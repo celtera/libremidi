@@ -120,7 +120,7 @@ class midi_in_winmm final : public midi_in_api
     {
       return rtmidi::API::WINDOWS_MM;
     }
-    void open_port(unsigned int portNumber, const std::string& portName) override
+    void open_port(unsigned int portNumber, const std::string& ) override
     {
       if (connected_)
       {
@@ -592,5 +592,13 @@ class midi_out_winmm final : public midi_out_api
 
   private:
     WinMidiData data;
+};
+
+struct winmm_backend
+{
+    using midi_in = midi_in_winmm;
+    using midi_out = midi_out_winmm;
+    using midi_observer = observer_winmm;
+    static const constexpr auto API = API::WINDOWS_MM;
 };
 }

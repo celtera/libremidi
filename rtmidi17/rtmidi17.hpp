@@ -479,6 +479,7 @@ enum class API
   LINUX_ALSA,  /*!< The Advanced Linux Sound Architecture API. */
   UNIX_JACK,   /*!< The JACK Low-Latency MIDI Server API. */
   WINDOWS_MM,  /*!< The Microsoft Multimedia MIDI API. */
+  WINDOWS_UWP, /*!< The Microsoft WinRT MIDI API. */
   DUMMY        /*!< A compilable but non-functional API. */
 };
 

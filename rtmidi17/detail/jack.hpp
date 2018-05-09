@@ -447,4 +447,12 @@ private:
 
   jack_data data;
 };
+
+struct jack_backend
+{
+    using midi_in = midi_in_jack;
+    using midi_out = midi_out_jack;
+    using midi_observer = observer_jack;
+    static const constexpr auto API = API::UNIX_JACK;
+};
 }

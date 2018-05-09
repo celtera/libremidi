@@ -28,12 +28,60 @@
 #  include <rtmidi17/detail/winmm.hpp>
 #endif
 
+#if defined(RTMIDI_WINUWP)
+#  include <rtmidi17/detail/winuwp.hpp>
+#endif
+
 #if defined(RTMIDI_DUMMY)
 #  include <rtmidi17/detail/dummy.hpp>
 #endif
 
 namespace rtmidi
 {
+
+// The order here will control the order of the API search in
+// the constructor.
+template<typename unused, typename... Args>
+constexpr auto make_tl(unused, Args...)
+{ return std::tuple<Args...>{}; }
+static constexpr auto available_backends =
+make_tl(
+  0
+#if defined(RTMIDI_ALSA)
+  , alsa_backend{}
+#endif
+#if defined(RTMIDI_COREAUDIO)
+  , core_backend{}
+#endif
+#if defined(RTMIDI_JACK)
+  , jack_backend{}
+#endif
+#if defined(RTMIDI_WINMM)
+  , winmm_backend{}
+#endif
+#if defined(RTMIDI_WINUWP)
+  , winuwp_backend{}
+#endif
+#if defined(RTMIDI_DUMMY)
+  , dummy_backend{}
+#endif
+);
+
+// There should always be at least one back-end.
+static_assert(std::tuple_size_v<decltype(available_backends)> >= 2);
+
+template<typename F>
+auto for_all_backends(F&& f)
+{
+  std::apply([&](auto _, auto&&... x){ (f(x), ...) ; }, available_backends);
+}
+
+template<typename F>
+auto for_backend(rtmidi::API api, F&& f)
+{
+  for_all_backends([&] (auto b) { if(b.API == api) f(b); });
+}
+
 RTMIDI17_INLINE midi_exception::~midi_exception() = default;
 RTMIDI17_INLINE no_devices_found_error::~no_devices_found_error() = default;
 RTMIDI17_INLINE invalid_device_error::~invalid_device_error() = default;
@@ -47,104 +95,45 @@ RTMIDI17_INLINE thread_error::~thread_error() = default;
 RTMIDI17_INLINE midi_in::~midi_in() = default;
 RTMIDI17_INLINE midi_out::~midi_out() = default;
 
+
 [[nodiscard]] RTMIDI17_INLINE std::vector<rtmidi::API> available_apis() noexcept
 {
   std::vector<rtmidi::API> apis;
-
-  // The order here will control the order of RtMidi's API search in
-  // the constructor.
-#if defined(RTMIDI_COREAUDIO)
-  apis.push_back(rtmidi::API::MACOSX_CORE);
-#endif
-#if defined(RTMIDI_ALSA)
-  apis.push_back(rtmidi::API::LINUX_ALSA);
-#endif
-#if defined(RTMIDI_JACK)
-  apis.push_back(rtmidi::API::UNIX_JACK);
-#endif
-#if defined(RTMIDI_WINMM)
-  apis.push_back(rtmidi::API::WINDOWS_MM);
-#endif
-#if defined(RTMIDI_DUMMY)
-  apis.push_back(rtmidi::API::DUMMY);
-#endif
+  for_all_backends([&] (auto b) { apis.push_back(b.API); });
   return apis;
 }
 
 [[nodiscard]] RTMIDI17_INLINE std::unique_ptr<observer_api>
-open_midi_observer(rtmidi::API api, observer::callbacks&& cb) {
-#if defined(RTMIDI_JACK)
-  if (api == rtmidi::API::UNIX_JACK)
-    return std::make_unique<observer_jack>(std::move(cb));
-#endif
-#if defined(RTMIDI_ALSA)
-  if (api == rtmidi::API::LINUX_ALSA)
-    return std::make_unique<observer_alsa>(std::move(cb));
-#endif
-#if defined(RTMIDI_WINMM)
-  if (api == rtmidi::API::WINDOWS_MM)
-    return std::make_unique<observer_winmm>(std::move(cb));
-#endif
-#if defined(RTMIDI_COREAUDIO)
-  if (api == rtmidi::API::MACOSX_CORE)
-    return std::make_unique<observer_core>(std::move(cb));
-#endif
-  return {};
+open_midi_observer(rtmidi::API api, observer::callbacks&& cb)
+{
+  std::unique_ptr<observer_api> ptr;
+
+  for_backend(api, [&] (auto b)
+  { ptr = std::make_unique<typename decltype(b)::midi_observer>(std::move(cb)); });
+
+  return ptr;
 }
 
-    [[nodiscard]] RTMIDI17_INLINE std::unique_ptr<midi_in_api> open_midi_in(
+[[nodiscard]] RTMIDI17_INLINE std::unique_ptr<midi_in_api> open_midi_in(
         rtmidi::API api, const std::string& clientName, unsigned int queueSizeLimit)
 {
-#if defined(RTMIDI_JACK)
-  if (api == rtmidi::API::UNIX_JACK)
-    return std::make_unique<midi_in_jack>(clientName, queueSizeLimit);
-#endif
-#if defined(RTMIDI_ALSA)
-  if (api == rtmidi::API::LINUX_ALSA)
-    return std::make_unique<midi_in_alsa>(clientName, queueSizeLimit);
-#endif
-#if defined(RTMIDI_WINMM)
-  if (api == rtmidi::API::WINDOWS_MM)
-    return std::make_unique<midi_in_winmm>(clientName, queueSizeLimit);
-#endif
-#if defined(RTMIDI_COREAUDIO)
-  if (api == rtmidi::API::MACOSX_CORE)
-    return std::make_unique<midi_in_core>(clientName, queueSizeLimit);
-#endif
-#if defined(RTMIDI_DUMMY)
-  if (api == rtmidi::API::DUMMY)
-  {
-    return std::make_unique<midi_in_dummy>(clientName, queueSizeLimit);
-  }
-#endif
-  return {};
+  std::unique_ptr<midi_in_api> ptr;
+
+  for_backend(api, [&] (auto b)
+  { ptr = std::make_unique<typename decltype(b)::midi_in>(clientName, queueSizeLimit); });
+
+  return ptr;
 }
 
 [[nodiscard]] RTMIDI17_INLINE std::unique_ptr<midi_out_api>
 open_midi_out(rtmidi::API api, const std::string& clientName) {
-#if defined(RTMIDI_JACK)
-  if (api == rtmidi::API::UNIX_JACK)
-    return std::make_unique<midi_out_jack>(clientName);
-#endif
-#if defined(RTMIDI_ALSA)
-  if (api == rtmidi::API::LINUX_ALSA)
-    return std::make_unique<midi_out_alsa>(clientName);
-#endif
-#if defined(RTMIDI_WINMM)
-  if (api == rtmidi::API::WINDOWS_MM)
-    return std::make_unique<midi_out_winmm>(clientName);
-#endif
-#if defined(RTMIDI_COREAUDIO)
-  if (api == rtmidi::API::MACOSX_CORE)
-    return std::make_unique<midi_out_core>(clientName);
-#endif
-#if defined(RTMIDI_DUMMY)
-  if (api == rtmidi::API::DUMMY)
-  {
-    return std::make_unique<midi_out_dummy>(clientName);
-  }
-#endif
-  return {};
+
+  std::unique_ptr<midi_out_api> ptr;
+
+  for_backend(api, [&] (auto b)
+  { ptr = std::make_unique<typename decltype(b)::midi_out>(clientName); });
+
+  return ptr;
 }
 
 RTMIDI17_INLINE observer::observer(rtmidi::API api, observer::callbacks cbs)
@@ -299,8 +288,7 @@ midi_in::midi_in(rtmidi::API api, const std::string& clientName, unsigned int qu
   if (api != rtmidi::API::UNSPECIFIED)
   {
     // Attempt to open the specified API.
-    rtapi_ = open_midi_in(api, clientName, queueSizeLimit);
-    if (rtapi_)
+    if ((rtapi_ = open_midi_in(api, clientName, queueSizeLimit)))
     {
       return;
     }
@@ -325,13 +313,6 @@ midi_in::midi_in(rtmidi::API api, const std::string& clientName, unsigned int qu
   {
     return;
   }
-
-  // It should not be possible to get here because the preprocessor
-  // definition RTMIDI_DUMMY is automatically defined if no
-  // API-specific definitions are passed to the compiler. But just in
-  // case something weird happens, we'll throw an error.
-
-  throw midi_exception("RtMidiIn: no compiled API support found ... critical error!!");
 }
 
 RTMIDI17_INLINE

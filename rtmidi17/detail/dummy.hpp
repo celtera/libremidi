@@ -4,11 +4,24 @@
 
 namespace rtmidi
 {
+class observer_dummy final : public observer_api
+{
+public:
+  observer_dummy(observer::callbacks&& c) : observer_api{std::move(c)}
+  {
+  }
+
+  ~observer_dummy()
+  {
+  }
+};
+
+
 class midi_in_dummy final : public midi_in_api
 {
 public:
   midi_in_dummy(const std::string& /*clientName*/, unsigned int queueSizeLimit)
-      : midi_in_api(queueSizeLimit)
+      : midi_in_api{queueSizeLimit}
   {
     warning("midi_in_dummy: This class provides no functionality.");
   }
@@ -90,5 +103,13 @@ public:
   void send_message(const unsigned char* /*message*/, size_t /*size*/) override
   {
   }
+};
+
+struct dummy_backend
+{
+    using midi_in = midi_in_dummy;
+    using midi_out = midi_out_dummy;
+    using midi_observer = observer_dummy;
+    static const constexpr auto API = API::DUMMY;
 };
 }

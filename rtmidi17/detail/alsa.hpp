@@ -1055,4 +1055,12 @@ public:
 private:
   alsa_data data;
 };
+
+struct alsa_backend
+{
+    using midi_in = midi_in_alsa;
+    using midi_out = midi_out_alsa;
+    using midi_observer = observer_alsa;
+    static const constexpr auto API = API::LINUX_ALSA;
+};
 }
