@@ -105,7 +105,7 @@ open_midi_observer(rtmidi::API api, observer::callbacks&& cb) {
 #endif
 #if defined(RTMIDI_WINMM)
   if (api == rtmidi::API::WINDOWS_MM)
-    return std::make_unique<MidiInWinMM>(clientName, queueSizeLimit);
+    return std::make_unique<midi_in_winmm>(clientName, queueSizeLimit);
 #endif
 #if defined(RTMIDI_COREAUDIO)
   if (api == rtmidi::API::MACOSX_CORE)
@@ -132,7 +132,7 @@ open_midi_out(rtmidi::API api, const std::string& clientName) {
 #endif
 #if defined(RTMIDI_WINMM)
   if (api == rtmidi::API::WINDOWS_MM)
-    return std::make_unique<MidiOutWinMM>(clientName);
+    return std::make_unique<midi_out_winmm>(clientName);
 #endif
 #if defined(RTMIDI_COREAUDIO)
   if (api == rtmidi::API::MACOSX_CORE)

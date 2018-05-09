@@ -83,6 +83,7 @@ struct alsa_data
   snd_seq_real_time_t lastTime{};
   int queue_id{}; // an input queue is needed to get timestamped events
   int trigger_fds[2]{};
+  std::vector<unsigned char> buffer;
 };
 
 class observer_alsa final : public observer_api
@@ -613,7 +614,8 @@ private:
                    "event parser!\n\n";
       return nullptr;
     }
-    unsigned char* buffer = (unsigned char*)alloca(apidata.bufferSize);
+    apidata.buffer.clear();
+    apidata.buffer.resize(apidata.bufferSize);
 
     snd_midi_event_init(apidata.coder);
     snd_midi_event_no_status(apidata.coder, 1); // suppress running status messages
@@ -706,8 +708,7 @@ private:
           if (ev->data.ext.len > apidata.bufferSize)
           {
             apidata.bufferSize = ev->data.ext.len;
-
-            buffer = (unsigned char*)alloca(apidata.bufferSize);
+            buffer.resize(apidata.bufferSize);
           }
           doDecode = true;
           break;
@@ -719,7 +720,7 @@ private:
 
       if (doDecode)
       {
-        nBytes = snd_midi_event_decode(apidata.coder, buffer, apidata.bufferSize, ev);
+        nBytes = snd_midi_event_decode(apidata.coder, buffer.data(), apidata.bufferSize, ev);
         if (nBytes > 0)
         {
           // The ALSA sequencer has a maximum buffer size for MIDI sysex
@@ -727,10 +728,11 @@ private:
           // than this, they are segmented into 256 byte chunks.  So,
           // we'll watch for this and concatenate sysex chunks into a
           // single sysex message if necessary.
+          assert(nBytes < buffer.size());
           if (!continueSysex)
-            message.bytes.assign(buffer, buffer + nBytes);
+            message.bytes.assign(buffer.data(), buffer.data() + nBytes);
           else
-            message.bytes.insert(message.bytes.end(), buffer, buffer + nBytes);
+            message.bytes.insert(message.bytes.end(), buffer.data(), buffer.data() + nBytes);
 
           continueSysex = ((ev->type == SND_SEQ_EVENT_SYSEX) && (message.bytes.back() != 0xF7));
           if (!continueSysex)

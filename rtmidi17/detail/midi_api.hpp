@@ -1,5 +1,7 @@
 #pragma once
 #include <rtmidi17/rtmidi17.hpp>
+#include <iostream>
+#include <string_view>
 
 namespace rtmidi
 {
