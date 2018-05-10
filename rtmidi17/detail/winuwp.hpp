@@ -11,20 +11,16 @@
 
 namespace rtmidi
 {
-struct UWPMidiData
-{
-    static void winrt_init()
-    { static auto _ = [] { winrt::init_apartment(); return 0; }(); }
+inline void winrt_init()
+{ static auto _ = [] { winrt::init_apartment(); return 0; }(); }
 
-
-};
 
 class observer_winuwp final : public observer_api
 {
   public:
     observer_winuwp(observer::callbacks&& c) : observer_api{std::move(c)}
     {
-      UWPMidiData::winrt_init();
+      winrt_init();
     }
 
     ~observer_winuwp()
@@ -32,24 +28,19 @@ class observer_winuwp final : public observer_api
     }
 };
 
-class midi_in_winuwp final : public midi_in_api
+class midi_in_winuwp final : public midi_in_default<midi_in_winuwp>
 {
   public:
+    static const constexpr auto backend = "UWP";
     midi_in_winuwp(const std::string& , unsigned int queueSizeLimit)
-      : midi_in_api(queueSizeLimit)
+      : midi_in_default{nullptr, queueSizeLimit}
     {
-      UWPMidiData::winrt_init();
+      winrt_init();
       using namespace winrt;
       using namespace winrt::Windows::Foundation;
       using namespace winrt::Windows::Devices::Midi;
       using namespace winrt::Windows::Devices::Enumeration;
       using namespace winrt::Windows::Storage::Streams;
-
-
-      auto devs = DeviceInformation::FindAllAsync(MidiInPort::GetDeviceSelector());
-      for(auto p : devs.get())
-      {
-      }
     }
 
     ~midi_in_winuwp() override
@@ -118,11 +109,6 @@ class midi_in_winuwp final : public midi_in_api
           }
         }
       }
-
-    }
-
-    void open_virtual_port(const std::string& portName) override
-    {
     }
 
     void close_port() override
@@ -134,14 +120,6 @@ class midi_in_winuwp final : public midi_in_api
           port_.Close();
         }
       }
-    }
-
-    void set_client_name(const std::string& clientName) override
-    {
-    }
-
-    void set_port_name(const std::string& portName) override
-    {
     }
 
     unsigned int get_port_count() override
@@ -178,12 +156,13 @@ class midi_in_winuwp final : public midi_in_api
     winrt::Windows::Devices::Midi::MidiInPort port_{nullptr};
 };
 
-class midi_out_winuwp final : public midi_out_api
+class midi_out_winuwp final : public midi_out_default<midi_out_winuwp>
 {
   public:
-    midi_out_winuwp(const std::string& clientName)
+    static const constexpr auto backend = "UWP";
+    midi_out_winuwp(const std::string&)
     {
-      UWPMidiData::winrt_init();
+      winrt_init();
     }
 
     ~midi_out_winuwp() override
@@ -196,7 +175,7 @@ class midi_out_winuwp final : public midi_out_api
       return rtmidi::API::WINDOWS_UWP;
     }
 
-    void open_port(unsigned int portNumber, const std::string& portName) override
+    void open_port(unsigned int portNumber, const std::string& ) override
     {
       using namespace winrt;
       using namespace winrt::Windows::Foundation;
@@ -223,10 +202,6 @@ class midi_out_winuwp final : public midi_out_api
       }
     }
 
-    void open_virtual_port(const std::string& portName) override
-    {
-    }
-
     void close_port() override
     {
       if (connected_)
@@ -236,13 +211,6 @@ class midi_out_winuwp final : public midi_out_api
           port_.Close();
         }
       }
-    }
-
-    void set_client_name(const std::string& clientName) override
-    {
-    }
-    void set_port_name(const std::string& portName) override
-    {
     }
 
     unsigned int get_port_count() override

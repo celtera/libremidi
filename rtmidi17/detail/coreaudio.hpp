@@ -188,7 +188,7 @@ class midi_in_core final : public midi_in_api
 {
 public:
   midi_in_core(const std::string& clientName, unsigned int queueSizeLimit)
-      : midi_in_api(queueSizeLimit)
+      : midi_in_api(&data, queueSizeLimit)
   {
     // Set up our client.
     MIDIClientRef client{};
@@ -206,10 +206,10 @@ public:
     // Save our api-specific connection information.
     data.client = client;
     data.endpoint = 0;
-    inputData_.apiData = &data;
     CFRelease(name);
   }
-  ~midi_in_core()
+
+  ~midi_in_core() override
   {
     // Close a connection if it exists.
     midi_in_core::close_port();

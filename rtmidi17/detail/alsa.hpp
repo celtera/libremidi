@@ -262,7 +262,7 @@ class midi_in_alsa final : public midi_in_api
 {
 public:
   midi_in_alsa(const std::string& clientName, unsigned int queueSizeLimit)
-      : midi_in_api(queueSizeLimit)
+      : midi_in_api{&data, queueSizeLimit}
   {
     // Set up the ALSA sequencer client.
     snd_seq_t* seq;
@@ -287,7 +287,6 @@ public:
     data.thread = data.dummy_thread_id;
     data.trigger_fds[0] = -1;
     data.trigger_fds[1] = -1;
-    inputData_.apiData = &data;
 
     if (pipe(data.trigger_fds) == -1)
     {

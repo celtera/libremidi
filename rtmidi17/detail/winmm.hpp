@@ -86,29 +86,27 @@ class observer_winmm final : public observer_api
     }
 };
 
-class midi_in_winmm final : public midi_in_api
+class midi_in_winmm final : public midi_in_default<midi_in_winmm>
 {
   public:
-    midi_in_winmm(const std::string& clientName, unsigned int queueSizeLimit)
-      : midi_in_api(queueSizeLimit)
+    static const constexpr auto backend = "WinMM";
+    midi_in_winmm(const std::string&, unsigned int queueSizeLimit)
+      : midi_in_default{&data, queueSizeLimit}
     {
       // We'll issue a warning here if no devices are available but not
       // throw an error since the user can plugin something later.
-      unsigned int nDevices = midiInGetNumDevs();
+      unsigned int nDevices = get_port_count();
       if (nDevices == 0)
       {
         warning("MidiInWinMM::initialize: no MIDI input devices currently available.");
       }
-
-      // Save our api-specific connection information.
-      inputData_.apiData = &data;
-      data.message.bytes.clear(); // needs to be empty for first input message
 
       if (!InitializeCriticalSectionAndSpinCount(&(data._mutex), 0x00000400))
       {
         warning("MidiInWinMM::initialize: InitializeCriticalSectionAndSpinCount failed.");
       }
     }
+
     ~midi_in_winmm() override
     {
       // Close a connection if it exists.
@@ -116,10 +114,12 @@ class midi_in_winmm final : public midi_in_api
 
       DeleteCriticalSection(&(data._mutex));
     }
+
     rtmidi::API get_current_api() const noexcept override
     {
       return rtmidi::API::WINDOWS_MM;
     }
+
     void open_port(unsigned int portNumber, const std::string& ) override
     {
       if (connected_)
@@ -194,11 +194,7 @@ class midi_in_winmm final : public midi_in_api
 
       connected_ = true;
     }
-    void open_virtual_port(const std::string& portName) override
-    {
-      warning("MidiInWinMM::openVirtualPort: cannot be implemented in Windows MM "
-              "MIDI API!");
-    }
+
     void close_port() override
     {
       if (connected_)
@@ -228,20 +224,12 @@ class midi_in_winmm final : public midi_in_api
         LeaveCriticalSection(&(data._mutex));
       }
     }
-    void set_client_name(const std::string& clientName) override
-    {
-      warning("MidiInWinMM::setClientName: this function is not implemented for the "
-              "WINDOWS_MM API!");
-    }
-    void set_port_name(const std::string& portName) override
-    {
-      warning("MidiInWinMM::setPortName: this function is not implemented for the "
-              "WINDOWS_MM API!");
-    }
+
     unsigned int get_port_count() override
     {
       return midiInGetNumDevs();
     }
+
     std::string get_port_name(unsigned int portNumber) override
     {
       std::string stringName;
@@ -397,29 +385,33 @@ class midi_in_winmm final : public midi_in_api
     WinMidiData data;
 };
 
-class midi_out_winmm final : public midi_out_api
+class midi_out_winmm final : public midi_out_default<midi_out_winmm>
 {
   public:
-    midi_out_winmm(const std::string& clientName)
+    static const constexpr auto backend = "WinMM";
+    midi_out_winmm(const std::string&)
     {
       // We'll issue a warning here if no devices are available but not
       // throw an error since the user can plug something in later.
-      unsigned int nDevices = midiOutGetNumDevs();
+      unsigned int nDevices = get_port_count();
       if (nDevices == 0)
       {
         warning("MidiOutWinMM::initialize: no MIDI output devices currently "
                 "available.");
       }
     }
+
     ~midi_out_winmm() override
     {
       // Close a connection if it exists.
       midi_out_winmm::close_port();
     }
+
     rtmidi::API get_current_api() const noexcept override
     {
       return rtmidi::API::WINDOWS_MM;
     }
+
     void open_port(unsigned int portNumber, const std::string& portName) override
     {
       if (connected_)
@@ -454,11 +446,7 @@ class midi_out_winmm final : public midi_out_api
 
       connected_ = true;
     }
-    void open_virtual_port(const std::string& portName) override
-    {
-      warning("MidiOutWinMM::openVirtualPort: cannot be implemented in Windows MM "
-              "MIDI API!");
-    }
+
     void close_port() override
     {
       if (connected_)
@@ -469,20 +457,12 @@ class midi_out_winmm final : public midi_out_api
         connected_ = false;
       }
     }
-    void set_client_name(const std::string& clientName) override
-    {
-      warning("MidiOutWinMM::setClientName: this function is not implemented for "
-              "the WINDOWS_MM API!");
-    }
-    void set_port_name(const std::string& portName) override
-    {
-      warning("MidiOutWinMM::setPortName: this function is not implemented for the "
-              "WINDOWS_MM API!");
-    }
+
     unsigned int get_port_count() override
     {
       return midiOutGetNumDevs();
     }
+
     std::string get_port_name(unsigned int portNumber) override
     {
       std::string stringName;

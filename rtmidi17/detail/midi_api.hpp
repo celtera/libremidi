@@ -30,18 +30,19 @@ public:
 
   virtual rtmidi::API get_current_api() const noexcept = 0;
   virtual void open_port(unsigned int portNumber, const std::string& portName) = 0;
-  virtual void open_virtual_port(const std::string& portName) = 0;
+  virtual void open_virtual_port(const std::string&) = 0;
   virtual void close_port() = 0;
-  virtual void set_client_name(const std::string& clientName) = 0;
-  virtual void set_port_name(const std::string& portName) = 0;
+  virtual void set_client_name(const std::string&) = 0;
+  virtual void set_port_name(const std::string&) = 0;
 
   virtual unsigned int get_port_count() = 0;
   virtual std::string get_port_name(unsigned int portNumber) = 0;
 
-  inline bool is_port_open() const noexcept
+  bool is_port_open() const noexcept
   {
     return connected_;
   }
+
   void set_error_callback(midi_error_callback errorCallback) noexcept
   {
     errorCallback_ = std::move(errorCallback);
@@ -97,8 +98,9 @@ protected:
 class midi_in_api : public midi_api
 {
 public:
-  explicit midi_in_api(unsigned int queueSizeLimit)
+  explicit midi_in_api(void* data, unsigned int queueSizeLimit)
   {
+    inputData_.apiData = data;
     // Allocate the MIDI queue.
     inputData_.queue.ringSize = queueSizeLimit;
     if (inputData_.queue.ringSize > 0)
@@ -229,5 +231,42 @@ class midi_out_api : public midi_api
 {
 public:
   virtual void send_message(const unsigned char* message, size_t size) = 0;
+};
+
+template<typename T>
+class midi_in_default : public midi_in_api
+{
+    using midi_in_api::midi_in_api;
+void open_virtual_port(const std::string&) override
+{
+  using namespace std::literals;
+  warning(T::backend + " in: open_virtual_port unsupported"s);
+}
+void set_client_name(const std::string&) override
+{
+  using namespace std::literals;
+  warning(T::backend + " in: set_client_name unsupported"s); }
+void set_port_name(const std::string&)  override
+{
+  using namespace std::literals;
+  warning(T::backend + " in: set_port_name unsupported"s); }
+};
+
+template<typename T>
+class midi_out_default : public midi_out_api
+{
+    using midi_out_api::midi_out_api;
+void open_virtual_port(const std::string&) override
+{
+  using namespace std::literals;
+  warning(T::backend + " out: open_virtual_port unsupported"s); }
+void set_client_name(const std::string&) override
+{
+  using namespace std::literals;
+  warning(T::backend + " out: set_client_name unsupported"s); }
+void set_port_name(const std::string&)  override
+{
+  using namespace std::literals;
+  warning(T::backend + " out: set_port_name unsupported"s); }
 };
 }

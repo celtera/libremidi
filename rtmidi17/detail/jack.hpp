@@ -46,8 +46,10 @@ public:
 class midi_in_jack final : public midi_in_api
 {
 public:
-  midi_in_jack(const std::string& cname, unsigned int queueSizeLimit) : midi_in_api(queueSizeLimit)
+  midi_in_jack(const std::string& cname, unsigned int queueSizeLimit)
+    : midi_in_api{&data, queueSizeLimit}
   {
+    // TODO do like the others
     data.rtMidiIn = &inputData_;
     data.port = nullptr;
     data.client = nullptr;

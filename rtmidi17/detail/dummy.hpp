@@ -21,7 +21,7 @@ class midi_in_dummy final : public midi_in_api
 {
 public:
   midi_in_dummy(const std::string& /*clientName*/, unsigned int queueSizeLimit)
-      : midi_in_api{queueSizeLimit}
+      : midi_in_api{nullptr, queueSizeLimit}
   {
     warning("midi_in_dummy: This class provides no functionality.");
   }
