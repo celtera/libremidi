@@ -39,7 +39,6 @@ struct WinMidiData
     CRITICAL_SECTION
     _mutex; // [Patrice] see
     // https://groups.google.com/forum/#!topic/mididev/6OUjHutMpEo
-    std::vector<char> buffer;
 };
 
 // The Windows MM API is based on the use of a callback function for
@@ -325,8 +324,9 @@ class midi_in_winmm final : public midi_in_default<midi_in_winmm>
 
         // Copy bytes to our MIDI message.
         unsigned char* ptr = (unsigned char*)&midiMessage;
+        apiData.message.bytes.resize(nBytes);
         for (int i = 0; i < nBytes; ++i)
-          apiData.message.bytes.push_back(*ptr++);
+          apiData.message.bytes[i] = ptr[i];
       }
       else
       { // Sysex message ( MIM_LONGDATA or MIM_LONGERROR )
@@ -510,16 +510,16 @@ class midi_out_winmm final : public midi_out_default<midi_out_winmm>
       { // Sysex message
 
         // Allocate buffer for sysex data.
-        data.buffer.clear();
-        data.buffer.resize(nBytes);
+        buffer.clear();
+        buffer.resize(nBytes);
 
         // Copy data to buffer.
         for (unsigned int i = 0; i < nBytes; ++i)
-          data.buffer[i] = message[i];
+          buffer[i] = message[i];
 
         // Create and prepare MIDIHDR structure.
         MIDIHDR sysex;
-        sysex.lpData = (LPSTR)data.buffer.data();
+        sysex.lpData = (LPSTR)buffer.data();
         sysex.dwBufferLength = nBytes;
         sysex.dwFlags = 0;
         result = midiOutPrepareHeader(data.outHandle, &sysex, sizeof(MIDIHDR));
@@ -572,6 +572,7 @@ class midi_out_winmm final : public midi_out_default<midi_out_winmm>
 
   private:
     WinMidiData data;
+    std::vector<char> buffer;
 };
 
 struct winmm_backend
