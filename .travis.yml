@@ -9,9 +9,9 @@ before_install:
   - docker pull archlinux/base
   - docker run -itd --name build archlinux/base
   - docker exec build pacman -Syyu --noconfirm
-  - docker exec build pacman -S  --noconfirm git gcc cmake boost alsa-lib jack2
+  - docker exec build pacman -S  --noconfirm git gcc cmake boost alsa-lib jack2 ninja
   - docker exec build git clone https://github.com/jcelerier/RtMidi17
 
 script:
-  - docker exec build cmake RtMidi17
+  - docker exec build cmake -G Ninja RtMidi17
   - docker exec build cmake --build .
