@@ -1,7 +1,11 @@
 #pragma once
+#if __has_include(<weak_libjack.h>)
+#include <weak_libjack.h>
+#else
 #include <jack/jack.h>
 #include <jack/midiport.h>
 #include <jack/ringbuffer.h>
+#endif
 #include <rtmidi17/detail/midi_api.hpp>
 #include <rtmidi17/detail/semaphore.hpp>
 #include <rtmidi17/rtmidi17.hpp>
@@ -106,7 +110,6 @@ public:
 
   void close_port() override
   {
-
     if (data.port == nullptr)
       return;
     jack_port_unregister(data.client, data.port);
