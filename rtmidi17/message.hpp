@@ -1,5 +1,8 @@
 #pragma once
 #include <cinttypes>
+#include <memory>
+#include <vector>
+
 #if __has_include(<boost/container/small_vector.hpp>) && !defined(RTMIDI17_NO_BOOST)
 #  include <boost/container/small_vector.hpp>
 namespace rtmidi
@@ -9,9 +12,14 @@ using midi_bytes = boost::container::small_vector<unsigned char, 4>;
 #else
 namespace rtmidi
 {
-#include <vector>
 using midi_bytes = std::vector<unsigned char>;
 }
+#endif
+
+#if defined(RTMIDI17_HEADER_ONLY)
+#  define RTMIDI17_INLINE inline
+#else
+#  define RTMIDI17_INLINE
 #endif
 
 namespace rtmidi
@@ -129,7 +137,7 @@ struct message
   bool uses_channel(int channel) const
   {
     if (channel <= 0 || channel > 16)
-      throw std::range_error("midi_message::uses_channel: out of range");
+      throw std::range_error("message::uses_channel: out of range");
     return ((bytes[0] & 0xF) == channel - 1) && ((bytes[0] & 0xF0) != 0xF0);
   }
 
@@ -311,4 +319,34 @@ struct meta_events
                        (uint8_t)((positionInBeats >> 7) & 127)}};
   }
 };
+
+struct track_event
+{
+  track_event(int tick, int track, std::shared_ptr<message> m)
+    : tick{tick}
+    , track{track}
+    , m{std::move(m)}
+  {
+
+  }
+
+  track_event(track_event && r)
+  {
+    *this = std::move(r);
+  }
+
+  track_event& operator=(track_event&& r)
+  {
+    tick = r.tick;
+    track = r.track;
+    m = std::move(r.m);
+    return *this;
+  }
+
+  int tick = 0;
+  int track = 0;
+  std::shared_ptr<message> m;
+};
+
+typedef std::vector<std::shared_ptr<track_event>> midi_track;
 }

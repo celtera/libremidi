@@ -78,12 +78,6 @@
 
 #define RTMIDI17_VERSION "1.0.0"
 
-#if defined(RTMIDI17_HEADER_ONLY)
-#  define RTMIDI17_INLINE inline
-#else
-#  define RTMIDI17_INLINE
-#endif
-
 namespace rtmidi
 {
 //! Defines various error types.
