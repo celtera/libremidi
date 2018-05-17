@@ -11,6 +11,7 @@ option(RTMIDI17_NO_ALSA "Disable ALSA back-end" OFF)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 add_library(RtMidi17
   rtmidi17/rtmidi17.cpp
+  rtmidi17/message.hpp
   rtmidi17/rtmidi17.hpp
   rtmidi17/detail/midi_api.hpp
 )
