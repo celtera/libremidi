@@ -260,8 +260,14 @@ std::string midi_out::get_port_name(unsigned int portNumber)
 
 RTMIDI17_INLINE
 void midi_out::send_message(const std::vector<unsigned char>& message)
+{  
+  send_message(message.data(), message.size());
+}
+
+RTMIDI17_INLINE
+void midi_out::send_message(const rtmidi::message& message)
 {
-  (static_cast<midi_out_api*>(rtapi_.get()))->send_message(message.data(), message.size());
+  send_message(message.bytes.data(), message.bytes.size());
 }
 
 RTMIDI17_INLINE

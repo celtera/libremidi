@@ -87,7 +87,7 @@ int main(int argc, char**) try
     for (auto i = 0U; i < nBytes; i++)
       std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
     if (nBytes > 0)
-      std::cout << "stamp = " << message.timeStamp << std::endl;
+      std::cout << "stamp = " << message.timestamp << std::endl;
   });
 
   // Don't ignore sysex, timing, or active sensing messages.

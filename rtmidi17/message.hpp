@@ -86,7 +86,7 @@ constexpr inline uint8_t clamp(uint8_t val, uint8_t min, uint8_t max)
 struct message
 {
   midi_bytes bytes;
-  double timeStamp{};
+  double timestamp{};
 
   static uint8_t make_command(const message_type type, const int channel)
   {

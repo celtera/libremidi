@@ -448,6 +448,8 @@ public:
   */
   void send_message(const std::vector<unsigned char>& message);
 
+  void send_message(const rtmidi::message& message);
+
   //! Immediately send a single message out an open MIDI output port.
   /*!
       An exception is thrown if an error occurs during output or an
@@ -457,6 +459,7 @@ public:
       \param size    Length of the MIDI message in bytes
   */
   void send_message(const unsigned char* message, size_t size);
+
 
   //! Set an error callback function to be invoked when an error has occured.
   /*!

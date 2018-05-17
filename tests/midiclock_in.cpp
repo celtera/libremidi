@@ -84,7 +84,7 @@ int main(int, const char* argv[]) try
     {
       if (++clock_count == 24)
       {
-        double bpm = 60.0 / 24.0 / message.timeStamp;
+        double bpm = 60.0 / 24.0 / message.timestamp;
         std::cout << "One beat, estimated BPM = " << bpm << std::endl;
         clock_count = 0;
       }

@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) try
     for (auto i = 0U; i < nBytes; i++)
       std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
     if (nBytes > 0)
-      std::cout << "stamp = " << message.timeStamp << std::endl;
+      std::cout << "stamp = " << message.timestamp << std::endl;
   });
 
   std::vector<unsigned char> message;

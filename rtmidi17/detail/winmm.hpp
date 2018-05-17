@@ -278,11 +278,11 @@ class midi_in_winmm final : public midi_in_default<midi_in_winmm>
       // Calculate time stamp.
       if (data.firstMessage == true)
       {
-        apiData.message.timeStamp = 0.0;
+        apiData.message.timestamp = 0.0;
         data.firstMessage = false;
       }
       else
-        apiData.message.timeStamp = (double)(timestamp - apiData.lastTime) * 0.001;
+        apiData.message.timestamp = (double)(timestamp - apiData.lastTime) * 0.001;
 
       if (inputStatus == MIM_DATA)
       { // Channel or system message

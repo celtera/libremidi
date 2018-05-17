@@ -740,7 +740,7 @@ private:
           {
 
             // Calculate the time stamp:
-            message.timeStamp = 0.0;
+            message.timestamp = 0.0;
 
             // Method 1: Use the system time.
             // gettimeofday(&tv, (struct timezone *)nullptr);
@@ -776,7 +776,7 @@ private:
             if (data.firstMessage == true)
               data.firstMessage = false;
             else
-              message.timeStamp = time;
+              message.timestamp = time;
           }
           else
           {

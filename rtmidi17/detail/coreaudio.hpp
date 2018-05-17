@@ -401,7 +401,7 @@ private:
       // Calculate time stamp.
       if (data.firstMessage)
       {
-        msg.timeStamp = 0.0;
+        msg.timestamp = 0.0;
         data.firstMessage = false;
       }
       else
@@ -414,7 +414,7 @@ private:
         time -= apiData->lastTime;
         time = AudioConvertHostTimeToNanos(time);
         if (!continueSysex)
-          msg.timeStamp = time * 0.000000001;
+          msg.timestamp = time * 0.000000001;
       }
 
       // Track whether any non-filtered messages were found in this
@@ -540,7 +540,7 @@ private:
       // Save the time of the last non-filtered message
       if (foundNonFiltered)
       {
-        apiData->lastTime = packet->timeStamp;
+        apiData->lastTime = packet->timestamp;
         if (apiData->lastTime == 0)
         { // this happens when receiving asynchronous sysex messages
           apiData->lastTime = AudioGetCurrentHostTime();
@@ -738,7 +738,7 @@ public:
       return;
     }
 
-    MIDITimeStamp timeStamp = AudioGetCurrentHostTime();
+    MIDITimeStamp timestamp = AudioGetCurrentHostTime();
     OSStatus result;
 
     if (message[0] != 0xF0 && nBytes > 3)
@@ -762,7 +762,7 @@ public:
                                      : remainingBytes; // 65535 = maximum size of a MIDIPacket
       const Byte* dataStartPtr = (const Byte*)&message[nBytes - remainingBytes];
       packet = MIDIPacketListAdd(
-          packetList, listSize, packet, timeStamp, bytesForPacket, dataStartPtr);
+          packetList, listSize, packet, timestamp, bytesForPacket, dataStartPtr);
       remainingBytes -= bytesForPacket;
     }
 

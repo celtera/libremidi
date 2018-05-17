@@ -64,7 +64,7 @@ int main(int argc, char** argv) try
       std::cout << "Byte " << i << " = " << (int)msg[i] << ", ";
 
     if (nBytes > 0)
-      std::cout << "stamp = " << msg.timeStamp << std::endl;
+      std::cout << "stamp = " << msg.timestamp << std::endl;
 
     std::this_thread::sleep_for(10ms);
   }

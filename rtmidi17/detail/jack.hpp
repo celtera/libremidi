@@ -224,7 +224,7 @@ private:
       if (rtData.firstMessage == true)
         rtData.firstMessage = false;
       else
-        m.timeStamp = (time - jData.lastTime) * 0.000001;
+        m.timestamp = (time - jData.lastTime) * 0.000001;
 
       jData.lastTime = time;
 
