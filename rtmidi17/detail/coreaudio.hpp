@@ -540,7 +540,7 @@ private:
       // Save the time of the last non-filtered message
       if (foundNonFiltered)
       {
-        apiData->lastTime = packet->timestamp;
+        apiData->lastTime = packet->timeStamp;
         if (apiData->lastTime == 0)
         { // this happens when receiving asynchronous sysex messages
           apiData->lastTime = AudioGetCurrentHostTime();
