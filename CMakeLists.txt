@@ -24,7 +24,7 @@ target_link_libraries(RtMidi17 PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 if(APPLE)
   ## CoreMIDI support ##
   if(NOT RTMIDI17_NO_COREMIDI)
-    target_compile_definitions(RtMidi17 PUBLIC RTMIDI_COREAUDIO)
+    target_compile_definitions(RtMidi17 PUBLIC RTMIDI17_COREAUDIO)
     target_sources(RtMidi17 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rtmidi17/detail/coreaudio.hpp)
 
     find_library(COREMIDI_LIBRARY CoreMIDI)
@@ -44,7 +44,7 @@ elseif(WIN32)
   if(NOT RTMIDI17_NO_WINMM)
     target_compile_definitions(RtMidi17
       PUBLIC
-        RTMIDI_WINMM
+        RTMIDI17_WINMM
         WIN32=1
         UNICODE=1
         _UNICODE=1
@@ -59,7 +59,7 @@ elseif(WIN32)
     find_path(CPPWINRT_PATH winrt/base.h HINTS ${WINSDK_PATH}/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt)
     if(CPPWINRT_PATH)
       target_include_directories(RtMidi17 PUBLIC "${CPPWINRT_PATH}")
-      target_compile_definitions(RtMidi17 PUBLIC RTMIDI_WINUWP)
+      target_compile_definitions(RtMidi17 PUBLIC RTMIDI17_WINUWP)
       target_compile_options(RtMidi17 PUBLIC /ZW /EHsc /await)
       target_sources(RtMidi17 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rtmidi17/detail/winuwp.hpp)
     endif()
@@ -70,7 +70,7 @@ elseif(UNIX)
   if(NOT RTMIDI17_NO_ALSA)
     find_package(ALSA)
     if(ALSA_FOUND)
-      target_compile_definitions(RtMidi17 PUBLIC RTMIDI_ALSA)
+      target_compile_definitions(RtMidi17 PUBLIC RTMIDI17_ALSA)
       target_link_libraries(RtMidi17 PUBLIC ${ALSA_LIBRARIES})
       target_sources(RtMidi17 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rtmidi17/detail/alsa.hpp)
     endif()
@@ -82,18 +82,18 @@ if(NOT RTMIDI17_NO_JACK)
 
   find_library(JACK_LIBRARIES jack)
   if(JACK_LIBRARIES)
-    set(HAS_HACK 1)
+    set(HAS_JACK 1)
     target_link_libraries(RtMidi17 PUBLIC ${JACK_LIBRARIES})
   else()
     find_path(WEAKJACK_PATH weakjack/weak_libjack.h)
     if(WEAKJACK_PATH)
-      set(HAS_HACK 1)
+      set(HAS_JACK 1)
       target_include_directories(RtMidi17 PUBLIC ${WEAKJACK_PATH})
     endif()
   endif()
 
   if(HAS_JACK)
-    target_compile_definitions(RtMidi17 PUBLIC RTMIDI_JACK)
+    target_compile_definitions(RtMidi17 PUBLIC RTMIDI17_JACK)
     target_sources(RtMidi17
       PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/rtmidi17/detail/jack.hpp

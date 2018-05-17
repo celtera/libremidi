@@ -266,6 +266,6 @@ struct winuwp_backend
     using midi_in = midi_in_winuwp;
     using midi_out = midi_out_winuwp;
     using midi_observer = observer_winuwp;
-    static const constexpr auto API = API::WINDOWS_UWP;
+    static const constexpr auto API = rtmidi::API::WINDOWS_UWP;
 };
 }

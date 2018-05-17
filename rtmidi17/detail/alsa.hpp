@@ -613,8 +613,10 @@ private:
                    "event parser!\n\n";
       return nullptr;
     }
-    apidata.buffer.clear();
-    apidata.buffer.resize(apidata.bufferSize);
+
+    auto& buffer = apidata.buffer;
+    buffer.clear();
+    buffer.resize(apidata.bufferSize);
 
     snd_midi_event_init(apidata.coder);
     snd_midi_event_no_status(apidata.coder, 1); // suppress running status messages
@@ -665,13 +667,13 @@ private:
       {
 
         case SND_SEQ_EVENT_PORT_SUBSCRIBED:
-#if defined(__RTMIDI_DEBUG__)
+#if defined(__RTMIDI17_DEBUG__)
           std::cout << "MidiInAlsa::alsaMidiHandler: port connection made!\n";
 #endif
           break;
 
         case SND_SEQ_EVENT_PORT_UNSUBSCRIBED:
-#if defined(__RTMIDI_DEBUG__)
+#if defined(__RTMIDI17_DEBUG__)
           std::cerr << "MidiInAlsa::alsaMidiHandler: port connection has closed!\n";
           std::cout << "sender = " << (int)ev->data.connect.sender.client << ":"
                     << (int)ev->data.connect.sender.port
@@ -778,7 +780,7 @@ private:
           }
           else
           {
-#if defined(__RTMIDI_DEBUG__)
+#if defined(__RTMIDI17_DEBUG__)
             std::cerr << "\nMidiInAlsa::alsaMidiHandler: event parsing error or "
                          "not a MIDI event!\n\n";
 #endif
@@ -1060,6 +1062,6 @@ struct alsa_backend
     using midi_in = midi_in_alsa;
     using midi_out = midi_out_alsa;
     using midi_observer = observer_alsa;
-    static const constexpr auto API = API::LINUX_ALSA;
+    static const constexpr auto API = rtmidi::API::LINUX_ALSA;
 };
 }

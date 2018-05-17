@@ -10,7 +10,7 @@
 
 // Default for Windows is to add an identifier to the port names; this
 // flag can be defined (e.g. in your project file) to disable this behaviour.
-//#define RTMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+//#define RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
 
 //*********************************************************************//
 //  API: Windows Multimedia Library (MM)
@@ -249,7 +249,7 @@ class midi_in_winmm final : public midi_in_default<midi_in_winmm>
       // Next lines added to add the portNumber to the name so that
       // the device's names are sure to be listed with individual names
       // even when they have the same brand name
-#ifndef RTMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+#ifndef RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
       std::ostringstream os;
       os << " ";
       os << portNumber;
@@ -484,7 +484,7 @@ class midi_out_winmm final : public midi_out_default<midi_out_winmm>
       // the device's names are sure to be listed with individual names
       // even when they have the same brand name
       std::ostringstream os;
-#ifndef RTMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+#ifndef RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
       os << " ";
       os << portNumber;
       stringName += os.str();
@@ -580,6 +580,6 @@ struct winmm_backend
     using midi_in = midi_in_winmm;
     using midi_out = midi_out_winmm;
     using midi_observer = observer_winmm;
-    static const constexpr auto API = API::WINDOWS_MM;
+    static const constexpr auto API = rtmidi::API::WINDOWS_MM;
 };
 }

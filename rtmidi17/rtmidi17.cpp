@@ -7,32 +7,32 @@
 
 #include <rtmidi17/detail/midi_api.hpp>
 
-#if !defined(RTMIDI_ALSA) && !defined(RTMIDI_JACK) && !defined(RTMIDI_COREAUDIO) \
-    && !defined(RTMIDI_WINMM)
-#  define RTMIDI_DUMMY
+#if !defined(RTMIDI17_ALSA) && !defined(RTMIDI17_JACK) && !defined(RTMIDI17_COREAUDIO) \
+    && !defined(RTMIDI17_WINMM)
+#  define RTMIDI17_DUMMY
 #endif
 
-#if defined(RTMIDI_ALSA)
+#if defined(RTMIDI17_ALSA)
 #  include <rtmidi17/detail/alsa.hpp>
 #endif
 
-#if defined(RTMIDI_JACK)
+#if defined(RTMIDI17_JACK)
 #  include <rtmidi17/detail/jack.hpp>
 #endif
 
-#if defined(RTMIDI_COREAUDIO)
+#if defined(RTMIDI17_COREAUDIO)
 #  include <rtmidi17/detail/coreaudio.hpp>
 #endif
 
-#if defined(RTMIDI_WINMM)
+#if defined(RTMIDI17_WINMM)
 #  include <rtmidi17/detail/winmm.hpp>
 #endif
 
-#if defined(RTMIDI_WINUWP)
+#if defined(RTMIDI17_WINUWP)
 #  include <rtmidi17/detail/winuwp.hpp>
 #endif
 
-#if defined(RTMIDI_DUMMY)
+#if defined(RTMIDI17_DUMMY)
 #  include <rtmidi17/detail/dummy.hpp>
 #endif
 
@@ -47,28 +47,28 @@ constexpr auto make_tl(unused, Args...)
 static constexpr auto available_backends =
 make_tl(
   0
-#if defined(RTMIDI_ALSA)
+#if defined(RTMIDI17_ALSA)
   , alsa_backend{}
 #endif
-#if defined(RTMIDI_COREAUDIO)
+#if defined(RTMIDI17_COREAUDIO)
   , core_backend{}
 #endif
-#if defined(RTMIDI_JACK)
+#if defined(RTMIDI17_JACK)
   , jack_backend{}
 #endif
-#if defined(RTMIDI_WINMM)
+#if defined(RTMIDI17_WINMM)
   , winmm_backend{}
 #endif
-#if defined(RTMIDI_WINUWP)
+#if defined(RTMIDI17_WINUWP)
   , winuwp_backend{}
 #endif
-#if defined(RTMIDI_DUMMY)
+#if defined(RTMIDI17_DUMMY)
   , dummy_backend{}
 #endif
 );
 
 // There should always be at least one back-end.
-static_assert(std::tuple_size_v<decltype(available_backends)> >= 2);
+static_assert(std::tuple_size_v<decltype(available_backends)> >= 1);
 
 template<typename F>
 auto for_all_backends(F&& f)
@@ -321,6 +321,7 @@ void midi_in::set_client_name(const std::string& clientName)
   rtapi_->set_client_name(clientName);
 }
 
+RTMIDI17_INLINE
 void midi_in::set_port_name(const std::string& portName)
 {
   rtapi_->set_port_name(portName);
@@ -360,7 +361,7 @@ midi_out::midi_out(rtmidi::API api, const std::string& clientName)
   }
 
   // It should not be possible to get here because the preprocessor
-  // definition RTMIDI_DUMMY is automatically defined if no
+  // definition RTMIDI17_DUMMY is automatically defined if no
   // API-specific definitions are passed to the compiler. But just in
   // case something weird happens, we'll thrown an error.
   throw midi_exception{"RtMidiOut: no compiled API support found ... critical error!!"};
