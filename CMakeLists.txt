@@ -29,7 +29,7 @@ if(APPLE)
   ## CoreMIDI support ##
   if(NOT RTMIDI17_NO_COREMIDI)
     target_compile_definitions(RtMidi17 PUBLIC RTMIDI17_COREAUDIO)
-    target_sources(RtMidi17 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rtmidi17/detail/coreaudio.hpp)
+    target_sources(RtMidi17 PRIVATE rtmidi17/detail/coreaudio.hpp)
 
     find_library(COREMIDI_LIBRARY CoreMIDI)
     find_library(COREAUDIO_LIBRARY CoreAudio)
@@ -53,7 +53,7 @@ elseif(WIN32)
         UNICODE=1
         _UNICODE=1
     )
-    target_sources(RtMidi17 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rtmidi17/detail/winmm.hpp)
+    target_sources(RtMidi17 PRIVATE rtmidi17/detail/winmm.hpp)
     target_link_libraries(RtMidi17 PUBLIC WinMM)
   endif()
 
@@ -65,7 +65,7 @@ elseif(WIN32)
       target_include_directories(RtMidi17 PUBLIC "${CPPWINRT_PATH}")
       target_compile_definitions(RtMidi17 PUBLIC RTMIDI17_WINUWP)
       target_compile_options(RtMidi17 PUBLIC /ZW /EHsc /await)
-      target_sources(RtMidi17 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rtmidi17/detail/winuwp.hpp)
+      target_sources(RtMidi17 PRIVATE rtmidi17/detail/winuwp.hpp)
     endif()
   endif()
 
@@ -76,7 +76,7 @@ elseif(UNIX)
     if(ALSA_FOUND)
       target_compile_definitions(RtMidi17 PUBLIC RTMIDI17_ALSA)
       target_link_libraries(RtMidi17 PUBLIC ${ALSA_LIBRARIES})
-      target_sources(RtMidi17 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rtmidi17/detail/alsa.hpp)
+      target_sources(RtMidi17 PRIVATE rtmidi17/detail/alsa.hpp)
     endif()
   endif()
 endif()
@@ -99,12 +99,20 @@ if(NOT RTMIDI17_NO_JACK)
   if(HAS_JACK)
     target_compile_definitions(RtMidi17 PUBLIC RTMIDI17_JACK)
     target_sources(RtMidi17
-      PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/rtmidi17/detail/jack.hpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/rtmidi17/detail/semaphore.hpp
+      PRIVATE
+        rtmidi17/detail/jack.hpp
+        rtmidi17/detail/semaphore.hpp
     )
   endif()
 endif()
+
+### Install  ###
+install(TARGETS RtMidi17
+        EXPORT rtmidi17-exports
+        ARCHIVE DESTINATION lib/static)
+install(EXPORT rtmidi17-exports
+        DESTINATION lib/cmake/rtmidi17)
+export(EXPORT rtmidi17-exports)
 
 ### Examples ###
 add_executable(midiobserve tests/midiobserve.cpp)
@@ -130,3 +138,4 @@ target_link_libraries(qmidiin PRIVATE RtMidi17)
 
 add_executable(sysextest tests/sysextest.cpp)
 target_link_libraries(sysextest PRIVATE RtMidi17)
+
