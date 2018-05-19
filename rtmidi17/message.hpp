@@ -1,7 +1,12 @@
 #pragma once
+#if defined(MSC_VER)
+#define NOMINMAX 1
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include <cinttypes>
 #include <memory>
 #include <vector>
+#include <algorithm>
 
 #if __has_include(<boost/container/small_vector.hpp>) && !defined(RTMIDI17_NO_BOOST)
 #  include <boost/container/small_vector.hpp>
