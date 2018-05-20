@@ -39,8 +39,8 @@ public:
 
   size_t get_num_tracks() { return tracks.size(); }
 
-  void add_event(int tick, int track, std::shared_ptr<message> m);
-  void add_event(int track, std::shared_ptr<track_event> m);
+  void add_event(int tick, int track, message m);
+  void add_event(int track, track_event m);
 
   void add_track();
 

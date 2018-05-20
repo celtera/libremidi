@@ -43,12 +43,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace rtmidi
 {
 RTMIDI17_INLINE
-track_event * parseEvent(int tick, int track, uint8_t const *& dataStart, message_type lastEventTypeByte)
+track_event parseEvent(int tick, int track, uint8_t const *& dataStart, message_type lastEventTypeByte)
 {
   message_type type = (message_type) *dataStart++;
 
-  auto m = std::make_shared<message>();
-  track_event * event = new track_event(tick, track, m);
+  track_event event{tick, track, message{}};
 
   if (((uint8_t) type & 0xF) == 0xF)
   {
@@ -58,17 +57,17 @@ track_event * parseEvent(int tick, int track, uint8_t const *& dataStart, messag
       meta_event_type subtype = (meta_event_type) *dataStart++;
       int length = read_variable_length(dataStart);
 
-      event->m->bytes = midi_bytes(std::max(length, 3), (std::size_t) 0);
-      event->m->bytes[0] = (uint8_t) type;
-      event->m->bytes[1] = (uint8_t) subtype;
-      event->m->bytes[2] = length;
+      event.m.bytes = midi_bytes(std::max(length, 3), (std::size_t) 0);
+      event.m.bytes[0] = (uint8_t) type;
+      event.m.bytes[1] = (uint8_t) subtype;
+      event.m.bytes[2] = length;
 
       switch(subtype)
       {
         case meta_event_type::SEQUENCE_NUMBER:
         {
           if (length != 2) throw std::invalid_argument("Expected length for SEQUENCE_NUMBER event is 2");
-          read_bytes(event->m->bytes, dataStart, 2);
+          read_bytes(event.m.bytes, dataStart, 2);
           return event;
         }
         case meta_event_type::TEXT:
@@ -81,7 +80,7 @@ track_event * parseEvent(int tick, int track, uint8_t const *& dataStart, messag
         case meta_event_type::PATCH_NAME:
         case meta_event_type::DEVICE_NAME:
         {
-          read_bytes(event->m->bytes, dataStart, length);
+          read_bytes(event.m.bytes, dataStart, length);
           return event;
         }
 
@@ -93,38 +92,38 @@ track_event * parseEvent(int tick, int track, uint8_t const *& dataStart, messag
         case meta_event_type::TEMPO_CHANGE:
         {
           if (length != 3) throw std::invalid_argument("Expected length for TEMPO_CHANGE event is 3");
-          //event->m->bytes[3] = read_uint24_be(dataStart); // @dimitri TOFIX
-          read_bytes(event->m->bytes, dataStart, length);
+          //event.m.bytes[3] = read_uint24_be(dataStart); // @dimitri TOFIX
+          read_bytes(event.m.bytes, dataStart, length);
           return event;
         }
         case meta_event_type::SMPTE_OFFSET:
         {
           if (length != 5) throw std::invalid_argument("Expected length for SMPTE_OFFSET event is 5");
-          read_bytes(event->m->bytes, dataStart, length);
+          read_bytes(event.m.bytes, dataStart, length);
           return event;
         }
         case meta_event_type::TIME_SIGNATURE:
         {
           if (length != 4) throw std::invalid_argument("Expected length for TIME_SIGNATURE event is 4");
-          read_bytes(event->m->bytes, dataStart, length);
+          read_bytes(event.m.bytes, dataStart, length);
           return event;
         }
         case meta_event_type::KEY_SIGNATURE:
         {
           if (length != 2) throw std::invalid_argument("Expected length for KEY_SIGNATURE event is 2");
-          read_bytes(event->m->bytes, dataStart, length);
+          read_bytes(event.m.bytes, dataStart, length);
           return event;
         }
         case meta_event_type::PROPRIETARY:
         {
-          read_bytes(event->m->bytes, dataStart, length);
+          read_bytes(event.m.bytes, dataStart, length);
           return event;
         }
         case meta_event_type::UNKNOWN:
         default:
         {
           // Unknown events?
-          read_bytes(event->m->bytes, dataStart, length);
+          read_bytes(event.m.bytes, dataStart, length);
           return event;
         }
       }
@@ -133,14 +132,14 @@ track_event * parseEvent(int tick, int track, uint8_t const *& dataStart, messag
     else if (type == message_type::SYSTEM_EXCLUSIVE)
     {
       int length = read_variable_length(dataStart);
-      read_bytes(event->m->bytes, dataStart, length);
+      read_bytes(event.m.bytes, dataStart, length);
       return event;
     }
 
     else if (type == message_type::EOX)
     {
       int length = read_variable_length(dataStart);
-      read_bytes(event->m->bytes, dataStart, length);
+      read_bytes(event.m.bytes, dataStart, length);
       return event;
     }
     else
@@ -152,46 +151,46 @@ track_event * parseEvent(int tick, int track, uint8_t const *& dataStart, messag
   // Channel events
   else
   {
-    event->m->bytes = midi_bytes(3, 0);
-    event->m->bytes[0] = (uint8_t) type;
+    event.m.bytes = midi_bytes(3, 0);
+    event.m.bytes[0] = (uint8_t) type;
 
     // Running status...
     if (((uint8_t) type & 0x80) == 0)
     {
       // Reuse lastEventTypeByte as the event type.
       // eventTypeByte is actually the first parameter
-      event->m->bytes[0] = (uint8_t) type;
+      event.m.bytes[0] = (uint8_t) type;
       type = lastEventTypeByte;
     }
     else
     {
-      event->m->bytes[1] = uint8_t(*dataStart++);
+      event.m.bytes[1] = uint8_t(*dataStart++);
       lastEventTypeByte = type;
     }
 
     // Just in case
-    event->m->bytes[2] = 0xFF;
+    event.m.bytes[2] = 0xFF;
 
     switch (message_type((uint8_t) type & 0xF0))
     {
       case message_type::NOTE_OFF:
-        event->m->bytes[2] = uint8_t(*dataStart++);
+        event.m.bytes[2] = uint8_t(*dataStart++);
         return event;
       case message_type::NOTE_ON:
-        event->m->bytes[2] = uint8_t(*dataStart++);
+        event.m.bytes[2] = uint8_t(*dataStart++);
         return event;
       case message_type::POLY_PRESSURE:
-        event->m->bytes[2] = uint8_t(*dataStart++);
+        event.m.bytes[2] = uint8_t(*dataStart++);
         return event;
       case message_type::CONTROL_CHANGE:
-        event->m->bytes[2] = uint8_t(*dataStart++);
+        event.m.bytes[2] = uint8_t(*dataStart++);
         return event;
       case message_type::PROGRAM_CHANGE:
         return event;
       case message_type::AFTERTOUCH:
         return event;
       case message_type::PITCH_BEND:
-        event->m->bytes[2] = uint8_t(*dataStart++);
+        event.m.bytes[2] = uint8_t(*dataStart++);
         return event;
       default:
         throw std::runtime_error("Unrecognised MIDI event type");
@@ -279,11 +278,11 @@ void reader::parse_impl(const std::vector<uint8_t> & buffer)
         tickCount = tick;
       }
 
-      auto ev = std::shared_ptr<track_event>(parseEvent(tickCount, i, dataPtr, runningEvent));
+      track_event ev = parseEvent(tickCount, i, dataPtr, runningEvent);
 
-      if (ev->m->is_meta_event() == false)
+      if (ev.m.is_meta_event() == false)
       {
-        runningEvent = message_type(ev->m->bytes[0]);
+        runningEvent = message_type(ev.m.bytes[0]);
       }
 
       track.push_back(ev);
@@ -298,11 +297,11 @@ RTMIDI17_INLINE
 double reader::get_end_time()
 {
   double totalLength = 0;
-  for (const auto t : tracks)
+  for (const auto& t : tracks)
   {
     double localLength = 0;
-    for (const auto e : t)
-      localLength += e->tick;
+    for (const auto& e : t)
+      localLength += e.tick;
 
     if (localLength > totalLength)
       totalLength = localLength;

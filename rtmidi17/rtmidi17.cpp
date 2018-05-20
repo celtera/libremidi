@@ -73,7 +73,7 @@ static_assert(std::tuple_size_v<decltype(available_backends)> >= 1);
 template<typename F>
 auto for_all_backends(F&& f)
 {
-  std::apply([&](auto _, auto&&... x){ (f(x), ...) ; }, available_backends);
+  std::apply([&](auto&&... x){ (f(x), ...) ; }, available_backends);
 }
 
 template<typename F>
@@ -260,7 +260,7 @@ std::string midi_out::get_port_name(unsigned int portNumber)
 
 RTMIDI17_INLINE
 void midi_out::send_message(const std::vector<unsigned char>& message)
-{  
+{
   send_message(message.data(), message.size());
 }
 

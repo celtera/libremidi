@@ -133,16 +133,16 @@ void writer::add_track()
 }
 
 RTMIDI17_INLINE
-void writer::add_event(int tick, int track, std::shared_ptr<message> m)
+void writer::add_event(int tick, int track, message m)
 {
   if (track > tracks.size())
     throw std::out_of_range("track idx exceeds availble tracks");
 
-  tracks[track].push_back(std::make_shared<track_event>(tick, track, m));
+  tracks[track].push_back({tick, track, m});
 }
 
 RTMIDI17_INLINE
-void writer::add_event(int track, std::shared_ptr<track_event> m)
+void writer::add_event(int track, track_event m)
 {
   if (track > tracks.size())
     throw std::out_of_range("track idx exceeds availble tracks");
@@ -162,19 +162,19 @@ void writer::write(std::ostream & out)
 
   std::vector<uint8_t> trackRawData;
 
-  for (auto & event_list : tracks)
+  for (const auto & event_list : tracks)
   {
-    for (auto & event : event_list)
+    for (const auto & event : event_list)
     {
-      const auto msg = event->m;
+      const auto msg = event.m;
 
       // Suppress end-of-track meta messages (one will be added
       // automatically after all track data has been written).
-      if (msg->get_meta_event_type() == meta_event_type::END_OF_TRACK) continue;
+      if (msg.get_meta_event_type() == meta_event_type::END_OF_TRACK) continue;
 
-      util::write_variable_length(event->tick, trackRawData);
+      util::write_variable_length(event.tick, trackRawData);
 
-      if ((msg->get_message_type() == message_type::SYSTEM_EXCLUSIVE) || (event->m->get_message_type() == message_type::EOX))
+      if ((msg.get_message_type() == message_type::SYSTEM_EXCLUSIVE) || (event.m.get_message_type() == message_type::EOX))
       {
         // 0xf0 == Complete sysex message (0xf0 is part of the raw MIDI).
         // 0xf7 == Raw byte message (0xf7 not part of the raw MIDI).
@@ -183,22 +183,22 @@ void writer::write(std::ostream & out)
         // In other words, when creating a 0xf0 or 0xf7 MIDI message,
         // do not insert the VLV byte length yourself, as this code will
         // do it for you automatically.
-        trackRawData.emplace_back(msg->bytes[0]); // 0xf0 or 0xf7;
+        trackRawData.emplace_back(msg.bytes[0]); // 0xf0 or 0xf7;
 
-        util::write_variable_length(msg->size() - 1, trackRawData);
+        util::write_variable_length(msg.size() - 1, trackRawData);
 
-        for (size_t k = 1; k < msg->size(); k++)
+        for (size_t k = 1; k < msg.size(); k++)
         {
-          trackRawData.emplace_back((*msg)[k]);
+          trackRawData.emplace_back(msg[k]);
         }
       }
 
       else
       {
         // Non-sysex type of message, so just output the bytes of the message:
-        for (size_t k = 0; k < msg->size(); k++)
+        for (size_t k = 0; k < msg.size(); k++)
         {
-          trackRawData.emplace_back((*msg)[k]);
+          trackRawData.emplace_back(msg[k]);
         }
       }
     }

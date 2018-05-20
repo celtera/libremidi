@@ -327,31 +327,10 @@ struct meta_events
 
 struct track_event
 {
-  track_event(int tick, int track, std::shared_ptr<message> m)
-    : tick{tick}
-    , track{track}
-    , m{std::move(m)}
-  {
-
-  }
-
-  track_event(track_event && r)
-  {
-    *this = std::move(r);
-  }
-
-  track_event& operator=(track_event&& r)
-  {
-    tick = r.tick;
-    track = r.track;
-    m = std::move(r.m);
-    return *this;
-  }
-
   int tick = 0;
   int track = 0;
-  std::shared_ptr<message> m;
+  message m;
 };
 
-typedef std::vector<std::shared_ptr<track_event>> midi_track;
+typedef std::vector<track_event> midi_track;
 }
