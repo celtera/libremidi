@@ -23,7 +23,9 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#if !defined(RTMIDI17_HEADER_ONLY)
 #include <rtmidi17/writer.hpp>
+#endif
 #include <iostream>
 namespace rtmidi
 {

@@ -30,7 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace rtmidi
 {
-
 class writer
 {
 public:
@@ -44,13 +43,16 @@ public:
 
   void add_track();
 
-  void write(std::ostream & out);
+  void write(std::ostream& out);
 
-  std::vector<midi_track> & get_tracks() { return tracks; }
+  const std::vector<midi_track>& get_tracks() { return tracks; }
 
 private:
   std::vector<midi_track> tracks;
   const int ticksPerQuarterNote = 120;
 };
-
 }
+
+#if defined(RTMIDI17_HEADER_ONLY)
+#  include <rtmidi17/writer.cpp>
+#endif
