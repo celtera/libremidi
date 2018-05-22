@@ -102,15 +102,17 @@ if(NOT RTMIDI17_NO_JACK)
 endif()
 
 ### Install  ###
-install(TARGETS RtMidi17
-        EXPORT rtmidi17-exports
-        ARCHIVE DESTINATION lib/static
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        )
-install(EXPORT rtmidi17-exports
-        DESTINATION lib/cmake/rtmidi17)
-export(EXPORT rtmidi17-exports)
+if(NOT RTMIDI17_HEADER_ONLY)
+  install(TARGETS RtMidi17
+          EXPORT rtmidi17-exports
+          ARCHIVE DESTINATION lib/static
+          RUNTIME DESTINATION bin
+          LIBRARY DESTINATION lib
+          )
+  install(EXPORT rtmidi17-exports
+          DESTINATION lib/cmake/rtmidi17)
+  export(EXPORT rtmidi17-exports)
+endif()
 
 ### Examples ###
 add_executable(midiobserve tests/midiobserve.cpp)
