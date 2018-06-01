@@ -14,5 +14,5 @@ before_install:
 
 script:
   - docker exec mkdir /travis
-  - docker exec -w travis build cmake -G Ninja /RtMidi17
-  - docker exec -w travis build cmake --build .
+  - docker exec travis cd build & cmake -G Ninja /RtMidi17
+  - docker exec travis cd build & cmake --build .
