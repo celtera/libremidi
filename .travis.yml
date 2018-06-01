@@ -13,6 +13,6 @@ before_install:
   - docker exec build git clone https://github.com/jcelerier/RtMidi17
 
 script:
-  - docker exec mkdir /travis
-  - docker exec travis cd build & cmake -G Ninja /RtMidi17
-  - docker exec travis cd build & cmake --build .
+  - docker exec build mkdir /travis
+  - docker exec build cd travis & cmake -G Ninja /RtMidi17
+  - docker exec build cd travis & cmake --build .
