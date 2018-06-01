@@ -8,6 +8,7 @@ option(RTMIDI17_NO_WINUWP "Disable UWP back-end" OFF)
 option(RTMIDI17_NO_JACK "Disable JACK back-end" OFF)
 option(RTMIDI17_NO_ALSA "Disable ALSA back-end" OFF)
 
+include(CheckSymbolExists)
 ### Main library ###
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -88,6 +89,10 @@ if(NOT RTMIDI17_NO_JACK)
   if(JACK_LIBRARIES)
     set(HAS_JACK 1)
     target_link_libraries(RtMidi17 ${_public} ${JACK_LIBRARIES})
+    check_symbol_exists(jack_port_rename jack/jack.h JACK_HAS_PORT_RENAME)
+    if(JACK_HAS_PORT_RENAME)
+      target_compile_definitions(RtMidi17 ${_public} RTMIDI17_JACK_HAS_PORT_RENAME)
+    endif()
   else()
     find_path(WEAKJACK_PATH weakjack/weak_libjack.h)
     if(WEAKJACK_PATH)

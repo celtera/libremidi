@@ -125,7 +125,11 @@ public:
 
   void set_port_name(const std::string& portName) override
   {
+#if defined(RTMIDI17_JACK_HAS_PORT_RENAME)
     jack_port_rename(data.client, data.port, portName.c_str());
+#else
+    jack_port_set_name(data.port, portName.c_str());
+#endif
   }
 
   unsigned int get_port_count() override
