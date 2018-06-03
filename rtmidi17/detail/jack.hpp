@@ -95,12 +95,12 @@ public:
     jack_connect(data.client, name.c_str(), jack_port_name(data.port));
   }
 
-  void open_virtual_port(const std::string& portName) override
+  void open_virtual_port(std::string_view portName) override
   {
     connect();
     if (!data.port)
       data.port = jack_port_register(
-          data.client, portName.c_str(), JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
+          data.client, portName.data(), JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
 
     if (!data.port)
     {
@@ -116,19 +116,19 @@ public:
     data.port = nullptr;
   }
 
-  void set_client_name(const std::string& clientName) override
+  void set_client_name(std::string_view clientName) override
   {
     warning(
         "MidiInJack::setClientName: this function is not implemented for the "
         "UNIX_JACK API!");
   }
 
-  void set_port_name(const std::string& portName) override
+  void set_port_name(std::string_view portName) override
   {
 #if defined(RTMIDI17_JACK_HAS_PORT_RENAME)
     jack_port_rename(data.client, data.port, portName.c_str());
 #else
-    jack_port_set_name(data.port, portName.c_str());
+    jack_port_set_name(data.port, portName.data());
 #endif
   }
 
@@ -305,12 +305,12 @@ public:
     jack_connect(data.client, jack_port_name(data.port), name.c_str());
   }
 
-  void open_virtual_port(const std::string& portName) override
+  void open_virtual_port(std::string_view portName) override
   {
     connect();
     if (data.port == nullptr)
       data.port = jack_port_register(
-          data.client, portName.c_str(), JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+          data.client, portName.data(), JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
 
     if (data.port == nullptr)
     {
@@ -331,19 +331,19 @@ public:
     data.port = nullptr;
   }
 
-  void set_client_name(const std::string& clientName) override
+  void set_client_name(std::string_view clientName) override
   {
     warning(
         "MidiOutJack::setClientName: this function is not implemented for the "
         "UNIX_JACK API!");
   }
 
-  void set_port_name(const std::string& portName) override
+  void set_port_name(std::string_view portName) override
   {
 #if defined(RTMIDI17_JACK_HAS_PORT_RENAME)
     jack_port_rename(data.client, data.port, portName.c_str());
 #else
-    jack_port_set_name(data.port, portName.c_str());
+    jack_port_set_name(data.port, portName.data());
 #endif
   }
 

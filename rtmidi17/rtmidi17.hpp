@@ -468,9 +468,9 @@ public:
   */
   void set_error_callback(midi_error_callback errorCallback) noexcept;
 
-  void set_client_name(const std::string& clientName);
+  void set_client_name(std::string_view clientName);
 
-  void set_port_name(const std::string& portName);
+  void set_port_name(std::string_view portName);
 
 private:
   std::unique_ptr<class midi_out_api> rtapi_;

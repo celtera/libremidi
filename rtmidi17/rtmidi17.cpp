@@ -374,13 +374,13 @@ midi_out::midi_out(rtmidi::API api, const std::string& clientName)
 }
 
 RTMIDI17_INLINE
-void midi_out::set_client_name(const std::string& clientName)
+void midi_out::set_client_name(std::string_view clientName)
 {
   rtapi_->set_client_name(clientName);
 }
 
 RTMIDI17_INLINE
-void midi_out::set_port_name(const std::string& portName)
+void midi_out::set_port_name(std::string_view portName)
 {
   rtapi_->set_port_name(portName);
 }

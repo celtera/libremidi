@@ -30,10 +30,10 @@ public:
 
   virtual rtmidi::API get_current_api() const noexcept = 0;
   virtual void open_port(unsigned int portNumber, const std::string& portName) = 0;
-  virtual void open_virtual_port(const std::string&) = 0;
+  virtual void open_virtual_port(std::string_view) = 0;
   virtual void close_port() = 0;
-  virtual void set_client_name(const std::string&) = 0;
-  virtual void set_port_name(const std::string&) = 0;
+  virtual void set_client_name(std::string_view) = 0;
+  virtual void set_port_name(std::string_view) = 0;
 
   virtual unsigned int get_port_count() = 0;
   virtual std::string get_port_name(unsigned int portNumber) = 0;

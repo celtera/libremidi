@@ -448,7 +448,7 @@ public:
 
     connected_ = true;
   }
-  void open_virtual_port(const std::string& portName) override
+  void open_virtual_port(std::string_view portName) override
   {
     if (data.vport < 0)
     {
@@ -464,7 +464,7 @@ public:
       snd_seq_port_info_set_timestamp_real(pinfo, 1);
       snd_seq_port_info_set_timestamp_queue(pinfo, data.queue_id);
 #endif
-      snd_seq_port_info_set_name(pinfo, portName.c_str());
+      snd_seq_port_info_set_name(pinfo, portName.data());
       data.vport = snd_seq_create_port(data.seq, pinfo);
 
       if (data.vport < 0)
@@ -538,16 +538,16 @@ public:
         pthread_join(data.thread, nullptr);
     }
   }
-  void set_client_name(const std::string& clientName) override
+  void set_client_name(std::string_view clientName) override
   {
-    snd_seq_set_client_name(data.seq, clientName.c_str());
+    snd_seq_set_client_name(data.seq, clientName.data());
   }
-  void set_port_name(const std::string& portName) override
+  void set_port_name(std::string_view portName) override
   {
     snd_seq_port_info_t* pinfo;
     snd_seq_port_info_alloca(&pinfo);
     snd_seq_get_port_info(data.seq, data.vport, pinfo);
-    snd_seq_port_info_set_name(pinfo, portName.c_str());
+    snd_seq_port_info_set_name(pinfo, portName.data());
     snd_seq_set_port_info(data.seq, data.vport, pinfo);
   }
   unsigned int get_port_count() override
@@ -934,12 +934,12 @@ public:
     connected_ = true;
   }
 
-  void open_virtual_port(const std::string& portName) override
+  void open_virtual_port(std::string_view portName) override
   {
     if (data.vport < 0)
     {
       data.vport = snd_seq_create_simple_port(
-          data.seq, portName.c_str(), SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
+          data.seq, portName.data(), SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
           SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
 
       if (data.vport < 0)
@@ -960,17 +960,17 @@ public:
     }
   }
 
-  void set_client_name(const std::string& clientName) override
+  void set_client_name(std::string_view clientName) override
   {
-    snd_seq_set_client_name(data.seq, clientName.c_str());
+    snd_seq_set_client_name(data.seq, clientName.data());
   }
 
-  void set_port_name(const std::string& portName) override
+  void set_port_name(std::string_view portName) override
   {
     snd_seq_port_info_t* pinfo;
     snd_seq_port_info_alloca(&pinfo);
     snd_seq_get_port_info(data.seq, data.vport, pinfo);
-    snd_seq_port_info_set_name(pinfo, portName.c_str());
+    snd_seq_port_info_set_name(pinfo, portName.data());
     snd_seq_set_port_info(data.seq, data.vport, pinfo);
   }
 
