@@ -259,13 +259,16 @@ public:
 
   //! Open a MIDI input connection given by enumeration number.
   /*!
-    \param portNumber An optional port number greater than 0 can be specified.
+    \param portNumber A port number greater than 0 can be specified.
                       Otherwise, the default or first port found is opened.
-    \param portName An optional name for the application port that is used to
+    \param portName A name for the application port that is used to
     connect to portId can be specified.
   */
-  void open_port(
-      unsigned int portNumber, std::string_view portName);
+  void open_port(unsigned int portNumber, std::string_view portName);
+  void open_port()
+  { open_port(0, "RtMidi17 Input"); }
+  void open_port(unsigned int port)
+  { open_port(port, "RtMidi17 Input"); }
 
   //! Create a virtual input port, with optional name, to allow software
   //! connections (OS X, JACK and ALSA only).
@@ -407,6 +410,10 @@ public:
   */
   void open_port(
       unsigned int portNumber, std::string_view portName);
+  void open_port()
+  { open_port(0, "RtMidi17 Output"); }
+  void open_port(unsigned int port)
+  { open_port(port, "RtMidi17 Output"); }
 
   //! Close an open MIDI connection (if one exists).
   void close_port();
