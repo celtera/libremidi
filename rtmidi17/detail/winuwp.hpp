@@ -32,7 +32,7 @@ class midi_in_winuwp final : public midi_in_default<midi_in_winuwp>
 {
   public:
     static const constexpr auto backend = "UWP";
-    midi_in_winuwp(const std::string& , unsigned int queueSizeLimit)
+    midi_in_winuwp(std::string_view, unsigned int queueSizeLimit)
       : midi_in_default{nullptr, queueSizeLimit}
     {
       winrt_init();
@@ -54,7 +54,7 @@ class midi_in_winuwp final : public midi_in_default<midi_in_winuwp>
       return rtmidi::API::WINDOWS_UWP;
     }
 
-    void open_port(unsigned int portNumber, const std::string&) override
+    void open_port(unsigned int portNumber, std::string_view) override
     {
       using namespace winrt;
       using namespace winrt::Windows::Foundation;
@@ -160,7 +160,7 @@ class midi_out_winuwp final : public midi_out_default<midi_out_winuwp>
 {
   public:
     static const constexpr auto backend = "UWP";
-    midi_out_winuwp(const std::string&)
+    midi_out_winuwp(std::string_view)
     {
       winrt_init();
     }
@@ -175,7 +175,7 @@ class midi_out_winuwp final : public midi_out_default<midi_out_winuwp>
       return rtmidi::API::WINDOWS_UWP;
     }
 
-    void open_port(unsigned int portNumber, const std::string& ) override
+    void open_port(unsigned int portNumber, std::string_view) override
     {
       using namespace winrt;
       using namespace winrt::Windows::Foundation;

@@ -50,7 +50,7 @@ public:
 class midi_in_jack final : public midi_in_api
 {
 public:
-  midi_in_jack(const std::string& cname, unsigned int queueSizeLimit)
+  midi_in_jack(std::string_view cname, unsigned int queueSizeLimit)
     : midi_in_api{&data, queueSizeLimit}
   {
     // TODO do like the others
@@ -75,14 +75,14 @@ public:
     return rtmidi::API::UNIX_JACK;
   }
 
-  void open_port(unsigned int portNumber, const std::string& portName) override
+  void open_port(unsigned int portNumber, std::string_view portName) override
   {
     connect();
 
     // Creating new port
     if (data.port == nullptr)
       data.port = jack_port_register(
-          data.client, portName.c_str(), JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
+          data.client, portName.data(), JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
 
     if (data.port == nullptr)
     {
@@ -258,7 +258,7 @@ private:
 class midi_out_jack final : public midi_out_api
 {
 public:
-  midi_out_jack(const std::string& cname)
+  midi_out_jack(std::string_view cname)
   {
     data.port = nullptr;
     data.client = nullptr;
@@ -285,14 +285,14 @@ public:
     return rtmidi::API::UNIX_JACK;
   }
 
-  void open_port(unsigned int portNumber, const std::string& portName) override
+  void open_port(unsigned int portNumber, std::string_view portName) override
   {
     connect();
 
     // Creating new port
     if (!data.port)
       data.port = jack_port_register(
-          data.client, portName.c_str(), JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+          data.client, portName.data(), JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
 
     if (!data.port)
     {

@@ -20,7 +20,7 @@ public:
 class midi_in_dummy final : public midi_in_api
 {
 public:
-  midi_in_dummy(const std::string& /*clientName*/, unsigned int queueSizeLimit)
+  midi_in_dummy(std::string_view /*clientName*/, unsigned int queueSizeLimit)
       : midi_in_api{nullptr, queueSizeLimit}
   {
     warning("midi_in_dummy: This class provides no functionality.");
@@ -31,11 +31,11 @@ public:
     return rtmidi::API::DUMMY;
   }
 
-  void open_port(unsigned int /*portNumber*/, const std::string& /*portName*/) override
+  void open_port(unsigned int /*portNumber*/, std::string_view /*portName*/) override
   {
   }
 
-  void open_virtual_port(const std::string& /*portName*/) override
+  void open_virtual_port(std::string_view /*portName*/) override
   {
   }
 
@@ -43,11 +43,11 @@ public:
   {
   }
 
-  void set_client_name(const std::string& /*clientName*/) override
+  void set_client_name(std::string_view /*clientName*/) override
   {
   }
 
-  void set_port_name(const std::string& /*portName*/) override
+  void set_port_name(std::string_view /*portName*/) override
   {
   }
 
@@ -66,7 +66,7 @@ public:
 class midi_out_dummy final : public midi_out_api
 {
 public:
-  explicit midi_out_dummy(const std::string& /*clientName*/)
+  explicit midi_out_dummy(std::string_view /*clientName*/)
   {
     warning("midi_out_dummy: This class provides no functionality.");
   }
@@ -76,19 +76,19 @@ public:
     return rtmidi::API::DUMMY;
   }
 
-  void open_port(unsigned int /*portNumber*/, const std::string& /*portName*/) override
+  void open_port(unsigned int /*portNumber*/, std::string_view /*portName*/) override
   {
   }
-  void open_virtual_port(const std::string& /*portName*/) override
+  void open_virtual_port(std::string_view /*portName*/) override
   {
   }
   void close_port() override
   {
   }
-  void set_client_name(const std::string& /*clientName*/) override
+  void set_client_name(std::string_view /*clientName*/) override
   {
   }
-  void set_port_name(const std::string& /*portName*/) override
+  void set_port_name(std::string_view /*portName*/) override
   {
   }
   unsigned int get_port_count() override

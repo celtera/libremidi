@@ -248,7 +248,7 @@ public:
   */
   midi_in(
       rtmidi::API api = API::UNSPECIFIED,
-      const std::string& clientName = "RtMidi Input Client",
+      std::string_view clientName = "RtMidi Input Client",
       unsigned int queueSizeLimit = 100);
 
   //! If a MIDI connection is still open, it will be closed by the destructor.
@@ -265,7 +265,7 @@ public:
     connect to portId can be specified.
   */
   void open_port(
-      unsigned int portNumber = 0, const std::string& portName = std::string("RtMidi Input"));
+      unsigned int portNumber, std::string_view portName);
 
   //! Create a virtual input port, with optional name, to allow software
   //! connections (OS X, JACK and ALSA only).
@@ -278,7 +278,7 @@ public:
     \param portName An optional name for the application port that is
                     used to connect to portId can be specified.
   */
-  void open_virtual_port(const std::string& portName = std::string("RtMidi Input"));
+  void open_virtual_port(std::string_view portName);
 
   //! Set a callback function to be invoked for incoming MIDI messages.
   /*!
@@ -354,9 +354,9 @@ public:
   */
   void set_error_callback(midi_error_callback errorCallback);
 
-  void set_client_name(const std::string& clientName);
+  void set_client_name(std::string_view clientName);
 
-  void set_port_name(const std::string& portName);
+  void set_port_name(std::string_view portName);
 
 private:
   std::unique_ptr<class midi_in_api> rtapi_;
@@ -390,7 +390,7 @@ public:
     JACK (OS-X).
   */
   midi_out(
-      rtmidi::API api = API::UNSPECIFIED, const std::string& clientName = "RtMidi Output Client");
+      rtmidi::API api, std::string_view clientName);
 
   //! The destructor closes any open MIDI connections.
   ~midi_out();
@@ -406,7 +406,7 @@ public:
       the port connection.
   */
   void open_port(
-      unsigned int portNumber = 0, const std::string& portName = std::string("RtMidi Output"));
+      unsigned int portNumber, std::string_view portName);
 
   //! Close an open MIDI connection (if one exists).
   void close_port();
@@ -428,7 +428,7 @@ public:
       An exception is thrown if an error occurs while attempting to
       create the virtual port.
   */
-  void open_virtual_port(const std::string& portName = std::string("RtMidi Output"));
+  void open_virtual_port(std::string_view portName);
 
   //! Return the number of available MIDI output ports.
   unsigned int get_port_count();

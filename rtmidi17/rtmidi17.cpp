@@ -115,7 +115,7 @@ open_midi_observer(rtmidi::API api, observer::callbacks&& cb)
 }
 
 [[nodiscard]] RTMIDI17_INLINE std::unique_ptr<midi_in_api> open_midi_in(
-        rtmidi::API api, const std::string& clientName, unsigned int queueSizeLimit)
+        rtmidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
 {
   std::unique_ptr<midi_in_api> ptr;
 
@@ -126,7 +126,7 @@ open_midi_observer(rtmidi::API api, observer::callbacks&& cb)
 }
 
 [[nodiscard]] RTMIDI17_INLINE std::unique_ptr<midi_out_api>
-open_midi_out(rtmidi::API api, const std::string& clientName) {
+open_midi_out(rtmidi::API api, std::string_view clientName) {
 
   std::unique_ptr<midi_out_api> ptr;
 
@@ -151,13 +151,13 @@ rtmidi::API midi_in::get_current_api() const noexcept
 }
 
 RTMIDI17_INLINE
-void midi_in::open_port(unsigned int portNumber, const std::string& portName)
+void midi_in::open_port(unsigned int portNumber, std::string_view portName)
 {
   rtapi_->open_port(portNumber, portName);
 }
 
 RTMIDI17_INLINE
-void midi_in::open_virtual_port(const std::string& portName)
+void midi_in::open_virtual_port(std::string_view portName)
 {
   rtapi_->open_virtual_port(portName);
 }
@@ -223,13 +223,13 @@ rtmidi::API midi_out::get_current_api() noexcept
 }
 
 RTMIDI17_INLINE
-void midi_out::open_port(unsigned int portNumber, const std::string& portName)
+void midi_out::open_port(unsigned int portNumber, std::string_view portName)
 {
   rtapi_->open_port(portNumber, portName);
 }
 
 RTMIDI17_INLINE
-void midi_out::open_virtual_port(const std::string& portName)
+void midi_out::open_virtual_port(std::string_view portName)
 {
   rtapi_->open_virtual_port(portName);
 }
@@ -289,7 +289,7 @@ std::string get_version() noexcept
 }
 
 RTMIDI17_INLINE
-midi_in::midi_in(rtmidi::API api, const std::string& clientName, unsigned int queueSizeLimit)
+midi_in::midi_in(rtmidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
 {
   if (api != rtmidi::API::UNSPECIFIED)
   {
@@ -322,19 +322,19 @@ midi_in::midi_in(rtmidi::API api, const std::string& clientName, unsigned int qu
 }
 
 RTMIDI17_INLINE
-void midi_in::set_client_name(const std::string& clientName)
+void midi_in::set_client_name(std::string_view clientName)
 {
   rtapi_->set_client_name(clientName);
 }
 
 RTMIDI17_INLINE
-void midi_in::set_port_name(const std::string& portName)
+void midi_in::set_port_name(std::string_view portName)
 {
   rtapi_->set_port_name(portName);
 }
 
 RTMIDI17_INLINE
-midi_out::midi_out(rtmidi::API api, const std::string& clientName)
+midi_out::midi_out(rtmidi::API api, std::string_view clientName)
 {
   if (api != rtmidi::API::UNSPECIFIED)
   {

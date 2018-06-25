@@ -187,7 +187,7 @@ public:
 class midi_in_core final : public midi_in_api
 {
 public:
-  midi_in_core(const std::string& clientName, unsigned int queueSizeLimit)
+  midi_in_core(std::string_view clientName, unsigned int queueSizeLimit)
       : midi_in_api(&data, queueSizeLimit)
   {
     // Set up our client.
@@ -223,7 +223,7 @@ public:
   {
     return rtmidi::API::MACOSX_CORE;
   }
-  void open_port(unsigned int portNumber, const std::string& portName) override
+  void open_port(unsigned int portNumber, std::string_view portName) override
   {
     if (connected_)
     {
@@ -286,7 +286,7 @@ public:
 
     connected_ = true;
   }
-  void open_virtual_port(const std::string& portName) override
+  void open_virtual_port(std::string_view portName) override
   {
     // Create a virtual MIDI input destination.
     MIDIEndpointRef endpoint;
@@ -323,13 +323,13 @@ public:
 
     connected_ = false;
   }
-  void set_client_name(const std::string& clientName) override
+  void set_client_name(std::string_view clientName) override
   {
     warning(
         "MidiInCore::setClientName: this function is not implemented for the "
         "MACOSX_CORE API!");
   }
-  void set_port_name(const std::string& portName) override
+  void set_port_name(std::string_view portName) override
   {
     warning(
         "MidiInCore::setPortName: this function is not implemented for the "
@@ -556,7 +556,7 @@ private:
 class midi_out_core final : public midi_out_api
 {
 public:
-  midi_out_core(const std::string& clientName)
+  midi_out_core(std::string_view clientName)
   {
     // Set up our client.
     MIDIClientRef client;
@@ -590,7 +590,7 @@ public:
   {
     return rtmidi::API::MACOSX_CORE;
   }
-  void open_port(unsigned int portNumber, const std::string& portName) override
+  void open_port(unsigned int portNumber, std::string_view portName) override
   {
     if (connected_)
     {
@@ -643,7 +643,7 @@ public:
     data.destinationId = destination;
     connected_ = true;
   }
-  void open_virtual_port(const std::string& portName) override
+  void open_virtual_port(std::string_view portName) override
   {
     if (data.endpoint)
     {
@@ -685,14 +685,14 @@ public:
 
     connected_ = false;
   }
-  void set_client_name(const std::string& clientName) override
+  void set_client_name(std::string_view clientName) override
   {
     warning(
         "MidiOutCore::set_client_name: this function is not implemented for "
         "the "
         "MACOSX_CORE API!");
   }
-  void set_port_name(const std::string& portName) override
+  void set_port_name(std::string_view portName) override
   {
     warning(
         "MidiOutCore::set_port_name: this function is not implemented for the "

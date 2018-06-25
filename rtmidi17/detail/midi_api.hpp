@@ -29,7 +29,7 @@ public:
   midi_api& operator=(midi_api&&) = delete;
 
   virtual rtmidi::API get_current_api() const noexcept = 0;
-  virtual void open_port(unsigned int portNumber, const std::string& portName) = 0;
+  virtual void open_port(unsigned int portNumber, std::string_view portName) = 0;
   virtual void open_virtual_port(std::string_view) = 0;
   virtual void close_port() = 0;
   virtual void set_client_name(std::string_view) = 0;
@@ -237,16 +237,16 @@ template<typename T>
 class midi_in_default : public midi_in_api
 {
     using midi_in_api::midi_in_api;
-void open_virtual_port(const std::string&) override
+void open_virtual_port(std::string_view) override
 {
   using namespace std::literals;
   warning(T::backend + " in: open_virtual_port unsupported"s);
 }
-void set_client_name(const std::string&) override
+void set_client_name(std::string_view) override
 {
   using namespace std::literals;
   warning(T::backend + " in: set_client_name unsupported"s); }
-void set_port_name(const std::string&)  override
+void set_port_name(std::string_view)  override
 {
   using namespace std::literals;
   warning(T::backend + " in: set_port_name unsupported"s); }
@@ -256,15 +256,15 @@ template<typename T>
 class midi_out_default : public midi_out_api
 {
     using midi_out_api::midi_out_api;
-void open_virtual_port(const std::string&) override
+void open_virtual_port(std::string_view) override
 {
   using namespace std::literals;
   warning(T::backend + " out: open_virtual_port unsupported"s); }
-void set_client_name(const std::string&) override
+void set_client_name(std::string_view) override
 {
   using namespace std::literals;
   warning(T::backend + " out: set_client_name unsupported"s); }
-void set_port_name(const std::string&)  override
+void set_port_name(std::string_view)  override
 {
   using namespace std::literals;
   warning(T::backend + " out: set_port_name unsupported"s); }

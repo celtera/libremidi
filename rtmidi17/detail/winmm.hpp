@@ -89,7 +89,7 @@ class midi_in_winmm final : public midi_in_default<midi_in_winmm>
 {
   public:
     static const constexpr auto backend = "WinMM";
-    midi_in_winmm(const std::string&, unsigned int queueSizeLimit)
+    midi_in_winmm(std::string_view, unsigned int queueSizeLimit)
       : midi_in_default{&data, queueSizeLimit}
     {
       // We'll issue a warning here if no devices are available but not
@@ -119,7 +119,7 @@ class midi_in_winmm final : public midi_in_default<midi_in_winmm>
       return rtmidi::API::WINDOWS_MM;
     }
 
-    void open_port(unsigned int portNumber, const std::string& ) override
+    void open_port(unsigned int portNumber, std::string_view) override
     {
       if (connected_)
       {
@@ -389,7 +389,7 @@ class midi_out_winmm final : public midi_out_default<midi_out_winmm>
 {
   public:
     static const constexpr auto backend = "WinMM";
-    midi_out_winmm(const std::string&)
+    midi_out_winmm(std::string_view)
     {
       // We'll issue a warning here if no devices are available but not
       // throw an error since the user can plug something in later.
@@ -412,7 +412,7 @@ class midi_out_winmm final : public midi_out_default<midi_out_winmm>
       return rtmidi::API::WINDOWS_MM;
     }
 
-    void open_port(unsigned int portNumber, const std::string& portName) override
+    void open_port(unsigned int portNumber, std::string_view portName) override
     {
       if (connected_)
       {
