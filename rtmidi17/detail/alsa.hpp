@@ -276,7 +276,7 @@ public:
     }
 
     // Set client name.
-    snd_seq_set_client_name(seq, clientName.c_str());
+    snd_seq_set_client_name(seq, clientName.data());
 
     // Save our api-specific connection information.
     data.seq = seq;
@@ -387,7 +387,7 @@ public:
       snd_seq_port_info_set_timestamp_real(pinfo, 1);
       snd_seq_port_info_set_timestamp_queue(pinfo, data.queue_id);
 #endif
-      snd_seq_port_info_set_name(pinfo, portName.c_str());
+      snd_seq_port_info_set_name(pinfo, portName.data());
       data.vport = snd_seq_create_port(data.seq, pinfo);
 
       if (data.vport < 0)
@@ -830,7 +830,7 @@ public:
     }
 
     // Set client name.
-    snd_seq_set_client_name(seq, clientName.c_str());
+    snd_seq_set_client_name(seq, clientName.data());
 
     // Save our api-specific connection information.
     data.seq = seq;
@@ -902,7 +902,7 @@ public:
     if (data.vport < 0)
     {
       data.vport = snd_seq_create_simple_port(
-          data.seq, portName.c_str(), SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
+          data.seq, portName.data(), SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
           SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
       if (data.vport < 0)
       {
