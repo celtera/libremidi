@@ -261,7 +261,7 @@ private:
 class midi_in_alsa final : public midi_in_api
 {
 public:
-  midi_in_alsa(const std::string& clientName, unsigned int queueSizeLimit)
+  midi_in_alsa(std::string_view clientName, unsigned int queueSizeLimit)
       : midi_in_api{&data, queueSizeLimit}
   {
     // Set up the ALSA sequencer client.
@@ -338,7 +338,7 @@ public:
     return rtmidi::API::LINUX_ALSA;
   }
 
-  void open_port(unsigned int portNumber, const std::string& portName) override
+  void open_port(unsigned int portNumber, std::string_view portName) override
   {
     if (connected_)
     {
@@ -816,7 +816,7 @@ private:
 class midi_out_alsa final : public midi_out_api
 {
 public:
-  midi_out_alsa(const std::string& clientName)
+  midi_out_alsa(std::string_view clientName)
   {
     // Set up the ALSA sequencer client.
     snd_seq_t* seq{};
@@ -867,7 +867,7 @@ public:
     return rtmidi::API::LINUX_ALSA;
   }
 
-  void open_port(unsigned int portNumber, const std::string& portName) override
+  void open_port(unsigned int portNumber, std::string_view portName) override
   {
     if (connected_)
     {
