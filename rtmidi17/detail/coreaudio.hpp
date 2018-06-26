@@ -193,7 +193,7 @@ public:
     // Set up our client.
     MIDIClientRef client{};
     CFStringRef name
-        = CFStringCreateWithCString(nullptr, clientName.c_str(), kCFStringEncodingASCII);
+        = CFStringCreateWithCString(nullptr, clientName.data(), kCFStringEncodingASCII);
     OSStatus result = MIDIClientCreate(name, nullptr, nullptr, &client);
     if (result != noErr)
     {
@@ -249,7 +249,7 @@ public:
 
     MIDIPortRef port;
     CFStringRef portNameRef
-        = CFStringCreateWithCString(nullptr, portName.c_str(), kCFStringEncodingASCII);
+        = CFStringCreateWithCString(nullptr, portName.data(), kCFStringEncodingASCII);
     OSStatus result = MIDIInputPortCreate(
         data.client, portNameRef, midiInputCallback, (void*)&inputData_, &port);
     CFRelease(portNameRef);
@@ -291,7 +291,7 @@ public:
     // Create a virtual MIDI input destination.
     MIDIEndpointRef endpoint;
     CFStringRef portNameRef
-        = CFStringCreateWithCString(nullptr, portName.c_str(), kCFStringEncodingASCII);
+        = CFStringCreateWithCString(nullptr, portName.data(), kCFStringEncodingASCII);
     OSStatus result = MIDIDestinationCreate(
         data.client, portNameRef, midiInputCallback, (void*)&inputData_, &endpoint);
     CFRelease(portNameRef);
@@ -561,7 +561,7 @@ public:
     // Set up our client.
     MIDIClientRef client;
     CFStringRef name
-        = CFStringCreateWithCString(nullptr, clientName.c_str(), kCFStringEncodingASCII);
+        = CFStringCreateWithCString(nullptr, clientName.data(), kCFStringEncodingASCII);
     OSStatus result = MIDIClientCreate(name, nullptr, nullptr, &client);
     if (result != noErr)
     {
@@ -616,7 +616,7 @@ public:
 
     MIDIPortRef port;
     CFStringRef portNameRef
-        = CFStringCreateWithCString(nullptr, portName.c_str(), kCFStringEncodingASCII);
+        = CFStringCreateWithCString(nullptr, portName.data(), kCFStringEncodingASCII);
     OSStatus result = MIDIOutputPortCreate(data.client, portNameRef, &port);
     CFRelease(portNameRef);
     if (result != noErr)
@@ -656,7 +656,7 @@ public:
     // Create a virtual MIDI output source.
     MIDIEndpointRef endpoint;
     CFStringRef portNameRef
-        = CFStringCreateWithCString(nullptr, portName.c_str(), kCFStringEncodingASCII);
+        = CFStringCreateWithCString(nullptr, portName.data(), kCFStringEncodingASCII);
     OSStatus result = MIDISourceCreate(data.client, portNameRef, &endpoint);
     CFRelease(portNameRef);
 
