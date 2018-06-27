@@ -73,9 +73,6 @@ class midi_in_winuwp final : public midi_in_default<midi_in_winuwp>
         auto p = devs.GetAt(portNumber);
         if(p)
         {
-          std::cerr << "yeah "
-                    << winrt::to_string(p.Id()) << " => "
-                    << winrt::to_string(p.Name()) << std::endl;
           port_ = MidiInPort::FromIdAsync(p.Id()).get();
           if(port_)
           {
@@ -89,11 +86,6 @@ class midi_in_winuwp final : public midi_in_default<midi_in_winuwp>
               reader.ReadBytes(bs);
 
               double t = msg.Timestamp().count();
-              std::cerr
-                  << bs[0] << " "
-                           << bs[1] << " "
-                           << bs[2] << " "
-                           << std::endl;
 
               rtmidi::message m{{bs.begin(), bs.end()}, t};
               if(inputData_.userCallback)
@@ -194,9 +186,6 @@ class midi_out_winuwp final : public midi_out_default<midi_out_winuwp>
         auto p = devs.GetAt(portNumber);
         if(p)
         {
-          std::cerr << "yeah "
-                    << winrt::to_string(p.Id()) << " => "
-                    << winrt::to_string(p.Name()) << std::endl;
           port_ = MidiOutPort::FromIdAsync(p.Id()).get();
         }
       }
