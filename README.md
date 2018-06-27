@@ -1,5 +1,7 @@
 # RtMidi17
 
+[![Build Status](https://travis-ci.com/jcelerier/RtMidi17.svg?branch=master)](https://travis-ci.com/jcelerier/RtMidi17)
+
 This is a fork based on two libraries: 
 
 * [RtMidi](https://github.com/theSTK/RtMidi)
@@ -17,7 +19,10 @@ this directly modernizes the RtMidi codebase with new C++ features and improveme
 * Simplification of exceptions.
 * The library can be used header-only with the define `RTMIDI17_HEADER_ONLY`.
 * Passes clean through clang-tidy, clang analyzer, GCC -Wall -Wextra, etc etc.
+* JACK support on Windows.
+* JACK support through weakjack to allow runtime loading of JACK.
 
 ### To-dos: 
 * Work-in-progress support for notification on device connection / disconnection (currently ALSA only)
-* UWP MIDI support on Windows
+* Work-in-progress support for UWP MIDI support on Windows
+
