@@ -282,7 +282,7 @@ public:
                     used to connect to portId can be specified.
   */
   void open_virtual_port(std::string_view portName);
-
+  void open_virtual_port() { open_virtual_port("RtMidi17 virtual port"); }
   //! Set a callback function to be invoked for incoming MIDI messages.
   /*!
     The callback function will be called whenever an incoming MIDI
@@ -395,6 +395,8 @@ public:
   midi_out(
       rtmidi::API api, std::string_view clientName);
 
+  midi_out(): midi_out{rtmidi::API::UNSPECIFIED, "RtMidi client"} { }
+
   //! The destructor closes any open MIDI connections.
   ~midi_out();
 
@@ -436,6 +438,7 @@ public:
       create the virtual port.
   */
   void open_virtual_port(std::string_view portName);
+  void open_virtual_port() { open_virtual_port("RtMidi17 virtual port"); }
 
   //! Return the number of available MIDI output ports.
   unsigned int get_port_count();
