@@ -594,7 +594,6 @@ private:
     auto& data = *static_cast<midi_in_api::in_data*>(ptr);
     auto& apidata = *static_cast<alsa_data*>(data.apiData);
 
-    long nBytes{};
     double time{};
     bool continueSysex = false;
     bool doDecode = false;
@@ -721,7 +720,7 @@ private:
 
       if (doDecode)
       {
-        nBytes = snd_midi_event_decode(apidata.coder, buffer.data(), apidata.bufferSize, ev);
+        uint64_t nBytes = snd_midi_event_decode(apidata.coder, buffer.data(), apidata.bufferSize, ev);
         if (nBytes > 0)
         {
           // The ALSA sequencer has a maximum buffer size for MIDI sysex
