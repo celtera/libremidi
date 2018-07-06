@@ -64,6 +64,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #if defined(RTMIDI17_EXPORTS)
