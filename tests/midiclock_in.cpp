@@ -19,7 +19,7 @@
 // an exception.  It offers the user a choice of MIDI ports to open.
 // It returns false if there are no ports available.
 template <typename RT>
-bool choosePort(RT& rtmidi, std::string dir)
+bool choosePort(RT& rtmidi, const std::string& dir)
 {
   std::string portName;
   auto port = 0U;
@@ -61,7 +61,7 @@ int main(int, const char* argv[]) try
   rtmidi::midi_in midiin;
 
   // Call function to select port.
-  if (choosePort(midiin, "input") == false)
+  if (!choosePort(midiin, "input"))
     return 0;
 
   // Set our callback function.  This should be done immediately after

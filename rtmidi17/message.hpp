@@ -74,6 +74,8 @@ enum class meta_event_type : uint8_t
   CUE = 0x07,
   PATCH_NAME = 0x08,
   DEVICE_NAME = 0x09,
+  CHANNEL_PREFIX = 0x20,
+  MIDI_PORT = 0x21,
   END_OF_TRACK = 0x2F,
   TEMPO_CHANGE = 0x51,
   SMPTE_OFFSET = 0x54,
