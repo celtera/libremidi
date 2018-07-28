@@ -12,7 +12,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <rtmidi17/rtmidi17.hpp>
-#include <signal.h>
+#include <csignal>
 #include <thread>
 
 [[noreturn]] static void usage()

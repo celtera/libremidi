@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 #include <rtmidi17/message.hpp>
 #include <algorithm>
+#include <iostream>
 
 // File Parsing Validation Todo:
 // ==============================
@@ -176,6 +177,18 @@ track_event parseEvent(int tick, int track, uint8_t const *& dataStart, message_
           read_bytes(event.m.bytes, dataStart, length);
           return event;
         }
+        case meta_event_type::CHANNEL_PREFIX:
+        {
+          if (length != 1) throw std::invalid_argument("Expected length for CHANNEL_PREFIX event is 1");
+          read_bytes(event.m.bytes, dataStart, length);
+          return event;
+        }
+        case meta_event_type::MIDI_PORT:
+        {
+          if (length != 1) throw std::invalid_argument("Expected length for MIDI_PORT event is 1");
+          read_bytes(event.m.bytes, dataStart, length);
+          return event;
+        }
         case meta_event_type::UNKNOWN:
         default:
         {
@@ -209,18 +222,19 @@ track_event parseEvent(int tick, int track, uint8_t const *& dataStart, message_
   else
   {
     event.m.bytes = midi_bytes(3, 0);
-    event.m.bytes[0] = (uint8_t) type;
 
     // Running status...
     if (((uint8_t) type & 0x80) == 0)
     {
       // Reuse lastEventTypeByte as the event type.
       // eventTypeByte is actually the first parameter
-      event.m.bytes[0] = (uint8_t) type;
+      event.m.bytes[0] = (uint8_t) lastEventTypeByte;
+      event.m.bytes[1] = (uint8_t) type;
       type = lastEventTypeByte;
     }
     else
     {
+      event.m.bytes[0] = (uint8_t) type;
       event.m.bytes[1] = uint8_t(*dataStart++);
       lastEventTypeByte = type;
     }
@@ -249,8 +263,45 @@ track_event parseEvent(int tick, int track, uint8_t const *& dataStart, message_
       case message_type::PITCH_BEND:
         event.m.bytes[2] = uint8_t(*dataStart++);
         return event;
-      default:
-        throw std::runtime_error("Unrecognised MIDI event type");
+
+
+    case message_type::TIME_CODE:
+      throw std::runtime_error("Unsupported MIDI event type TIME_CODE");
+    case message_type::SONG_POS_POINTER:
+      throw std::runtime_error("Unsupported MIDI event type SONG_POS_POINTER");
+    case message_type::SONG_SELECT:
+      throw std::runtime_error("Unsupported MIDI event type SONG_SELECT");
+    case message_type::RESERVED1:
+      throw std::runtime_error("Unsupported MIDI event type RESERVED1");
+    case message_type::RESERVED2:
+      throw std::runtime_error("Unsupported MIDI event type RESERVED2");
+    case message_type::TUNE_REQUEST :
+      throw std::runtime_error("Unsupported MIDI event type TUNE_REQUEST");
+    case message_type::EOX:
+      throw std::runtime_error("Unsupported MIDI event type EOX");
+      // System Realtime Messages :
+    case message_type::TIME_CLOCK:
+      throw std::runtime_error("Unsupported MIDI event type TIME_CLOCK");
+    case message_type::RESERVED3:
+      throw std::runtime_error("Unsupported MIDI event type RESERVED3");
+    case message_type::START:
+      throw std::runtime_error("Unsupported MIDI event type START");
+    case message_type::CONTINUE :
+      throw std::runtime_error("Unsupported MIDI event type CONTINUE");
+    case message_type::STOP :
+      throw std::runtime_error("Unsupported MIDI event type STOP");
+    case message_type::RESERVED4:
+      throw std::runtime_error("Unsupported MIDI event type RESERVED4");
+    case message_type::ACTIVE_SENSING :
+      throw std::runtime_error("Unsupported MIDI event type ACTIVE_SENSING");
+    case message_type::SYSTEM_RESET :
+      throw std::runtime_error("Unsupported MIDI event type SYSTEM_RESET");
+    case message_type::INVALID:
+      throw std::runtime_error("Unsupported MIDI event type INVALID");
+    case message_type::SYSTEM_EXCLUSIVE:
+      throw std::runtime_error("Unsupported MIDI event type SYSTEM_EXCLUSIVE");
+    default:
+      throw std::runtime_error("Unsupported MIDI event type");
     }
   }
 }
@@ -336,14 +387,21 @@ void reader::parse_impl(const std::vector<uint8_t> & buffer)
         tickCount = tick;
       }
 
-      track_event ev = parseEvent(tickCount, i, dataPtr, runningEvent);
-
-      if (ev.m.is_meta_event() == false)
+      try
       {
-        runningEvent = message_type(ev.m.bytes[0]);
-      }
+        track_event ev = parseEvent(tickCount, i, dataPtr, runningEvent);
 
-      track.push_back(ev);
+        if (!ev.m.is_meta_event())
+        {
+          runningEvent = message_type(ev.m.bytes[0]);
+        }
+
+        track.push_back(ev);
+      }
+      catch(const std::runtime_error& e)
+      {
+        std::cerr << e.what() << "\n";
+      }
     }
 
     tracks.push_back(track);
