@@ -1,10 +1,12 @@
 #pragma once
+#if __has_include(<weak_libjack.h>) && __has_include(<jack/jack.h>)
+
 #if __has_include(<weak_libjack.h>)
-#include <weak_libjack.h>
-#else
-#include <jack/jack.h>
-#include <jack/midiport.h>
-#include <jack/ringbuffer.h>
+  #include <weak_libjack.h>
+#elif __has_include(<jack/jack.h>)
+  #include <jack/jack.h>
+  #include <jack/midiport.h>
+  #include <jack/ringbuffer.h>
 #endif
 #include <rtmidi17/detail/midi_api.hpp>
 #include <rtmidi17/detail/semaphore.hpp>
@@ -469,3 +471,4 @@ struct jack_backend
     static const constexpr auto API = rtmidi::API::UNIX_JACK;
 };
 }
+#endif

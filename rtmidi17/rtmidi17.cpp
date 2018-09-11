@@ -6,7 +6,11 @@
 #endif
 
 #include <rtmidi17/detail/midi_api.hpp>
-
+#if  !__has_include(<weak_libjack.h>) || !__has_include(<jack/jack.h>) 
+  #if defined(RTMIDI17_JACK)
+    #undef RTMIDI17_JACK
+  #endif
+#endif
 #if !defined(RTMIDI17_ALSA) && !defined(RTMIDI17_JACK) && !defined(RTMIDI17_COREAUDIO) \
     && !defined(RTMIDI17_WINMM)
 #  define RTMIDI17_DUMMY
