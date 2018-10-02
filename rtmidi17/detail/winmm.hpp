@@ -5,7 +5,7 @@
 #include <rtmidi17/rtmidi17.hpp>
 #include <ostream>
 #include <sstream>
-#include <Windows.h>
+#include <windows.h>
 #include <mmsystem.h>
 
 // Default for Windows is to add an identifier to the port names; this
