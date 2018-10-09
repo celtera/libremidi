@@ -57,7 +57,7 @@ elseif(WIN32)
         UNICODE=1
         _UNICODE=1
     )
-    target_link_libraries(RtMidi17 ${_public} WinMM)
+    target_link_libraries(RtMidi17 ${_public} winmm)
   endif()
 
   ## UWP MIDI support ##
