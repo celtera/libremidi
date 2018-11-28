@@ -4,7 +4,7 @@ project(RtMidi17 CXX)
 option(RTMIDI17_HEADER_ONLY "Header-only mode" OFF)
 option(RTMIDI17_NO_COREMIDI "Disable CoreMidi back-end" OFF)
 option(RTMIDI17_NO_WINMM "Disable WinMM back-end" OFF)
-option(RTMIDI17_NO_WINUWP "Disable UWP back-end" OFF)
+option(RTMIDI17_NO_WINUWP "Disable UWP back-end" ON)
 option(RTMIDI17_NO_JACK "Disable JACK back-end" OFF)
 option(RTMIDI17_NO_ALSA "Disable ALSA back-end" OFF)
 
