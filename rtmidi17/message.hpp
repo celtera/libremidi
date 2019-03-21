@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 #include <algorithm>
+#include <stdexcept>
 
 #if __has_include(<boost/container/small_vector.hpp>) && !defined(RTMIDI17_NO_BOOST)
 #  include <boost/container/small_vector.hpp>
