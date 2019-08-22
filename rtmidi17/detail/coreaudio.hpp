@@ -749,8 +749,8 @@ public:
       return;
     }
 
-    Byte* buffer = (Byte*)alloca(nBytes + (sizeof(MIDIPacketList)));
-    ByteCount listSize = sizeof(buffer);
+    ByteCount listSize = nBytes + (sizeof(MIDIPacketList));
+    Byte* buffer = (Byte*)alloca(listSize);
     MIDIPacketList* packetList = (MIDIPacketList*)buffer;
     MIDIPacket* packet = MIDIPacketListInit(packetList);
 
@@ -761,6 +761,7 @@ public:
                                      ? 65535
                                      : remainingBytes; // 65535 = maximum size of a MIDIPacket
       const Byte* dataStartPtr = (const Byte*)&message[nBytes - remainingBytes];
+
       packet = MIDIPacketListAdd(
           packetList, listSize, packet, timestamp, bytesForPacket, dataStartPtr);
       remainingBytes -= bytesForPacket;
@@ -807,3 +808,4 @@ struct core_backend
     static const constexpr auto API = rtmidi::API::MACOSX_CORE;
 };
 }
+

@@ -95,6 +95,8 @@ public:
     // Connecting to the output
     std::string name = get_port_name(portNumber);
     jack_connect(data.client, name.c_str(), jack_port_name(data.port));
+
+    connected_ = true;
   }
 
   void open_virtual_port(std::string_view portName) override
@@ -116,6 +118,8 @@ public:
       return;
     jack_port_unregister(data.client, data.port);
     data.port = nullptr;
+
+    connected_ = false;
   }
 
   void set_client_name(std::string_view clientName) override
@@ -227,15 +231,54 @@ private:
 
       // Compute the delta time.
       time = jack_get_time();
-      if (rtData.firstMessage == true)
-        rtData.firstMessage = false;
-      else
+      if (rtData.firstMessage == true) {
+          m.timestamp = 0.;
+          rtData.firstMessage = false;
+      }
+      else {
         m.timestamp = (time - jData.lastTime) * 0.000001;
+      }
 
       jData.lastTime = time;
+      if ( !rtData.continueSysex )
+          m.clear();
+
+      if ( !( ( rtData.continueSysex || event.buffer[0] == 0xF0 ) && ( rtData.ignoreFlags & 0x01 ) ) ) {
+          // Unless this is a (possibly continued) SysEx message and we're ignoring SysEx,
+          // copy the event buffer into the MIDI message struct.
+          for ( unsigned int i = 0; i < event.size; i++ )
+              m.bytes.push_back( event.buffer[i] );
+      }
+
+      switch ( event.buffer[0] ) {
+      case 0xF0:
+          // Start of a SysEx message
+          rtData.continueSysex = event.buffer[event.size - 1] != 0xF7;
+          if ( rtData.ignoreFlags & 0x01 ) continue;
+          break;
+      case 0xF1:
+      case 0xF8:
+          // MIDI Time Code or Timing Clock message
+          if ( rtData.ignoreFlags & 0x02 ) continue;
+          break;
+      case 0xFE:
+          // Active Sensing message
+          if ( rtData.ignoreFlags & 0x04 ) continue;
+          break;
+      default:
+          if ( rtData.continueSysex ) {
+              // Continuation of a SysEx message
+              rtData.continueSysex = event.buffer[event.size - 1] != 0xF7;
+              if ( rtData.ignoreFlags & 0x01 ) continue;
+          }
+          // All other MIDI messages
+      }
+
 
       if (!rtData.continueSysex)
       {
+        // If not a continuation of a SysEx message,
+        // invoke the user callback function or queue the message.
         if (rtData.userCallback)
         {
           rtData.userCallback(std::move(m));
@@ -305,6 +348,8 @@ public:
     // Connecting to the output
     std::string name = get_port_name(portNumber);
     jack_connect(data.client, jack_port_name(data.port), name.c_str());
+
+    connected_ = true;
   }
 
   void open_virtual_port(std::string_view portName) override
@@ -331,6 +376,8 @@ public:
 
     jack_port_unregister(data.client, data.port);
     data.port = nullptr;
+
+    connected_ = false;
   }
 
   void set_client_name(std::string_view clientName) override
