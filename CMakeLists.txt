@@ -7,6 +7,7 @@ option(RTMIDI17_NO_WINMM "Disable WinMM back-end" OFF)
 option(RTMIDI17_NO_WINUWP "Disable UWP back-end" ON)
 option(RTMIDI17_NO_JACK "Disable JACK back-end" OFF)
 option(RTMIDI17_NO_ALSA "Disable ALSA back-end" OFF)
+option(RTMIDI17_EXAMPLES "Enable examples" ON)
 
 include(CheckSymbolExists)
 ### Main library ###
@@ -129,27 +130,28 @@ install(EXPORT rtmidi17-exports
 export(EXPORT rtmidi17-exports)
 
 ### Examples ###
-add_executable(midiobserve tests/midiobserve.cpp)
-target_link_libraries(midiobserve PRIVATE RtMidi17)
+if(NOT RTMIDI17_EXAMPLES)
+  add_executable(midiobserve tests/midiobserve.cpp)
+  target_link_libraries(midiobserve PRIVATE RtMidi17)
 
-add_executable(cmidiin tests/cmidiin.cpp)
-target_link_libraries(cmidiin PRIVATE RtMidi17)
+  add_executable(cmidiin tests/cmidiin.cpp)
+  target_link_libraries(cmidiin PRIVATE RtMidi17)
 
-add_executable(midiclock_in tests/midiclock_in.cpp)
-target_link_libraries(midiclock_in PRIVATE RtMidi17)
+  add_executable(midiclock_in tests/midiclock_in.cpp)
+  target_link_libraries(midiclock_in PRIVATE RtMidi17)
 
-add_executable(midiclock_out tests/midiclock_out.cpp)
-target_link_libraries(midiclock_out PRIVATE RtMidi17)
+  add_executable(midiclock_out tests/midiclock_out.cpp)
+  target_link_libraries(midiclock_out PRIVATE RtMidi17)
 
-add_executable(midiout tests/midiout.cpp)
-target_link_libraries(midiout PRIVATE RtMidi17)
+  add_executable(midiout tests/midiout.cpp)
+  target_link_libraries(midiout PRIVATE RtMidi17)
 
-add_executable(midiprobe tests/midiprobe.cpp)
-target_link_libraries(midiprobe PRIVATE RtMidi17)
+  add_executable(midiprobe tests/midiprobe.cpp)
+  target_link_libraries(midiprobe PRIVATE RtMidi17)
 
-add_executable(qmidiin tests/qmidiin.cpp)
-target_link_libraries(qmidiin PRIVATE RtMidi17)
+  add_executable(qmidiin tests/qmidiin.cpp)
+  target_link_libraries(qmidiin PRIVATE RtMidi17)
 
-add_executable(sysextest tests/sysextest.cpp)
-target_link_libraries(sysextest PRIVATE RtMidi17)
-
+  add_executable(sysextest tests/sysextest.cpp)
+  target_link_libraries(sysextest PRIVATE RtMidi17)
+endif()
