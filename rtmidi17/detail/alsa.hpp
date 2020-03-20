@@ -7,6 +7,7 @@
 #include <rtmidi17/rtmidi17.hpp>
 #include <sys/time.h>
 #include <thread>
+#include <sstream>
 
 //*********************************************************************//
 //  API: LINUX ALSA SEQUENCER
