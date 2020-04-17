@@ -132,7 +132,7 @@ public:
   void set_port_name(std::string_view portName) override
   {
 #if defined(RTMIDI17_JACK_HAS_PORT_RENAME)
-    jack_port_rename(data.client, data.port, portName.c_str());
+    jack_port_rename(data.client, data.port, portName.data());
 #else
     jack_port_set_name(data.port, portName.data());
 #endif
@@ -390,7 +390,7 @@ public:
   void set_port_name(std::string_view portName) override
   {
 #if defined(RTMIDI17_JACK_HAS_PORT_RENAME)
-    jack_port_rename(data.client, data.port, portName.c_str());
+    jack_port_rename(data.client, data.port, portName.data());
 #else
     jack_port_set_name(data.port, portName.data());
 #endif
