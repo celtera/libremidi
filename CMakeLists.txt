@@ -132,7 +132,7 @@ install(EXPORT rtmidi17-exports
 export(EXPORT rtmidi17-exports)
 
 ### Examples ###
-if(NOT RTMIDI17_EXAMPLES)
+if(RTMIDI17_EXAMPLES)
   add_executable(midiobserve tests/midiobserve.cpp)
   target_link_libraries(midiobserve PRIVATE RtMidi17)
 
