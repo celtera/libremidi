@@ -97,6 +97,10 @@ struct message
   double timestamp{};
 
   message() noexcept = default;
+  message(const midi_bytes& src_bytes, double src_timestamp)
+      : bytes(src_bytes), timestamp(src_timestamp)
+  {
+  }
   template<typename... Args>
   message(Args... args) noexcept
     : bytes{(uint8_t)args...}
