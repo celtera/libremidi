@@ -65,8 +65,14 @@ elseif(WIN32)
 
   ## UWP MIDI support ##
   if(NOT RTMIDI17_NO_WINUWP)
-    set(WINSDK_PATH "[HKLM\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows Kits\\Installed Roots;KitsRoot10]")
-    find_path(CPPWINRT_PATH winrt/base.h HINTS ${WINSDK_PATH}/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt)
+    target_include_directories(RtMidi17 ${_public} $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+    set(WINSDK_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots;KitsRoot10]")
+    find_path(CPPWINRT_PATH "winrt/base.h"
+        PATHS
+            ${WINSDK_PATH}
+        PATH_SUFFIXES
+            ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt
+            Include/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt)
     if(CPPWINRT_PATH)
       target_include_directories(RtMidi17 ${_public} "${CPPWINRT_PATH}")
       target_compile_definitions(RtMidi17 ${_public} RTMIDI17_WINUWP)
