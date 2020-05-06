@@ -76,7 +76,11 @@ elseif(WIN32)
     if(CPPWINRT_PATH)
       target_include_directories(RtMidi17 ${_public} "${CPPWINRT_PATH}")
       target_compile_definitions(RtMidi17 ${_public} RTMIDI17_WINUWP)
-      target_compile_options(RtMidi17 ${_public} /ZW /EHsc /await)
+      target_link_libraries(RtMidi17 INTERFACE RuntimeObject)
+      # We don't need /ZW option here (support for C++/CX)' as we use C++/WinRT
+      target_compile_options(RtMidi17 ${_public} /EHsc /await)
+    else()
+      message("Failed to find Windows SDK, UWP MIDI backend will not be available")
     endif()
   endif()
 
