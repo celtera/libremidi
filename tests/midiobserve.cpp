@@ -12,10 +12,10 @@
 int main() try
 {
   // Create an api map.
-  static std::map<rtmidi::API, std::string> apiMap{
+  static std::map<rtmidi::API, std::string> apiMap {
       {rtmidi::API::MACOSX_CORE, "OS-X CoreMidi"}, {rtmidi::API::WINDOWS_MM, "Windows MultiMedia"},
-      {rtmidi::API::UNIX_JACK, "Jack Client"},     {rtmidi::API::LINUX_ALSA, "Linux ALSA"},
-      {rtmidi::API::DUMMY, "Dummy (no driver)"},
+      {rtmidi::API::WINDOWS_UWP, "Windows UWP"},   {rtmidi::API::UNIX_JACK, "Jack Client"},
+      {rtmidi::API::LINUX_ALSA, "Linux ALSA"},     {rtmidi::API::DUMMY, "Dummy (no driver)"},
   };
 
   std::vector<std::unique_ptr<rtmidi::observer>> observers;
