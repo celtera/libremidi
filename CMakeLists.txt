@@ -59,6 +59,8 @@ elseif(WIN32)
         _UNICODE=1
     )
     target_link_libraries(RtMidi17 ${_public} winmm)
+    target_include_directories(RtMidi17 ${_public}
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
   endif()
 
   ## UWP MIDI support ##
