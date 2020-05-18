@@ -159,7 +159,7 @@ void writer::write(std::ostream & out)
   out << 'M'; out << 'T'; out << 'h'; out << 'd';
   util::write_uint32_be(out, 6);
   util::write_uint16_be(out, (get_num_tracks() == 1) ? 0 : 1);
-  util::write_uint16_be(out, get_num_tracks());
+  util::write_uint16_be(out, static_cast<uint16_t>(get_num_tracks()));
   util::write_uint16_be(out, ticksPerQuarterNote);
 
   std::vector<uint8_t> trackRawData;
@@ -187,11 +187,11 @@ void writer::write(std::ostream & out)
         // do it for you automatically.
         trackRawData.emplace_back(msg.bytes[0]); // 0xf0 or 0xf7;
 
-        util::write_variable_length(msg.size() - 1, trackRawData);
+        util::write_variable_length(static_cast<uint32_t>(msg.size()) - 1, trackRawData);
 
         for (size_t k = 1; k < msg.size(); k++)
         {
-          trackRawData.emplace_back(msg[k]);
+          trackRawData.emplace_back(msg[static_cast<int>(k)]);
         }
       }
 
@@ -200,7 +200,7 @@ void writer::write(std::ostream & out)
         // Non-sysex type of message, so just output the bytes of the message:
         for (size_t k = 0; k < msg.size(); k++)
         {
-          trackRawData.emplace_back(msg[k]);
+          trackRawData.emplace_back(msg[static_cast<int>(k)]);
         }
       }
     }
@@ -219,7 +219,7 @@ void writer::write(std::ostream & out)
 
   // Write the track ID marker "MTrk":
   out << 'M'; out << 'T'; out << 'r'; out << 'k';
-  util::write_uint32_be(out, trackRawData.size());
+  util::write_uint32_be(out, static_cast<uint32_t>(trackRawData.size()));
   out.write((char*) trackRawData.data(), trackRawData.size());
 }
 }

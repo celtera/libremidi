@@ -3,8 +3,13 @@
 #define WIN32_LEAN_AND_MEAN 1
 #include <rtmidi17/detail/midi_api.hpp>
 #include <rtmidi17/rtmidi17.hpp>
+#include <algorithm>
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
 #include <ostream>
 #include <sstream>
+#include <thread>
 #include <windows.h>
 #include <mmsystem.h>
 
@@ -24,10 +29,12 @@
 namespace rtmidi
 {
 
+#define RT_WINMM_OBSERVER_POLL_PERIOD_MS 100
+
 #define RT_SYSEX_BUFFER_SIZE 1024
 #define RT_SYSEX_BUFFER_COUNT 4
 
-// A structure to hold variables related to the CoreMIDI API
+// A structure to hold variables related to the WinMM API
 // implementation.
 struct WinMidiData
 {
@@ -75,13 +82,119 @@ inline std::string ConvertToUTF8(const TCHAR* str)
 
 class observer_winmm final : public observer_api
 {
-  public:
-    observer_winmm(observer::callbacks&& c) : observer_api{std::move(c)}
+private:
+    using CallbackFunc = std::function<void(int, std::string)>;
+    using PortList = std::vector<std::string>;
+
+    PortList inputPortList;
+    PortList outputPortList;
+
+    std::thread watchThread;
+    std::condition_variable watchThreadCV;
+    std::mutex watchThreadMutex;
+    bool watchThreadShutdown;
+
+    inline static const bool INPUT = true;
+    inline static const bool OUTPUT = false;
+
+public:
+    observer_winmm(observer::callbacks&& c) : observer_api {std::move(c)}
     {
+      inputPortList = get_port_list(INPUT);
+      outputPortList = get_port_list(OUTPUT);
+
+      watchThreadShutdown = false;
+      watchThread = std::thread([this]() { watch_thread(); });
     }
 
     ~observer_winmm()
     {
+      signal_watch_thread_shutdown();
+      watchThreadCV.notify_all();
+      if (watchThread.joinable())
+        watchThread.join();
+    }
+
+private:
+    void watch_thread()
+    {
+      while (!wait_for_watch_thread_shutdown_signal(RT_WINMM_OBSERVER_POLL_PERIOD_MS))
+      {
+        auto currInputPortList = get_port_list(INPUT);
+        compare_port_lists_and_notify_clients(
+            inputPortList, currInputPortList, callbacks_.input_added,
+            callbacks_.input_removed);
+        inputPortList = currInputPortList;
+
+        auto currOutputPortList = get_port_list(OUTPUT);
+        compare_port_lists_and_notify_clients(
+            outputPortList, currOutputPortList, callbacks_.output_added,
+            callbacks_.output_removed);
+        outputPortList = currOutputPortList;
+      }
+    }
+
+    void compare_port_lists_and_notify_clients(
+        const PortList& prevList,
+        const PortList& currList,
+        const CallbackFunc& portAddedFunc,
+        const CallbackFunc& portRemovedFunc)
+    {
+      if (portAddedFunc)
+      {
+        for (const auto& portName : currList)
+        {
+          auto iter = std::find(prevList.begin(), prevList.end(), portName);
+          if (iter == prevList.end())
+            portAddedFunc(0, portName);
+        }
+      }
+      if (portRemovedFunc)
+      {
+        for (const auto portName : prevList)
+        {
+          auto iter = std::find(currList.begin(), currList.end(), portName);
+          if (iter == currList.end())
+            portRemovedFunc(0, portName);
+        }
+      }
+    }
+
+    bool wait_for_watch_thread_shutdown_signal(unsigned int timeoutMs)
+    {
+      using namespace std::chrono_literals;
+      std::unique_lock<std::mutex> lock(watchThreadMutex);
+      return watchThreadCV.wait_for(lock, timeoutMs * 1ms, [this]() { return watchThreadShutdown; });
+    }
+
+    void signal_watch_thread_shutdown()
+    {
+      std::lock_guard lock(watchThreadMutex);
+      watchThreadShutdown = true;
+    }
+
+    PortList get_port_list(bool input) const
+    {
+      PortList portList;
+      unsigned int nDevices = input ? midiInGetNumDevs() : midiOutGetNumDevs();
+      for (unsigned int ix = 0; ix < nDevices; ++ix)
+      {
+        std::string portName;
+        if (input)
+        {
+          MIDIINCAPS deviceCaps;
+          midiInGetDevCaps(ix, &deviceCaps, sizeof(MIDIINCAPS));
+          portName = ConvertToUTF8(deviceCaps.szPname);
+        }
+        else
+        {
+          MIDIOUTCAPS deviceCaps;
+          midiOutGetDevCaps(ix, &deviceCaps, sizeof(MIDIOUTCAPS));
+          portName = ConvertToUTF8(deviceCaps.szPname);
+        }
+        portList.push_back(portName);
+      }
+      return portList;
     }
 };
 

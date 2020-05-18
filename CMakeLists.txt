@@ -59,16 +59,28 @@ elseif(WIN32)
         _UNICODE=1
     )
     target_link_libraries(RtMidi17 ${_public} winmm)
+    target_include_directories(RtMidi17 ${_public}
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
   endif()
 
   ## UWP MIDI support ##
   if(NOT RTMIDI17_NO_WINUWP)
-    set(WINSDK_PATH "[HKLM\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows Kits\\Installed Roots;KitsRoot10]")
-    find_path(CPPWINRT_PATH winrt/base.h HINTS ${WINSDK_PATH}/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt)
+    target_include_directories(RtMidi17 ${_public} $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+    set(WINSDK_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots;KitsRoot10]")
+    find_path(CPPWINRT_PATH "winrt/base.h"
+        PATHS
+            ${WINSDK_PATH}
+        PATH_SUFFIXES
+            ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt
+            Include/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt)
     if(CPPWINRT_PATH)
       target_include_directories(RtMidi17 ${_public} "${CPPWINRT_PATH}")
       target_compile_definitions(RtMidi17 ${_public} RTMIDI17_WINUWP)
-      target_compile_options(RtMidi17 ${_public} /ZW /EHsc /await)
+      target_link_libraries(RtMidi17 INTERFACE RuntimeObject)
+      # We don't need /ZW option here (support for C++/CX)' as we use C++/WinRT
+      target_compile_options(RtMidi17 ${_public} /EHsc /await)
+    else()
+      message("Failed to find Windows SDK, UWP MIDI backend will not be available")
     endif()
   endif()
 
@@ -130,7 +142,7 @@ install(EXPORT rtmidi17-exports
 export(EXPORT rtmidi17-exports)
 
 ### Examples ###
-if(NOT RTMIDI17_EXAMPLES)
+if(RTMIDI17_EXAMPLES)
   add_executable(midiobserve tests/midiobserve.cpp)
   target_link_libraries(midiobserve PRIVATE RtMidi17)
 
