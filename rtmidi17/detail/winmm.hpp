@@ -84,10 +84,7 @@ class observer_winmm final : public observer_api
 {
 private:
     using CallbackFunc = std::function<void(int, std::string)>;
-    using PortList = std::vector<std::string>;
-
-    PortList inputPortList;
-    PortList outputPortList;
+   
 
     std::thread watchThread;
     std::condition_variable watchThreadCV;
@@ -98,6 +95,10 @@ private:
     inline static const bool OUTPUT = false;
 
 public:
+    using PortList = std::vector<std::string>;
+
+    PortList inputPortList;
+    PortList outputPortList;
     observer_winmm(observer::callbacks&& c) : observer_api {std::move(c)}
     {
       inputPortList = get_port_list(INPUT);
@@ -173,8 +174,10 @@ private:
       watchThreadShutdown = true;
     }
 
+  public:
     PortList get_port_list(bool input) const
     {
+	    // true Get input, false get output
       PortList portList;
       unsigned int nDevices = input ? midiInGetNumDevs() : midiOutGetNumDevs();
       for (unsigned int ix = 0; ix < nDevices; ++ix)
@@ -363,12 +366,25 @@ class midi_in_winmm final : public midi_in_default<midi_in_winmm>
       // the device's names are sure to be listed with individual names
       // even when they have the same brand name
 #ifndef RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+      int x = 1;
+      for (int i = 0; i < portNumber; i++)
+      {
+        MIDIINCAPS deviceCaps2;
+        midiInGetDevCaps(i, &deviceCaps2, sizeof(MIDIINCAPS));
+        auto stringName2 = ConvertToUTF8(deviceCaps2.szPname);
+        if (stringName == stringName2)
+        {
+          x++;
+	}
+
+      }
       std::ostringstream os;
       os << " ";
-      os << portNumber;
+      os << x;
       stringName += os.str();
+      x = 1;
 #endif
-
+      
       return stringName;
     }
 
@@ -590,6 +606,7 @@ class midi_out_winmm final : public midi_out_default<midi_out_winmm>
       }
 
       MIDIOUTCAPS deviceCaps;
+      
       midiOutGetDevCaps(portNumber, &deviceCaps, sizeof(MIDIOUTCAPS));
       stringName = ConvertToUTF8(deviceCaps.szPname);
 
@@ -598,11 +615,23 @@ class midi_out_winmm final : public midi_out_default<midi_out_winmm>
       // even when they have the same brand name
       std::ostringstream os;
 #ifndef RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+      int x = 1;
+      for (int i = 0; i < portNumber; i++)
+      {
+        MIDIOUTCAPS deviceCaps2;
+        midiOutGetDevCaps(i, &deviceCaps2, sizeof(MIDIOUTCAPS));
+        auto sn2 = ConvertToUTF8(deviceCaps2.szPname);
+        if (stringName == sn2)
+        {
+          x++;
+        }
+      }
       os << " ";
-      os << portNumber;
+      os << x;
       stringName += os.str();
+      x = 1;
 #endif
-
+     
       return stringName;
     }
 
