@@ -85,6 +85,7 @@ elseif(WIN32)
   endif()
 
 elseif(UNIX)
+ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpic")
   ## ALSA support ##
   if(NOT RTMIDI17_NO_ALSA)
     find_package(ALSA)
