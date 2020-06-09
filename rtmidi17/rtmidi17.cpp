@@ -6,10 +6,10 @@
 #endif
 
 #include <rtmidi17/detail/midi_api.hpp>
-#if  !__has_include(<weak_libjack.h>) && !__has_include(<jack/jack.h>) 
-  #if defined(RTMIDI17_JACK)
-    #undef RTMIDI17_JACK
-  #endif
+#if !__has_include(<weak_libjack.h>) && !__has_include(<jack/jack.h>)
+#  if defined(RTMIDI17_JACK)
+#    undef RTMIDI17_JACK
+#  endif
 #endif
 #if !defined(RTMIDI17_ALSA) && !defined(RTMIDI17_JACK) && !defined(RTMIDI17_COREAUDIO) \
     && !defined(RTMIDI17_WINMM)
@@ -45,45 +45,55 @@ namespace rtmidi
 
 // The order here will control the order of the API search in
 // the constructor.
-template<typename unused, typename... Args>
+template <typename unused, typename... Args>
 constexpr auto make_tl(unused, Args...)
-{ return std::tuple<Args...>{}; }
-static constexpr auto available_backends =
-make_tl(
-  0
+{
+  return std::tuple<Args...>{};
+}
+static constexpr auto available_backends = make_tl(
+    0
 #if defined(RTMIDI17_ALSA)
-  , alsa_backend{}
+    ,
+    alsa_backend {}
 #endif
 #if defined(RTMIDI17_COREAUDIO)
-  , core_backend{}
+    ,
+    core_backend {}
 #endif
 #if defined(RTMIDI17_JACK)
-  , jack_backend{}
+    ,
+    jack_backend {}
 #endif
 #if defined(RTMIDI17_WINMM)
-  , winmm_backend{}
+    ,
+    winmm_backend {}
 #endif
 #if defined(RTMIDI17_WINUWP)
-  , winuwp_backend{}
+    ,
+    winuwp_backend {}
 #endif
 #if defined(RTMIDI17_DUMMY)
-  , dummy_backend{}
+    ,
+    dummy_backend {}
 #endif
 );
 
 // There should always be at least one back-end.
 static_assert(std::tuple_size_v<decltype(available_backends)> >= 1);
 
-template<typename F>
+template <typename F>
 auto for_all_backends(F&& f)
 {
-  std::apply([&](auto&&... x){ (f(x), ...) ; }, available_backends);
+  std::apply([&](auto&&... x) { (f(x), ...); }, available_backends);
 }
 
-template<typename F>
+template <typename F>
 auto for_backend(rtmidi::API api, F&& f)
 {
-  for_all_backends([&] (auto b) { if(b.API == api) f(b); });
+  for_all_backends([&](auto b) {
+    if (b.API == api)
+      f(b);
+  });
 }
 
 RTMIDI17_INLINE midi_exception::~midi_exception() = default;
@@ -99,11 +109,10 @@ RTMIDI17_INLINE thread_error::~thread_error() = default;
 RTMIDI17_INLINE midi_in::~midi_in() = default;
 RTMIDI17_INLINE midi_out::~midi_out() = default;
 
-
 [[nodiscard]] RTMIDI17_INLINE std::vector<rtmidi::API> available_apis() noexcept
 {
   std::vector<rtmidi::API> apis;
-  for_all_backends([&] (auto b) { apis.push_back(b.API); });
+  for_all_backends([&](auto b) { apis.push_back(b.API); });
   return apis;
 }
 
@@ -112,30 +121,33 @@ open_midi_observer(rtmidi::API api, observer::callbacks&& cb)
 {
   std::unique_ptr<observer_api> ptr;
 
-  for_backend(api, [&] (auto b)
-  { ptr = std::make_unique<typename decltype(b)::midi_observer>(std::move(cb)); });
+  for_backend(api, [&](auto b) {
+    ptr = std::make_unique<typename decltype(b)::midi_observer>(std::move(cb));
+  });
 
   return ptr;
 }
 
-[[nodiscard]] RTMIDI17_INLINE std::unique_ptr<midi_in_api> open_midi_in(
-        rtmidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
+[[nodiscard]] RTMIDI17_INLINE std::unique_ptr<midi_in_api>
+open_midi_in(rtmidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
 {
   std::unique_ptr<midi_in_api> ptr;
 
-  for_backend(api, [&] (auto b)
-  { ptr = std::make_unique<typename decltype(b)::midi_in>(clientName, queueSizeLimit); });
+  for_backend(api, [&](auto b) {
+    ptr = std::make_unique<typename decltype(b)::midi_in>(clientName, queueSizeLimit);
+  });
 
   return ptr;
 }
 
 [[nodiscard]] RTMIDI17_INLINE std::unique_ptr<midi_out_api>
-open_midi_out(rtmidi::API api, std::string_view clientName) {
+open_midi_out(rtmidi::API api, std::string_view clientName)
+{
 
   std::unique_ptr<midi_out_api> ptr;
 
-  for_backend(api, [&] (auto b)
-  { ptr = std::make_unique<typename decltype(b)::midi_out>(clientName); });
+  for_backend(
+      api, [&](auto b) { ptr = std::make_unique<typename decltype(b)::midi_out>(clientName); });
 
   return ptr;
 }

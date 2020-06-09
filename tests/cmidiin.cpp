@@ -11,7 +11,8 @@
 #include <iostream>
 #include <rtmidi17/rtmidi17.hpp>
 
-[[noreturn]] void usage() {
+[[noreturn]] void usage()
+{
   // Error function in case of incorrect command-line
   // argument specifications.
   std::cout << "\nuseage: cmidiin <port>\n";
@@ -67,7 +68,8 @@ bool chooseMidiPort(rtmidi::midi_in& rtmidi)
   return true;
 }
 
-int main(int argc, char**) try
+int main(int argc, char**)
+try
 {
   rtmidi::midi_in midiin;
 

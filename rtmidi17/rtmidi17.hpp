@@ -56,25 +56,25 @@
  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  POSSIBILITY OF SUCH DAMAGE.
 */
-#include <rtmidi17/message.hpp>
 #include <algorithm>
 #include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <rtmidi17/message.hpp>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #if defined(RTMIDI17_EXPORTS)
-#if defined(_MSC_VER)
-#  define RTMIDI17_EXPORT __declspec(dllexport)
-#elif defined(__GNUC__) || defined(__clang__)
-#  define RTMIDI17_EXPORT __attribute__((visibility("default")))
-#endif
+#  if defined(_MSC_VER)
+#    define RTMIDI17_EXPORT __declspec(dllexport)
+#  elif defined(__GNUC__) || defined(__clang__)
+#    define RTMIDI17_EXPORT __attribute__((visibility("default")))
+#  endif
 #else
-#define RTMIDI17_EXPORT
+#  define RTMIDI17_EXPORT
 #endif
 
 #define RTMIDI17_VERSION "1.0.0"
@@ -267,9 +267,13 @@ public:
   */
   void open_port(unsigned int portNumber, std::string_view portName);
   void open_port()
-  { open_port(0, "RtMidi17 Input"); }
+  {
+    open_port(0, "RtMidi17 Input");
+  }
   void open_port(unsigned int port)
-  { open_port(port, "RtMidi17 Input"); }
+  {
+    open_port(port, "RtMidi17 Input");
+  }
 
   //! Create a virtual input port, with optional name, to allow software
   //! connections (OS X, JACK and ALSA only).
@@ -283,7 +287,10 @@ public:
                     used to connect to portId can be specified.
   */
   void open_virtual_port(std::string_view portName);
-  void open_virtual_port() { open_virtual_port("RtMidi17 virtual port"); }
+  void open_virtual_port()
+  {
+    open_virtual_port("RtMidi17 virtual port");
+  }
   //! Set a callback function to be invoked for incoming MIDI messages.
   /*!
     The callback function will be called whenever an incoming MIDI
@@ -393,10 +400,11 @@ public:
     compiled, the default order of use is ALSA, JACK (Linux) and CORE,
     JACK (OS-X).
   */
-  midi_out(
-      rtmidi::API api, std::string_view clientName);
+  midi_out(rtmidi::API api, std::string_view clientName);
 
-  midi_out(): midi_out{rtmidi::API::UNSPECIFIED, "RtMidi client"} { }
+  midi_out() : midi_out{rtmidi::API::UNSPECIFIED, "RtMidi client"}
+  {
+  }
 
   //! The destructor closes any open MIDI connections.
   ~midi_out();
@@ -411,12 +419,15 @@ public:
       exception is thrown if an error occurs while attempting to make
       the port connection.
   */
-  void open_port(
-      unsigned int portNumber, std::string_view portName);
+  void open_port(unsigned int portNumber, std::string_view portName);
   void open_port()
-  { open_port(0, "RtMidi17 Output"); }
+  {
+    open_port(0, "RtMidi17 Output");
+  }
   void open_port(unsigned int port)
-  { open_port(port, "RtMidi17 Output"); }
+  {
+    open_port(port, "RtMidi17 Output");
+  }
 
   //! Close an open MIDI connection (if one exists).
   void close_port();
@@ -439,7 +450,10 @@ public:
       create the virtual port.
   */
   void open_virtual_port(std::string_view portName);
-  void open_virtual_port() { open_virtual_port("RtMidi17 virtual port"); }
+  void open_virtual_port()
+  {
+    open_virtual_port("RtMidi17 virtual port");
+  }
 
   //! Return the number of available MIDI output ports.
   unsigned int get_port_count();
@@ -470,7 +484,6 @@ public:
       \param size    Length of the MIDI message in bytes
   */
   void send_message(const unsigned char* message, size_t size);
-
 
   //! Set an error callback function to be invoked when an error has occured.
   /*!

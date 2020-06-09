@@ -11,7 +11,7 @@
 
 int main()
 
-    try
+try
 {
   // Create an api map.
   std::map<rtmidi::API, std::string> apiMap{

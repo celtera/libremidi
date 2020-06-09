@@ -1,17 +1,15 @@
 #pragma once
 #define NOMINMAX 1
 #define WIN32_LEAN_AND_MEAN 1
+#include <mutex>
 #include <rtmidi17/detail/midi_api.hpp>
 #include <rtmidi17/rtmidi17.hpp>
-
-#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
-
-#include <winrt/Windows.Foundation.h>
-#include <winrt/Windows.Devices.Midi.h>
 #include <winrt/Windows.Devices.Enumeration.h>
+#include <winrt/Windows.Devices.Midi.h>
+#include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Storage.Streams.h>
 
 namespace rtmidi
@@ -19,10 +17,10 @@ namespace rtmidi
 
 inline void winrt_init()
 {
-    // init_apartment should only be called on the threads we own.
-    // Since we're the library we don't own the threads we are called from,
-    // so we should not perform this initialization ourselves.
-    // winrt::init_apartment();
+  // init_apartment should only be called on the threads we own.
+  // Since we're the library we don't own the threads we are called from,
+  // so we should not perform this initialization ourselves.
+  // winrt::init_apartment();
 }
 
 namespace
@@ -104,13 +102,13 @@ public:
   hstring get_port_id(unsigned int portNumber) const
   {
     std::lock_guard<std::mutex> lock(portListMutex_);
-    return portNumber < portList_.size() ? portList_[portNumber].id : hstring {};
+    return portNumber < portList_.size() ? portList_[portNumber].id : hstring{};
   }
 
   std::string get_port_name(unsigned int portNumber) const
   {
     std::lock_guard<std::mutex> lock(portListMutex_);
-    return portNumber < portList_.size() ? to_string(portList_[portNumber].name) : std::string {};
+    return portNumber < portList_.size() ? to_string(portList_[portNumber].name) : std::string{};
   }
 
   event_token PortAdded(TypedEventHandler<int, hstring> const& handler)
@@ -208,7 +206,7 @@ private:
   std::vector<port_info> portList_;
   mutable std::mutex portListMutex_;
 
-  DeviceWatcher deviceWatcher_ {nullptr};
+  DeviceWatcher deviceWatcher_{nullptr};
   event_token evTokenOnDeviceAdded_;
   event_token evTokenOnDeviceRemoved_;
   event_token evTokenOnDeviceUpdated_;
@@ -217,7 +215,6 @@ private:
   winrt::event<TypedEventHandler<int, hstring>> portAddedEvent_;
   winrt::event<TypedEventHandler<int, hstring>> portRemovedEvent_;
 };
-
 
 class observer_winuwp final : public observer_api
 {
@@ -287,186 +284,188 @@ private:
 };
 
 observer_winuwp_internal observer_winuwp::internalInPortObserver_(MidiInPort::GetDeviceSelector());
-observer_winuwp_internal observer_winuwp::internalOutPortObserver_(MidiOutPort::GetDeviceSelector());
+observer_winuwp_internal
+    observer_winuwp::internalOutPortObserver_(MidiOutPort::GetDeviceSelector());
 
 class midi_in_winuwp final : public midi_in_default<midi_in_winuwp>
 {
-  public:
-    static const constexpr auto backend = "UWP";
-    midi_in_winuwp(std::string_view, unsigned int queueSizeLimit)
+public:
+  static const constexpr auto backend = "UWP";
+  midi_in_winuwp(std::string_view, unsigned int queueSizeLimit)
       : midi_in_default{nullptr, queueSizeLimit}
+  {
+    winrt_init();
+  }
+
+  ~midi_in_winuwp() override
+  {
+    if (port_)
+      port_.Close();
+  }
+
+  rtmidi::API get_current_api() const noexcept override
+  {
+    return rtmidi::API::WINDOWS_UWP;
+  }
+
+  void open_port(unsigned int portNumber, std::string_view) override
+  {
+    if (connected_)
     {
-      winrt_init();
+      warning("midi_in_winuwp::openPort: a valid connection already exists!");
+      return;
     }
 
-    ~midi_in_winuwp() override
+    const auto id = get_port_id(portNumber);
+    if (!id.empty())
     {
-      if(port_)
+      port_ = get(MidiInPort::FromIdAsync(id));
+      if (port_)
+      {
+        port_.MessageReceived([=](auto&, auto args) {
+          const auto& msg = args.Message();
+
+          auto reader = DataReader::FromBuffer(msg.RawData());
+          array_view<uint8_t> bs;
+          reader.ReadBytes(bs);
+
+          double t = static_cast<double>(msg.Timestamp().count());
+
+          rtmidi::message m{{bs.begin(), bs.end()}, t};
+          if (inputData_.userCallback)
+          {
+            inputData_.userCallback(m);
+          }
+          else
+          {
+            if (!inputData_.queue.push(m))
+              std::cerr << "\nmidi_in_winuwp: message queue limit reached!!\n\n";
+          }
+        });
+      }
+    }
+  }
+
+  void close_port() override
+  {
+    if (connected_)
+    {
+      if (port_)
+      {
         port_.Close();
-    }
-
-    rtmidi::API get_current_api() const noexcept override
-    {
-      return rtmidi::API::WINDOWS_UWP;
-    }
-
-    void open_port(unsigned int portNumber, std::string_view) override
-    {
-      if (connected_)
-      {
-        warning("midi_in_winuwp::openPort: a valid connection already exists!");
-        return;
-      }
-
-      const auto id = get_port_id(portNumber);
-      if (!id.empty())
-      {
-        port_ = get(MidiInPort::FromIdAsync(id));
-        if (port_)
-        {
-          port_.MessageReceived([=](auto&, auto args) {
-            const auto& msg = args.Message();
-
-            auto reader = DataReader::FromBuffer(msg.RawData());
-            array_view<uint8_t> bs;
-            reader.ReadBytes(bs);
-
-            double t = static_cast<double>(msg.Timestamp().count());
-
-            rtmidi::message m {{bs.begin(), bs.end()}, t};
-            if (inputData_.userCallback)
-            {
-              inputData_.userCallback(m);
-            }
-            else
-            {
-              if (!inputData_.queue.push(m))
-                std::cerr << "\nmidi_in_winuwp: message queue limit reached!!\n\n";
-            }
-          });
-        }
       }
     }
+  }
 
-    void close_port() override
-    {
-      if (connected_)
-      {
-        if(port_)
-        {
-          port_.Close();
-        }
-      }
-    }
+  unsigned int get_port_count() override
+  {
+    auto& observer = observer_winuwp::get_internal_in_port_observer();
+    return observer.get_port_count();
+  }
 
-    unsigned int get_port_count() override
-    {
-      auto& observer = observer_winuwp::get_internal_in_port_observer();
-      return observer.get_port_count();
-    }
+  std::string get_port_name(unsigned int portNumber) override
+  {
+    auto& observer = observer_winuwp::get_internal_in_port_observer();
+    return observer.get_port_name(portNumber);
+  }
 
-    std::string get_port_name(unsigned int portNumber) override
-    {
-      auto& observer = observer_winuwp::get_internal_in_port_observer();
-      return observer.get_port_name(portNumber);
-    }
+private:
+  hstring get_port_id(unsigned int portNumber)
+  {
+    auto& observer = observer_winuwp::get_internal_in_port_observer();
+    return observer.get_port_id(portNumber);
+  }
 
-  private:
-    hstring get_port_id(unsigned int portNumber)
-    {
-      auto& observer = observer_winuwp::get_internal_in_port_observer();
-      return observer.get_port_id(portNumber);
-    }
-
-  private:
-    winrt::Windows::Devices::Midi::MidiInPort port_{nullptr};
+private:
+  winrt::Windows::Devices::Midi::MidiInPort port_{nullptr};
 };
 
 class midi_out_winuwp final : public midi_out_default<midi_out_winuwp>
 {
-  public:
-    static const constexpr auto backend = "UWP";
-    midi_out_winuwp(std::string_view)
+public:
+  static const constexpr auto backend = "UWP";
+  midi_out_winuwp(std::string_view)
+  {
+    winrt_init();
+  }
+
+  ~midi_out_winuwp() override
+  {
+    close_port();
+  }
+
+  rtmidi::API get_current_api() const noexcept override
+  {
+    return rtmidi::API::WINDOWS_UWP;
+  }
+
+  void open_port(unsigned int portNumber, std::string_view) override
+  {
+    if (connected_)
     {
-      winrt_init();
+      warning("midi_out_winuwp::open_port: a valid connection already exists!");
+      return;
     }
 
-    ~midi_out_winuwp() override
+    const auto id = get_port_id(portNumber);
+    if (!id.empty())
     {
-      close_port();
+      port_ = get(MidiOutPort::FromIdAsync(id));
     }
+  }
 
-    rtmidi::API get_current_api() const noexcept override
+  void close_port() override
+  {
+    if (connected_)
     {
-      return rtmidi::API::WINDOWS_UWP;
-    }
-
-    void open_port(unsigned int portNumber, std::string_view) override
-    {
-      if (connected_)
+      if (port_)
       {
-        warning("midi_out_winuwp::open_port: a valid connection already exists!");
-        return;
-      }
-
-      const auto id = get_port_id(portNumber);
-      if (!id.empty())
-      {
-        port_ = get(MidiOutPort::FromIdAsync(id));
+        port_.Close();
       }
     }
+  }
 
-    void close_port() override
-    {
-      if (connected_)
-      {
-        if(port_)
-        {
-          port_.Close();
-        }
-      }
-    }
+  unsigned int get_port_count() override
+  {
+    auto& out_ports_observer = observer_winuwp::get_internal_out_port_observer();
+    return static_cast<unsigned int>(out_ports_observer.get_ports().size());
+  }
 
-    unsigned int get_port_count() override
-    {
-      auto& out_ports_observer = observer_winuwp::get_internal_out_port_observer();
-      return static_cast<unsigned int>(out_ports_observer.get_ports().size());
-    }
+  std::string get_port_name(unsigned int portNumber) override
+  {
+    auto& observer = observer_winuwp::get_internal_out_port_observer();
+    return observer.get_port_name(portNumber);
+  }
 
-    std::string get_port_name(unsigned int portNumber) override
-    {
-      auto& observer = observer_winuwp::get_internal_out_port_observer();
-      return observer.get_port_name(portNumber);
-    }
+  void send_message(const unsigned char* message, size_t size) override
+  {
+    if (!connected_)
+      return;
 
-    void send_message(const unsigned char* message, size_t size) override
-    {
-      if (!connected_)
-        return;
+    InMemoryRandomAccessStream str;
+    DataWriter rb(str);
+    rb.WriteBytes(
+        winrt::array_view<const uint8_t>{(const uint8_t*)message, (const uint8_t*)message + size});
+    port_.SendBuffer(rb.DetachBuffer());
+  }
 
-      InMemoryRandomAccessStream str;
-      DataWriter rb(str);
-      rb.WriteBytes(winrt::array_view<const uint8_t>{(const uint8_t*)message, (const uint8_t*)message + size});
-      port_.SendBuffer(rb.DetachBuffer());
-    }
+private:
+  hstring get_port_id(unsigned int portNumber)
+  {
+    auto& observer = observer_winuwp::get_internal_out_port_observer();
+    return observer.get_port_id(portNumber);
+  }
 
-  private:
-    hstring get_port_id(unsigned int portNumber)
-    {
-      auto& observer = observer_winuwp::get_internal_out_port_observer();
-      return observer.get_port_id(portNumber);
-    }
-
-  private:
-    winrt::Windows::Devices::Midi::IMidiOutPort port_{nullptr};
+private:
+  winrt::Windows::Devices::Midi::IMidiOutPort port_{nullptr};
 };
 
 struct winuwp_backend
 {
-    using midi_in = midi_in_winuwp;
-    using midi_out = midi_out_winuwp;
-    using midi_observer = observer_winuwp;
-    static const constexpr auto API = rtmidi::API::WINDOWS_UWP;
+  using midi_in = midi_in_winuwp;
+  using midi_out = midi_out_winuwp;
+  using midi_observer = observer_winuwp;
+  static const constexpr auto API = rtmidi::API::WINDOWS_UWP;
 };
 } // namespace
 } // namespace rtmidi

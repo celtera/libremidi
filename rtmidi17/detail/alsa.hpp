@@ -5,9 +5,9 @@
 #include <pthread.h>
 #include <rtmidi17/detail/midi_api.hpp>
 #include <rtmidi17/rtmidi17.hpp>
+#include <sstream>
 #include <sys/time.h>
 #include <thread>
-#include <sstream>
 
 //*********************************************************************//
 //  API: LINUX ALSA SEQUENCER
@@ -721,7 +721,8 @@ private:
 
       if (doDecode)
       {
-        uint64_t nBytes = snd_midi_event_decode(apidata.coder, buffer.data(), apidata.bufferSize, ev);
+        uint64_t nBytes
+            = snd_midi_event_decode(apidata.coder, buffer.data(), apidata.bufferSize, ev);
         if (nBytes > 0)
         {
           // The ALSA sequencer has a maximum buffer size for MIDI sysex
@@ -1059,9 +1060,9 @@ private:
 
 struct alsa_backend
 {
-    using midi_in = midi_in_alsa;
-    using midi_out = midi_out_alsa;
-    using midi_observer = observer_alsa;
-    static const constexpr auto API = rtmidi::API::LINUX_ALSA;
+  using midi_in = midi_in_alsa;
+  using midi_out = midi_out_alsa;
+  using midi_observer = observer_alsa;
+  static const constexpr auto API = rtmidi::API::LINUX_ALSA;
 };
 }

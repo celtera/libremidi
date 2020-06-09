@@ -16,7 +16,6 @@ public:
   }
 };
 
-
 class midi_in_dummy final : public midi_in_api
 {
 public:
@@ -107,9 +106,9 @@ public:
 
 struct dummy_backend
 {
-    using midi_in = midi_in_dummy;
-    using midi_out = midi_out_dummy;
-    using midi_observer = observer_dummy;
-    static const constexpr auto API = rtmidi::API::DUMMY;
+  using midi_in = midi_in_dummy;
+  using midi_out = midi_out_dummy;
+  using midi_observer = observer_dummy;
+  static const constexpr auto API = rtmidi::API::DUMMY;
 };
 }

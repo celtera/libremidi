@@ -1,13 +1,13 @@
 #pragma once
 #if defined(MSC_VER)
-#define NOMINMAX 1
-#define WIN32_LEAN_AND_MEAN
+#  define NOMINMAX 1
+#  define WIN32_LEAN_AND_MEAN
 #endif
+#include <algorithm>
 #include <cinttypes>
 #include <memory>
-#include <vector>
-#include <algorithm>
 #include <stdexcept>
+#include <vector>
 
 #if __has_include(<boost/container/small_vector.hpp>) && !defined(RTMIDI17_NO_BOOST)
 #  include <boost/container/small_vector.hpp>
@@ -101,11 +101,9 @@ struct message
       : bytes(src_bytes), timestamp(src_timestamp)
   {
   }
-  template<typename... Args>
-  message(Args... args) noexcept
-    : bytes{(uint8_t)args...}
+  template <typename... Args>
+  message(Args... args) noexcept : bytes{(uint8_t)args...}
   {
-
   }
   static uint8_t make_command(const message_type type, const int channel) noexcept
   {
@@ -134,8 +132,9 @@ struct message
 
   static message pitch_bend(uint8_t channel, int value) noexcept
   {
-    return {make_command(message_type::PITCH_BEND, channel),
-                       (unsigned char)(value & 0x7F), (uint8_t)((value >> 7) & 0x7F)};
+    return {
+        make_command(message_type::PITCH_BEND, channel), (unsigned char)(value & 0x7F),
+        (uint8_t)((value >> 7) & 0x7F)};
   }
 
   static message pitch_bend(uint8_t channel, uint8_t lsb, uint8_t msb) noexcept
@@ -334,8 +333,7 @@ struct meta_events
 
   static message song_position(int positionInBeats) noexcept
   {
-    return {0xf2, (uint8_t)(positionInBeats & 127),
-                       (uint8_t)((positionInBeats >> 7) & 127)};
+    return {0xf2, (uint8_t)(positionInBeats & 127), (uint8_t)((positionInBeats >> 7) & 127)};
   }
 };
 

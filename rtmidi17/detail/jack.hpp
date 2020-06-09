@@ -1,16 +1,16 @@
 #pragma once
 #if __has_include(<weak_libjack.h>) || __has_include(<jack/jack.h>)
 
-#if __has_include(<weak_libjack.h>)
-  #include <weak_libjack.h>
-#elif __has_include(<jack/jack.h>)
-  #include <jack/jack.h>
-  #include <jack/midiport.h>
-  #include <jack/ringbuffer.h>
-#endif
-#include <rtmidi17/detail/midi_api.hpp>
-#include <rtmidi17/detail/semaphore.hpp>
-#include <rtmidi17/rtmidi17.hpp>
+#  if __has_include(<weak_libjack.h>)
+#    include <weak_libjack.h>
+#  elif __has_include(<jack/jack.h>)
+#    include <jack/jack.h>
+#    include <jack/midiport.h>
+#    include <jack/ringbuffer.h>
+#  endif
+#  include <rtmidi17/detail/midi_api.hpp>
+#  include <rtmidi17/detail/semaphore.hpp>
+#  include <rtmidi17/rtmidi17.hpp>
 
 //*********************************************************************//
 //  API: UNIX JACK
@@ -53,7 +53,7 @@ class midi_in_jack final : public midi_in_api
 {
 public:
   midi_in_jack(std::string_view cname, unsigned int queueSizeLimit)
-    : midi_in_api{&data, queueSizeLimit}
+      : midi_in_api{&data, queueSizeLimit}
   {
     // TODO do like the others
     data.rtMidiIn = &inputData_;
@@ -131,11 +131,11 @@ public:
 
   void set_port_name(std::string_view portName) override
   {
-#if defined(RTMIDI17_JACK_HAS_PORT_RENAME)
+#  if defined(RTMIDI17_JACK_HAS_PORT_RENAME)
     jack_port_rename(data.client, data.port, portName.data());
-#else
+#  else
     jack_port_set_name(data.port, portName.data());
-#endif
+#  endif
   }
 
   unsigned int get_port_count() override
@@ -231,49 +231,57 @@ private:
 
       // Compute the delta time.
       time = jack_get_time();
-      if (rtData.firstMessage == true) {
-          m.timestamp = 0.;
-          rtData.firstMessage = false;
+      if (rtData.firstMessage == true)
+      {
+        m.timestamp = 0.;
+        rtData.firstMessage = false;
       }
-      else {
+      else
+      {
         m.timestamp = (time - jData.lastTime) * 0.000001;
       }
 
       jData.lastTime = time;
-      if ( !rtData.continueSysex )
-          m.clear();
+      if (!rtData.continueSysex)
+        m.clear();
 
-      if ( !( ( rtData.continueSysex || event.buffer[0] == 0xF0 ) && ( rtData.ignoreFlags & 0x01 ) ) ) {
-          // Unless this is a (possibly continued) SysEx message and we're ignoring SysEx,
-          // copy the event buffer into the MIDI message struct.
-          for ( unsigned int i = 0; i < event.size; i++ )
-              m.bytes.push_back( event.buffer[i] );
+      if (!((rtData.continueSysex || event.buffer[0] == 0xF0) && (rtData.ignoreFlags & 0x01)))
+      {
+        // Unless this is a (possibly continued) SysEx message and we're ignoring SysEx,
+        // copy the event buffer into the MIDI message struct.
+        for (unsigned int i = 0; i < event.size; i++)
+          m.bytes.push_back(event.buffer[i]);
       }
 
-      switch ( event.buffer[0] ) {
-      case 0xF0:
+      switch (event.buffer[0])
+      {
+        case 0xF0:
           // Start of a SysEx message
           rtData.continueSysex = event.buffer[event.size - 1] != 0xF7;
-          if ( rtData.ignoreFlags & 0x01 ) continue;
+          if (rtData.ignoreFlags & 0x01)
+            continue;
           break;
-      case 0xF1:
-      case 0xF8:
+        case 0xF1:
+        case 0xF8:
           // MIDI Time Code or Timing Clock message
-          if ( rtData.ignoreFlags & 0x02 ) continue;
+          if (rtData.ignoreFlags & 0x02)
+            continue;
           break;
-      case 0xFE:
+        case 0xFE:
           // Active Sensing message
-          if ( rtData.ignoreFlags & 0x04 ) continue;
+          if (rtData.ignoreFlags & 0x04)
+            continue;
           break;
-      default:
-          if ( rtData.continueSysex ) {
-              // Continuation of a SysEx message
-              rtData.continueSysex = event.buffer[event.size - 1] != 0xF7;
-              if ( rtData.ignoreFlags & 0x01 ) continue;
+        default:
+          if (rtData.continueSysex)
+          {
+            // Continuation of a SysEx message
+            rtData.continueSysex = event.buffer[event.size - 1] != 0xF7;
+            if (rtData.ignoreFlags & 0x01)
+              continue;
           }
           // All other MIDI messages
       }
-
 
       if (!rtData.continueSysex)
       {
@@ -389,11 +397,11 @@ public:
 
   void set_port_name(std::string_view portName) override
   {
-#if defined(RTMIDI17_JACK_HAS_PORT_RENAME)
+#  if defined(RTMIDI17_JACK_HAS_PORT_RENAME)
     jack_port_rename(data.client, data.port, portName.data());
-#else
+#  else
     jack_port_set_name(data.port, portName.data());
-#endif
+#  endif
   }
 
   unsigned int get_port_count() override
@@ -512,10 +520,10 @@ private:
 
 struct jack_backend
 {
-    using midi_in = midi_in_jack;
-    using midi_out = midi_out_jack;
-    using midi_observer = observer_jack;
-    static const constexpr auto API = rtmidi::API::UNIX_JACK;
+  using midi_in = midi_in_jack;
+  using midi_out = midi_out_jack;
+  using midi_observer = observer_jack;
+  static const constexpr auto API = rtmidi::API::UNIX_JACK;
 };
 }
 #endif

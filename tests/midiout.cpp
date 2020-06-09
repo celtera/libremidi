@@ -60,7 +60,8 @@ bool chooseMidiPort(rtmidi::midi_out& rtmidi)
   return true;
 }
 
-int main(void) try
+int main(void)
+try
 {
   using namespace std::literals;
   rtmidi::midi_out midiout;

@@ -1,17 +1,17 @@
 #pragma once
 #define NOMINMAX 1
 #define WIN32_LEAN_AND_MEAN 1
-#include <rtmidi17/detail/midi_api.hpp>
-#include <rtmidi17/rtmidi17.hpp>
 #include <algorithm>
 #include <chrono>
 #include <condition_variable>
+#include <mmsystem.h>
 #include <mutex>
 #include <ostream>
+#include <rtmidi17/detail/midi_api.hpp>
+#include <rtmidi17/rtmidi17.hpp>
 #include <sstream>
 #include <thread>
 #include <windows.h>
-#include <mmsystem.h>
 
 // Default for Windows is to add an identifier to the port names; this
 // flag can be defined (e.g. in your project file) to disable this behaviour.
@@ -38,14 +38,14 @@ namespace rtmidi
 // implementation.
 struct WinMidiData
 {
-    HMIDIIN inHandle;   // Handle to Midi Input Device
-    HMIDIOUT outHandle; // Handle to Midi Output Device
-    DWORD lastTime;
-    rtmidi::message message;
-    LPMIDIHDR sysexBuffer[RT_SYSEX_BUFFER_COUNT];
-    CRITICAL_SECTION
-    _mutex; // [Patrice] see
-    // https://groups.google.com/forum/#!topic/mididev/6OUjHutMpEo
+  HMIDIIN inHandle;   // Handle to Midi Input Device
+  HMIDIOUT outHandle; // Handle to Midi Output Device
+  DWORD lastTime;
+  rtmidi::message message;
+  LPMIDIHDR sysexBuffer[RT_SYSEX_BUFFER_COUNT];
+  CRITICAL_SECTION
+  _mutex; // [Patrice] see
+          // https://groups.google.com/forum/#!topic/mididev/6OUjHutMpEo
 };
 
 // The Windows MM API is based on the use of a callback function for
@@ -83,645 +83,648 @@ inline std::string ConvertToUTF8(const TCHAR* str)
 class observer_winmm final : public observer_api
 {
 private:
-    using CallbackFunc = std::function<void(int, std::string)>;
-   
+  using CallbackFunc = std::function<void(int, std::string)>;
 
-    std::thread watchThread;
-    std::condition_variable watchThreadCV;
-    std::mutex watchThreadMutex;
-    bool watchThreadShutdown;
+  std::thread watchThread;
+  std::condition_variable watchThreadCV;
+  std::mutex watchThreadMutex;
+  bool watchThreadShutdown;
 
-    inline static const bool INPUT = true;
-    inline static const bool OUTPUT = false;
+  inline static const bool INPUT = true;
+  inline static const bool OUTPUT = false;
 
 public:
-    using PortList = std::vector<std::string>;
+  using PortList = std::vector<std::string>;
 
-    PortList inputPortList;
-    PortList outputPortList;
-    observer_winmm(observer::callbacks&& c) : observer_api {std::move(c)}
-    {
-      inputPortList = get_port_list(INPUT);
-      outputPortList = get_port_list(OUTPUT);
+  PortList inputPortList;
+  PortList outputPortList;
+  observer_winmm(observer::callbacks&& c) : observer_api{std::move(c)}
+  {
+    inputPortList = get_port_list(INPUT);
+    outputPortList = get_port_list(OUTPUT);
 
-      watchThreadShutdown = false;
-      watchThread = std::thread([this]() { watch_thread(); });
-    }
+    watchThreadShutdown = false;
+    watchThread = std::thread([this]() { watch_thread(); });
+  }
 
-    ~observer_winmm()
-    {
-      signal_watch_thread_shutdown();
-      watchThreadCV.notify_all();
-      if (watchThread.joinable())
-        watchThread.join();
-    }
+  ~observer_winmm()
+  {
+    signal_watch_thread_shutdown();
+    watchThreadCV.notify_all();
+    if (watchThread.joinable())
+      watchThread.join();
+  }
 
 private:
-    void watch_thread()
+  void watch_thread()
+  {
+    while (!wait_for_watch_thread_shutdown_signal(RT_WINMM_OBSERVER_POLL_PERIOD_MS))
     {
-      while (!wait_for_watch_thread_shutdown_signal(RT_WINMM_OBSERVER_POLL_PERIOD_MS))
-      {
-        auto currInputPortList = get_port_list(INPUT);
-        compare_port_lists_and_notify_clients(
-            inputPortList, currInputPortList, callbacks_.input_added,
-            callbacks_.input_removed);
-        inputPortList = currInputPortList;
+      auto currInputPortList = get_port_list(INPUT);
+      compare_port_lists_and_notify_clients(
+          inputPortList, currInputPortList, callbacks_.input_added, callbacks_.input_removed);
+      inputPortList = currInputPortList;
 
-        auto currOutputPortList = get_port_list(OUTPUT);
-        compare_port_lists_and_notify_clients(
-            outputPortList, currOutputPortList, callbacks_.output_added,
-            callbacks_.output_removed);
-        outputPortList = currOutputPortList;
+      auto currOutputPortList = get_port_list(OUTPUT);
+      compare_port_lists_and_notify_clients(
+          outputPortList, currOutputPortList, callbacks_.output_added, callbacks_.output_removed);
+      outputPortList = currOutputPortList;
+    }
+  }
+
+  void compare_port_lists_and_notify_clients(
+      const PortList& prevList,
+      const PortList& currList,
+      const CallbackFunc& portAddedFunc,
+      const CallbackFunc& portRemovedFunc)
+  {
+    if (portAddedFunc)
+    {
+      for (const auto& portName : currList)
+      {
+        auto iter = std::find(prevList.begin(), prevList.end(), portName);
+        if (iter == prevList.end())
+          portAddedFunc(0, portName);
       }
     }
-
-    void compare_port_lists_and_notify_clients(
-        const PortList& prevList,
-        const PortList& currList,
-        const CallbackFunc& portAddedFunc,
-        const CallbackFunc& portRemovedFunc)
+    if (portRemovedFunc)
     {
-      if (portAddedFunc)
+      for (const auto portName : prevList)
       {
-        for (const auto& portName : currList)
-        {
-          auto iter = std::find(prevList.begin(), prevList.end(), portName);
-          if (iter == prevList.end())
-            portAddedFunc(0, portName);
-        }
-      }
-      if (portRemovedFunc)
-      {
-        for (const auto portName : prevList)
-        {
-          auto iter = std::find(currList.begin(), currList.end(), portName);
-          if (iter == currList.end())
-            portRemovedFunc(0, portName);
-        }
+        auto iter = std::find(currList.begin(), currList.end(), portName);
+        if (iter == currList.end())
+          portRemovedFunc(0, portName);
       }
     }
+  }
 
-    bool wait_for_watch_thread_shutdown_signal(unsigned int timeoutMs)
-    {
-      using namespace std::chrono_literals;
-      std::unique_lock<std::mutex> lock(watchThreadMutex);
-      return watchThreadCV.wait_for(lock, timeoutMs * 1ms, [this]() { return watchThreadShutdown; });
-    }
+  bool wait_for_watch_thread_shutdown_signal(unsigned int timeoutMs)
+  {
+    using namespace std::chrono_literals;
+    std::unique_lock<std::mutex> lock(watchThreadMutex);
+    return watchThreadCV.wait_for(lock, timeoutMs * 1ms, [this]() { return watchThreadShutdown; });
+  }
 
-    void signal_watch_thread_shutdown()
-    {
-      std::lock_guard lock(watchThreadMutex);
-      watchThreadShutdown = true;
-    }
+  void signal_watch_thread_shutdown()
+  {
+    std::lock_guard lock(watchThreadMutex);
+    watchThreadShutdown = true;
+  }
 
-  public:
-    PortList get_port_list(bool input) const
+public:
+  PortList get_port_list(bool input) const
+  {
+    // true Get input, false get output
+    PortList portList;
+    unsigned int nDevices = input ? midiInGetNumDevs() : midiOutGetNumDevs();
+    for (unsigned int ix = 0; ix < nDevices; ++ix)
     {
-	    // true Get input, false get output
-      PortList portList;
-      unsigned int nDevices = input ? midiInGetNumDevs() : midiOutGetNumDevs();
-      for (unsigned int ix = 0; ix < nDevices; ++ix)
+      std::string portName;
+      if (input)
       {
-        std::string portName;
-        if (input)
-        {
-          MIDIINCAPS deviceCaps;
-          midiInGetDevCaps(ix, &deviceCaps, sizeof(MIDIINCAPS));
-          portName = ConvertToUTF8(deviceCaps.szPname);
-        }
-        else
-        {
-          MIDIOUTCAPS deviceCaps;
-          midiOutGetDevCaps(ix, &deviceCaps, sizeof(MIDIOUTCAPS));
-          portName = ConvertToUTF8(deviceCaps.szPname);
-        }
-        portList.push_back(portName);
+        MIDIINCAPS deviceCaps;
+        midiInGetDevCaps(ix, &deviceCaps, sizeof(MIDIINCAPS));
+        portName = ConvertToUTF8(deviceCaps.szPname);
       }
-      return portList;
+      else
+      {
+        MIDIOUTCAPS deviceCaps;
+        midiOutGetDevCaps(ix, &deviceCaps, sizeof(MIDIOUTCAPS));
+        portName = ConvertToUTF8(deviceCaps.szPname);
+      }
+      portList.push_back(portName);
     }
+    return portList;
+  }
 };
 
 class midi_in_winmm final : public midi_in_default<midi_in_winmm>
 {
-  public:
-    static const constexpr auto backend = "WinMM";
-    midi_in_winmm(std::string_view, unsigned int queueSizeLimit)
+public:
+  static const constexpr auto backend = "WinMM";
+  midi_in_winmm(std::string_view, unsigned int queueSizeLimit)
       : midi_in_default{&data, queueSizeLimit}
+  {
+    // We'll issue a warning here if no devices are available but not
+    // throw an error since the user can plugin something later.
+    unsigned int nDevices = get_port_count();
+    if (nDevices == 0)
     {
-      // We'll issue a warning here if no devices are available but not
-      // throw an error since the user can plugin something later.
-      unsigned int nDevices = get_port_count();
-      if (nDevices == 0)
-      {
-        warning("MidiInWinMM::initialize: no MIDI input devices currently available.");
-      }
-
-      if (!InitializeCriticalSectionAndSpinCount(&(data._mutex), 0x00000400))
-      {
-        warning("MidiInWinMM::initialize: InitializeCriticalSectionAndSpinCount failed.");
-      }
+      warning("MidiInWinMM::initialize: no MIDI input devices currently available.");
     }
 
-    ~midi_in_winmm() override
+    if (!InitializeCriticalSectionAndSpinCount(&(data._mutex), 0x00000400))
     {
-      // Close a connection if it exists.
-      midi_in_winmm::close_port();
+      warning("MidiInWinMM::initialize: InitializeCriticalSectionAndSpinCount failed.");
+    }
+  }
 
-      DeleteCriticalSection(&(data._mutex));
+  ~midi_in_winmm() override
+  {
+    // Close a connection if it exists.
+    midi_in_winmm::close_port();
+
+    DeleteCriticalSection(&(data._mutex));
+  }
+
+  rtmidi::API get_current_api() const noexcept override
+  {
+    return rtmidi::API::WINDOWS_MM;
+  }
+
+  void open_port(unsigned int portNumber, std::string_view) override
+  {
+    if (connected_)
+    {
+      warning("MidiInWinMM::openPort: a valid connection already exists!");
+      return;
     }
 
-    rtmidi::API get_current_api() const noexcept override
+    unsigned int nDevices = midiInGetNumDevs();
+    if (nDevices == 0)
     {
-      return rtmidi::API::WINDOWS_MM;
+      error<no_devices_found_error>("MidiInWinMM::openPort: no MIDI input sources found!");
+      return;
     }
 
-    void open_port(unsigned int portNumber, std::string_view) override
+    if (portNumber >= nDevices)
     {
-      if (connected_)
-      {
-        warning("MidiInWinMM::openPort: a valid connection already exists!");
-        return;
-      }
+      std::ostringstream ost;
+      ost << "MidiInWinMM::openPort: the 'portNumber' argument (" << portNumber << ") is invalid.";
+      error<invalid_parameter_error>(ost.str());
+      return;
+    }
 
-      unsigned int nDevices = midiInGetNumDevs();
-      if (nDevices == 0)
-      {
-        error<no_devices_found_error>("MidiInWinMM::openPort: no MIDI input sources found!");
-        return;
-      }
+    MMRESULT result = midiInOpen(
+        &data.inHandle, portNumber, (DWORD_PTR)&midiInputCallback, (DWORD_PTR)&inputData_,
+        CALLBACK_FUNCTION);
+    if (result != MMSYSERR_NOERROR)
+    {
+      error<driver_error>("MidiInWinMM::openPort: error creating Windows MM MIDI input port.");
+      return;
+    }
 
-      if (portNumber >= nDevices)
-      {
-        std::ostringstream ost;
-        ost << "MidiInWinMM::openPort: the 'portNumber' argument (" << portNumber << ") is invalid.";
-        error<invalid_parameter_error>(ost.str());
-        return;
-      }
+    // Allocate and init the sysex buffers.
+    for (int i = 0; i < RT_SYSEX_BUFFER_COUNT; ++i)
+    {
+      data.sysexBuffer[i] = (MIDIHDR*)new char[sizeof(MIDIHDR)];
+      data.sysexBuffer[i]->lpData = new char[RT_SYSEX_BUFFER_SIZE];
+      data.sysexBuffer[i]->dwBufferLength = RT_SYSEX_BUFFER_SIZE;
+      data.sysexBuffer[i]->dwUser = i; // We use the dwUser parameter as buffer indicator
+      data.sysexBuffer[i]->dwFlags = 0;
 
-      MMRESULT result = midiInOpen(
-            &data.inHandle, portNumber, (DWORD_PTR)&midiInputCallback, (DWORD_PTR)&inputData_,
-            CALLBACK_FUNCTION);
-      if (result != MMSYSERR_NOERROR)
-      {
-        error<driver_error>("MidiInWinMM::openPort: error creating Windows MM MIDI input port.");
-        return;
-      }
-
-      // Allocate and init the sysex buffers.
-      for (int i = 0; i < RT_SYSEX_BUFFER_COUNT; ++i)
-      {
-        data.sysexBuffer[i] = (MIDIHDR*)new char[sizeof(MIDIHDR)];
-        data.sysexBuffer[i]->lpData = new char[RT_SYSEX_BUFFER_SIZE];
-        data.sysexBuffer[i]->dwBufferLength = RT_SYSEX_BUFFER_SIZE;
-        data.sysexBuffer[i]->dwUser = i; // We use the dwUser parameter as buffer indicator
-        data.sysexBuffer[i]->dwFlags = 0;
-
-        result = midiInPrepareHeader(data.inHandle, data.sysexBuffer[i], sizeof(MIDIHDR));
-        if (result != MMSYSERR_NOERROR)
-        {
-          midiInClose(data.inHandle);
-          data.inHandle = nullptr;
-          error<driver_error>("MidiInWinMM::openPort: error starting Windows MM MIDI input port "
-                              "(PrepareHeader).");
-          return;
-        }
-
-        // Register the buffer.
-        result = midiInAddBuffer(data.inHandle, data.sysexBuffer[i], sizeof(MIDIHDR));
-        if (result != MMSYSERR_NOERROR)
-        {
-          midiInClose(data.inHandle);
-          data.inHandle = nullptr;
-          error<driver_error>("MidiInWinMM::openPort: error starting Windows MM MIDI input port "
-                              "(AddBuffer).");
-          return;
-        }
-      }
-
-      result = midiInStart(data.inHandle);
+      result = midiInPrepareHeader(data.inHandle, data.sysexBuffer[i], sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
       {
         midiInClose(data.inHandle);
         data.inHandle = nullptr;
-        error<driver_error>("MidiInWinMM::openPort: error starting Windows MM MIDI input port.");
+        error<driver_error>(
+            "MidiInWinMM::openPort: error starting Windows MM MIDI input port "
+            "(PrepareHeader).");
         return;
       }
 
-      connected_ = true;
-    }
-
-    void close_port() override
-    {
-      if (connected_)
+      // Register the buffer.
+      result = midiInAddBuffer(data.inHandle, data.sysexBuffer[i], sizeof(MIDIHDR));
+      if (result != MMSYSERR_NOERROR)
       {
-        EnterCriticalSection(&(data._mutex));
-        midiInReset(data.inHandle);
-        midiInStop(data.inHandle);
-
-        for (int i = 0; i < RT_SYSEX_BUFFER_COUNT; ++i)
-        {
-          int result = midiInUnprepareHeader(data.inHandle, data.sysexBuffer[i], sizeof(MIDIHDR));
-          delete[] data.sysexBuffer[i]->lpData;
-          delete[] data.sysexBuffer[i];
-          if (result != MMSYSERR_NOERROR)
-          {
-            midiInClose(data.inHandle);
-            data.inHandle = nullptr;
-            error<driver_error>("MidiInWinMM::openPort: error closing Windows MM MIDI input "
-                                "port (midiInUnprepareHeader).");
-            return;
-          }
-        }
-
         midiInClose(data.inHandle);
-        data.inHandle = 0;
-        connected_ = false;
-        LeaveCriticalSection(&(data._mutex));
+        data.inHandle = nullptr;
+        error<driver_error>(
+            "MidiInWinMM::openPort: error starting Windows MM MIDI input port "
+            "(AddBuffer).");
+        return;
       }
     }
 
-    unsigned int get_port_count() override
+    result = midiInStart(data.inHandle);
+    if (result != MMSYSERR_NOERROR)
     {
-      return midiInGetNumDevs();
+      midiInClose(data.inHandle);
+      data.inHandle = nullptr;
+      error<driver_error>("MidiInWinMM::openPort: error starting Windows MM MIDI input port.");
+      return;
     }
 
-    std::string get_port_name(unsigned int portNumber) override
+    connected_ = true;
+  }
+
+  void close_port() override
+  {
+    if (connected_)
     {
-      std::string stringName;
-      unsigned int nDevices = midiInGetNumDevs();
-      if (portNumber >= nDevices)
-      {
-        std::ostringstream ost;
-        ost << "MidiInWinMM::getPortName: the 'portNumber' argument (" << portNumber
-            << ") is invalid.";
-        warning(ost.str());
-        return stringName;
-      }
+      EnterCriticalSection(&(data._mutex));
+      midiInReset(data.inHandle);
+      midiInStop(data.inHandle);
 
-      MIDIINCAPS deviceCaps;
-      midiInGetDevCaps(portNumber, &deviceCaps, sizeof(MIDIINCAPS));
-      stringName = ConvertToUTF8(deviceCaps.szPname);
-
-      // Next lines added to add the portNumber to the name so that
-      // the device's names are sure to be listed with individual names
-      // even when they have the same brand name
-#ifndef RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
-      int x = 1;
-      for (int i = 0; i < portNumber; i++)
+      for (int i = 0; i < RT_SYSEX_BUFFER_COUNT; ++i)
       {
-        MIDIINCAPS deviceCaps2;
-        midiInGetDevCaps(i, &deviceCaps2, sizeof(MIDIINCAPS));
-        auto stringName2 = ConvertToUTF8(deviceCaps2.szPname);
-        if (stringName == stringName2)
+        int result = midiInUnprepareHeader(data.inHandle, data.sysexBuffer[i], sizeof(MIDIHDR));
+        delete[] data.sysexBuffer[i]->lpData;
+        delete[] data.sysexBuffer[i];
+        if (result != MMSYSERR_NOERROR)
         {
-          x++;
-	}
-
+          midiInClose(data.inHandle);
+          data.inHandle = nullptr;
+          error<driver_error>(
+              "MidiInWinMM::openPort: error closing Windows MM MIDI input "
+              "port (midiInUnprepareHeader).");
+          return;
+        }
       }
-      std::ostringstream os;
-      os << " ";
-      os << x;
-      stringName += os.str();
-      x = 1;
-#endif
-      
+
+      midiInClose(data.inHandle);
+      data.inHandle = 0;
+      connected_ = false;
+      LeaveCriticalSection(&(data._mutex));
+    }
+  }
+
+  unsigned int get_port_count() override
+  {
+    return midiInGetNumDevs();
+  }
+
+  std::string get_port_name(unsigned int portNumber) override
+  {
+    std::string stringName;
+    unsigned int nDevices = midiInGetNumDevs();
+    if (portNumber >= nDevices)
+    {
+      std::ostringstream ost;
+      ost << "MidiInWinMM::getPortName: the 'portNumber' argument (" << portNumber
+          << ") is invalid.";
+      warning(ost.str());
       return stringName;
     }
 
-  private:
-    static void CALLBACK midiInputCallback(
-        HMIDIIN /*hmin*/,
-        UINT inputStatus,
-        DWORD_PTR instancePtr,
-        DWORD_PTR midiMessage,
-        DWORD timestamp)
+    MIDIINCAPS deviceCaps;
+    midiInGetDevCaps(portNumber, &deviceCaps, sizeof(MIDIINCAPS));
+    stringName = ConvertToUTF8(deviceCaps.szPname);
+
+    // Next lines added to add the portNumber to the name so that
+    // the device's names are sure to be listed with individual names
+    // even when they have the same brand name
+#ifndef RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+    int x = 1;
+    for (int i = 0; i < portNumber; i++)
     {
-      if (inputStatus != MIM_DATA && inputStatus != MIM_LONGDATA && inputStatus != MIM_LONGERROR)
+      MIDIINCAPS deviceCaps2;
+      midiInGetDevCaps(i, &deviceCaps2, sizeof(MIDIINCAPS));
+      auto stringName2 = ConvertToUTF8(deviceCaps2.szPname);
+      if (stringName == stringName2)
+      {
+        x++;
+      }
+    }
+    std::ostringstream os;
+    os << " ";
+    os << x;
+    stringName += os.str();
+    x = 1;
+#endif
+
+    return stringName;
+  }
+
+private:
+  static void CALLBACK midiInputCallback(
+      HMIDIIN /*hmin*/,
+      UINT inputStatus,
+      DWORD_PTR instancePtr,
+      DWORD_PTR midiMessage,
+      DWORD timestamp)
+  {
+    if (inputStatus != MIM_DATA && inputStatus != MIM_LONGDATA && inputStatus != MIM_LONGERROR)
+      return;
+
+    // midi_in_api::RtMidiInData *data = static_cast<midi_in_api::RtMidiInData *>
+    // (instancePtr);
+    midi_in_api::in_data& data = *(midi_in_api::in_data*)instancePtr;
+    WinMidiData& apiData = *static_cast<WinMidiData*>(data.apiData);
+
+    // Calculate time stamp.
+    if (data.firstMessage == true)
+    {
+      apiData.message.timestamp = 0.0;
+      data.firstMessage = false;
+    }
+    else
+      apiData.message.timestamp = (double)(timestamp - apiData.lastTime) * 0.001;
+
+    if (inputStatus == MIM_DATA)
+    { // Channel or system message
+
+      // Make sure the first byte is a status byte.
+      unsigned char status = (unsigned char)(midiMessage & 0x000000FF);
+      if (!(status & 0x80))
         return;
 
-      // midi_in_api::RtMidiInData *data = static_cast<midi_in_api::RtMidiInData *>
-      // (instancePtr);
-      midi_in_api::in_data& data = *(midi_in_api::in_data*)instancePtr;
-      WinMidiData& apiData = *static_cast<WinMidiData*>(data.apiData);
-
-      // Calculate time stamp.
-      if (data.firstMessage == true)
+      // Determine the number of bytes in the MIDI message.
+      unsigned short nBytes = 1;
+      if (status < 0xC0)
+        nBytes = 3;
+      else if (status < 0xE0)
+        nBytes = 2;
+      else if (status < 0xF0)
+        nBytes = 3;
+      else if (status == 0xF1)
       {
-        apiData.message.timestamp = 0.0;
-        data.firstMessage = false;
-      }
-      else
-        apiData.message.timestamp = (double)(timestamp - apiData.lastTime) * 0.001;
-
-      if (inputStatus == MIM_DATA)
-      { // Channel or system message
-
-        // Make sure the first byte is a status byte.
-        unsigned char status = (unsigned char)(midiMessage & 0x000000FF);
-        if (!(status & 0x80))
+        if (data.ignoreFlags & 0x02)
           return;
-
-        // Determine the number of bytes in the MIDI message.
-        unsigned short nBytes = 1;
-        if (status < 0xC0)
-          nBytes = 3;
-        else if (status < 0xE0)
-          nBytes = 2;
-        else if (status < 0xF0)
-          nBytes = 3;
-        else if (status == 0xF1)
-        {
-          if (data.ignoreFlags & 0x02)
-            return;
-          else
-            nBytes = 2;
-        }
-        else if (status == 0xF2)
-          nBytes = 3;
-        else if (status == 0xF3)
-          nBytes = 2;
-        else if (status == 0xF8 && (data.ignoreFlags & 0x02))
-        {
-          // A MIDI timing tick message and we're ignoring it.
-          return;
-        }
-        else if (status == 0xFE && (data.ignoreFlags & 0x04))
-        {
-          // A MIDI active sensing message and we're ignoring it.
-          return;
-        }
-
-        // Copy bytes to our MIDI message.
-        unsigned char* ptr = (unsigned char*)&midiMessage;
-        apiData.message.bytes.resize(nBytes);
-        for (int i = 0; i < nBytes; ++i)
-          apiData.message.bytes[i] = ptr[i];
-      }
-      else
-      { // Sysex message ( MIM_LONGDATA or MIM_LONGERROR )
-        MIDIHDR* sysex = (MIDIHDR*)midiMessage;
-        if (!(data.ignoreFlags & 0x01) && inputStatus != MIM_LONGERROR)
-        {
-          // Sysex message and we're not ignoring it
-          for (int i = 0; i < (int)sysex->dwBytesRecorded; ++i)
-            apiData.message.bytes.push_back(sysex->lpData[i]);
-        }
-
-        // The WinMM API requires that the sysex buffer be requeued after
-        // input of each sysex message.  Even if we are ignoring sysex
-        // messages, we still need to requeue the buffer in case the user
-        // decides to not ignore sysex messages in the future.  However,
-        // it seems that WinMM calls this function with an empty sysex
-        // buffer when an application closes and in this case, we should
-        // avoid requeueing it, else the computer suddenly reboots after
-        // one or two minutes.
-        if (apiData.sysexBuffer[sysex->dwUser]->dwBytesRecorded > 0)
-        {
-          // if ( sysex->dwBytesRecorded > 0 ) {
-          EnterCriticalSection(&(apiData._mutex));
-          MMRESULT result
-              = midiInAddBuffer(apiData.inHandle, apiData.sysexBuffer[sysex->dwUser], sizeof(MIDIHDR));
-          LeaveCriticalSection(&(apiData._mutex));
-          if (result != MMSYSERR_NOERROR)
-            std::cerr << "\nRtMidiIn::midiInputCallback: error sending sysex to "
-                         "Midi device!!\n\n";
-
-          if (data.ignoreFlags & 0x01)
-            return;
-        }
         else
+          nBytes = 2;
+      }
+      else if (status == 0xF2)
+        nBytes = 3;
+      else if (status == 0xF3)
+        nBytes = 2;
+      else if (status == 0xF8 && (data.ignoreFlags & 0x02))
+      {
+        // A MIDI timing tick message and we're ignoring it.
+        return;
+      }
+      else if (status == 0xFE && (data.ignoreFlags & 0x04))
+      {
+        // A MIDI active sensing message and we're ignoring it.
+        return;
+      }
+
+      // Copy bytes to our MIDI message.
+      unsigned char* ptr = (unsigned char*)&midiMessage;
+      apiData.message.bytes.resize(nBytes);
+      for (int i = 0; i < nBytes; ++i)
+        apiData.message.bytes[i] = ptr[i];
+    }
+    else
+    { // Sysex message ( MIM_LONGDATA or MIM_LONGERROR )
+      MIDIHDR* sysex = (MIDIHDR*)midiMessage;
+      if (!(data.ignoreFlags & 0x01) && inputStatus != MIM_LONGERROR)
+      {
+        // Sysex message and we're not ignoring it
+        for (int i = 0; i < (int)sysex->dwBytesRecorded; ++i)
+          apiData.message.bytes.push_back(sysex->lpData[i]);
+      }
+
+      // The WinMM API requires that the sysex buffer be requeued after
+      // input of each sysex message.  Even if we are ignoring sysex
+      // messages, we still need to requeue the buffer in case the user
+      // decides to not ignore sysex messages in the future.  However,
+      // it seems that WinMM calls this function with an empty sysex
+      // buffer when an application closes and in this case, we should
+      // avoid requeueing it, else the computer suddenly reboots after
+      // one or two minutes.
+      if (apiData.sysexBuffer[sysex->dwUser]->dwBytesRecorded > 0)
+      {
+        // if ( sysex->dwBytesRecorded > 0 ) {
+        EnterCriticalSection(&(apiData._mutex));
+        MMRESULT result = midiInAddBuffer(
+            apiData.inHandle, apiData.sysexBuffer[sysex->dwUser], sizeof(MIDIHDR));
+        LeaveCriticalSection(&(apiData._mutex));
+        if (result != MMSYSERR_NOERROR)
+          std::cerr << "\nRtMidiIn::midiInputCallback: error sending sysex to "
+                       "Midi device!!\n\n";
+
+        if (data.ignoreFlags & 0x01)
           return;
       }
-
-      // Save the time of the last non-filtered message
-      apiData.lastTime = timestamp;
-
-      if (data.userCallback)
-      {
-        data.userCallback(apiData.message);
-      }
       else
-      {
-        // As long as we haven't reached our queue size limit, push the message.
-        if (!data.queue.push(apiData.message))
-          std::cerr << "\nMidiInWinMM: message queue limit reached!!\n\n";
-      }
-
-      // Clear the vector for the next input message.
-      apiData.message.bytes.clear();
+        return;
     }
 
-    WinMidiData data;
+    // Save the time of the last non-filtered message
+    apiData.lastTime = timestamp;
+
+    if (data.userCallback)
+    {
+      data.userCallback(apiData.message);
+    }
+    else
+    {
+      // As long as we haven't reached our queue size limit, push the message.
+      if (!data.queue.push(apiData.message))
+        std::cerr << "\nMidiInWinMM: message queue limit reached!!\n\n";
+    }
+
+    // Clear the vector for the next input message.
+    apiData.message.bytes.clear();
+  }
+
+  WinMidiData data;
 };
 
 class midi_out_winmm final : public midi_out_default<midi_out_winmm>
 {
-  public:
-    static const constexpr auto backend = "WinMM";
-    midi_out_winmm(std::string_view)
+public:
+  static const constexpr auto backend = "WinMM";
+  midi_out_winmm(std::string_view)
+  {
+    // We'll issue a warning here if no devices are available but not
+    // throw an error since the user can plug something in later.
+    unsigned int nDevices = get_port_count();
+    if (nDevices == 0)
     {
-      // We'll issue a warning here if no devices are available but not
-      // throw an error since the user can plug something in later.
-      unsigned int nDevices = get_port_count();
-      if (nDevices == 0)
-      {
-        warning("MidiOutWinMM::initialize: no MIDI output devices currently "
-                "available.");
-      }
+      warning(
+          "MidiOutWinMM::initialize: no MIDI output devices currently "
+          "available.");
+    }
+  }
+
+  ~midi_out_winmm() override
+  {
+    // Close a connection if it exists.
+    midi_out_winmm::close_port();
+  }
+
+  rtmidi::API get_current_api() const noexcept override
+  {
+    return rtmidi::API::WINDOWS_MM;
+  }
+
+  void open_port(unsigned int portNumber, std::string_view portName) override
+  {
+    if (connected_)
+    {
+      warning("MidiOutWinMM::openPort: a valid connection already exists!");
+      return;
     }
 
-    ~midi_out_winmm() override
+    unsigned int nDevices = midiOutGetNumDevs();
+    if (nDevices < 1)
     {
-      // Close a connection if it exists.
-      midi_out_winmm::close_port();
+      error<no_devices_found_error>("MidiOutWinMM::openPort: no MIDI output destinations found!");
+      return;
     }
 
-    rtmidi::API get_current_api() const noexcept override
+    if (portNumber >= nDevices)
     {
-      return rtmidi::API::WINDOWS_MM;
+      std::ostringstream ost;
+      ost << "MidiOutWinMM::openPort: the 'portNumber' argument (" << portNumber
+          << ") is invalid.";
+      error<invalid_parameter_error>(ost.str());
+      return;
     }
 
-    void open_port(unsigned int portNumber, std::string_view portName) override
+    MMRESULT result = midiOutOpen(&data.outHandle, portNumber, NULL, NULL, CALLBACK_NULL);
+    if (result != MMSYSERR_NOERROR)
     {
-      if (connected_)
-      {
-        warning("MidiOutWinMM::openPort: a valid connection already exists!");
-        return;
-      }
-
-      unsigned int nDevices = midiOutGetNumDevs();
-      if (nDevices < 1)
-      {
-        error<no_devices_found_error>("MidiOutWinMM::openPort: no MIDI output destinations found!");
-        return;
-      }
-
-      if (portNumber >= nDevices)
-      {
-        std::ostringstream ost;
-        ost << "MidiOutWinMM::openPort: the 'portNumber' argument (" << portNumber << ") is invalid.";
-        error<invalid_parameter_error>(ost.str());
-        return;
-      }
-
-      MMRESULT result = midiOutOpen(
-            &data.outHandle, portNumber, NULL, NULL, CALLBACK_NULL);
-      if (result != MMSYSERR_NOERROR)
-      {
-        error<driver_error>("MidiOutWinMM::openPort: error creating Windows MM MIDI output "
-                            "port.");
-        return;
-      }
-
-      connected_ = true;
+      error<driver_error>(
+          "MidiOutWinMM::openPort: error creating Windows MM MIDI output "
+          "port.");
+      return;
     }
 
-    void close_port() override
+    connected_ = true;
+  }
+
+  void close_port() override
+  {
+    if (connected_)
     {
-      if (connected_)
-      {
-        midiOutReset(data.outHandle);
-        midiOutClose(data.outHandle);
-        data.outHandle = nullptr;
-        connected_ = false;
-      }
+      midiOutReset(data.outHandle);
+      midiOutClose(data.outHandle);
+      data.outHandle = nullptr;
+      connected_ = false;
     }
+  }
 
-    unsigned int get_port_count() override
+  unsigned int get_port_count() override
+  {
+    return midiOutGetNumDevs();
+  }
+
+  std::string get_port_name(unsigned int portNumber) override
+  {
+    std::string stringName;
+    unsigned int nDevices = midiOutGetNumDevs();
+    if (portNumber >= nDevices)
     {
-      return midiOutGetNumDevs();
-    }
-
-    std::string get_port_name(unsigned int portNumber) override
-    {
-      std::string stringName;
-      unsigned int nDevices = midiOutGetNumDevs();
-      if (portNumber >= nDevices)
-      {
-        std::ostringstream ost;
-        ost << "MidiOutWinMM::getPortName: the 'portNumber' argument (" << portNumber
-            << ") is invalid.";
-        warning(ost.str());
-        return stringName;
-      }
-
-      MIDIOUTCAPS deviceCaps;
-      
-      midiOutGetDevCaps(portNumber, &deviceCaps, sizeof(MIDIOUTCAPS));
-      stringName = ConvertToUTF8(deviceCaps.szPname);
-
-      // Next lines added to add the portNumber to the name so that
-      // the device's names are sure to be listed with individual names
-      // even when they have the same brand name
-      std::ostringstream os;
-#ifndef RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
-      int x = 1;
-      for (int i = 0; i < portNumber; i++)
-      {
-        MIDIOUTCAPS deviceCaps2;
-        midiOutGetDevCaps(i, &deviceCaps2, sizeof(MIDIOUTCAPS));
-        auto sn2 = ConvertToUTF8(deviceCaps2.szPname);
-        if (stringName == sn2)
-        {
-          x++;
-        }
-      }
-      os << " ";
-      os << x;
-      stringName += os.str();
-      x = 1;
-#endif
-     
+      std::ostringstream ost;
+      ost << "MidiOutWinMM::getPortName: the 'portNumber' argument (" << portNumber
+          << ") is invalid.";
+      warning(ost.str());
       return stringName;
     }
 
-    void send_message(const unsigned char* message, size_t size) override
+    MIDIOUTCAPS deviceCaps;
+
+    midiOutGetDevCaps(portNumber, &deviceCaps, sizeof(MIDIOUTCAPS));
+    stringName = ConvertToUTF8(deviceCaps.szPname);
+
+    // Next lines added to add the portNumber to the name so that
+    // the device's names are sure to be listed with individual names
+    // even when they have the same brand name
+    std::ostringstream os;
+#ifndef RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+    int x = 1;
+    for (int i = 0; i < portNumber; i++)
     {
-      if (!connected_)
-        return;
-
-      unsigned int nBytes = static_cast<unsigned int>(size);
-      if (nBytes == 0)
+      MIDIOUTCAPS deviceCaps2;
+      midiOutGetDevCaps(i, &deviceCaps2, sizeof(MIDIOUTCAPS));
+      auto sn2 = ConvertToUTF8(deviceCaps2.szPname);
+      if (stringName == sn2)
       {
-        warning("MidiOutWinMM::sendMessage: message argument is empty!");
-        return;
-      }
-
-      MMRESULT result;
-      if (message[0] == 0xF0)
-      { // Sysex message
-
-        // Allocate buffer for sysex data.
-        buffer.clear();
-        buffer.resize(nBytes);
-
-        // Copy data to buffer.
-        for (unsigned int i = 0; i < nBytes; ++i)
-          buffer[i] = message[i];
-
-        // Create and prepare MIDIHDR structure.
-        MIDIHDR sysex;
-        sysex.lpData = (LPSTR)buffer.data();
-        sysex.dwBufferLength = nBytes;
-        sysex.dwFlags = 0;
-        result = midiOutPrepareHeader(data.outHandle, &sysex, sizeof(MIDIHDR));
-        if (result != MMSYSERR_NOERROR)
-        {
-          error<driver_error>("MidiOutWinMM::sendMessage: error preparing sysex header.");
-          return;
-        }
-
-        // Send the message.
-        result = midiOutLongMsg(data.outHandle, &sysex, sizeof(MIDIHDR));
-        if (result != MMSYSERR_NOERROR)
-        {
-          error<driver_error>("MidiOutWinMM::sendMessage: error sending sysex message.");
-          return;
-        }
-
-        // Unprepare the buffer and MIDIHDR.
-        while (MIDIERR_STILLPLAYING == midiOutUnprepareHeader(data.outHandle, &sysex, sizeof(MIDIHDR)))
-          Sleep(1);
-      }
-      else
-      { // Channel or system message.
-
-        // Make sure the message size isn't too big.
-        if (nBytes > 3)
-        {
-          warning("MidiOutWinMM::sendMessage: message size is greater than 3 bytes "
-                  "(and not sysex)!");
-          return;
-        }
-
-        // Pack MIDI bytes into double word.
-        DWORD packet;
-        unsigned char* ptr = (unsigned char*)&packet;
-        for (unsigned int i = 0; i < nBytes; ++i)
-        {
-          *ptr = message[i];
-          ++ptr;
-        }
-
-        // Send the message immediately.
-        result = midiOutShortMsg(data.outHandle, packet);
-        if (result != MMSYSERR_NOERROR)
-        {
-          error<driver_error>("MidiOutWinMM::sendMessage: error sending MIDI message.");
-        }
+        x++;
       }
     }
+    os << " ";
+    os << x;
+    stringName += os.str();
+    x = 1;
+#endif
 
-  private:
-    WinMidiData data;
-    std::vector<char> buffer;
+    return stringName;
+  }
+
+  void send_message(const unsigned char* message, size_t size) override
+  {
+    if (!connected_)
+      return;
+
+    unsigned int nBytes = static_cast<unsigned int>(size);
+    if (nBytes == 0)
+    {
+      warning("MidiOutWinMM::sendMessage: message argument is empty!");
+      return;
+    }
+
+    MMRESULT result;
+    if (message[0] == 0xF0)
+    { // Sysex message
+
+      // Allocate buffer for sysex data.
+      buffer.clear();
+      buffer.resize(nBytes);
+
+      // Copy data to buffer.
+      for (unsigned int i = 0; i < nBytes; ++i)
+        buffer[i] = message[i];
+
+      // Create and prepare MIDIHDR structure.
+      MIDIHDR sysex;
+      sysex.lpData = (LPSTR)buffer.data();
+      sysex.dwBufferLength = nBytes;
+      sysex.dwFlags = 0;
+      result = midiOutPrepareHeader(data.outHandle, &sysex, sizeof(MIDIHDR));
+      if (result != MMSYSERR_NOERROR)
+      {
+        error<driver_error>("MidiOutWinMM::sendMessage: error preparing sysex header.");
+        return;
+      }
+
+      // Send the message.
+      result = midiOutLongMsg(data.outHandle, &sysex, sizeof(MIDIHDR));
+      if (result != MMSYSERR_NOERROR)
+      {
+        error<driver_error>("MidiOutWinMM::sendMessage: error sending sysex message.");
+        return;
+      }
+
+      // Unprepare the buffer and MIDIHDR.
+      while (MIDIERR_STILLPLAYING
+             == midiOutUnprepareHeader(data.outHandle, &sysex, sizeof(MIDIHDR)))
+        Sleep(1);
+    }
+    else
+    { // Channel or system message.
+
+      // Make sure the message size isn't too big.
+      if (nBytes > 3)
+      {
+        warning(
+            "MidiOutWinMM::sendMessage: message size is greater than 3 bytes "
+            "(and not sysex)!");
+        return;
+      }
+
+      // Pack MIDI bytes into double word.
+      DWORD packet;
+      unsigned char* ptr = (unsigned char*)&packet;
+      for (unsigned int i = 0; i < nBytes; ++i)
+      {
+        *ptr = message[i];
+        ++ptr;
+      }
+
+      // Send the message immediately.
+      result = midiOutShortMsg(data.outHandle, packet);
+      if (result != MMSYSERR_NOERROR)
+      {
+        error<driver_error>("MidiOutWinMM::sendMessage: error sending MIDI message.");
+      }
+    }
+  }
+
+private:
+  WinMidiData data;
+  std::vector<char> buffer;
 };
 
 struct winmm_backend
 {
-    using midi_in = midi_in_winmm;
-    using midi_out = midi_out_winmm;
-    using midi_observer = observer_winmm;
-    static const constexpr auto API = rtmidi::API::WINDOWS_MM;
+  using midi_in = midi_in_winmm;
+  using midi_out = midi_out_winmm;
+  using midi_observer = observer_winmm;
+  static const constexpr auto API = rtmidi::API::WINDOWS_MM;
 };
 }

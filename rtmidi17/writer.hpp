@@ -24,8 +24,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#include <rtmidi17/message.hpp>
 #include <cstdint>
+#include <rtmidi17/message.hpp>
 #include <vector>
 
 namespace rtmidi
@@ -36,7 +36,10 @@ public:
   writer(int ticks);
   ~writer();
 
-  size_t get_num_tracks() { return tracks.size(); }
+  size_t get_num_tracks()
+  {
+    return tracks.size();
+  }
 
   void add_event(int tick, int track, message m);
   void add_event(int track, track_event m);
@@ -45,7 +48,10 @@ public:
 
   void write(std::ostream& out);
 
-  const std::vector<midi_track>& get_tracks() { return tracks; }
+  const std::vector<midi_track>& get_tracks()
+  {
+    return tracks;
+  }
 
 private:
   std::vector<midi_track> tracks;

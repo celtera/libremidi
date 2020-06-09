@@ -24,7 +24,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #if !defined(RTMIDI17_HEADER_ONLY)
-#include <rtmidi17/writer.hpp>
+#  include <rtmidi17/writer.hpp>
 #endif
 #include <iostream>
 namespace rtmidi
@@ -32,62 +32,98 @@ namespace rtmidi
 namespace util
 {
 RTMIDI17_INLINE
-std::ostream & write_uint16_be(std::ostream & out, uint16_t value)
+std::ostream& write_uint16_be(std::ostream& out, uint16_t value)
 {
-  union { uint8_t bytes[2]; uint16_t v; } data;
+  union
+  {
+    uint8_t bytes[2];
+    uint16_t v;
+  } data;
   data.v = value;
-  out << data.bytes[1]; out << data.bytes[0];
+  out << data.bytes[1];
+  out << data.bytes[0];
   return out;
 }
 
 RTMIDI17_INLINE
-std::ostream & write_int16_be(std::ostream & out, int16_t value)
+std::ostream& write_int16_be(std::ostream& out, int16_t value)
 {
-  union { uint8_t bytes[2]; int16_t v; } data;
+  union
+  {
+    uint8_t bytes[2];
+    int16_t v;
+  } data;
   data.v = value;
-  out << data.bytes[1]; out << data.bytes[0];
+  out << data.bytes[1];
+  out << data.bytes[0];
   return out;
 }
 
 RTMIDI17_INLINE
-std::ostream & write_uint32_be(std::ostream & out, uint32_t value)
+std::ostream& write_uint32_be(std::ostream& out, uint32_t value)
 {
-  union { uint8_t bytes[4]; uint32_t v; } data;
+  union
+  {
+    uint8_t bytes[4];
+    uint32_t v;
+  } data;
   data.v = value;
-  out << data.bytes[3]; out << data.bytes[2];
-  out << data.bytes[1]; out << data.bytes[0];
+  out << data.bytes[3];
+  out << data.bytes[2];
+  out << data.bytes[1];
+  out << data.bytes[0];
   return out;
 }
 
 RTMIDI17_INLINE
-std::ostream & write_int32_be(std::ostream & out, int32_t value)
+std::ostream& write_int32_be(std::ostream& out, int32_t value)
 {
-  union { uint8_t bytes[4]; int32_t v; } data;
+  union
+  {
+    uint8_t bytes[4];
+    int32_t v;
+  } data;
   data.v = value;
-  out << data.bytes[3]; out << data.bytes[2];
-  out << data.bytes[1]; out << data.bytes[0];
+  out << data.bytes[3];
+  out << data.bytes[2];
+  out << data.bytes[1];
+  out << data.bytes[0];
   return out;
 }
 
 RTMIDI17_INLINE
-std::ostream & write_float_be(std::ostream & out, float value)
+std::ostream& write_float_be(std::ostream& out, float value)
 {
-  union { uint8_t bytes[4]; float v; } data;
+  union
+  {
+    uint8_t bytes[4];
+    float v;
+  } data;
   data.v = value;
-  out << data.bytes[3]; out << data.bytes[2];
-  out << data.bytes[1]; out << data.bytes[0];
+  out << data.bytes[3];
+  out << data.bytes[2];
+  out << data.bytes[1];
+  out << data.bytes[0];
   return out;
 }
 
 RTMIDI17_INLINE
-std::ostream & write_double_be(std::ostream & out, double value)
+std::ostream& write_double_be(std::ostream& out, double value)
 {
-  union { uint8_t bytes[8]; double v; } data;
+  union
+  {
+    uint8_t bytes[8];
+    double v;
+  } data;
   data.v = value;
-  out << data.bytes[7]; out << data.bytes[6];
-  out << data.bytes[5]; out << data.bytes[4];
-  out << data.bytes[3]; out << data.bytes[2];
-  out << data.bytes[1]; out << data.bytes[0];
+  out << data.bytes[7];
+  out << data.bytes[6];
+  out << data.bytes[5];
+  out << data.bytes[4];
+  out << data.bytes[3];
+  out << data.bytes[2];
+  out << data.bytes[1];
+  out << data.bytes[0];
   return out;
 }
 
@@ -95,15 +131,15 @@ std::ostream & write_double_be(std::ostream & out, double value)
 // as a variable length value which segments a file into 7-bit
 // values.  Maximum size of aValue is 0x7fffffff
 RTMIDI17_INLINE
-void write_variable_length(uint32_t aValue, std::vector<uint8_t> & outdata)
+void write_variable_length(uint32_t aValue, std::vector<uint8_t>& outdata)
 {
   uint8_t bytes[5] = {0};
 
-  bytes[0] = (uint8_t) (((uint32_t) aValue >> 28) & 0x7F);  // most significant 5 bits
-  bytes[1] = (uint8_t) (((uint32_t) aValue >> 21) & 0x7F);  // next largest 7 bits
-  bytes[2] = (uint8_t) (((uint32_t) aValue >> 14) & 0x7F);
-  bytes[3] = (uint8_t) (((uint32_t) aValue >> 7)  & 0x7F);
-  bytes[4] = (uint8_t) (((uint32_t) aValue)       & 0x7F);  // least significant 7 bits
+  bytes[0] = (uint8_t)(((uint32_t)aValue >> 28) & 0x7F); // most significant 5 bits
+  bytes[1] = (uint8_t)(((uint32_t)aValue >> 21) & 0x7F); // next largest 7 bits
+  bytes[2] = (uint8_t)(((uint32_t)aValue >> 14) & 0x7F);
+  bytes[3] = (uint8_t)(((uint32_t)aValue >> 7) & 0x7F);
+  bytes[4] = (uint8_t)(((uint32_t)aValue) & 0x7F); // least significant 7 bits
 
   int start = 0;
   while (start < 5 && bytes[start] == 0)
@@ -119,10 +155,8 @@ void write_variable_length(uint32_t aValue, std::vector<uint8_t> & outdata)
 }
 
 RTMIDI17_INLINE
-writer::writer(int ticks)
-  : ticksPerQuarterNote{ticks}
+writer::writer(int ticks) : ticksPerQuarterNote{ticks}
 {
-
 }
 
 RTMIDI17_INLINE
@@ -153,10 +187,13 @@ void writer::add_event(int track, track_event m)
 }
 
 RTMIDI17_INLINE
-void writer::write(std::ostream & out)
+void writer::write(std::ostream& out)
 {
   // MIDI File Header
-  out << 'M'; out << 'T'; out << 'h'; out << 'd';
+  out << 'M';
+  out << 'T';
+  out << 'h';
+  out << 'd';
   util::write_uint32_be(out, 6);
   util::write_uint16_be(out, (get_num_tracks() == 1) ? 0 : 1);
   util::write_uint16_be(out, static_cast<uint16_t>(get_num_tracks()));
@@ -164,19 +201,21 @@ void writer::write(std::ostream & out)
 
   std::vector<uint8_t> trackRawData;
 
-  for (const auto & event_list : tracks)
+  for (const auto& event_list : tracks)
   {
-    for (const auto & event : event_list)
+    for (const auto& event : event_list)
     {
       const auto msg = event.m;
 
       // Suppress end-of-track meta messages (one will be added
       // automatically after all track data has been written).
-      if (msg.get_meta_event_type() == meta_event_type::END_OF_TRACK) continue;
+      if (msg.get_meta_event_type() == meta_event_type::END_OF_TRACK)
+        continue;
 
       util::write_variable_length(event.tick, trackRawData);
 
-      if ((msg.get_message_type() == message_type::SYSTEM_EXCLUSIVE) || (event.m.get_message_type() == message_type::EOX))
+      if ((msg.get_message_type() == message_type::SYSTEM_EXCLUSIVE)
+          || (event.m.get_message_type() == message_type::EOX))
       {
         // 0xf0 == Complete sysex message (0xf0 is part of the raw MIDI).
         // 0xf7 == Raw byte message (0xf7 not part of the raw MIDI).
@@ -218,8 +257,11 @@ void writer::write(std::ostream & out)
   }
 
   // Write the track ID marker "MTrk":
-  out << 'M'; out << 'T'; out << 'r'; out << 'k';
+  out << 'M';
+  out << 'T';
+  out << 'r';
+  out << 'k';
   util::write_uint32_be(out, static_cast<uint32_t>(trackRawData.size()));
-  out.write((char*) trackRawData.data(), trackRawData.size());
+  out.write((char*)trackRawData.data(), trackRawData.size());
 }
 }

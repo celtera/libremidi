@@ -9,10 +9,10 @@
 
 #include <atomic>
 #include <chrono>
+#include <csignal>
 #include <cstdlib>
 #include <iostream>
 #include <rtmidi17/rtmidi17.hpp>
-#include <csignal>
 #include <thread>
 
 [[noreturn]] static void usage()
@@ -24,7 +24,8 @@
   exit(0);
 }
 
-int main(int argc, char** argv) try
+int main(int argc, char** argv)
+try
 {
   using namespace std::literals;
   // Minimal command-line check.

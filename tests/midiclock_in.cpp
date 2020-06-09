@@ -56,7 +56,8 @@ bool choosePort(RT& rtmidi, const std::string& dir)
   return true;
 }
 
-int main(int, const char* argv[]) try
+int main(int, const char* argv[])
+try
 {
   rtmidi::midi_in midiin;
 

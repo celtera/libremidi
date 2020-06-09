@@ -9,10 +9,11 @@
 #include <map>
 #include <rtmidi17/rtmidi17.hpp>
 
-int main() try
+int main()
+try
 {
   // Create an api map.
-  static std::map<rtmidi::API, std::string> apiMap {
+  static std::map<rtmidi::API, std::string> apiMap{
       {rtmidi::API::MACOSX_CORE, "OS-X CoreMidi"}, {rtmidi::API::WINDOWS_MM, "Windows MultiMedia"},
       {rtmidi::API::WINDOWS_UWP, "Windows UWP"},   {rtmidi::API::UNIX_JACK, "Jack Client"},
       {rtmidi::API::LINUX_ALSA, "Linux ALSA"},     {rtmidi::API::DUMMY, "Dummy (no driver)"},

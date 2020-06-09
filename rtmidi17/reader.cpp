@@ -24,11 +24,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #if !defined(RTMIDI17_HEADER_ONLY)
-#include <rtmidi17/reader.hpp>
+#  include <rtmidi17/reader.hpp>
 #endif
-#include <rtmidi17/message.hpp>
 #include <algorithm>
 #include <iostream>
+#include <rtmidi17/message.hpp>
 
 // File Parsing Validation Todo:
 // ==============================
@@ -49,7 +49,7 @@ namespace util
 {
 // Read a MIDI-style variable-length integer (big-endian value in groups of 7 bits,
 // with top bit set to signify that another byte follows).
-inline uint32_t read_variable_length(uint8_t const *& data)
+inline uint32_t read_variable_length(uint8_t const*& data)
 {
   uint32_t result = 0;
   while (true)
@@ -67,21 +67,21 @@ inline uint32_t read_variable_length(uint8_t const *& data)
   }
 }
 
-inline void read_bytes(midi_bytes & buffer, uint8_t const *& data, int num)
+inline void read_bytes(midi_bytes& buffer, uint8_t const*& data, int num)
 {
   buffer.reserve(buffer.size() + num);
   for (int i = 0; i < num; ++i)
     buffer.push_back(uint8_t(*data++));
 }
 
-inline uint16_t read_uint16_be(uint8_t const *& data)
+inline uint16_t read_uint16_be(uint8_t const*& data)
 {
   uint16_t result = int(*data++) << 8;
   result += int(*data++);
   return result;
 }
 
-inline uint32_t read_uint24_be(uint8_t const *& data)
+inline uint32_t read_uint24_be(uint8_t const*& data)
 {
   uint32_t result = int(*data++) << 16;
   result += int(*data++) << 8;
@@ -89,7 +89,7 @@ inline uint32_t read_uint24_be(uint8_t const *& data)
   return result;
 }
 
-inline uint32_t read_uint32_be(uint8_t const *& data)
+inline uint32_t read_uint32_be(uint8_t const*& data)
 {
   uint32_t result = int(*data++) << 24;
   result += int(*data++) << 16;
@@ -100,31 +100,33 @@ inline uint32_t read_uint32_be(uint8_t const *& data)
 }
 
 RTMIDI17_INLINE
-track_event parseEvent(int tick, int track, uint8_t const *& dataStart, message_type lastEventTypeByte)
+track_event
+parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEventTypeByte)
 {
   using namespace rtmidi::util;
-  message_type type = (message_type) *dataStart++;
+  message_type type = (message_type)*dataStart++;
 
   track_event event{tick, track, message{}};
 
-  if (((uint8_t) type & 0xF) == 0xF)
+  if (((uint8_t)type & 0xF) == 0xF)
   {
     // Meta event
-    if ((uint8_t) type == 0xFF)
+    if ((uint8_t)type == 0xFF)
     {
-      meta_event_type subtype = (meta_event_type) *dataStart++;
+      meta_event_type subtype = (meta_event_type)*dataStart++;
       int length = read_variable_length(dataStart);
 
-      event.m.bytes = midi_bytes(std::max(length, 3), (std::size_t) 0);
-      event.m.bytes[0] = (uint8_t) type;
-      event.m.bytes[1] = (uint8_t) subtype;
+      event.m.bytes = midi_bytes(std::max(length, 3), (std::size_t)0);
+      event.m.bytes[0] = (uint8_t)type;
+      event.m.bytes[1] = (uint8_t)subtype;
       event.m.bytes[2] = length;
 
-      switch(subtype)
+      switch (subtype)
       {
         case meta_event_type::SEQUENCE_NUMBER:
         {
-          if (length != 2) throw std::invalid_argument("Expected length for SEQUENCE_NUMBER event is 2");
+          if (length != 2)
+            throw std::invalid_argument("Expected length for SEQUENCE_NUMBER event is 2");
           read_bytes(event.m.bytes, dataStart, 2);
           return event;
         }
@@ -144,31 +146,36 @@ track_event parseEvent(int tick, int track, uint8_t const *& dataStart, message_
 
         case meta_event_type::END_OF_TRACK:
         {
-          if (length != 0) throw std::invalid_argument("Expected length for END_OF_TRACK event is 0");
+          if (length != 0)
+            throw std::invalid_argument("Expected length for END_OF_TRACK event is 0");
           return event;
         }
         case meta_event_type::TEMPO_CHANGE:
         {
-          if (length != 3) throw std::invalid_argument("Expected length for TEMPO_CHANGE event is 3");
-          //event.m.bytes[3] = read_uint24_be(dataStart); // @dimitri TOFIX
+          if (length != 3)
+            throw std::invalid_argument("Expected length for TEMPO_CHANGE event is 3");
+          // event.m.bytes[3] = read_uint24_be(dataStart); // @dimitri TOFIX
           read_bytes(event.m.bytes, dataStart, length);
           return event;
         }
         case meta_event_type::SMPTE_OFFSET:
         {
-          if (length != 5) throw std::invalid_argument("Expected length for SMPTE_OFFSET event is 5");
+          if (length != 5)
+            throw std::invalid_argument("Expected length for SMPTE_OFFSET event is 5");
           read_bytes(event.m.bytes, dataStart, length);
           return event;
         }
         case meta_event_type::TIME_SIGNATURE:
         {
-          if (length != 4) throw std::invalid_argument("Expected length for TIME_SIGNATURE event is 4");
+          if (length != 4)
+            throw std::invalid_argument("Expected length for TIME_SIGNATURE event is 4");
           read_bytes(event.m.bytes, dataStart, length);
           return event;
         }
         case meta_event_type::KEY_SIGNATURE:
         {
-          if (length != 2) throw std::invalid_argument("Expected length for KEY_SIGNATURE event is 2");
+          if (length != 2)
+            throw std::invalid_argument("Expected length for KEY_SIGNATURE event is 2");
           read_bytes(event.m.bytes, dataStart, length);
           return event;
         }
@@ -179,13 +186,15 @@ track_event parseEvent(int tick, int track, uint8_t const *& dataStart, message_
         }
         case meta_event_type::CHANNEL_PREFIX:
         {
-          if (length != 1) throw std::invalid_argument("Expected length for CHANNEL_PREFIX event is 1");
+          if (length != 1)
+            throw std::invalid_argument("Expected length for CHANNEL_PREFIX event is 1");
           read_bytes(event.m.bytes, dataStart, length);
           return event;
         }
         case meta_event_type::MIDI_PORT:
         {
-          if (length != 1) throw std::invalid_argument("Expected length for MIDI_PORT event is 1");
+          if (length != 1)
+            throw std::invalid_argument("Expected length for MIDI_PORT event is 1");
           read_bytes(event.m.bytes, dataStart, length);
           return event;
         }
@@ -224,17 +233,17 @@ track_event parseEvent(int tick, int track, uint8_t const *& dataStart, message_
     event.m.bytes = midi_bytes(3, 0);
 
     // Running status...
-    if (((uint8_t) type & 0x80) == 0)
+    if (((uint8_t)type & 0x80) == 0)
     {
       // Reuse lastEventTypeByte as the event type.
       // eventTypeByte is actually the first parameter
-      event.m.bytes[0] = (uint8_t) lastEventTypeByte;
-      event.m.bytes[1] = (uint8_t) type;
+      event.m.bytes[0] = (uint8_t)lastEventTypeByte;
+      event.m.bytes[1] = (uint8_t)type;
       type = lastEventTypeByte;
     }
     else
     {
-      event.m.bytes[0] = (uint8_t) type;
+      event.m.bytes[0] = (uint8_t)type;
       event.m.bytes[1] = uint8_t(*dataStart++);
       lastEventTypeByte = type;
     }
@@ -242,7 +251,7 @@ track_event parseEvent(int tick, int track, uint8_t const *& dataStart, message_
     // Just in case
     event.m.bytes[2] = 0xFF;
 
-    switch (message_type((uint8_t) type & 0xF0))
+    switch (message_type((uint8_t)type & 0xF0))
     {
       case message_type::NOTE_OFF:
         event.m.bytes[2] = uint8_t(*dataStart++);
@@ -264,69 +273,63 @@ track_event parseEvent(int tick, int track, uint8_t const *& dataStart, message_
         event.m.bytes[2] = uint8_t(*dataStart++);
         return event;
 
-
-    case message_type::TIME_CODE:
-      throw std::runtime_error("Unsupported MIDI event type TIME_CODE");
-    case message_type::SONG_POS_POINTER:
-      throw std::runtime_error("Unsupported MIDI event type SONG_POS_POINTER");
-    case message_type::SONG_SELECT:
-      throw std::runtime_error("Unsupported MIDI event type SONG_SELECT");
-    case message_type::RESERVED1:
-      throw std::runtime_error("Unsupported MIDI event type RESERVED1");
-    case message_type::RESERVED2:
-      throw std::runtime_error("Unsupported MIDI event type RESERVED2");
-    case message_type::TUNE_REQUEST :
-      throw std::runtime_error("Unsupported MIDI event type TUNE_REQUEST");
-    case message_type::EOX:
-      throw std::runtime_error("Unsupported MIDI event type EOX");
-      // System Realtime Messages :
-    case message_type::TIME_CLOCK:
-      throw std::runtime_error("Unsupported MIDI event type TIME_CLOCK");
-    case message_type::RESERVED3:
-      throw std::runtime_error("Unsupported MIDI event type RESERVED3");
-    case message_type::START:
-      throw std::runtime_error("Unsupported MIDI event type START");
-    case message_type::CONTINUE :
-      throw std::runtime_error("Unsupported MIDI event type CONTINUE");
-    case message_type::STOP :
-      throw std::runtime_error("Unsupported MIDI event type STOP");
-    case message_type::RESERVED4:
-      throw std::runtime_error("Unsupported MIDI event type RESERVED4");
-    case message_type::ACTIVE_SENSING :
-      throw std::runtime_error("Unsupported MIDI event type ACTIVE_SENSING");
-    case message_type::SYSTEM_RESET :
-      throw std::runtime_error("Unsupported MIDI event type SYSTEM_RESET");
-    case message_type::INVALID:
-      throw std::runtime_error("Unsupported MIDI event type INVALID");
-    case message_type::SYSTEM_EXCLUSIVE:
-      throw std::runtime_error("Unsupported MIDI event type SYSTEM_EXCLUSIVE");
-    default:
-      throw std::runtime_error("Unsupported MIDI event type");
+      case message_type::TIME_CODE:
+        throw std::runtime_error("Unsupported MIDI event type TIME_CODE");
+      case message_type::SONG_POS_POINTER:
+        throw std::runtime_error("Unsupported MIDI event type SONG_POS_POINTER");
+      case message_type::SONG_SELECT:
+        throw std::runtime_error("Unsupported MIDI event type SONG_SELECT");
+      case message_type::RESERVED1:
+        throw std::runtime_error("Unsupported MIDI event type RESERVED1");
+      case message_type::RESERVED2:
+        throw std::runtime_error("Unsupported MIDI event type RESERVED2");
+      case message_type::TUNE_REQUEST:
+        throw std::runtime_error("Unsupported MIDI event type TUNE_REQUEST");
+      case message_type::EOX:
+        throw std::runtime_error("Unsupported MIDI event type EOX");
+        // System Realtime Messages :
+      case message_type::TIME_CLOCK:
+        throw std::runtime_error("Unsupported MIDI event type TIME_CLOCK");
+      case message_type::RESERVED3:
+        throw std::runtime_error("Unsupported MIDI event type RESERVED3");
+      case message_type::START:
+        throw std::runtime_error("Unsupported MIDI event type START");
+      case message_type::CONTINUE:
+        throw std::runtime_error("Unsupported MIDI event type CONTINUE");
+      case message_type::STOP:
+        throw std::runtime_error("Unsupported MIDI event type STOP");
+      case message_type::RESERVED4:
+        throw std::runtime_error("Unsupported MIDI event type RESERVED4");
+      case message_type::ACTIVE_SENSING:
+        throw std::runtime_error("Unsupported MIDI event type ACTIVE_SENSING");
+      case message_type::SYSTEM_RESET:
+        throw std::runtime_error("Unsupported MIDI event type SYSTEM_RESET");
+      case message_type::INVALID:
+        throw std::runtime_error("Unsupported MIDI event type INVALID");
+      case message_type::SYSTEM_EXCLUSIVE:
+        throw std::runtime_error("Unsupported MIDI event type SYSTEM_EXCLUSIVE");
+      default:
+        throw std::runtime_error("Unsupported MIDI event type");
     }
   }
 }
 
 RTMIDI17_INLINE
 reader::reader(bool useAbsolute)
-  : tracks(0)
-  , ticksPerBeat(480)
-  , startingTempo(120)
-  , useAbsoluteTicks(useAbsolute)
+    : tracks(0), ticksPerBeat(480), startingTempo(120), useAbsoluteTicks(useAbsolute)
 {
-
 }
 
 RTMIDI17_INLINE
 reader::~reader()
 {
-
 }
 
 RTMIDI17_INLINE
-void reader::parse_impl(const std::vector<uint8_t> & buffer)
+void reader::parse_impl(const std::vector<uint8_t>& buffer)
 {
   using namespace rtmidi::util;
-  const uint8_t * dataPtr = buffer.data();
+  const uint8_t* dataPtr = buffer.data();
 
   int headerId = read_uint32_be(dataPtr);
   int headerLength = read_uint32_be(dataPtr);
@@ -347,13 +350,13 @@ void reader::parse_impl(const std::vector<uint8_t> & buffer)
   if (timeDivision & 0x8000)
   {
     std::cerr << "Found SMPTE time frames" << std::endl;
-    //int fps = (timeDivision >> 16) & 0x7f;
-    //int ticksPerFrame = timeDivision & 0xff;
+    // int fps = (timeDivision >> 16) & 0x7f;
+    // int ticksPerFrame = timeDivision & 0xff;
     // given beats per second, timeDivision should be derivable.
     return;
   }
 
-  startingTempo = 120.0f; // midi default
+  startingTempo = 120.0f;             // midi default
   ticksPerBeat = float(timeDivision); // ticks per beat (a beat is defined as a quarter note)
 
   for (int i = 0; i < trackCount; ++i)
@@ -368,7 +371,7 @@ void reader::parse_impl(const std::vector<uint8_t> & buffer)
       throw std::runtime_error("Bad .mid file - couldn't find track header");
     }
 
-    uint8_t const * dataEnd = dataPtr + headerLength;
+    uint8_t const* dataEnd = dataPtr + headerLength;
 
     message_type runningEvent = message_type::INVALID;
 
@@ -398,7 +401,7 @@ void reader::parse_impl(const std::vector<uint8_t> & buffer)
 
         track.push_back(ev);
       }
-      catch(const std::runtime_error& e)
+      catch (const std::runtime_error& e)
       {
         std::cerr << e.what() << "\n";
       }
@@ -426,7 +429,7 @@ double reader::get_end_time()
 }
 
 RTMIDI17_INLINE
-void reader::parse(const std::vector<uint8_t> & buffer)
+void reader::parse(const std::vector<uint8_t>& buffer)
 {
   tracks.clear();
   parse_impl(buffer);

@@ -35,7 +35,7 @@ public:
   reader(bool useAbsolute = false);
   ~reader();
 
-  void parse(const std::vector<uint8_t> & buffer);
+  void parse(const std::vector<uint8_t>& buffer);
   double get_end_time();
 
   float ticksPerBeat{}; // precision (number of ticks distinguishable per second)
@@ -44,7 +44,7 @@ public:
   std::vector<midi_track> tracks;
 
 private:
-  void parse_impl(const std::vector<uint8_t> & buffer);
+  void parse_impl(const std::vector<uint8_t>& buffer);
   bool useAbsoluteTicks{};
 };
 }

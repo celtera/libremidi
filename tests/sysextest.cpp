@@ -13,7 +13,8 @@
 #include <thread>
 #include <typeinfo>
 
-[[noreturn]] void usage() {
+[[noreturn]] void usage()
+{
   std::cout << "\nuseage: sysextest N\n";
   std::cout << "    where N = length of sysex message to send / receive.\n\n";
   exit(0);
@@ -113,7 +114,8 @@ bool chooseMidiPort(rtmidi::midi_out& rtmidi)
   return true;
 }
 
-int main(int argc, char* argv[]) try
+int main(int argc, char* argv[])
+try
 {
   using namespace std::literals;
   rtmidi::midi_out midiout;

@@ -802,10 +802,9 @@ private:
 
 struct core_backend
 {
-    using midi_in = midi_in_core;
-    using midi_out = midi_out_core;
-    using midi_observer = observer_core;
-    static const constexpr auto API = rtmidi::API::MACOSX_CORE;
+  using midi_in = midi_in_core;
+  using midi_out = midi_out_core;
+  using midi_observer = observer_core;
+  static const constexpr auto API = rtmidi::API::MACOSX_CORE;
 };
 }
-

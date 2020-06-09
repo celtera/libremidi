@@ -1,6 +1,6 @@
 #pragma once
-#include <rtmidi17/rtmidi17.hpp>
 #include <iostream>
+#include <rtmidi17/rtmidi17.hpp>
 #include <string_view>
 
 namespace rtmidi
@@ -233,40 +233,45 @@ public:
   virtual void send_message(const unsigned char* message, size_t size) = 0;
 };
 
-template<typename T>
+template <typename T>
 class midi_in_default : public midi_in_api
 {
-    using midi_in_api::midi_in_api;
-void open_virtual_port(std::string_view) override
-{
-  using namespace std::literals;
-  warning(T::backend + " in: open_virtual_port unsupported"s);
-}
-void set_client_name(std::string_view) override
-{
-  using namespace std::literals;
-  warning(T::backend + " in: set_client_name unsupported"s); }
-void set_port_name(std::string_view)  override
-{
-  using namespace std::literals;
-  warning(T::backend + " in: set_port_name unsupported"s); }
+  using midi_in_api::midi_in_api;
+  void open_virtual_port(std::string_view) override
+  {
+    using namespace std::literals;
+    warning(T::backend + " in: open_virtual_port unsupported"s);
+  }
+  void set_client_name(std::string_view) override
+  {
+    using namespace std::literals;
+    warning(T::backend + " in: set_client_name unsupported"s);
+  }
+  void set_port_name(std::string_view) override
+  {
+    using namespace std::literals;
+    warning(T::backend + " in: set_port_name unsupported"s);
+  }
 };
 
-template<typename T>
+template <typename T>
 class midi_out_default : public midi_out_api
 {
-    using midi_out_api::midi_out_api;
-void open_virtual_port(std::string_view) override
-{
-  using namespace std::literals;
-  warning(T::backend + " out: open_virtual_port unsupported"s); }
-void set_client_name(std::string_view) override
-{
-  using namespace std::literals;
-  warning(T::backend + " out: set_client_name unsupported"s); }
-void set_port_name(std::string_view)  override
-{
-  using namespace std::literals;
-  warning(T::backend + " out: set_port_name unsupported"s); }
+  using midi_out_api::midi_out_api;
+  void open_virtual_port(std::string_view) override
+  {
+    using namespace std::literals;
+    warning(T::backend + " out: open_virtual_port unsupported"s);
+  }
+  void set_client_name(std::string_view) override
+  {
+    using namespace std::literals;
+    warning(T::backend + " out: set_client_name unsupported"s);
+  }
+  void set_port_name(std::string_view) override
+  {
+    using namespace std::literals;
+    warning(T::backend + " out: set_port_name unsupported"s);
+  }
 };
 }
