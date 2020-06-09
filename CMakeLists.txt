@@ -12,6 +12,7 @@ option(RTMIDI17_EXAMPLES "Enable examples" ON)
 include(CheckSymbolExists)
 ### Main library ###
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if(RTMIDI17_HEADER_ONLY)
   add_library(RtMidi17 INTERFACE)
@@ -85,7 +86,6 @@ elseif(WIN32)
   endif()
 
 elseif(UNIX)
- set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpic")
   ## ALSA support ##
   if(NOT RTMIDI17_NO_ALSA)
     find_package(ALSA)
