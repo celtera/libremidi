@@ -1,6 +1,8 @@
 #pragma once
 #define NOMINMAX 1
 #define WIN32_LEAN_AND_MEAN 1
+#include <windows.h>
+
 #include <algorithm>
 #include <chrono>
 #include <condition_variable>
@@ -11,7 +13,6 @@
 #include <rtmidi17/rtmidi17.hpp>
 #include <sstream>
 #include <thread>
-#include <windows.h>
 
 // Default for Windows is to add an identifier to the port names; this
 // flag can be defined (e.g. in your project file) to disable this behaviour.
