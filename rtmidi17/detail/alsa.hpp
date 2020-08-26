@@ -74,7 +74,6 @@ portInfo(snd_seq_t* seq, snd_seq_port_info_t* pinfo, unsigned int type, int port
 struct alsa_data
 {
   snd_seq_t* seq{};
-  unsigned int portNum{};
   int vport{};
   snd_seq_port_subscribe_t* subscription{};
   snd_midi_event_t* coder{};
@@ -281,7 +280,6 @@ public:
 
     // Save our api-specific connection information.
     data.seq = seq;
-    data.portNum = -1;
     data.vport = -1;
     data.subscription = nullptr;
     data.dummy_thread_id = pthread_self();
@@ -835,7 +833,6 @@ public:
 
     // Save our api-specific connection information.
     data.seq = seq;
-    data.portNum = -1;
     data.vport = -1;
     data.bufferSize = 32;
     data.coder = nullptr;
