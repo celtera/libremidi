@@ -1,6 +1,8 @@
 # RtMidi17
 
-[![Build Status](https://travis-ci.com/jcelerier/RtMidi17.svg?branch=master)](https://travis-ci.com/jcelerier/RtMidi17)
+[![Build status](https://github.com/jcelerier/RtMidi17/workflows/Build/badge.svg)](https://github.com/jcelerier/RtMidi17/actions)
+
+RtMidi17 is a header-only cross-platform C++17 library for MIDI input and output.
 
 This is a fork based on two libraries: 
 
