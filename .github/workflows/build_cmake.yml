@@ -1,0 +1,74 @@
+name: Build
+
+on: [push]
+
+jobs:
+  build:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "Windows",
+            os: windows-latest,
+            cmakeflags: ""
+          }
+        - {
+            name: "Ubuntu",
+            os: ubuntu-latest,
+            cmakeflags: ""
+          }
+        - {
+            name: 'Tarball',
+            os: ubuntu-latest,
+            cmakeflags: ""
+          }
+        - {
+            name: "macOS",
+            os: macos-latest,
+            cmakeflags: ""
+          }
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Get latest release version number
+      id: get_version
+      uses: battila7/get-version-action@v2
+
+    - name: Install dependencies
+      if: matrix.config.name != 'Tarball'
+      run:  |
+        git submodule update --init --recursive
+        
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          sudo apt update
+          sudo apt install cmake ninja-build libboost-dev
+        elif [ "$RUNNER_OS" == "Windows" ]; then
+          echo "nothing to do"
+          # maybe choco install ninja
+        else
+          brew install ninja boost
+        fi
+      shell: bash
+
+    - name: Configure
+      if: matrix.config.name != 'Tarball'
+      env:
+        CMAKEFLAGS: ${{ matrix.config.cmakeflags }}
+      run: |
+        mkdir build && cd build
+        cmake $CMAKEFLAGS ..
+      shell: bash
+
+    - name: Build
+      if: matrix.config.name != 'Tarball'
+      run: cd build && cmake --build .
+
+    - name: Test
+      if: matrix.config.name != 'Tarball'
+      run: |
+        cd build && ctest -V
+        
+      shell: bash
