@@ -20,9 +20,9 @@ if(RTMIDI17_HEADER_ONLY)
   target_compile_definitions(RtMidi17 ${_public} RTMIDI17_HEADER_ONLY)
 else()
   add_library(RtMidi17
-    rtmidi17/rtmidi17.cpp
-    rtmidi17/reader.cpp
-    rtmidi17/writer.cpp
+    include/rtmidi17/rtmidi17.cpp
+    include/rtmidi17/reader.cpp
+    include/rtmidi17/writer.cpp
   )
   set(_public PUBLIC)
 endif()
@@ -31,6 +31,10 @@ target_compile_features(RtMidi17 ${_public} cxx_std_17)
 
 find_package(Threads)
 target_link_libraries(RtMidi17 ${_public} ${CMAKE_THREAD_LIBS_INIT})
+
+target_include_directories(RtMidi17 ${_public}
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
 
 if(APPLE)
   ## CoreMIDI support ##
@@ -60,13 +64,10 @@ elseif(WIN32)
         _UNICODE=1
     )
     target_link_libraries(RtMidi17 ${_public} winmm)
-    target_include_directories(RtMidi17 ${_public}
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
   endif()
 
   ## UWP MIDI support ##
   if(NOT RTMIDI17_NO_WINUWP)
-    target_include_directories(RtMidi17 ${_public} $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
     set(WINSDK_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots;KitsRoot10]")
     find_path(CPPWINRT_PATH "winrt/base.h"
         PATHS
