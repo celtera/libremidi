@@ -168,4 +168,7 @@ if(RTMIDI17_EXAMPLES)
 
   add_executable(sysextest tests/sysextest.cpp)
   target_link_libraries(sysextest PRIVATE RtMidi17)
+
+  add_executable(midi2 tests/midi2.cpp)
+  target_link_libraries(midi2 PRIVATE RtMidi17)
 endif()
