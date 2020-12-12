@@ -45,7 +45,7 @@ try
     }
   }
 
-  if (in_idx == -1 or out_idx == -1) {
+  if (in_idx == -1 || out_idx == -1) {
     std::cerr << "MIDI 2 device not found (searching for a Roland A-88 MKII";
     return 1;
   }
