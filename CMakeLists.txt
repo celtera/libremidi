@@ -59,7 +59,6 @@ elseif(WIN32)
     target_compile_definitions(RtMidi17
       ${_public}
         RTMIDI17_WINMM
-        WIN32=1
         UNICODE=1
         _UNICODE=1
     )
@@ -99,7 +98,6 @@ endif()
 
 ## JACK support ##
 if(NOT RTMIDI17_NO_JACK)
-
   find_path(WEAKJACK_PATH weakjack/weak_libjack.h HINTS ${WEAKJACK_FOLDER})
   find_path(JACK_PATH jack/jack.h)
   if(WEAKJACK_PATH AND JACK_PATH)
