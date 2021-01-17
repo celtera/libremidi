@@ -1,5 +1,5 @@
 # Index
 
-- [usage.md](Real-time API usage)
-- [matrix.md](Feature matrix)
-- [file.md](File API usage)
+- [Real-time API usage](usage.md)
+- [Feature matrix](matrix.md)
+- [File API usage](file.md)
