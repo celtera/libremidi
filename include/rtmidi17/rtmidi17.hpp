@@ -67,6 +67,11 @@
 #include <string_view>
 #include <vector>
 
+#if defined(__cpp_lib_span) && __cpp_lib_span >= 202002
+#define RTMIDI17_HAS_SPAN 1
+#include <span>
+#endif
+
 #if defined(RTMIDI17_EXPORTS)
 #  if defined(_MSC_VER)
 #    define RTMIDI17_EXPORT __declspec(dllexport)
@@ -358,6 +363,8 @@ public:
   */
   message get_message();
 
+  bool get_message(message&);
+
   //! Set an error callback function to be invoked when an error has occured.
   /*!
     The callback function will be called whenever an error has occured. It is
@@ -484,6 +491,10 @@ public:
       \param size    Length of the MIDI message in bytes
   */
   void send_message(const unsigned char* message, size_t size);
+
+  #if RTMIDI17_HAS_SPAN
+  void send_message(std::span<unsigned char>);
+  #endif
 
   //! Set an error callback function to be invoked when an error has occured.
   /*!

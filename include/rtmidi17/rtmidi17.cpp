@@ -227,6 +227,12 @@ message midi_in::get_message()
 }
 
 RTMIDI17_INLINE
+bool midi_in::get_message(message& msg)
+{
+  return (static_cast<midi_in_api*>(rtapi_.get()))->get_message(msg);
+}
+
+RTMIDI17_INLINE
 void midi_in::set_error_callback(midi_error_callback errorCallback)
 {
   rtapi_->set_error_callback(std::move(errorCallback));
@@ -286,6 +292,14 @@ void midi_out::send_message(const rtmidi::message& message)
   send_message(message.bytes.data(), message.bytes.size());
 }
 
+#if RTMIDI17_HAS_SPAN
+RTMIDI17_INLINE
+void midi_out::send_message(std::span<unsigned char> message)
+{
+  send_message(message.data(), message.size());
+}
+
+#endif
 RTMIDI17_INLINE
 void midi_out::send_message(const unsigned char* message, size_t size)
 {

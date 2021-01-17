@@ -140,6 +140,7 @@ public:
   {
     inputData_.userCallback = nullptr;
   }
+
   message get_message()
   {
     if (inputData_.userCallback)
@@ -156,6 +157,19 @@ public:
       return m;
     }
     return {};
+  }
+
+  bool get_message(message& m)
+  {
+    if (inputData_.userCallback)
+    {
+      warning(
+          "RtMidiIn::getNextMessage: a user callback is currently set for "
+          "this port.");
+      return {};
+    }
+
+    return inputData_.queue.pop(m);
   }
 
   struct midi_queue
@@ -188,7 +202,8 @@ public:
       }
 
       // Copy queued message to the vector pointer argument and then "pop" it.
-      msg = ring[f];
+      using namespace std;
+      swap(msg, ring[f]);
 
       // Update front
       front = (front + 1) % ringSize;
