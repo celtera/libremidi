@@ -246,6 +246,13 @@ class midi_out_api : public midi_api
 {
 public:
   virtual void send_message(const unsigned char* message, size_t size) = 0;
+
+  void set_chunking_parameters(std::optional<chunking_parameters> parameters)
+  {
+    chunking = std::move(parameters);
+  }
+
+  std::optional<chunking_parameters> chunking;
 };
 
 template <typename T>

@@ -1,5 +1,6 @@
 #include <cmath>
 #include <sstream>
+#include <thread>
 
 #if !defined(RTMIDI17_HEADER_ONLY)
 #  include <rtmidi17/rtmidi17.hpp>
@@ -108,6 +109,11 @@ RTMIDI17_INLINE thread_error::~thread_error() = default;
 
 RTMIDI17_INLINE midi_in::~midi_in() = default;
 RTMIDI17_INLINE midi_out::~midi_out() = default;
+
+RTMIDI17_INLINE
+void chunking_parameters::default_wait(const chunking_parameters& self) {
+  std::this_thread::sleep_for(self.interval);
+}
 
 [[nodiscard]] RTMIDI17_INLINE std::vector<rtmidi::API> available_apis() noexcept
 {
@@ -413,5 +419,11 @@ RTMIDI17_INLINE
 void midi_out::set_port_name(std::string_view portName)
 {
   rtapi_->set_port_name(portName);
+}
+
+RTMIDI17_INLINE
+void midi_out::set_chunking_parameters(std::optional<chunking_parameters> parameters)
+{
+  rtapi_->set_chunking_parameters(std::move(parameters));
 }
 }
