@@ -105,6 +105,14 @@ enum midi_error
   THREAD_ERROR       /*!< A thread error occured. */
 };
 
+//! Defines whether processing of incoming messages will be done
+//! in a thread managed by the library, or if the user has to invoke poll() manually
+//! in a thread of its own choosing.
+enum processing_mode {
+  THREAD,
+  MANUAL
+};
+
 //! Base exception class for MIDI problems
 struct RTMIDI17_EXPORT midi_exception : public std::runtime_error
 {
@@ -334,6 +342,16 @@ public:
   */
   void set_callback(message_callback callback);
 
+  /**
+   * @brief Configure how the library processes messages.
+   *
+   * This method will have no effect if it is invoked while a port is open:
+   * call it before open_port.
+   *
+   * @see processing_mode
+   */
+  void set_processing_mode(processing_mode mode);
+
   //! Cancel use of the current callback function (if one exists).
   /*!
     Subsequent incoming MIDI messages will be written to the queue
@@ -389,6 +407,17 @@ public:
   message get_message();
 
   bool get_message(message&);
+
+  /**
+   * @brief poll for incoming MIDI messages.
+   *
+   * @param timeout in milliseconds for the polling process.
+   * @return false if the polling was unsuccessful.
+   *
+   * Behaviour is undefined if set_processing_mode(processing_mode::MANUAL)
+   * was not called beforehand.
+   */
+  bool poll(std::chrono::milliseconds timeout = std::chrono::milliseconds{50});
 
   //! Set an error callback function to be invoked when an error has occured.
   /*!

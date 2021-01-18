@@ -133,10 +133,23 @@ public:
     }
   }
 
+  void set_processing_mode(processing_mode mode) noexcept
+  {
+    if (connected_)
+    {
+      warning(
+          "midi_in::set_processing_mode: must be called before open_port.");
+      return;
+    }
+
+    mode_ = mode;
+  }
+
   void set_callback(midi_in::message_callback callback)
   {
     inputData_.userCallback = std::move(callback);
   }
+
   void cancel_callback()
   {
     inputData_.userCallback = nullptr;
@@ -147,7 +160,7 @@ public:
     if (inputData_.userCallback)
     {
       warning(
-          "RtMidiIn::getNextMessage: a user callback is currently set for "
+          "midi_in::getNextMessage: a user callback is currently set for "
           "this port.");
       return {};
     }
@@ -165,7 +178,7 @@ public:
     if (inputData_.userCallback)
     {
       warning(
-          "RtMidiIn::getNextMessage: a user callback is currently set for "
+          "midi_in::get_message: a user callback is currently set for "
           "this port.");
       return {};
     }
@@ -173,7 +186,24 @@ public:
     return inputData_.queue.pop(m);
   }
 
-  // The RtMidiInData structure is used to pass private class data to
+  bool poll(std::chrono::milliseconds timeout)
+  {
+    if (mode_ != processing_mode::MANUAL)
+    {
+      warning("midi_in::poll: mode is not processing_mode::MANUAL.");
+      return false;
+    }
+
+    return do_poll(timeout);
+  }
+
+  virtual bool do_poll(std::chrono::milliseconds timeout)
+  {
+    warning("midi_in::poll: unsupported for this backend.");
+    return false;
+  }
+
+  // The midi_inData structure is used to pass private class data to
   // the MIDI input handling function or thread.
   struct in_data
   {
@@ -189,6 +219,7 @@ public:
 
 protected:
   in_data inputData_{};
+  processing_mode mode_{processing_mode::THREAD};
 };
 
 class midi_out_api : public midi_api

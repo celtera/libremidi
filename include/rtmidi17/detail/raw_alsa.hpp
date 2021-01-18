@@ -175,10 +175,23 @@ public:
       return;
     }
 
-    this->thread_ = std::thread{[this] {
-      running_ = true;
-      run_thread();
-    }};
+    init_pollfd();
+    switch(mode_)
+    {
+      case processing_mode::THREAD:
+      {
+        this->thread_ = std::thread{[this] {
+          running_ = true;
+          run_thread();
+        }};
+        break;
+      }
+      case processing_mode::MANUAL:
+      {
+        running_ = true;
+        break;
+      }
+    }
 
     connected_ = true;
   }
@@ -195,37 +208,42 @@ public:
 
   void run_thread()
   {
-    static const constexpr int poll_timeout = 50; // in ms
+    static const constexpr std::chrono::milliseconds poll_timeout{50};
 
-    init_pollfd();
-
-    while(this->running_)
+    while(this->running_ && do_poll(poll_timeout))
     {
-      // Poll
-      int err = poll(fds_.data(), fds_.size(), poll_timeout);
-      if (err < 0)
-        return;
-
-      if(!this->running_)
-        return;
-
-      // Read events
-      unsigned short res{};
-      err = snd_rawmidi_poll_descriptors_revents(this->midiport_, fds_.data(), fds_.size(), &res);
-      if (err < 0)
-        return;
-
-      // Did we encounter an error during polling
-      if (res & (POLLERR | POLLHUP))
-        return;
-
-      // Is there data to read
-      if (res & POLLIN)
-      {
-        if (!read_input_buffer())
-          return;
-      }
+      ;
     }
+  }
+
+  bool do_poll(std::chrono::milliseconds poll_timeout) override
+  {
+    // Poll
+    int err = ::poll(fds_.data(), fds_.size(), poll_timeout.count());
+    if (err < 0)
+      return false;
+
+    if(!this->running_)
+      return false;
+
+    // Read events
+    unsigned short res{};
+    err = snd_rawmidi_poll_descriptors_revents(this->midiport_, fds_.data(), fds_.size(), &res);
+    if (err < 0)
+      return false;
+
+    // Did we encounter an error during polling
+    if (res & (POLLERR | POLLHUP))
+      return false;
+
+    // Is there data to read
+    if (res & POLLIN)
+    {
+      if (!read_input_buffer())
+        return false;
+    }
+
+    return true;
   }
 
   bool read_input_buffer()
@@ -266,7 +284,8 @@ public:
     if (connected_)
     {
       running_ = false;
-      thread_.join();
+      if(mode_ == processing_mode::THREAD && thread_.joinable())
+        thread_.join();
 
       snd_rawmidi_close(midiport_);
       midiport_ = nullptr;
@@ -363,7 +382,7 @@ public:
 
     const int mode = SND_RAWMIDI_SYNC;
     const char* portname = device_list.outputs[portNumber].device.c_str();
-    int status = snd_rawmidi_open(NULL, &midiport_, portname, mode);
+    const int status = snd_rawmidi_open(NULL, &midiport_, portname, mode);
     if (status < 0)
     {
       error<driver_error>("midi_out_raw_alsa::open_port: cannot open device.");

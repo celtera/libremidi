@@ -200,6 +200,12 @@ void midi_in::set_callback(message_callback callback)
 }
 
 RTMIDI17_INLINE
+void midi_in::set_processing_mode(processing_mode mode)
+{
+  (static_cast<midi_in_api*>(rtapi_.get()))->set_processing_mode(mode);
+}
+
+RTMIDI17_INLINE
 void midi_in::cancel_callback()
 {
   (static_cast<midi_in_api*>(rtapi_.get()))->cancel_callback();
@@ -233,6 +239,13 @@ RTMIDI17_INLINE
 bool midi_in::get_message(message& msg)
 {
   return (static_cast<midi_in_api*>(rtapi_.get()))->get_message(msg);
+}
+
+RTMIDI17_INLINE
+[[nodiscard]]
+bool midi_in::poll(std::chrono::milliseconds timeout)
+{
+  return (static_cast<midi_in_api*>(rtapi_.get()))->poll(timeout);
 }
 
 RTMIDI17_INLINE

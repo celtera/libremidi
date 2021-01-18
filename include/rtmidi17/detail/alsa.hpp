@@ -630,7 +630,7 @@ private:
       if (snd_seq_event_input_pending(apidata.seq, 1) == 0)
       {
         // No data pending
-        if (poll(poll_fds, poll_fd_count, -1) >= 0)
+        if (::poll(poll_fds, poll_fd_count, -1) >= 0)
         {
           if (poll_fds[0].revents & POLLIN)
           {
