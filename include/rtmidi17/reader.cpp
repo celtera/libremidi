@@ -383,11 +383,11 @@ void reader::parse_impl(const std::vector<uint8_t>& buffer)
 
       if (useAbsoluteTicks)
       {
-        tickCount += tick;
+        tickCount = tick;
       }
       else
       {
-        tickCount = tick;
+        tickCount += tick;
       }
 
       try
