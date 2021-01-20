@@ -108,7 +108,7 @@ parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEven
 
   track_event event{tick, track, message{}};
 
-  if (((uint8_t)type & 0xF) == 0xF)
+  if (((uint8_t)type & 0xF0) == 0xF0)
   {
     // Meta event
     if ((uint8_t)type == 0xFF)
