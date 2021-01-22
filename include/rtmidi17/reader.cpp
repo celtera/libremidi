@@ -114,12 +114,15 @@ parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEven
     if ((uint8_t)type == 0xFF)
     {
       meta_event_type subtype = (meta_event_type)*dataStart++;
-      int length = read_variable_length(dataStart);
+      uint32_t length = read_variable_length(dataStart);
 
-      event.m.bytes = midi_bytes(std::max(length, 3), (std::size_t)0);
+      if (length > 0x7F)
+        throw(std::invalid_argument("Implementation does not allow meta event length over 127 bytes"));
+
+      event.m.bytes.resize(3);
       event.m.bytes[0] = (uint8_t)type;
       event.m.bytes[1] = (uint8_t)subtype;
-      event.m.bytes[2] = length;
+      event.m.bytes[2] = (uint8_t)length;
 
       switch (subtype)
       {
@@ -217,6 +220,7 @@ parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEven
     else if (type == message_type::SYSTEM_EXCLUSIVE)
     {
       int length = read_variable_length(dataStart);
+      event.m.bytes = { (uint8_t)type };
       read_bytes(event.m.bytes, dataStart, length);
       return event;
     }
@@ -236,47 +240,44 @@ parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEven
   // Channel events
   else
   {
-    event.m.bytes = midi_bytes(3, 0);
+    event.m.bytes.clear();
 
     // Running status...
     if (((uint8_t)type & 0x80) == 0)
     {
       // Reuse lastEventTypeByte as the event type.
       // eventTypeByte is actually the first parameter
-      event.m.bytes[0] = (uint8_t)lastEventTypeByte;
-      event.m.bytes[1] = (uint8_t)type;
+      event.m.bytes.push_back((uint8_t)lastEventTypeByte);
+      event.m.bytes.push_back((uint8_t)type);
       type = lastEventTypeByte;
     }
     else
     {
-      event.m.bytes[0] = (uint8_t)type;
-      event.m.bytes[1] = uint8_t(*dataStart++);
+      event.m.bytes.push_back((uint8_t)type);
+      event.m.bytes.push_back((uint8_t)*dataStart++);
       lastEventTypeByte = type;
     }
-
-    // Just in case
-    event.m.bytes[2] = 0xFF;
 
     switch (message_type((uint8_t)type & 0xF0))
     {
       case message_type::NOTE_OFF:
-        event.m.bytes[2] = uint8_t(*dataStart++);
+        event.m.bytes.push_back(*dataStart++);
         return event;
       case message_type::NOTE_ON:
-        event.m.bytes[2] = uint8_t(*dataStart++);
+        event.m.bytes.push_back(*dataStart++);
         return event;
       case message_type::POLY_PRESSURE:
-        event.m.bytes[2] = uint8_t(*dataStart++);
+        event.m.bytes.push_back(*dataStart++);
         return event;
       case message_type::CONTROL_CHANGE:
-        event.m.bytes[2] = uint8_t(*dataStart++);
+        event.m.bytes.push_back(*dataStart++);
         return event;
       case message_type::PROGRAM_CHANGE:
         return event;
       case message_type::AFTERTOUCH:
         return event;
       case message_type::PITCH_BEND:
-        event.m.bytes[2] = uint8_t(*dataStart++);
+        event.m.bytes.push_back(*dataStart++);
         return event;
 
       case message_type::TIME_CODE:
