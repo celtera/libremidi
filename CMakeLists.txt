@@ -192,7 +192,12 @@ if(TARGET Catch2::Catch2)
   add_executable(midiout_test tests/unit/midi_out.cpp)
   target_link_libraries(midiout_test PRIVATE RtMidi17 Catch2::Catch2)
 
+  add_executable(midifile_read_test tests/unit/midifile_read.cpp)
+  target_link_libraries(midifile_read_test PRIVATE RtMidi17 Catch2::Catch2)
+  target_compile_definitions(midifile_read_test PRIVATE "RTMIDI_TEST_CORPUS=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus\"")
+
   include(CTest)
   include(Catch)
   catch_discover_tests(midiout_test)
+  catch_discover_tests(midifile_read_test)
 endif()
