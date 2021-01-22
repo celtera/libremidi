@@ -108,7 +108,7 @@ parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEven
 
   track_event event{tick, track, message{}};
 
-  if (((uint8_t)type & 0xF) == 0xF)
+  if (((uint8_t)type & 0xF0) == 0xF0)
   {
     // Meta event
     if ((uint8_t)type == 0xFF)
@@ -125,10 +125,16 @@ parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEven
       {
         case meta_event_type::SEQUENCE_NUMBER:
         {
-          if (length != 2)
-            throw std::invalid_argument("Expected length for SEQUENCE_NUMBER event is 2");
-          read_bytes(event.m.bytes, dataStart, 2);
-          return event;
+          switch(length)
+          {
+            case 0:
+              return event;
+            case 2:
+              read_bytes(event.m.bytes, dataStart, 2);
+              return event;
+            default:
+              throw std::invalid_argument("Expected length for SEQUENCE_NUMBER event is 0 or 2");
+          }
         }
         case meta_event_type::TEXT:
         case meta_event_type::COPYRIGHT:
