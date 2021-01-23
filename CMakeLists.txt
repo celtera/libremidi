@@ -25,6 +25,8 @@ else()
     include/rtmidi17/detail/dummy.hpp
     include/rtmidi17/detail/jack.hpp
     include/rtmidi17/detail/midi_api.hpp
+    include/rtmidi17/detail/raw_alsa.hpp
+    include/rtmidi17/detail/raw_alsa_helpers.hpp
     include/rtmidi17/detail/semaphore.hpp
     include/rtmidi17/detail/winmm.hpp
     include/rtmidi17/detail/winuwp.hpp
