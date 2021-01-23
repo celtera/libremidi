@@ -15,8 +15,9 @@ try
 {
   // Create an api map.
   std::map<rtmidi::API, std::string> apiMap{
-      {rtmidi::API::MACOSX_CORE, "OS-X CoreMidi"}, {rtmidi::API::WINDOWS_MM, "Windows MultiMedia"},
-      {rtmidi::API::UNIX_JACK, "Jack Client"},     {rtmidi::API::LINUX_ALSA, "Linux ALSA"},
+      {rtmidi::API::MACOSX_CORE, "OS-X CoreMidi"},  {rtmidi::API::WINDOWS_MM, "Windows MultiMedia"},
+      {rtmidi::API::UNIX_JACK, "Jack Client"},      {rtmidi::API::LINUX_ALSA_SEQ, "Linux ALSA (sequencer)"},
+      {rtmidi::API::LINUX_ALSA_RAW, "Linux ALSA (raw)"},
       {rtmidi::API::DUMMY, "Dummy (no driver)"},
   };
 
