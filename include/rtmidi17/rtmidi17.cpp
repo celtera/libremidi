@@ -19,6 +19,7 @@
 
 #if defined(RTMIDI17_ALSA)
 #  include <rtmidi17/detail/alsa.hpp>
+#  include <rtmidi17/detail/raw_alsa.hpp>
 #endif
 
 #if defined(RTMIDI17_JACK)
@@ -54,28 +55,23 @@ constexpr auto make_tl(unused, Args...)
 static constexpr auto available_backends = make_tl(
     0
 #if defined(RTMIDI17_ALSA)
-    ,
-    alsa_backend {}
+      , raw_alsa_backend {}
+    , alsa_backend {}
 #endif
 #if defined(RTMIDI17_COREAUDIO)
-    ,
-    core_backend {}
+    , core_backend {}
 #endif
 #if defined(RTMIDI17_JACK)
-    ,
-    jack_backend {}
+    , jack_backend {}
 #endif
 #if defined(RTMIDI17_WINMM)
-    ,
-    winmm_backend {}
+    , winmm_backend {}
 #endif
 #if defined(RTMIDI17_WINUWP)
-    ,
-    winuwp_backend {}
+    , winuwp_backend {}
 #endif
 #if defined(RTMIDI17_DUMMY)
-    ,
-    dummy_backend {}
+    , dummy_backend {}
 #endif
 );
 
@@ -111,8 +107,9 @@ RTMIDI17_INLINE midi_in::~midi_in() = default;
 RTMIDI17_INLINE midi_out::~midi_out() = default;
 
 RTMIDI17_INLINE
-void chunking_parameters::default_wait(const chunking_parameters& self) {
-  std::this_thread::sleep_for(self.interval);
+bool chunking_parameters::default_wait(std::chrono::microseconds time_to_wait, int written_bytes) {
+  std::this_thread::sleep_for(time_to_wait);
+  return true;
 }
 
 [[nodiscard]] RTMIDI17_INLINE std::vector<rtmidi::API> available_apis() noexcept

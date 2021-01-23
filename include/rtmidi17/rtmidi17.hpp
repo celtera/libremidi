@@ -175,11 +175,13 @@ enum class API
 {
   UNSPECIFIED, /*!< Search for a working compiled API. */
   MACOSX_CORE, /*!< Macintosh OS-X Core Midi API. */
-  LINUX_ALSA,  /*!< The Advanced Linux Sound Architecture API. */
-  UNIX_JACK,   /*!< The JACK Low-Latency MIDI Server API. */
-  WINDOWS_MM,  /*!< The Microsoft Multimedia MIDI API. */
+  LINUX_ALSA, /*!< The Advanced Linux Sound Architecture API. */
+  LINUX_ALSA_SEQ = LINUX_ALSA,
+  LINUX_ALSA_RAW, /*!< Raw ALSA API. */
+  UNIX_JACK, /*!< The JACK Low-Latency MIDI Server API. */
+  WINDOWS_MM, /*!< The Microsoft Multimedia MIDI API. */
   WINDOWS_UWP, /*!< The Microsoft WinRT MIDI API. */
-  DUMMY        /*!< A compilable but non-functional API. */
+  DUMMY       /*!< A compilable but non-functional API. */
 };
 
 /**
@@ -220,9 +222,17 @@ private:
 struct RTMIDI17_EXPORT chunking_parameters {
   std::chrono::milliseconds interval{};
   int32_t size{};
-  std::function<void(const chunking_parameters&)> wait = chunking_parameters::default_wait;
 
-  static void default_wait(const chunking_parameters& self);
+  /**
+   * @brief Will be called by the chunking code to allow the API user to wait.
+   *
+   * By default just calls sleep.
+   * Arguments are: the time that must be waited, the bytes currently written.
+   * Return false if you want to abort the transfer, and true otherwise.
+   */
+  std::function<bool(std::chrono::microseconds, int)> wait = chunking_parameters::default_wait;
+
+  static bool default_wait(std::chrono::microseconds time_to_wait, int written_bytes);
 };
 
 /**********************************************************************/

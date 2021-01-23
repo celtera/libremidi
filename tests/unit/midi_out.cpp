@@ -11,19 +11,24 @@ TEST_CASE("sending messages with span", "[midi_out]" ) {
   midi.send_message(std::span<unsigned char>(data, 3));
 }
 
+#if defined(__linux__)
 TEST_CASE("sending chunked messages", "[midi_out]" ) {
-  rtmidi::midi_out midi{rtmidi::API::DUMMY, "dummy"};
+  rtmidi::midi_out midi{rtmidi::API::LINUX_ALSA_RAW, "dummy"};
   midi.open_port();
 
-  int chunk_count = 0;
+  std::set<int> written_bytes;
   midi.set_chunking_parameters(rtmidi::chunking_parameters{
     .interval = std::chrono::milliseconds(100),
     .size = 4096, // 4kb
-    .wait = [&] (const rtmidi::chunking_parameters&) { chunk_count++; }
+    .wait = [&] (const std::chrono::microseconds&, int sz) {
+       written_bytes.insert(sz);
+       return true;
+    }
   });
 
   unsigned char data[16384]{};
   midi.send_message(std::span<unsigned char>(data, 16384));
 
-  // REQUIRE(chunk_count == 4);
+  REQUIRE(written_bytes == std::set<int>{4096, 8192, 12288});
 }
+#endif
