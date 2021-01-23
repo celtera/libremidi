@@ -1,7 +1,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
-#include <rtmidi17/rtmidi17.hpp>
+#include <remidi/remidi.hpp>
 #include <thread>
 #include <typeinfo>
 
@@ -11,12 +11,12 @@ try
   using namespace std::literals;
   std::cout << std::hex;
 
-  rtmidi::midi_out midiout;
-  rtmidi::midi_in midiin;
+  remidi::midi_out midiout;
+  remidi::midi_in midiin;
   // Don't ignore sysex, timing, or active sensing messages.
   midiin.ignore_types(false, false, false);
 
-  midiin.set_callback([](const rtmidi::message& message) {
+  midiin.set_callback([](const remidi::message& message) {
     auto nBytes = message.size();
     for (auto i = 0U; i < nBytes; i++)
       std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
@@ -73,7 +73,7 @@ try
   midiout.send_message(message);
   std::this_thread::sleep_for(3000ms); // maximum allowed timeout is 3s
 }
-catch (rtmidi::midi_exception& error)
+catch (remidi::midi_exception& error)
 {
   std::cerr << error.what() << std::endl;
   return 0;

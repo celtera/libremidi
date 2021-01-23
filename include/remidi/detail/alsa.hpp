@@ -3,8 +3,8 @@
 #include <atomic>
 #include <map>
 #include <pthread.h>
-#include <rtmidi17/detail/midi_api.hpp>
-#include <rtmidi17/rtmidi17.hpp>
+#include <remidi/detail/midi_api.hpp>
+#include <remidi/remidi.hpp>
 #include <sstream>
 #include <sys/time.h>
 #include <thread>
@@ -26,7 +26,7 @@
 // preprocessor definition AVOID_TIMESTAMPING to save resources
 // associated with the ALSA sequencer queues.
 
-namespace rtmidi
+namespace remidi
 {
 // This function is used to count or get the pinfo structure for a given port
 // number.
@@ -104,14 +104,14 @@ public:
     descriptors_.resize(N);
     snd_seq_poll_descriptors(seq_, descriptors_.data(), N, POLLIN);
 
-    err = snd_seq_set_client_name(seq_, "rtmidi17-observe");
+    err = snd_seq_set_client_name(seq_, "remidi-observe");
     if (err < 0)
     {
       throw driver_error("observer_alsa: snd_seq_set_client_name failed");
     }
 
     err = snd_seq_create_simple_port(
-        seq_, "rtmidi-observe",
+        seq_, "remidi-observe",
         SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_READ
             | SND_SEQ_PORT_CAP_SUBS_WRITE,
         SND_SEQ_PORT_TYPE_APPLICATION);
@@ -295,7 +295,7 @@ public:
 
     // Create the input queue
 #ifndef AVOID_TIMESTAMPING
-    data.queue_id = snd_seq_alloc_named_queue(seq, "RtMidi Queue");
+    data.queue_id = snd_seq_alloc_named_queue(seq, "remidi Queue");
     // Set arbitrary tempo (mm=100) and resolution (240)
     snd_seq_queue_tempo_t* qtempo;
     snd_seq_queue_tempo_alloca(&qtempo);
@@ -332,9 +332,9 @@ public:
     snd_seq_close(data.seq);
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  remidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::LINUX_ALSA;
+    return remidi::API::LINUX_ALSA;
   }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
@@ -665,13 +665,13 @@ private:
       {
 
         case SND_SEQ_EVENT_PORT_SUBSCRIBED:
-#if defined(__RTMIDI17_DEBUG__)
+#if defined(__REMIDI_DEBUG__)
           std::cout << "MidiInAlsa::alsaMidiHandler: port connection made!\n";
 #endif
           break;
 
         case SND_SEQ_EVENT_PORT_UNSUBSCRIBED:
-#if defined(__RTMIDI17_DEBUG__)
+#if defined(__REMIDI_DEBUG__)
           std::cerr << "MidiInAlsa::alsaMidiHandler: port connection has closed!\n";
           std::cout << "sender = " << (int)ev->data.connect.sender.client << ":"
                     << (int)ev->data.connect.sender.port
@@ -779,7 +779,7 @@ private:
           }
           else
           {
-#if defined(__RTMIDI17_DEBUG__)
+#if defined(__REMIDI_DEBUG__)
             std::cerr << "\nMidiInAlsa::alsaMidiHandler: event parsing error or "
                          "not a MIDI event!\n\n";
 #endif
@@ -860,9 +860,9 @@ public:
     snd_seq_close(data.seq);
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  remidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::LINUX_ALSA;
+    return remidi::API::LINUX_ALSA;
   }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
@@ -1060,6 +1060,6 @@ struct alsa_backend
   using midi_in = midi_in_alsa;
   using midi_out = midi_out_alsa;
   using midi_observer = observer_alsa;
-  static const constexpr auto API = rtmidi::API::LINUX_ALSA;
+  static const constexpr auto API = remidi::API::LINUX_ALSA;
 };
 }

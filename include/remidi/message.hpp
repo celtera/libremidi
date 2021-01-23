@@ -9,26 +9,26 @@
 #include <stdexcept>
 #include <vector>
 
-#if __has_include(<boost/container/small_vector.hpp>) && !defined(RTMIDI17_NO_BOOST)
+#if __has_include(<boost/container/small_vector.hpp>) && !defined(REMIDI_NO_BOOST)
 #  include <boost/container/small_vector.hpp>
-namespace rtmidi
+namespace remidi
 {
 using midi_bytes = boost::container::small_vector<unsigned char, 4>;
 }
 #else
-namespace rtmidi
+namespace remidi
 {
 using midi_bytes = std::vector<unsigned char>;
 }
 #endif
 
-#if defined(RTMIDI17_HEADER_ONLY)
-#  define RTMIDI17_INLINE inline
+#if defined(REMIDI_HEADER_ONLY)
+#  define REMIDI_INLINE inline
 #else
-#  define RTMIDI17_INLINE
+#  define REMIDI_INLINE
 #endif
 
-namespace rtmidi
+namespace remidi
 {
 enum class message_type : uint8_t
 {

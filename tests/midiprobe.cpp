@@ -7,29 +7,29 @@
 #include <cstdlib>
 #include <iostream>
 #include <map>
-#include <rtmidi17/rtmidi17.hpp>
+#include <remidi/remidi.hpp>
 
 int main()
 
 try
 {
   // Create an api map.
-  std::map<rtmidi::API, std::string> apiMap{
-      {rtmidi::API::MACOSX_CORE, "OS-X CoreMidi"}, {rtmidi::API::WINDOWS_MM, "Windows MultiMedia"},
-      {rtmidi::API::UNIX_JACK, "Jack Client"},     {rtmidi::API::LINUX_ALSA, "Linux ALSA"},
-      {rtmidi::API::DUMMY, "Dummy (no driver)"},
+  std::map<remidi::API, std::string> apiMap{
+      {remidi::API::MACOSX_CORE, "OS-X CoreMidi"}, {remidi::API::WINDOWS_MM, "Windows MultiMedia"},
+      {remidi::API::UNIX_JACK, "Jack Client"},     {remidi::API::LINUX_ALSA, "Linux ALSA"},
+      {remidi::API::DUMMY, "Dummy (no driver)"},
   };
 
-  auto apis = rtmidi::available_apis();
+  auto apis = remidi::available_apis();
 
   std::cout << "\nCompiled APIs:\n";
-  for (auto& api : rtmidi::available_apis())
+  for (auto& api : remidi::available_apis())
   {
     std::cout << "  " << apiMap[api] << std::endl;
   }
 
   {
-    rtmidi::midi_in midiin;
+    remidi::midi_in midiin;
     std::cout << "\nCurrent input API: " << apiMap[midiin.get_current_api()] << std::endl;
 
     // Check inputs.
@@ -44,7 +44,7 @@ try
   }
 
   {
-    rtmidi::midi_out midiout;
+    remidi::midi_out midiout;
     std::cout << "\nCurrent output API: " << apiMap[midiout.get_current_api()] << std::endl;
 
     // Check outputs.
@@ -60,7 +60,7 @@ try
   }
   return 0;
 }
-catch (const rtmidi::midi_exception& error)
+catch (const remidi::midi_exception& error)
 {
   std::cerr << error.what() << std::endl;
   return EXIT_FAILURE;

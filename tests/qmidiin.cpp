@@ -12,7 +12,7 @@
 #include <csignal>
 #include <cstdlib>
 #include <iostream>
-#include <rtmidi17/rtmidi17.hpp>
+#include <remidi/remidi.hpp>
 #include <thread>
 
 [[noreturn]] static void usage()
@@ -32,7 +32,7 @@ try
   if (argc > 2)
     usage();
 
-  rtmidi::midi_in midiin;
+  remidi::midi_in midiin;
 
   // Check available ports vs. specified.
   auto port = 0U;
@@ -72,7 +72,7 @@ try
 
   return 0;
 }
-catch (const rtmidi::midi_exception& error)
+catch (const remidi::midi_exception& error)
 {
   std::cerr << error.what() << std::endl;
   return EXIT_FAILURE;

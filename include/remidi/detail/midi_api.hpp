@@ -1,9 +1,9 @@
 #pragma once
 #include <iostream>
-#include <rtmidi17/rtmidi17.hpp>
+#include <remidi/remidi.hpp>
 #include <string_view>
 
-namespace rtmidi
+namespace remidi
 {
 class observer_api
 {
@@ -28,7 +28,7 @@ public:
   midi_api& operator=(const midi_api&) = delete;
   midi_api& operator=(midi_api&&) = delete;
 
-  virtual rtmidi::API get_current_api() const noexcept = 0;
+  virtual remidi::API get_current_api() const noexcept = 0;
   virtual void open_port(unsigned int portNumber, std::string_view portName) = 0;
   virtual void open_virtual_port(std::string_view) = 0;
   virtual void close_port() = 0;
@@ -48,7 +48,7 @@ public:
     errorCallback_ = std::move(errorCallback);
   }
 
-  //! Error reporting function for RtMidi classes. Throws.
+  //! Error reporting function for remidi classes. Throws.
   template <typename Error_T>
   void error(std::string_view errorString) const
   {
@@ -70,7 +70,7 @@ public:
     }
   }
 
-  //! Warning reporting function for RtMidi classes.
+  //! Warning reporting function for remidi classes.
   void warning(std::string_view errorString) const
   {
     if (errorCallback_)
@@ -105,7 +105,7 @@ public:
     inputData_.queue.ringSize = queueSizeLimit;
     if (inputData_.queue.ringSize > 0)
     {
-      inputData_.queue.ring = std::make_unique<rtmidi::message[]>(inputData_.queue.ringSize);
+      inputData_.queue.ring = std::make_unique<remidi::message[]>(inputData_.queue.ringSize);
     }
   }
   ~midi_in_api() override = default;
@@ -146,7 +146,7 @@ public:
     if (inputData_.userCallback)
     {
       warning(
-          "RtMidiIn::getNextMessage: a user callback is currently set for "
+          "remidiIn::getNextMessage: a user callback is currently set for "
           "this port.");
       return {};
     }
@@ -164,7 +164,7 @@ public:
     if (inputData_.userCallback)
     {
       warning(
-          "RtMidiIn::getNextMessage: a user callback is currently set for "
+          "remidiIn::getNextMessage: a user callback is currently set for "
           "this port.");
       return {};
     }
@@ -224,12 +224,12 @@ public:
     }
   };
 
-  // The RtMidiInData structure is used to pass private class data to
+  // The remidiInData structure is used to pass private class data to
   // the MIDI input handling function or thread.
   struct in_data
   {
     midi_queue queue{};
-    rtmidi::message message{};
+    remidi::message message{};
     unsigned char ignoreFlags{7};
     bool doInput{false};
     bool firstMessage{true};

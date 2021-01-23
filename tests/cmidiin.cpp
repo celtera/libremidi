@@ -9,7 +9,7 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <rtmidi17/rtmidi17.hpp>
+#include <remidi/remidi.hpp>
 
 [[noreturn]] void usage()
 {
@@ -23,7 +23,7 @@
 // This function should be embedded in a try/catch block in case of
 // an exception.  It offers the user a choice of MIDI ports to open.
 // It returns false if there are no ports available.
-bool chooseMidiPort(rtmidi::midi_in& rtmidi)
+bool chooseMidiPort(remidi::midi_in& remidi)
 {
   std::cout << "\nWould you like to open a virtual input port? [y/N] ";
 
@@ -31,12 +31,12 @@ bool chooseMidiPort(rtmidi::midi_in& rtmidi)
   std::getline(std::cin, keyHit);
   if (keyHit == "y")
   {
-    rtmidi.open_virtual_port();
+    remidi.open_virtual_port();
     return true;
   }
 
   std::string portName;
-  unsigned int i = 0, nPorts = rtmidi.get_port_count();
+  unsigned int i = 0, nPorts = remidi.get_port_count();
   if (nPorts == 0)
   {
     std::cout << "No input ports available!" << std::endl;
@@ -45,13 +45,13 @@ bool chooseMidiPort(rtmidi::midi_in& rtmidi)
 
   if (nPorts == 1)
   {
-    std::cout << "\nOpening " << rtmidi.get_port_name() << std::endl;
+    std::cout << "\nOpening " << remidi.get_port_name() << std::endl;
   }
   else
   {
     for (i = 0; i < nPorts; i++)
     {
-      portName = rtmidi.get_port_name(i);
+      portName = remidi.get_port_name(i);
       std::cout << "  Input port #" << i << ": " << portName << '\n';
     }
 
@@ -63,7 +63,7 @@ bool chooseMidiPort(rtmidi::midi_in& rtmidi)
     std::getline(std::cin, keyHit); // used to clear out stdin
   }
 
-  rtmidi.open_port(i);
+  remidi.open_port(i);
 
   return true;
 }
@@ -71,7 +71,7 @@ bool chooseMidiPort(rtmidi::midi_in& rtmidi)
 int main(int argc, char**)
 try
 {
-  rtmidi::midi_in midiin;
+  remidi::midi_in midiin;
 
   // Minimal command-line check.
   if (argc > 2)
@@ -84,7 +84,7 @@ try
   // Set our callback function.  This should be done immediately after
   // opening the port to avoid having incoming messages written to the
   // queue instead of sent to the callback function.
-  midiin.set_callback([](const rtmidi::message& message) {
+  midiin.set_callback([](const remidi::message& message) {
     auto nBytes = message.size();
     for (auto i = 0U; i < nBytes; i++)
       std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
@@ -99,7 +99,7 @@ try
   char input;
   std::cin.get(input);
 }
-catch (const rtmidi::midi_exception& error)
+catch (const remidi::midi_exception& error)
 {
   std::cerr << error.what() << std::endl;
   return EXIT_FAILURE;

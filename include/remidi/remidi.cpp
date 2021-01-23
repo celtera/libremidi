@@ -1,46 +1,46 @@
 #include <cmath>
 #include <sstream>
 
-#if !defined(RTMIDI17_HEADER_ONLY)
-#  include <rtmidi17/rtmidi17.hpp>
+#if !defined(REMIDI_HEADER_ONLY)
+#  include <remidi/remidi.hpp>
 #endif
 
-#include <rtmidi17/detail/midi_api.hpp>
+#include <remidi/detail/midi_api.hpp>
 #if !__has_include(<weak_libjack.h>) && !__has_include(<jack/jack.h>)
-#  if defined(RTMIDI17_JACK)
-#    undef RTMIDI17_JACK
+#  if defined(REMIDI_JACK)
+#    undef REMIDI_JACK
 #  endif
 #endif
-#if !defined(RTMIDI17_ALSA) && !defined(RTMIDI17_JACK) && !defined(RTMIDI17_COREAUDIO) \
-    && !defined(RTMIDI17_WINMM)
-#  define RTMIDI17_DUMMY
+#if !defined(REMIDI_ALSA) && !defined(REMIDI_JACK) && !defined(REMIDI_COREAUDIO) \
+    && !defined(REMIDI_WINMM)
+#  define REMIDI_DUMMY
 #endif
 
-#if defined(RTMIDI17_ALSA)
-#  include <rtmidi17/detail/alsa.hpp>
+#if defined(REMIDI_ALSA)
+#  include <remidi/detail/alsa.hpp>
 #endif
 
-#if defined(RTMIDI17_JACK)
-#  include <rtmidi17/detail/jack.hpp>
+#if defined(REMIDI_JACK)
+#  include <remidi/detail/jack.hpp>
 #endif
 
-#if defined(RTMIDI17_COREAUDIO)
-#  include <rtmidi17/detail/coreaudio.hpp>
+#if defined(REMIDI_COREAUDIO)
+#  include <remidi/detail/coreaudio.hpp>
 #endif
 
-#if defined(RTMIDI17_WINMM)
-#  include <rtmidi17/detail/winmm.hpp>
+#if defined(REMIDI_WINMM)
+#  include <remidi/detail/winmm.hpp>
 #endif
 
-#if defined(RTMIDI17_WINUWP)
-#  include <rtmidi17/detail/winuwp.hpp>
+#if defined(REMIDI_WINUWP)
+#  include <remidi/detail/winuwp.hpp>
 #endif
 
-#if defined(RTMIDI17_DUMMY)
-#  include <rtmidi17/detail/dummy.hpp>
+#if defined(REMIDI_DUMMY)
+#  include <remidi/detail/dummy.hpp>
 #endif
 
-namespace rtmidi
+namespace remidi
 {
 
 // The order here will control the order of the API search in
@@ -52,27 +52,27 @@ constexpr auto make_tl(unused, Args...)
 }
 static constexpr auto available_backends = make_tl(
     0
-#if defined(RTMIDI17_ALSA)
+#if defined(REMIDI_ALSA)
     ,
     alsa_backend {}
 #endif
-#if defined(RTMIDI17_COREAUDIO)
+#if defined(REMIDI_COREAUDIO)
     ,
     core_backend {}
 #endif
-#if defined(RTMIDI17_JACK)
+#if defined(REMIDI_JACK)
     ,
     jack_backend {}
 #endif
-#if defined(RTMIDI17_WINMM)
+#if defined(REMIDI_WINMM)
     ,
     winmm_backend {}
 #endif
-#if defined(RTMIDI17_WINUWP)
+#if defined(REMIDI_WINUWP)
     ,
     winuwp_backend {}
 #endif
-#if defined(RTMIDI17_DUMMY)
+#if defined(REMIDI_DUMMY)
     ,
     dummy_backend {}
 #endif
@@ -88,7 +88,7 @@ auto for_all_backends(F&& f)
 }
 
 template <typename F>
-auto for_backend(rtmidi::API api, F&& f)
+auto for_backend(remidi::API api, F&& f)
 {
   for_all_backends([&](auto b) {
     if (b.API == api)
@@ -96,28 +96,28 @@ auto for_backend(rtmidi::API api, F&& f)
   });
 }
 
-RTMIDI17_INLINE midi_exception::~midi_exception() = default;
-RTMIDI17_INLINE no_devices_found_error::~no_devices_found_error() = default;
-RTMIDI17_INLINE invalid_device_error::~invalid_device_error() = default;
-RTMIDI17_INLINE memory_error::~memory_error() = default;
-RTMIDI17_INLINE invalid_parameter_error::~invalid_parameter_error() = default;
-RTMIDI17_INLINE invalid_use_error::~invalid_use_error() = default;
-RTMIDI17_INLINE driver_error::~driver_error() = default;
-RTMIDI17_INLINE system_error::~system_error() = default;
-RTMIDI17_INLINE thread_error::~thread_error() = default;
+REMIDI_INLINE midi_exception::~midi_exception() = default;
+REMIDI_INLINE no_devices_found_error::~no_devices_found_error() = default;
+REMIDI_INLINE invalid_device_error::~invalid_device_error() = default;
+REMIDI_INLINE memory_error::~memory_error() = default;
+REMIDI_INLINE invalid_parameter_error::~invalid_parameter_error() = default;
+REMIDI_INLINE invalid_use_error::~invalid_use_error() = default;
+REMIDI_INLINE driver_error::~driver_error() = default;
+REMIDI_INLINE system_error::~system_error() = default;
+REMIDI_INLINE thread_error::~thread_error() = default;
 
-RTMIDI17_INLINE midi_in::~midi_in() = default;
-RTMIDI17_INLINE midi_out::~midi_out() = default;
+REMIDI_INLINE midi_in::~midi_in() = default;
+REMIDI_INLINE midi_out::~midi_out() = default;
 
-[[nodiscard]] RTMIDI17_INLINE std::vector<rtmidi::API> available_apis() noexcept
+[[nodiscard]] REMIDI_INLINE std::vector<remidi::API> available_apis() noexcept
 {
-  std::vector<rtmidi::API> apis;
+  std::vector<remidi::API> apis;
   for_all_backends([&](auto b) { apis.push_back(b.API); });
   return apis;
 }
 
-[[nodiscard]] RTMIDI17_INLINE std::unique_ptr<observer_api>
-open_midi_observer(rtmidi::API api, observer::callbacks&& cb)
+[[nodiscard]] REMIDI_INLINE std::unique_ptr<observer_api>
+open_midi_observer(remidi::API api, observer::callbacks&& cb)
 {
   std::unique_ptr<observer_api> ptr;
 
@@ -128,8 +128,8 @@ open_midi_observer(rtmidi::API api, observer::callbacks&& cb)
   return ptr;
 }
 
-[[nodiscard]] RTMIDI17_INLINE std::unique_ptr<midi_in_api>
-open_midi_in(rtmidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
+[[nodiscard]] REMIDI_INLINE std::unique_ptr<midi_in_api>
+open_midi_in(remidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
 {
   std::unique_ptr<midi_in_api> ptr;
 
@@ -140,8 +140,8 @@ open_midi_in(rtmidi::API api, std::string_view clientName, unsigned int queueSiz
   return ptr;
 }
 
-[[nodiscard]] RTMIDI17_INLINE std::unique_ptr<midi_out_api>
-open_midi_out(rtmidi::API api, std::string_view clientName)
+[[nodiscard]] REMIDI_INLINE std::unique_ptr<midi_out_api>
+open_midi_out(remidi::API api, std::string_view clientName)
 {
 
   std::unique_ptr<midi_out_api> ptr;
@@ -152,176 +152,176 @@ open_midi_out(rtmidi::API api, std::string_view clientName)
   return ptr;
 }
 
-RTMIDI17_INLINE observer::observer(rtmidi::API api, observer::callbacks cbs)
+REMIDI_INLINE observer::observer(remidi::API api, observer::callbacks cbs)
     : impl_{open_midi_observer(api, std::move(cbs))}
 {
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 observer::~observer() = default;
 
-RTMIDI17_INLINE
-rtmidi::API midi_in::get_current_api() const noexcept
+REMIDI_INLINE
+remidi::API midi_in::get_current_api() const noexcept
 {
   return rtapi_->get_current_api();
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_in::open_port(unsigned int portNumber, std::string_view portName)
 {
   rtapi_->open_port(portNumber, portName);
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_in::open_virtual_port(std::string_view portName)
 {
   rtapi_->open_virtual_port(portName);
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_in::close_port()
 {
   rtapi_->close_port();
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 bool midi_in::is_port_open() const noexcept
 {
   return rtapi_->is_port_open();
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_in::set_callback(message_callback callback)
 {
   (static_cast<midi_in_api*>(rtapi_.get()))->set_callback(std::move(callback));
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_in::cancel_callback()
 {
   (static_cast<midi_in_api*>(rtapi_.get()))->cancel_callback();
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 unsigned int midi_in::get_port_count()
 {
   return rtapi_->get_port_count();
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 std::string midi_in::get_port_name(unsigned int portNumber)
 {
   return rtapi_->get_port_name(portNumber);
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_in::ignore_types(bool midiSysex, bool midiTime, bool midiSense)
 {
   (static_cast<midi_in_api*>(rtapi_.get()))->ignore_types(midiSysex, midiTime, midiSense);
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 message midi_in::get_message()
 {
   return (static_cast<midi_in_api*>(rtapi_.get()))->get_message();
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 bool midi_in::get_message(message& msg)
 {
   return (static_cast<midi_in_api*>(rtapi_.get()))->get_message(msg);
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_in::set_error_callback(midi_error_callback errorCallback)
 {
   rtapi_->set_error_callback(std::move(errorCallback));
 }
 
-RTMIDI17_INLINE
-rtmidi::API midi_out::get_current_api() noexcept
+REMIDI_INLINE
+remidi::API midi_out::get_current_api() noexcept
 {
   return rtapi_->get_current_api();
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_out::open_port(unsigned int portNumber, std::string_view portName)
 {
   rtapi_->open_port(portNumber, portName);
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_out::open_virtual_port(std::string_view portName)
 {
   rtapi_->open_virtual_port(portName);
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_out::close_port()
 {
   rtapi_->close_port();
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 bool midi_out::is_port_open() const noexcept
 {
   return rtapi_->is_port_open();
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 unsigned int midi_out::get_port_count()
 {
   return rtapi_->get_port_count();
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 std::string midi_out::get_port_name(unsigned int portNumber)
 {
   return rtapi_->get_port_name(portNumber);
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_out::send_message(const std::vector<unsigned char>& message)
 {
   send_message(message.data(), message.size());
 }
 
-RTMIDI17_INLINE
-void midi_out::send_message(const rtmidi::message& message)
+REMIDI_INLINE
+void midi_out::send_message(const remidi::message& message)
 {
   send_message(message.bytes.data(), message.bytes.size());
 }
 
-#if RTMIDI17_HAS_SPAN
-RTMIDI17_INLINE
+#if REMIDI_HAS_SPAN
+REMIDI_INLINE
 void midi_out::send_message(std::span<unsigned char> message)
 {
   send_message(message.data(), message.size());
 }
 
 #endif
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_out::send_message(const unsigned char* message, size_t size)
 {
   (static_cast<midi_out_api*>(rtapi_.get()))->send_message(message, size);
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_out::set_error_callback(midi_error_callback errorCallback) noexcept
 {
   rtapi_->set_error_callback(std::move(errorCallback));
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 std::string get_version() noexcept
 {
-  return std::string{RTMIDI17_VERSION};
+  return std::string{REMIDI_VERSION};
 }
 
-RTMIDI17_INLINE
-midi_in::midi_in(rtmidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
+REMIDI_INLINE
+midi_in::midi_in(remidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
 {
-  if (api != rtmidi::API::UNSPECIFIED)
+  if (api != remidi::API::UNSPECIFIED)
   {
     // Attempt to open the specified API.
     if ((rtapi_ = open_midi_in(api, clientName, queueSizeLimit)))
@@ -331,7 +331,7 @@ midi_in::midi_in(rtmidi::API api, std::string_view clientName, unsigned int queu
 
     // No compiled support for specified API value.  Issue a warning
     // and continue as if no API was specified.
-    std::cerr << "\nRtMidiIn: no compiled support for specified API argument!\n\n" << std::endl;
+    std::cerr << "\nremidiIn: no compiled support for specified API argument!\n\n" << std::endl;
   }
 
   // Iterate through the compiled APIs and return as soon as we find
@@ -351,22 +351,22 @@ midi_in::midi_in(rtmidi::API api, std::string_view clientName, unsigned int queu
   }
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_in::set_client_name(std::string_view clientName)
 {
   rtapi_->set_client_name(clientName);
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_in::set_port_name(std::string_view portName)
 {
   rtapi_->set_port_name(portName);
 }
 
-RTMIDI17_INLINE
-midi_out::midi_out(rtmidi::API api, std::string_view clientName)
+REMIDI_INLINE
+midi_out::midi_out(remidi::API api, std::string_view clientName)
 {
-  if (api != rtmidi::API::UNSPECIFIED)
+  if (api != remidi::API::UNSPECIFIED)
   {
     // Attempt to open the specified API.
     rtapi_ = open_midi_out(api, clientName);
@@ -377,7 +377,7 @@ midi_out::midi_out(rtmidi::API api, std::string_view clientName)
 
     // No compiled support for specified API value.  Issue a warning
     // and continue as if no API was specified.
-    std::cerr << "\nRtMidiOut: no compiled support for specified API argument!\n\n" << std::endl;
+    std::cerr << "\nremidiOut: no compiled support for specified API argument!\n\n" << std::endl;
   }
 
   // Iterate through the compiled APIs and return as soon as we find
@@ -397,19 +397,19 @@ midi_out::midi_out(rtmidi::API api, std::string_view clientName)
   }
 
   // It should not be possible to get here because the preprocessor
-  // definition RTMIDI17_DUMMY is automatically defined if no
+  // definition REMIDI_DUMMY is automatically defined if no
   // API-specific definitions are passed to the compiler. But just in
   // case something weird happens, we'll thrown an error.
-  throw midi_exception{"RtMidiOut: no compiled API support found ... critical error!!"};
+  throw midi_exception{"remidiOut: no compiled API support found ... critical error!!"};
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_out::set_client_name(std::string_view clientName)
 {
   rtapi_->set_client_name(clientName);
 }
 
-RTMIDI17_INLINE
+REMIDI_INLINE
 void midi_out::set_port_name(std::string_view portName)
 {
   rtapi_->set_port_name(portName);

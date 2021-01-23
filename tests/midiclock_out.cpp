@@ -12,18 +12,18 @@
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
-#include <rtmidi17/rtmidi17.hpp>
+#include <remidi/remidi.hpp>
 #include <thread>
 
 // These functions should be embedded in a try/catch block in case of
 // an exception.  It offers the user a choice of MIDI ports to open.
 // It returns false if there are no ports available.
 template <typename RT>
-bool choosePort(RT& rtmidi, std::string dir)
+bool choosePort(RT& remidi, std::string dir)
 {
   std::string portName;
   auto port = 0U;
-  auto nPorts = rtmidi.get_port_count();
+  auto nPorts = remidi.get_port_count();
 
   if (nPorts == 0)
   {
@@ -32,13 +32,13 @@ bool choosePort(RT& rtmidi, std::string dir)
   }
   else if (nPorts == 1)
   {
-    std::cout << "\nOpening " << rtmidi.get_port_name() << std::endl;
+    std::cout << "\nOpening " << remidi.get_port_name() << std::endl;
   }
   else
   {
     for (auto i = 0U; i < nPorts; i++)
     {
-      portName = rtmidi.get_port_name(i);
+      portName = remidi.get_port_name(i);
       std::cout << "  " << dir << " port #" << i << ": " << portName << '\n';
     }
 
@@ -51,7 +51,7 @@ bool choosePort(RT& rtmidi, std::string dir)
 
   std::cout << "\n";
 
-  rtmidi.open_port(port);
+  remidi.open_port(port);
 
   return true;
 }
@@ -60,7 +60,7 @@ int main(int, const char* argv[])
 try
 {
   using namespace std::literals;
-  rtmidi::midi_out midiout;
+  remidi::midi_out midiout;
 
   // Call function to select port.
   if (choosePort(midiout, "output") == false)
@@ -120,7 +120,7 @@ try
 
   return 0;
 }
-catch (const rtmidi::midi_exception& error)
+catch (const remidi::midi_exception& error)
 {
   std::cerr << error.what() << std::endl;
   exit(EXIT_FAILURE);

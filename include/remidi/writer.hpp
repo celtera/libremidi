@@ -24,31 +24,41 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
+#include <cstdint>
+#include <remidi/message.hpp>
+#include <vector>
 
-#include <rtmidi17/rtmidi17.hpp>
-
-namespace rtmidi
+namespace remidi
 {
-class reader
+class writer
 {
 public:
-  reader(bool useAbsolute = false);
-  ~reader();
+  writer(int ticks);
+  ~writer();
 
-  void parse(const std::vector<uint8_t>& buffer);
-  double get_end_time();
+  size_t get_num_tracks()
+  {
+    return tracks.size();
+  }
 
-  float ticksPerBeat{}; // precision (number of ticks distinguishable per second)
-  float startingTempo{};
+  void add_event(int tick, int track, message m);
+  void add_event(int track, track_event m);
 
-  std::vector<midi_track> tracks;
+  void add_track();
+
+  void write(std::ostream& out);
+
+  const std::vector<midi_track>& get_tracks()
+  {
+    return tracks;
+  }
 
 private:
-  void parse_impl(const std::vector<uint8_t>& buffer);
-  bool useAbsoluteTicks{};
+  std::vector<midi_track> tracks;
+  const int ticksPerQuarterNote = 120;
 };
 }
 
-#if defined(RTMIDI17_HEADER_ONLY)
-#  include <rtmidi17/reader.cpp>
+#if defined(REMIDI_HEADER_ONLY)
+#  include <remidi/writer.cpp>
 #endif

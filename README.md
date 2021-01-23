@@ -1,16 +1,16 @@
-# RtMidi17
+# libremidi
 
 [![Build status](https://github.com/jcelerier/RtMidi17/workflows/Build/badge.svg)](https://github.com/jcelerier/RtMidi17/actions)
 
-RtMidi17 is a header-only cross-platform C++17 library for MIDI input and output.
+libremidi is a header-only cross-platform C++17 library for MIDI input and output, both real-time and through MIDI files (SMF).
 
-This is a fork based on two libraries: 
+This is a fork based on two libraries:
 
 * [RtMidi](https://github.com/theSTK/RtMidi)
 * [ModernMIDI](https://github.com/ddiakopoulos/ModernMIDI)
 
-Instead of adding another abstraction layer like ModernMIDI does, 
-this directly modernizes the RtMidi codebase with new C++ features and improvements: 
+Instead of adding another abstraction layer like ModernMIDI does,
+this directly modernizes the RtMidi codebase with new C++ features and improvements:
 
 * Callbacks are passed by `std::function` and generally simplified.
 * Ability to use `boost::small_vector` to pass midi bytes instead of `std::vector` to reduce allocations.
@@ -19,12 +19,13 @@ this directly modernizes the RtMidi codebase with new C++ features and improveme
 * Use of standard C++ `snake_case`.
 * Use of standard C++ folder hierarchy ; just add the current folder to your include path.
 * Simplification of exceptions.
-* The library can be used header-only with the define `RTMIDI17_HEADER_ONLY`.
+* The library can be used header-only with the define (or CMake option) `REMIDI_HEADER_ONLY`.
+* The library can be used with CMake `add_subdirectory`.
 * Passes clean through clang-tidy, clang analyzer, GCC -Wall -Wextra, etc etc.
 * JACK support on Windows.
-* JACK support through weakjack to allow runtime loading of JACK.
+* JACK support through [weakjack](https://github.com/x42/weakjack) to allow runtime loading of JACK.
 
-### To-dos: 
+### To-dos:
 * Work-in-progress support for notification on device connection / disconnection (currently ALSA only)
 * Work-in-progress support for UWP MIDI support on Windows
 

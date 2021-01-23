@@ -8,9 +8,9 @@
 #    include <jack/midiport.h>
 #    include <jack/ringbuffer.h>
 #  endif
-#  include <rtmidi17/detail/midi_api.hpp>
-#  include <rtmidi17/detail/semaphore.hpp>
-#  include <rtmidi17/rtmidi17.hpp>
+#  include <remidi/detail/midi_api.hpp>
+#  include <remidi/detail/semaphore.hpp>
+#  include <remidi/remidi.hpp>
 
 //*********************************************************************//
 //  API: UNIX JACK
@@ -20,7 +20,7 @@
 //
 //  *********************************************************************//
 
-namespace rtmidi
+namespace remidi
 {
 struct jack_data
 {
@@ -31,10 +31,10 @@ struct jack_data
   jack_ringbuffer_t* buffMessage{};
   jack_time_t lastTime{};
 
-  rtmidi::semaphore sem_cleanup;
-  rtmidi::semaphore sem_needpost{};
+  remidi::semaphore sem_cleanup;
+  remidi::semaphore sem_needpost{};
 
-  midi_in_api::in_data* rtMidiIn{};
+  midi_in_api::in_data* input_data{};
 };
 
 class observer_jack final : public observer_api
@@ -56,7 +56,7 @@ public:
       : midi_in_api{&data, queueSizeLimit}
   {
     // TODO do like the others
-    data.rtMidiIn = &inputData_;
+    data.input_data = &inputData_;
     data.port = nullptr;
     data.client = nullptr;
     this->clientName = cname;
@@ -72,9 +72,9 @@ public:
       jack_client_close(data.client);
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  remidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::UNIX_JACK;
+    return remidi::API::UNIX_JACK;
   }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
@@ -131,7 +131,7 @@ public:
 
   void set_port_name(std::string_view portName) override
   {
-#  if defined(RTMIDI17_JACK_HAS_PORT_RENAME)
+#  if defined(REMIDI_JACK_HAS_PORT_RENAME)
     jack_port_rename(data.client, data.port, portName.data());
 #  else
     jack_port_set_name(data.port, portName.data());
@@ -210,7 +210,7 @@ private:
   static int jackProcessIn(jack_nframes_t nframes, void* arg)
   {
     jack_data& jData = *(jack_data*)arg;
-    midi_in_api::in_data& rtData = *jData.rtMidiIn;
+    midi_in_api::in_data& rtData = *jData.input_data;
     jack_midi_event_t event;
     jack_time_t time;
 
@@ -333,9 +333,9 @@ public:
     }
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  remidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::UNIX_JACK;
+    return remidi::API::UNIX_JACK;
   }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
@@ -397,7 +397,7 @@ public:
 
   void set_port_name(std::string_view portName) override
   {
-#  if defined(RTMIDI17_JACK_HAS_PORT_RENAME)
+#  if defined(REMIDI_JACK_HAS_PORT_RENAME)
     jack_port_rename(data.client, data.port, portName.data());
 #  else
     jack_port_set_name(data.port, portName.data());
@@ -523,7 +523,7 @@ struct jack_backend
   using midi_in = midi_in_jack;
   using midi_out = midi_out_jack;
   using midi_observer = observer_jack;
-  static const constexpr auto API = rtmidi::API::UNIX_JACK;
+  static const constexpr auto API = remidi::API::UNIX_JACK;
 };
 }
 #endif

@@ -9,14 +9,14 @@
 #include <mmsystem.h>
 #include <mutex>
 #include <ostream>
-#include <rtmidi17/detail/midi_api.hpp>
-#include <rtmidi17/rtmidi17.hpp>
+#include <remidi/detail/midi_api.hpp>
+#include <remidi/remidi.hpp>
 #include <sstream>
 #include <thread>
 
 // Default for Windows is to add an identifier to the port names; this
 // flag can be defined (e.g. in your project file) to disable this behaviour.
-//#define RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+//#define REMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
 
 //*********************************************************************//
 //  API: Windows Multimedia Library (MM)
@@ -27,7 +27,7 @@
 //  http://msdn.microsoft.com/library/default.asp?url=/library/en-us/multimed/htm/_win32_midi_reference.asp
 
 // Thanks to Jean-Baptiste Berruchon for the sysex code.
-namespace rtmidi
+namespace remidi
 {
 
 #define RT_WINMM_OBSERVER_POLL_PERIOD_MS 100
@@ -42,7 +42,7 @@ struct WinMidiData
   HMIDIIN inHandle;   // Handle to Midi Input Device
   HMIDIOUT outHandle; // Handle to Midi Output Device
   DWORD lastTime;
-  rtmidi::message message;
+  remidi::message message;
   LPMIDIHDR sysexBuffer[RT_SYSEX_BUFFER_COUNT];
   CRITICAL_SECTION
   _mutex; // [Patrice] see
@@ -228,9 +228,9 @@ public:
     DeleteCriticalSection(&(data._mutex));
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  remidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::WINDOWS_MM;
+    return remidi::API::WINDOWS_MM;
   }
 
   void open_port(unsigned int portNumber, std::string_view) override
@@ -366,7 +366,7 @@ public:
     // Next lines added to add the portNumber to the name so that
     // the device's names are sure to be listed with individual names
     // even when they have the same brand name
-#ifndef RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+#ifndef REMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
     int x = 1;
     for (int i = 0; i < portNumber; i++)
     {
@@ -399,7 +399,7 @@ private:
     if (inputStatus != MIM_DATA && inputStatus != MIM_LONGDATA && inputStatus != MIM_LONGERROR)
       return;
 
-    // midi_in_api::RtMidiInData *data = static_cast<midi_in_api::RtMidiInData *>
+    // midi_in_api::remidiInData *data = static_cast<midi_in_api::remidiInData *>
     // (instancePtr);
     midi_in_api::in_data& data = *(midi_in_api::in_data*)instancePtr;
     WinMidiData& apiData = *static_cast<WinMidiData*>(data.apiData);
@@ -483,7 +483,7 @@ private:
             apiData.inHandle, apiData.sysexBuffer[sysex->dwUser], sizeof(MIDIHDR));
         LeaveCriticalSection(&(apiData._mutex));
         if (result != MMSYSERR_NOERROR)
-          std::cerr << "\nRtMidiIn::midiInputCallback: error sending sysex to "
+          std::cerr << "\nremidiIn::midiInputCallback: error sending sysex to "
                        "Midi device!!\n\n";
 
         if (data.ignoreFlags & 0x01)
@@ -537,9 +537,9 @@ public:
     midi_out_winmm::close_port();
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  remidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::WINDOWS_MM;
+    return remidi::API::WINDOWS_MM;
   }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
@@ -616,7 +616,7 @@ public:
     // the device's names are sure to be listed with individual names
     // even when they have the same brand name
     std::ostringstream os;
-#ifndef RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+#ifndef REMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
     int x = 1;
     for (int i = 0; i < portNumber; i++)
     {
@@ -726,6 +726,6 @@ struct winmm_backend
   using midi_in = midi_in_winmm;
   using midi_out = midi_out_winmm;
   using midi_observer = observer_winmm;
-  static const constexpr auto API = rtmidi::API::WINDOWS_MM;
+  static const constexpr auto API = remidi::API::WINDOWS_MM;
 };
 }

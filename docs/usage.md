@@ -1,11 +1,11 @@
 # Real-time input/output usage
 
-The required header is `#include <rtmidi17/rtmidi17.hpp>`.
+The required header is `#include <remidi/remidi.hpp>`.
 
 ## Enumerating input ports
 
 ```C++
-rtmidi::midi_in midi;
+remidi::midi_in midi;
 for(int i = 0, N = midi.get_port_count(); i < N; i++) {
   // Information on port number i
   std::string name = midi.get_port_name(i);
@@ -15,7 +15,7 @@ for(int i = 0, N = midi.get_port_count(); i < N; i++) {
 ## Enumerating output ports
 
 ```C++
-rtmidi::midi_out midi;
+remidi::midi_out midi;
 for(int i = 0, N = midi.get_port_count(); i < N; i++) {
   // Information on port number i
   std::string name = midi.get_port_name(i);
@@ -26,7 +26,7 @@ for(int i = 0, N = midi.get_port_count(); i < N; i++) {
 
 ```C++
 // Create the midi object
-rtmidi::midi_in midi;
+remidi::midi_in midi;
 
 // Open a given midi port. Passing no arguments will open a default port.
 midi.open_port(0);
@@ -40,7 +40,7 @@ midi.open_port(0);
 // it is up to you to protect your data structures afterwards.
 // For instance if you are using a GUI toolkit, don't do GUI actions
 // in that callback !
-midi.set_callback([](const rtmidi::message& message) {
+midi.set_callback([](const remidi::message& message) {
   // how many bytes
   message.size();
   // access to the individual bytes
@@ -54,7 +54,7 @@ midi.set_callback([](const rtmidi::message& message) {
 
 ```C++
 // Create the midi object
-rtmidi::midi_in midi;
+remidi::midi_in midi;
 
 // Open a given midi port. Passing no arguments will open a default port.
 midi.open_port(0);
@@ -69,7 +69,7 @@ while(1) {
 
 // Option B, with less copies
 while(1) {
-    rtmidi::message next_message;
+    remidi::message next_message;
     if(midi.get_message(next_message)) {
         // next_message holds a valid message.
     }
@@ -80,7 +80,7 @@ while(1) {
 
 ```C++
 // Create the midi object
-rtmidi::midi_out midi;
+remidi::midi_out midi;
 
 // Open a given midi port. Passing no arguments will open a default port.
 midi.open_port(0);
@@ -96,10 +96,10 @@ midi.send_message(std::vector<unsigned char>{ 144, 110, 40 });
 midi.send_message(std::span<unsigned char>{ ... your span-compatible data-structure ... });
 
 // Option D: helpers with the message class
-// See rtmidi17/message.hpp for the full list
-midi.send_message(rtmidi17::message::note_on(channel, note, velocity));
-midi.send_message(rtmidi17::message::control_change(channel, control, value));
-midi.send_message(rtmidi17::message::pitch_bend(channel, value));
+// See remidi/message.hpp for the full list
+midi.send_message(remidi::message::note_on(channel, note, velocity));
+midi.send_message(remidi::message::control_change(channel, control, value));
+midi.send_message(remidi::message::pitch_bend(channel, value));
 ```
 
 ## Device connection / disconnection notification
@@ -109,14 +109,14 @@ Note: this has not been implemented for every API so far.
 ```C++
 // The callbacks will be called when the relevant event happens.
 
-rtmidi::observer::callbacks cb;
+remidi::observer::callbacks cb;
 cb.input_added = [] (int index, std::string name) { ... };
 cb.input_removed = [] (int index, std::string name) { ... };
 cb.output_added = [] (int index, std::string name) { ... };
 cb.output_removed = [] (int index, std::string name) { ... };
 
-rtmidi::observer observer{
-    rtmidi::API::WINDOWS_UWP,
+remidi::observer observer{
+    remidi::API::WINDOWS_UWP,
     std::move(cb)
 };
 
@@ -126,14 +126,14 @@ rtmidi::observer observer{
 The default error handling is done with exceptions.
 If exceptions are undesirable, it is also possible to set a callback function which will be invoked upon error, for the `midi_in` and `midi_out` classes.
 
-(Some classes may still throw, such as when creating invalid MIDI messages with the `rtmidi17::message` helpers, or the `observer` classes).
+(Some classes may still throw, such as when creating invalid MIDI messages with the `remidi::message` helpers, or the `observer` classes).
 
 ```C++
 // Create the midi object
-rtmidi::midi_out midi;
+remidi::midi_out midi;
 
 midi.set_error_callback(
-  [] (rtmidi::midi_error code, std::string_view info) {
+  [] (remidi::midi_error code, std::string_view info) {
   // ... log error however you want
 });
 ```
