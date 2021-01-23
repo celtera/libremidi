@@ -20,6 +20,20 @@ if(RTMIDI17_HEADER_ONLY)
   target_compile_definitions(RtMidi17 ${_public} RTMIDI17_HEADER_ONLY)
 else()
   add_library(RtMidi17
+    include/rtmidi17/detail/alsa.hpp
+    include/rtmidi17/detail/coreaudio.hpp
+    include/rtmidi17/detail/dummy.hpp
+    include/rtmidi17/detail/jack.hpp
+    include/rtmidi17/detail/midi_api.hpp
+    include/rtmidi17/detail/semaphore.hpp
+    include/rtmidi17/detail/winmm.hpp
+    include/rtmidi17/detail/winuwp.hpp
+
+    include/rtmidi17/message.hpp
+    include/rtmidi17/reader.hpp
+    include/rtmidi17/writer.hpp
+    include/rtmidi17/rtmidi17.hpp
+
     include/rtmidi17/rtmidi17.cpp
     include/rtmidi17/reader.cpp
     include/rtmidi17/writer.cpp
@@ -169,4 +183,16 @@ if(RTMIDI17_EXAMPLES)
 
   add_executable(midi2 tests/midi2.cpp)
   target_link_libraries(midi2 PRIVATE RtMidi17)
+endif()
+
+find_package(Catch2)
+if(TARGET Catch2::Catch2)
+  target_compile_features(RtMidi17 PUBLIC cxx_std_20)
+
+  add_executable(midiout_test tests/unit/midi_out.cpp)
+  target_link_libraries(midiout_test PRIVATE RtMidi17 Catch2::Catch2)
+
+  include(CTest)
+  include(Catch)
+  catch_discover_tests(midiout_test)
 endif()
