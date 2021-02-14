@@ -186,7 +186,7 @@ if(RTMIDI17_EXAMPLES)
 endif()
 
 find_package(Catch2)
-if(TARGET Catch2::Catch2)
+if(TARGET Catch2::Catch2 AND Catch2_FOUND)
   target_compile_features(RtMidi17 PUBLIC cxx_std_20)
 
   add_executable(midiout_test tests/unit/midi_out.cpp)
