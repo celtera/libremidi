@@ -439,6 +439,12 @@ RTMIDI17_INLINE
 void reader::parse(const std::vector<uint8_t>& buffer)
 {
   tracks.clear();
+
+  if(buffer.empty())
+  {
+    std::cerr << "rtmidi17::reader: empty buffer passed to parse." << std::endl;
+    return;
+  }
   parse_impl(buffer);
 }
 
