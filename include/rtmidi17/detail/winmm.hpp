@@ -368,7 +368,7 @@ public:
     // even when they have the same brand name
 #ifndef RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
     int x = 1;
-    for (int i = 0; i < portNumber; i++)
+    for (unsigned int i = 0; i < portNumber; i++)
     {
       MIDIINCAPS deviceCaps2;
       midiInGetDevCaps(i, &deviceCaps2, sizeof(MIDIINCAPS));
@@ -576,6 +576,7 @@ public:
     }
 
     connected_ = true;
+    UNUSED_PARAMETER(portName);
   }
 
   void close_port() override
@@ -618,7 +619,7 @@ public:
     std::ostringstream os;
 #ifndef RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
     int x = 1;
-    for (int i = 0; i < portNumber; i++)
+    for (unsigned int i = 0; i < portNumber; i++)
     {
       MIDIOUTCAPS deviceCaps2;
       midiOutGetDevCaps(i, &deviceCaps2, sizeof(MIDIOUTCAPS));
