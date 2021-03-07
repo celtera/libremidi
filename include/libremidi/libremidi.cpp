@@ -38,6 +38,10 @@
 #  include <libremidi/detail/winuwp.hpp>
 #endif
 
+#if defined(LIBREMIDI_EMSCRIPTEN)
+#  include <libremidi/detail/emscripten.hpp>
+#endif
+
 #if defined(LIBREMIDI_DUMMY)
 #  include <libremidi/detail/dummy.hpp>
 #endif
@@ -69,6 +73,9 @@ static constexpr auto available_backends = make_tl(
 #endif
 #if defined(LIBREMIDI_WINUWP)
     , winuwp_backend {}
+#endif
+#if defined(LIBREMIDI_EMSCRIPTEN)
+    , emscripten_backend {}
 #endif
 #if defined(LIBREMIDI_DUMMY)
     , dummy_backend {}

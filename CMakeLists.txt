@@ -23,6 +23,8 @@ else()
     include/libremidi/detail/alsa.hpp
     include/libremidi/detail/coreaudio.hpp
     include/libremidi/detail/dummy.hpp
+    include/libremidi/detail/emscripten.hpp
+    include/libremidi/detail/emscripten_api.hpp
     include/libremidi/detail/jack.hpp
     include/libremidi/detail/midi_api.hpp
     include/libremidi/detail/raw_alsa.hpp
@@ -52,7 +54,10 @@ target_include_directories(libremidi ${_public}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
-if(APPLE)
+if(EMSCRIPTEN)
+  set(CMAKE_EXECUTABLE_SUFFIX .html)
+  target_compile_definitions(libremidi ${_public} LIBREMIDI_EMSCRIPTEN)
+elseif(APPLE)
   ## CoreMIDI support ##
   if(NOT LIBREMIDI_NO_COREMIDI)
     target_compile_definitions(libremidi ${_public} LIBREMIDI_COREAUDIO)
@@ -185,6 +190,11 @@ if(LIBREMIDI_EXAMPLES)
 
   add_executable(midi2 tests/midi2.cpp)
   target_link_libraries(midi2 PRIVATE libremidi)
+
+  if(EMSCRIPTEN)
+    add_executable(emscripten_midiin tests/emscripten_midiin.cpp)
+    target_link_libraries(emscripten_midiin PRIVATE libremidi)
+  endif()
 endif()
 
 find_package(Catch2)

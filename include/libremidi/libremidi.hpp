@@ -181,6 +181,7 @@ enum class API
   UNIX_JACK, /*!< The JACK Low-Latency MIDI Server API. */
   WINDOWS_MM, /*!< The Microsoft Multimedia MIDI API. */
   WINDOWS_UWP, /*!< The Microsoft WinRT MIDI API. */
+  EMSCRIPTEN_WEBMIDI, /*!< Web MIDI API through Emscripten */
   DUMMY       /*!< A compilable but non-functional API. */
 };
 
