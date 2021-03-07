@@ -10,12 +10,6 @@
 // https://ccrma.stanford.edu/~craig/articles/linuxmidi/alsa-1.0/alsarawportlist.c
 // Thanks Craig Stuart Sapp <craig@ccrma.stanford.edu>
 
-
-// Credits: greatly inspired from
-// https://ccrma.stanford.edu/~craig/articles/linuxmidi/alsa-1.0/alsarawmidiout.c
-// https://ccrma.stanford.edu/~craig/articles/linuxmidi/alsa-1.0/alsarawportlist.c
-// Thanks Craig Stuart Sapp <craig@ccrma.stanford.edu>
-
 namespace rtmidi
 {
 namespace

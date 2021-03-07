@@ -23,15 +23,15 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#if !defined(RTMIDI17_HEADER_ONLY)
-#  include <rtmidi17/writer.hpp>
+#if !defined(LIBREMIDI_HEADER_ONLY)
+#  include <libremidi/writer.hpp>
 #endif
 #include <iostream>
 namespace rtmidi
 {
 namespace util
 {
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 std::ostream& write_uint16_be(std::ostream& out, uint16_t value)
 {
   union
@@ -45,7 +45,7 @@ std::ostream& write_uint16_be(std::ostream& out, uint16_t value)
   return out;
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 std::ostream& write_int16_be(std::ostream& out, int16_t value)
 {
   union
@@ -59,7 +59,7 @@ std::ostream& write_int16_be(std::ostream& out, int16_t value)
   return out;
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 std::ostream& write_uint32_be(std::ostream& out, uint32_t value)
 {
   union
@@ -75,7 +75,7 @@ std::ostream& write_uint32_be(std::ostream& out, uint32_t value)
   return out;
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 std::ostream& write_int32_be(std::ostream& out, int32_t value)
 {
   union
@@ -91,7 +91,7 @@ std::ostream& write_int32_be(std::ostream& out, int32_t value)
   return out;
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 std::ostream& write_float_be(std::ostream& out, float value)
 {
   union
@@ -107,7 +107,7 @@ std::ostream& write_float_be(std::ostream& out, float value)
   return out;
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 std::ostream& write_double_be(std::ostream& out, double value)
 {
   union
@@ -130,7 +130,7 @@ std::ostream& write_double_be(std::ostream& out, double value)
 // Write a number to the midifile
 // as a variable length value which segments a file into 7-bit
 // values.  Maximum size of aValue is 0x7fffffff
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void write_variable_length(uint32_t aValue, std::vector<uint8_t>& outdata)
 {
   uint8_t bytes[5] = {0};
@@ -154,21 +154,21 @@ void write_variable_length(uint32_t aValue, std::vector<uint8_t>& outdata)
 }
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 writer::writer(int ticks) : ticksPerQuarterNote{ticks}
 {
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 writer::~writer() = default;
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void writer::add_track()
 {
   tracks.emplace_back(midi_track());
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void writer::add_event(int tick, int track, message m)
 {
   if (track > tracks.size())
@@ -177,7 +177,7 @@ void writer::add_event(int tick, int track, message m)
   tracks[track].push_back({tick, track, m});
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void writer::add_event(int track, track_event m)
 {
   if (track > tracks.size())
@@ -186,7 +186,7 @@ void writer::add_event(int track, track_event m)
   tracks[track].push_back(m);
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void writer::write(std::ostream& out)
 {
   // MIDI File Header

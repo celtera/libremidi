@@ -23,12 +23,12 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#if !defined(RTMIDI17_HEADER_ONLY)
-#  include <rtmidi17/reader.hpp>
+#if !defined(LIBREMIDI_HEADER_ONLY)
+#  include <libremidi/reader.hpp>
 #endif
 #include <algorithm>
 #include <iostream>
-#include <rtmidi17/message.hpp>
+#include <libremidi/message.hpp>
 
 // File Parsing Validation Todo:
 // ==============================
@@ -99,7 +99,7 @@ inline uint32_t read_uint32_be(uint8_t const*& data)
 }
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 track_event
 parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEventTypeByte)
 {
@@ -321,18 +321,18 @@ parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEven
   }
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 reader::reader(bool useAbsolute)
     : tracks(0), ticksPerBeat(480), startingTempo(120), useAbsoluteTicks(useAbsolute)
 {
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 reader::~reader()
 {
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void reader::parse_impl(const std::vector<uint8_t>& buffer)
 {
   using namespace rtmidi::util;
@@ -419,7 +419,7 @@ void reader::parse_impl(const std::vector<uint8_t>& buffer)
 }
 
 // In ticks
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 double reader::get_end_time()
 {
   double totalLength = 0;
@@ -435,14 +435,14 @@ double reader::get_end_time()
   return totalLength;
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void reader::parse(const std::vector<uint8_t>& buffer)
 {
   tracks.clear();
 
   if(buffer.empty())
   {
-    std::cerr << "rtmidi17::reader: empty buffer passed to parse." << std::endl;
+    std::cerr << "libremidi::reader: empty buffer passed to parse." << std::endl;
     return;
   }
   parse_impl(buffer);

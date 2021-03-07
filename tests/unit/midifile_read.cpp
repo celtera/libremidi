@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_MAIN
 #include <catch2/catch.hpp>
-#include <rtmidi17/reader.hpp>
+#include <libremidi/reader.hpp>
 
 #include <filesystem>
 

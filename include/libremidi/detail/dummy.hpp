@@ -1,6 +1,6 @@
 #pragma once
-#include <rtmidi17/detail/midi_api.hpp>
-#include <rtmidi17/rtmidi17.hpp>
+#include <libremidi/detail/midi_api.hpp>
+#include <libremidi/libremidi.hpp>
 
 namespace rtmidi
 {

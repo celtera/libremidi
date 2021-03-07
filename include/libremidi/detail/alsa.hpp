@@ -3,8 +3,8 @@
 #include <atomic>
 #include <map>
 #include <pthread.h>
-#include <rtmidi17/detail/midi_api.hpp>
-#include <rtmidi17/rtmidi17.hpp>
+#include <libremidi/detail/midi_api.hpp>
+#include <libremidi/libremidi.hpp>
 #include <sstream>
 #include <sys/time.h>
 #include <thread>
@@ -104,7 +104,7 @@ public:
     descriptors_.resize(N);
     snd_seq_poll_descriptors(seq_, descriptors_.data(), N, POLLIN);
 
-    err = snd_seq_set_client_name(seq_, "rtmidi17-observe");
+    err = snd_seq_set_client_name(seq_, "libremidi-observe");
     if (err < 0)
     {
       throw driver_error("observer_alsa: snd_seq_set_client_name failed");
@@ -665,13 +665,13 @@ private:
       {
 
         case SND_SEQ_EVENT_PORT_SUBSCRIBED:
-#if defined(__RTMIDI17_DEBUG__)
+#if defined(__LIBREMIDI_DEBUG__)
           std::cout << "MidiInAlsa::alsaMidiHandler: port connection made!\n";
 #endif
           break;
 
         case SND_SEQ_EVENT_PORT_UNSUBSCRIBED:
-#if defined(__RTMIDI17_DEBUG__)
+#if defined(__LIBREMIDI_DEBUG__)
           std::cerr << "MidiInAlsa::alsaMidiHandler: port connection has closed!\n";
           std::cout << "sender = " << (int)ev->data.connect.sender.client << ":"
                     << (int)ev->data.connect.sender.port
@@ -779,7 +779,7 @@ private:
           }
           else
           {
-#if defined(__RTMIDI17_DEBUG__)
+#if defined(__LIBREMIDI_DEBUG__)
             std::cerr << "\nMidiInAlsa::alsaMidiHandler: event parsing error or "
                          "not a MIDI event!\n\n";
 #endif

@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
-#include <rtmidi17/rtmidi17.hpp>
-#include <rtmidi17/detail/midi_queue.hpp>
+#include <libremidi/libremidi.hpp>
+#include <libremidi/detail/midi_queue.hpp>
 #include <string_view>
 
 namespace rtmidi

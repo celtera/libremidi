@@ -9,14 +9,14 @@
 #include <mmsystem.h>
 #include <mutex>
 #include <ostream>
-#include <rtmidi17/detail/midi_api.hpp>
-#include <rtmidi17/rtmidi17.hpp>
+#include <libremidi/detail/midi_api.hpp>
+#include <libremidi/libremidi.hpp>
 #include <sstream>
 #include <thread>
 
 // Default for Windows is to add an identifier to the port names; this
 // flag can be defined (e.g. in your project file) to disable this behaviour.
-//#define RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+//#define LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
 
 //*********************************************************************//
 //  API: Windows Multimedia Library (MM)
@@ -366,7 +366,7 @@ public:
     // Next lines added to add the portNumber to the name so that
     // the device's names are sure to be listed with individual names
     // even when they have the same brand name
-#ifndef RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+#ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
     int x = 1;
     for (unsigned int i = 0; i < portNumber; i++)
     {
@@ -616,7 +616,7 @@ public:
     // the device's names are sure to be listed with individual names
     // even when they have the same brand name
     std::ostringstream os;
-#ifndef RTMIDI17_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+#ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
     int x = 1;
     for (unsigned int i = 0; i < portNumber; i++)
     {

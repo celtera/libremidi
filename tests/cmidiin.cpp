@@ -9,7 +9,7 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <rtmidi17/rtmidi17.hpp>
+#include <libremidi/libremidi.hpp>
 
 [[noreturn]] void usage()
 {

@@ -3,8 +3,8 @@
 #include <CoreMIDI/CoreMIDI.h>
 #include <CoreServices/CoreServices.h>
 #include <cmath>
-#include <rtmidi17/detail/midi_api.hpp>
-#include <rtmidi17/rtmidi17.hpp>
+#include <libremidi/detail/midi_api.hpp>
+#include <libremidi/libremidi.hpp>
 
 #if TARGET_OS_IPHONE
 #  define AudioGetCurrentHostTime CAHostTimeBase::GetCurrentTime

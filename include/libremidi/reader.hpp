@@ -25,7 +25,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include <rtmidi17/rtmidi17.hpp>
+#include <libremidi/libremidi.hpp>
 
 namespace rtmidi
 {
@@ -49,6 +49,6 @@ private:
 };
 }
 
-#if defined(RTMIDI17_HEADER_ONLY)
-#  include <rtmidi17/reader.cpp>
+#if defined(LIBREMIDI_HEADER_ONLY)
+#  include <libremidi/reader.cpp>
 #endif

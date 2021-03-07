@@ -25,7 +25,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 #include <cstdint>
-#include <rtmidi17/message.hpp>
+#include <libremidi/message.hpp>
 #include <vector>
 
 namespace rtmidi
@@ -59,6 +59,6 @@ private:
 };
 }
 
-#if defined(RTMIDI17_HEADER_ONLY)
-#  include <rtmidi17/writer.cpp>
+#if defined(LIBREMIDI_HEADER_ONLY)
+#  include <libremidi/writer.cpp>
 #endif

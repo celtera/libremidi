@@ -57,7 +57,7 @@
  POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <rtmidi17/message.hpp>
+#include <libremidi/message.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -72,21 +72,21 @@
 #include <vector>
 
 #if defined(__cpp_lib_span) && __cpp_lib_span >= 202002
-#define RTMIDI17_HAS_SPAN 1
+#define LIBREMIDI_HAS_SPAN 1
 #include <span>
 #endif
 
-#if defined(RTMIDI17_EXPORTS)
+#if defined(LIBREMIDI_EXPORTS)
 #  if defined(_MSC_VER)
-#    define RTMIDI17_EXPORT __declspec(dllexport)
+#    define LIBREMIDI_EXPORT __declspec(dllexport)
 #  elif defined(__GNUC__) || defined(__clang__)
-#    define RTMIDI17_EXPORT __attribute__((visibility("default")))
+#    define LIBREMIDI_EXPORT __attribute__((visibility("default")))
 #  endif
 #else
-#  define RTMIDI17_EXPORT
+#  define LIBREMIDI_EXPORT
 #endif
 
-#define RTMIDI17_VERSION "1.0.0"
+#define LIBREMIDI_VERSION "1.0.0"
 
 namespace rtmidi
 {
@@ -106,55 +106,55 @@ enum midi_error
 };
 
 //! Base exception class for MIDI problems
-struct RTMIDI17_EXPORT midi_exception : public std::runtime_error
+struct LIBREMIDI_EXPORT midi_exception : public std::runtime_error
 {
   using std::runtime_error::runtime_error;
   ~midi_exception() override;
 };
 
-struct RTMIDI17_EXPORT no_devices_found_error final : public midi_exception
+struct LIBREMIDI_EXPORT no_devices_found_error final : public midi_exception
 {
   static constexpr auto code = midi_error::NO_DEVICES_FOUND;
   using midi_exception::midi_exception;
   ~no_devices_found_error() override;
 };
-struct RTMIDI17_EXPORT invalid_device_error final : public midi_exception
+struct LIBREMIDI_EXPORT invalid_device_error final : public midi_exception
 {
   static constexpr auto code = midi_error::INVALID_DEVICE;
   using midi_exception::midi_exception;
   ~invalid_device_error() override;
 };
-struct RTMIDI17_EXPORT memory_error final : public midi_exception
+struct LIBREMIDI_EXPORT memory_error final : public midi_exception
 {
   static constexpr auto code = midi_error::MEMORY_ERROR;
   using midi_exception::midi_exception;
   ~memory_error() override;
 };
-struct RTMIDI17_EXPORT invalid_parameter_error final : public midi_exception
+struct LIBREMIDI_EXPORT invalid_parameter_error final : public midi_exception
 {
   static constexpr auto code = midi_error::INVALID_PARAMETER;
   using midi_exception::midi_exception;
   ~invalid_parameter_error() override;
 };
-struct RTMIDI17_EXPORT invalid_use_error final : public midi_exception
+struct LIBREMIDI_EXPORT invalid_use_error final : public midi_exception
 {
   static constexpr auto code = midi_error::INVALID_USE;
   using midi_exception::midi_exception;
   ~invalid_use_error() override;
 };
-struct RTMIDI17_EXPORT driver_error final : public midi_exception
+struct LIBREMIDI_EXPORT driver_error final : public midi_exception
 {
   static constexpr auto code = midi_error::DRIVER_ERROR;
   using midi_exception::midi_exception;
   ~driver_error() override;
 };
-struct RTMIDI17_EXPORT system_error final : public midi_exception
+struct LIBREMIDI_EXPORT system_error final : public midi_exception
 {
   static constexpr auto code = midi_error::SYSTEM_ERROR;
   using midi_exception::midi_exception;
   ~system_error() override;
 };
-struct RTMIDI17_EXPORT thread_error final : public midi_exception
+struct LIBREMIDI_EXPORT thread_error final : public midi_exception
 {
   static constexpr auto code = midi_error::THREAD_ERROR;
   using midi_exception::midi_exception;
@@ -198,7 +198,7 @@ std::string get_version() noexcept;
 
 //! The callbacks will be called whenever a device is added or removed
 //! for a given API.
-class RTMIDI17_EXPORT observer
+class LIBREMIDI_EXPORT observer
 {
 public:
   struct callbacks
@@ -219,7 +219,7 @@ private:
 /**
  * Used to determine how large sent messages will be chunked.
  */
-struct RTMIDI17_EXPORT chunking_parameters {
+struct LIBREMIDI_EXPORT chunking_parameters {
   std::chrono::milliseconds interval{};
   int32_t size{};
 
@@ -251,7 +251,7 @@ struct RTMIDI17_EXPORT chunking_parameters {
 
     by Gary P. Scavone, 2003-2017.
 */
-class RTMIDI17_EXPORT midi_in
+class LIBREMIDI_EXPORT midi_in
 {
 public:
   //! User callback function type definition.
@@ -298,11 +298,11 @@ public:
   void open_port(unsigned int portNumber, std::string_view portName);
   void open_port()
   {
-    open_port(0, "RtMidi17 Input");
+    open_port(0, "libremidi Input");
   }
   void open_port(unsigned int port)
   {
-    open_port(port, "RtMidi17 Input");
+    open_port(port, "libremidi Input");
   }
 
   //! Create a virtual input port, with optional name, to allow software
@@ -319,7 +319,7 @@ public:
   void open_virtual_port(std::string_view portName);
   void open_virtual_port()
   {
-    open_virtual_port("RtMidi17 virtual port");
+    open_virtual_port("libremidi virtual port");
   }
   //! Set a callback function to be invoked for incoming MIDI messages.
   /*!
@@ -421,7 +421,7 @@ private:
 */
 /**********************************************************************/
 
-class RTMIDI17_EXPORT midi_out
+class LIBREMIDI_EXPORT midi_out
 {
 public:
   //! Default constructor that allows an optional client name.
@@ -454,11 +454,11 @@ public:
   void open_port(unsigned int portNumber, std::string_view portName);
   void open_port()
   {
-    open_port(0, "RtMidi17 Output");
+    open_port(0, "libremidi Output");
   }
   void open_port(unsigned int port)
   {
-    open_port(port, "RtMidi17 Output");
+    open_port(port, "libremidi Output");
   }
 
   //! Close an open MIDI connection (if one exists).
@@ -484,7 +484,7 @@ public:
   void open_virtual_port(std::string_view portName);
   void open_virtual_port()
   {
-    open_virtual_port("RtMidi17 virtual port");
+    open_virtual_port("libremidi virtual port");
   }
 
   //! Return the number of available MIDI output ports.
@@ -517,7 +517,7 @@ public:
   */
   void send_message(const unsigned char* message, size_t size);
 
-  #if RTMIDI17_HAS_SPAN
+  #if LIBREMIDI_HAS_SPAN
   void send_message(std::span<unsigned char>);
   #endif
 
@@ -543,6 +543,6 @@ private:
 };
 }
 
-#if defined(RTMIDI17_HEADER_ONLY)
-#  include <rtmidi17/rtmidi17.cpp>
+#if defined(LIBREMIDI_HEADER_ONLY)
+#  include <libremidi/libremidi.cpp>
 #endif

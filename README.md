@@ -1,8 +1,8 @@
-# RtMidi17
+# libremidi
 
-[![Build status](https://github.com/jcelerier/RtMidi17/workflows/Build/badge.svg)](https://github.com/jcelerier/RtMidi17/actions)
+[![Build status](https://github.com/jcelerier/libremidi/workflows/Build/badge.svg)](https://github.com/jcelerier/libremidi/actions)
 
-RtMidi17 is a header-only cross-platform C++17 library for MIDI input and output.
+libremidi is a header-only cross-platform C++17 library for MIDI input and output.
 
 This is a fork based on two libraries: 
 
@@ -19,7 +19,7 @@ this directly modernizes the RtMidi codebase with new C++ features and improveme
 * Use of standard C++ `snake_case`.
 * Use of standard C++ folder hierarchy ; just add the current folder to your include path.
 * Simplification of exceptions.
-* The library can be used header-only with the define `RTMIDI17_HEADER_ONLY`.
+* The library can be used header-only with the define `LIBREMIDI_HEADER_ONLY`.
 * Passes clean through clang-tidy, clang analyzer, GCC -Wall -Wextra, etc etc.
 * JACK support on Windows.
 * JACK support through weakjack to allow runtime loading of JACK.

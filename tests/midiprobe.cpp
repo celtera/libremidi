@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <map>
-#include <rtmidi17/rtmidi17.hpp>
+#include <libremidi/libremidi.hpp>
 
 int main()
 

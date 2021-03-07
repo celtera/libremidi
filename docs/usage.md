@@ -1,6 +1,6 @@
 # Real-time input/output usage
 
-The required header is `#include <rtmidi17/rtmidi17.hpp>`.
+The required header is `#include <libremidi/libremidi.hpp>`.
 
 ## Enumerating input ports
 
@@ -96,10 +96,10 @@ midi.send_message(std::vector<unsigned char>{ 144, 110, 40 });
 midi.send_message(std::span<unsigned char>{ ... your span-compatible data-structure ... });
 
 // Option D: helpers with the message class
-// See rtmidi17/message.hpp for the full list
-midi.send_message(rtmidi17::message::note_on(channel, note, velocity));
-midi.send_message(rtmidi17::message::control_change(channel, control, value));
-midi.send_message(rtmidi17::message::pitch_bend(channel, value));
+// See libremidi/message.hpp for the full list
+midi.send_message(libremidi::message::note_on(channel, note, velocity));
+midi.send_message(libremidi::message::control_change(channel, control, value));
+midi.send_message(libremidi::message::pitch_bend(channel, value));
 ```
 
 ## Device connection / disconnection notification
@@ -126,7 +126,7 @@ rtmidi::observer observer{
 The default error handling is done with exceptions.
 If exceptions are undesirable, it is also possible to set a callback function which will be invoked upon error, for the `midi_in` and `midi_out` classes.
 
-(Some classes may still throw, such as when creating invalid MIDI messages with the `rtmidi17::message` helpers, or the `observer` classes).
+(Some classes may still throw, such as when creating invalid MIDI messages with the `libremidi::message` helpers, or the `observer` classes).
 
 ```C++
 // Create the midi object

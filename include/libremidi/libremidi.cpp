@@ -2,44 +2,44 @@
 #include <sstream>
 #include <thread>
 
-#if !defined(RTMIDI17_HEADER_ONLY)
-#  include <rtmidi17/rtmidi17.hpp>
+#if !defined(LIBREMIDI_HEADER_ONLY)
+#  include <libremidi/libremidi.hpp>
 #endif
 
-#include <rtmidi17/detail/midi_api.hpp>
+#include <libremidi/detail/midi_api.hpp>
 #if !__has_include(<weak_libjack.h>) && !__has_include(<jack/jack.h>)
-#  if defined(RTMIDI17_JACK)
-#    undef RTMIDI17_JACK
+#  if defined(LIBREMIDI_JACK)
+#    undef LIBREMIDI_JACK
 #  endif
 #endif
-#if !defined(RTMIDI17_ALSA) && !defined(RTMIDI17_JACK) && !defined(RTMIDI17_COREAUDIO) \
-    && !defined(RTMIDI17_WINMM)
-#  define RTMIDI17_DUMMY
+#if !defined(LIBREMIDI_ALSA) && !defined(LIBREMIDI_JACK) && !defined(LIBREMIDI_COREAUDIO) \
+    && !defined(LIBREMIDI_WINMM)
+#  define LIBREMIDI_DUMMY
 #endif
 
-#if defined(RTMIDI17_ALSA)
-#  include <rtmidi17/detail/alsa.hpp>
-#  include <rtmidi17/detail/raw_alsa.hpp>
+#if defined(LIBREMIDI_ALSA)
+#  include <libremidi/detail/alsa.hpp>
+#  include <libremidi/detail/raw_alsa.hpp>
 #endif
 
-#if defined(RTMIDI17_JACK)
-#  include <rtmidi17/detail/jack.hpp>
+#if defined(LIBREMIDI_JACK)
+#  include <libremidi/detail/jack.hpp>
 #endif
 
-#if defined(RTMIDI17_COREAUDIO)
-#  include <rtmidi17/detail/coreaudio.hpp>
+#if defined(LIBREMIDI_COREAUDIO)
+#  include <libremidi/detail/coreaudio.hpp>
 #endif
 
-#if defined(RTMIDI17_WINMM)
-#  include <rtmidi17/detail/winmm.hpp>
+#if defined(LIBREMIDI_WINMM)
+#  include <libremidi/detail/winmm.hpp>
 #endif
 
-#if defined(RTMIDI17_WINUWP)
-#  include <rtmidi17/detail/winuwp.hpp>
+#if defined(LIBREMIDI_WINUWP)
+#  include <libremidi/detail/winuwp.hpp>
 #endif
 
-#if defined(RTMIDI17_DUMMY)
-#  include <rtmidi17/detail/dummy.hpp>
+#if defined(LIBREMIDI_DUMMY)
+#  include <libremidi/detail/dummy.hpp>
 #endif
 
 namespace rtmidi
@@ -54,23 +54,23 @@ constexpr auto make_tl(unused, Args...)
 }
 static constexpr auto available_backends = make_tl(
     0
-#if defined(RTMIDI17_ALSA)
+#if defined(LIBREMIDI_ALSA)
       , raw_alsa_backend {}
     , alsa_backend {}
 #endif
-#if defined(RTMIDI17_COREAUDIO)
+#if defined(LIBREMIDI_COREAUDIO)
     , core_backend {}
 #endif
-#if defined(RTMIDI17_JACK)
+#if defined(LIBREMIDI_JACK)
     , jack_backend {}
 #endif
-#if defined(RTMIDI17_WINMM)
+#if defined(LIBREMIDI_WINMM)
     , winmm_backend {}
 #endif
-#if defined(RTMIDI17_WINUWP)
+#if defined(LIBREMIDI_WINUWP)
     , winuwp_backend {}
 #endif
-#if defined(RTMIDI17_DUMMY)
+#if defined(LIBREMIDI_DUMMY)
     , dummy_backend {}
 #endif
 );
@@ -93,33 +93,33 @@ auto for_backend(rtmidi::API api, F&& f)
   });
 }
 
-RTMIDI17_INLINE midi_exception::~midi_exception() = default;
-RTMIDI17_INLINE no_devices_found_error::~no_devices_found_error() = default;
-RTMIDI17_INLINE invalid_device_error::~invalid_device_error() = default;
-RTMIDI17_INLINE memory_error::~memory_error() = default;
-RTMIDI17_INLINE invalid_parameter_error::~invalid_parameter_error() = default;
-RTMIDI17_INLINE invalid_use_error::~invalid_use_error() = default;
-RTMIDI17_INLINE driver_error::~driver_error() = default;
-RTMIDI17_INLINE system_error::~system_error() = default;
-RTMIDI17_INLINE thread_error::~thread_error() = default;
+LIBREMIDI_INLINE midi_exception::~midi_exception() = default;
+LIBREMIDI_INLINE no_devices_found_error::~no_devices_found_error() = default;
+LIBREMIDI_INLINE invalid_device_error::~invalid_device_error() = default;
+LIBREMIDI_INLINE memory_error::~memory_error() = default;
+LIBREMIDI_INLINE invalid_parameter_error::~invalid_parameter_error() = default;
+LIBREMIDI_INLINE invalid_use_error::~invalid_use_error() = default;
+LIBREMIDI_INLINE driver_error::~driver_error() = default;
+LIBREMIDI_INLINE system_error::~system_error() = default;
+LIBREMIDI_INLINE thread_error::~thread_error() = default;
 
-RTMIDI17_INLINE midi_in::~midi_in() = default;
-RTMIDI17_INLINE midi_out::~midi_out() = default;
+LIBREMIDI_INLINE midi_in::~midi_in() = default;
+LIBREMIDI_INLINE midi_out::~midi_out() = default;
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 bool chunking_parameters::default_wait(std::chrono::microseconds time_to_wait, int written_bytes) {
   std::this_thread::sleep_for(time_to_wait);
   return true;
 }
 
-[[nodiscard]] RTMIDI17_INLINE std::vector<rtmidi::API> available_apis() noexcept
+[[nodiscard]] LIBREMIDI_INLINE std::vector<rtmidi::API> available_apis() noexcept
 {
   std::vector<rtmidi::API> apis;
   for_all_backends([&](auto b) { apis.push_back(b.API); });
   return apis;
 }
 
-[[nodiscard]] RTMIDI17_INLINE std::unique_ptr<observer_api>
+[[nodiscard]] LIBREMIDI_INLINE std::unique_ptr<observer_api>
 open_midi_observer(rtmidi::API api, observer::callbacks&& cb)
 {
   std::unique_ptr<observer_api> ptr;
@@ -131,7 +131,7 @@ open_midi_observer(rtmidi::API api, observer::callbacks&& cb)
   return ptr;
 }
 
-[[nodiscard]] RTMIDI17_INLINE std::unique_ptr<midi_in_api>
+[[nodiscard]] LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
 open_midi_in(rtmidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
 {
   std::unique_ptr<midi_in_api> ptr;
@@ -143,7 +143,7 @@ open_midi_in(rtmidi::API api, std::string_view clientName, unsigned int queueSiz
   return ptr;
 }
 
-[[nodiscard]] RTMIDI17_INLINE std::unique_ptr<midi_out_api>
+[[nodiscard]] LIBREMIDI_INLINE std::unique_ptr<midi_out_api>
 open_midi_out(rtmidi::API api, std::string_view clientName)
 {
 
@@ -155,173 +155,173 @@ open_midi_out(rtmidi::API api, std::string_view clientName)
   return ptr;
 }
 
-RTMIDI17_INLINE observer::observer(rtmidi::API api, observer::callbacks cbs)
+LIBREMIDI_INLINE observer::observer(rtmidi::API api, observer::callbacks cbs)
     : impl_{open_midi_observer(api, std::move(cbs))}
 {
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 observer::~observer() = default;
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 rtmidi::API midi_in::get_current_api() const noexcept
 {
   return rtapi_->get_current_api();
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_in::open_port(unsigned int portNumber, std::string_view portName)
 {
   rtapi_->open_port(portNumber, portName);
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_in::open_virtual_port(std::string_view portName)
 {
   rtapi_->open_virtual_port(portName);
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_in::close_port()
 {
   rtapi_->close_port();
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 bool midi_in::is_port_open() const noexcept
 {
   return rtapi_->is_port_open();
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_in::set_callback(message_callback callback)
 {
   (static_cast<midi_in_api*>(rtapi_.get()))->set_callback(std::move(callback));
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_in::cancel_callback()
 {
   (static_cast<midi_in_api*>(rtapi_.get()))->cancel_callback();
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 unsigned int midi_in::get_port_count()
 {
   return rtapi_->get_port_count();
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 std::string midi_in::get_port_name(unsigned int portNumber)
 {
   return rtapi_->get_port_name(portNumber);
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_in::ignore_types(bool midiSysex, bool midiTime, bool midiSense)
 {
   (static_cast<midi_in_api*>(rtapi_.get()))->ignore_types(midiSysex, midiTime, midiSense);
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 message midi_in::get_message()
 {
   return (static_cast<midi_in_api*>(rtapi_.get()))->get_message();
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 bool midi_in::get_message(message& msg)
 {
   return (static_cast<midi_in_api*>(rtapi_.get()))->get_message(msg);
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_in::set_error_callback(midi_error_callback errorCallback)
 {
   rtapi_->set_error_callback(std::move(errorCallback));
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 rtmidi::API midi_out::get_current_api() noexcept
 {
   return rtapi_->get_current_api();
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_out::open_port(unsigned int portNumber, std::string_view portName)
 {
   rtapi_->open_port(portNumber, portName);
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_out::open_virtual_port(std::string_view portName)
 {
   rtapi_->open_virtual_port(portName);
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_out::close_port()
 {
   rtapi_->close_port();
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 bool midi_out::is_port_open() const noexcept
 {
   return rtapi_->is_port_open();
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 unsigned int midi_out::get_port_count()
 {
   return rtapi_->get_port_count();
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 std::string midi_out::get_port_name(unsigned int portNumber)
 {
   return rtapi_->get_port_name(portNumber);
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_out::send_message(const std::vector<unsigned char>& message)
 {
   send_message(message.data(), message.size());
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_out::send_message(const rtmidi::message& message)
 {
   send_message(message.bytes.data(), message.bytes.size());
 }
 
-#if RTMIDI17_HAS_SPAN
-RTMIDI17_INLINE
+#if LIBREMIDI_HAS_SPAN
+LIBREMIDI_INLINE
 void midi_out::send_message(std::span<unsigned char> message)
 {
   send_message(message.data(), message.size());
 }
 
 #endif
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_out::send_message(const unsigned char* message, size_t size)
 {
   (static_cast<midi_out_api*>(rtapi_.get()))->send_message(message, size);
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_out::set_error_callback(midi_error_callback errorCallback) noexcept
 {
   rtapi_->set_error_callback(std::move(errorCallback));
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 std::string get_version() noexcept
 {
-  return std::string{RTMIDI17_VERSION};
+  return std::string{LIBREMIDI_VERSION};
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 midi_in::midi_in(rtmidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
 {
   if (api != rtmidi::API::UNSPECIFIED)
@@ -354,19 +354,19 @@ midi_in::midi_in(rtmidi::API api, std::string_view clientName, unsigned int queu
   }
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_in::set_client_name(std::string_view clientName)
 {
   rtapi_->set_client_name(clientName);
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_in::set_port_name(std::string_view portName)
 {
   rtapi_->set_port_name(portName);
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 midi_out::midi_out(rtmidi::API api, std::string_view clientName)
 {
   if (api != rtmidi::API::UNSPECIFIED)
@@ -400,25 +400,25 @@ midi_out::midi_out(rtmidi::API api, std::string_view clientName)
   }
 
   // It should not be possible to get here because the preprocessor
-  // definition RTMIDI17_DUMMY is automatically defined if no
+  // definition LIBREMIDI_DUMMY is automatically defined if no
   // API-specific definitions are passed to the compiler. But just in
   // case something weird happens, we'll thrown an error.
   throw midi_exception{"RtMidiOut: no compiled API support found ... critical error!!"};
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_out::set_client_name(std::string_view clientName)
 {
   rtapi_->set_client_name(clientName);
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_out::set_port_name(std::string_view portName)
 {
   rtapi_->set_port_name(portName);
 }
 
-RTMIDI17_INLINE
+LIBREMIDI_INLINE
 void midi_out::set_chunking_parameters(std::optional<chunking_parameters> parameters)
 {
   rtapi_->set_chunking_parameters(std::move(parameters));

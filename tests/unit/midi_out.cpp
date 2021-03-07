@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_MAIN
 #include <catch2/catch.hpp>
-#include <rtmidi17/rtmidi17.hpp>
+#include <libremidi/libremidi.hpp>
 
 
 TEST_CASE("sending messages with span", "[midi_out]" ) {

@@ -8,9 +8,9 @@
 #    include <jack/midiport.h>
 #    include <jack/ringbuffer.h>
 #  endif
-#  include <rtmidi17/detail/midi_api.hpp>
-#  include <rtmidi17/detail/semaphore.hpp>
-#  include <rtmidi17/rtmidi17.hpp>
+#  include <libremidi/detail/midi_api.hpp>
+#  include <libremidi/detail/semaphore.hpp>
+#  include <libremidi/libremidi.hpp>
 
 //*********************************************************************//
 //  API: UNIX JACK
@@ -131,7 +131,7 @@ public:
 
   void set_port_name(std::string_view portName) override
   {
-#  if defined(RTMIDI17_JACK_HAS_PORT_RENAME)
+#  if defined(LIBREMIDI_JACK_HAS_PORT_RENAME)
     jack_port_rename(data.client, data.port, portName.data());
 #  else
     jack_port_set_name(data.port, portName.data());
@@ -397,7 +397,7 @@ public:
 
   void set_port_name(std::string_view portName) override
   {
-#  if defined(RTMIDI17_JACK_HAS_PORT_RENAME)
+#  if defined(LIBREMIDI_JACK_HAS_PORT_RENAME)
     jack_port_rename(data.client, data.port, portName.data());
 #  else
     jack_port_set_name(data.port, portName.data());

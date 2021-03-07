@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <vector>
 
-#if __has_include(<boost/container/small_vector.hpp>) && !defined(RTMIDI17_NO_BOOST)
+#if __has_include(<boost/container/small_vector.hpp>) && !defined(LIBREMIDI_NO_BOOST)
 #  include <boost/container/small_vector.hpp>
 namespace rtmidi
 {
@@ -22,10 +22,10 @@ using midi_bytes = std::vector<unsigned char>;
 }
 #endif
 
-#if defined(RTMIDI17_HEADER_ONLY)
-#  define RTMIDI17_INLINE inline
+#if defined(LIBREMIDI_HEADER_ONLY)
+#  define LIBREMIDI_INLINE inline
 #else
-#  define RTMIDI17_INLINE
+#  define LIBREMIDI_INLINE
 #endif
 
 namespace rtmidi
