@@ -496,19 +496,7 @@ private:
     // Save the time of the last non-filtered message
     apiData.lastTime = timestamp;
 
-    if (data.userCallback)
-    {
-      data.userCallback(apiData.message);
-    }
-    else
-    {
-      // As long as we haven't reached our queue size limit, push the message.
-      if (!data.queue.push(apiData.message))
-        std::cerr << "\nMidiInWinMM: message queue limit reached!!\n\n";
-    }
-
-    // Clear the vector for the next input message.
-    apiData.message.bytes.clear();
+    this->data.on_message_received(std::move(apiData.message));
   }
 
   WinMidiData data;

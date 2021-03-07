@@ -41,7 +41,7 @@ public:
 
   bool is_port_open() const noexcept
   {
-    return connected_;
+    return bool(connected_);
   }
 
   void set_error_callback(midi_error_callback errorCallback) noexcept
@@ -91,7 +91,7 @@ public:
   }
 
 protected:
-  bool connected_{};
+  std::optional<int> connected_{};
   midi_error_callback errorCallback_{};
   mutable bool firstErrorOccurred_{};
 };
@@ -137,9 +137,10 @@ public:
   {
     inputData_.userCallback = std::move(callback);
   }
+
   void cancel_callback()
   {
-    inputData_.userCallback = nullptr;
+    inputData_.userCallback = midi_in::message_callback{};
   }
 
   message get_message()
@@ -185,6 +186,22 @@ public:
     void* apiData{};
     midi_in::message_callback userCallback{};
     bool continueSysex{false};
+
+    void on_message_received(libremidi::message&& message)
+    {
+      if (userCallback)
+      {
+        userCallback(std::move(message));
+      }
+      else
+      {
+        // As long as we haven't reached our queue size limit, push the
+        // message.
+        if (!queue.push(std::move(message)))
+          std::cerr << "\nmidi_in: message queue limit reached!!\n\n";
+      }
+      message.bytes.clear();
+    }
   };
 
 protected:

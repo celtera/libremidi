@@ -437,18 +437,7 @@ private:
         {
           // If not a continuing sysex message, invoke the user callback
           // function or queue the message.
-          if (data.userCallback)
-          {
-            data.userCallback(msg);
-          }
-          else
-          {
-            // As long as we haven't reached our queue size limit, push the
-            // message.
-            if (!data.queue.push(msg))
-              std::cerr << "\nMidiInCore: message queue limit reached!!\n\n";
-          }
-          msg.bytes.clear();
+          data.on_message_received(std::move(msg));
         }
       }
       else
@@ -519,18 +508,7 @@ private:
             {
               // If not a continuing sysex message, invoke the user callback
               // function or queue the message.
-              if (data.userCallback)
-              {
-                data.userCallback(msg);
-              }
-              else
-              {
-                // As long as we haven't reached our queue size limit, push the
-                // message.
-                if (!data.queue.push(msg))
-                  std::cerr << "\nMidiInCore: message queue limit reached!!\n\n";
-              }
-              msg.bytes.clear();
+              data.on_message_received(std::move(msg));
             }
             iByte += size;
           }

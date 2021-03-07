@@ -39,29 +39,12 @@ struct midi_stream_decoder
     while((read = parse(begin, end)) && read > 0)
     {
       begin += read;
-      write_message();
+      this->data.on_message_received(std::move(msg));
     }
 
     // Remove the read bytes
     if(begin != bytes.data())
       bytes.erase(bytes.begin(), bytes.begin() + (begin - bytes.data()));
-  }
-
-  void write_message()
-  {
-    if (data.userCallback)
-    {
-      data.userCallback(std::move(msg));
-    }
-    else
-    {
-      // As long as we haven't reached our queue size limit, push the
-      // message.
-      if (!data.queue.push(msg))
-      {
-        std::cerr << "midi_stream_decoder: message queue limit reached !\n";
-      }
-    }
   }
 
   uint8_t runningStatusType_{};
@@ -159,7 +142,7 @@ public:
     auto device_list = get_device_enumerator();
     device_list.enumerate_cards();
 
-    unsigned int num = device_list.outputs.size();
+    unsigned int num = device_list.inputs.size();
     if (portNumber >= num)
     {
       error<no_devices_found_error>("midi_in_raw_alsa::open_port: no MIDI output sources found.");
@@ -167,7 +150,7 @@ public:
     }
 
     const int mode = SND_RAWMIDI_NONBLOCK;
-    const char* portname = device_list.outputs[portNumber].device.c_str();
+    const char* portname = device_list.inputs[portNumber].device.c_str();
     int status = snd_rawmidi_open(&midiport_, nullptr, portname, mode);
     if (status < 0)
     {
@@ -289,7 +272,7 @@ public:
     auto device_list = get_device_enumerator();
     device_list.enumerate_cards();
 
-    return device_list.outputs.size();
+    return device_list.inputs.size();
   }
 
   std::string get_port_name(unsigned int portNumber) override
@@ -297,9 +280,9 @@ public:
     auto device_list = get_device_enumerator();
     device_list.enumerate_cards();
 
-    if (portNumber < device_list.outputs.size())
+    if (portNumber < device_list.inputs.size())
     {
-      return device_list.outputs[portNumber].pretty_name();
+      return device_list.inputs[portNumber].pretty_name();
     }
 
     return {};

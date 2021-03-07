@@ -791,17 +791,7 @@ private:
       if (message.bytes.size() == 0 || continueSysex)
         continue;
 
-      if (data.userCallback)
-      {
-        data.userCallback(std::move(message));
-      }
-      else
-      {
-        // As long as we haven't reached our queue size limit, push the
-        // message.
-        if (!data.queue.push(std::move(message)))
-          std::cerr << "\nMidiInAlsa: message queue limit reached!!\n\n";
-      }
+      data.on_message_received(std::move(message));
     }
 
     snd_midi_event_free(apidata.coder);

@@ -330,17 +330,7 @@ public:
           reader.ReadBytes(bs);
 
           double t = static_cast<double>(msg.Timestamp().count());
-
-          libremidi::message m{{bs.begin(), bs.end()}, t};
-          if (inputData_.userCallback)
-          {
-            inputData_.userCallback(m);
-          }
-          else
-          {
-            if (!inputData_.queue.push(m))
-              std::cerr << "\nmidi_in_winuwp: message queue limit reached!!\n\n";
-          }
+          inputData_.on_message_received(libremidi::message{{bs.begin(), bs.end()}, t});
         });
       }
     }

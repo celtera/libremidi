@@ -287,17 +287,7 @@ private:
       {
         // If not a continuation of a SysEx message,
         // invoke the user callback function or queue the message.
-        if (rtData.userCallback)
-        {
-          rtData.userCallback(std::move(m));
-        }
-        else
-        {
-          // As long as we haven't reached our queue size limit, push the
-          // message.
-          if (!rtData.queue.push(std::move(m)))
-            std::cerr << "\nMidiInJack: message queue limit reached!!\n\n";
-        }
+        rtData.on_message_received(std::move(m));
       }
     }
 
