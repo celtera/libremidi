@@ -5,7 +5,7 @@ The required header is `#include <libremidi/libremidi.hpp>`.
 ## Enumerating input ports
 
 ```C++
-rtmidi::midi_in midi;
+libremidi::midi_in midi;
 for(int i = 0, N = midi.get_port_count(); i < N; i++) {
   // Information on port number i
   std::string name = midi.get_port_name(i);
@@ -15,7 +15,7 @@ for(int i = 0, N = midi.get_port_count(); i < N; i++) {
 ## Enumerating output ports
 
 ```C++
-rtmidi::midi_out midi;
+libremidi::midi_out midi;
 for(int i = 0, N = midi.get_port_count(); i < N; i++) {
   // Information on port number i
   std::string name = midi.get_port_name(i);
@@ -26,7 +26,7 @@ for(int i = 0, N = midi.get_port_count(); i < N; i++) {
 
 ```C++
 // Create the midi object
-rtmidi::midi_in midi;
+libremidi::midi_in midi;
 
 // Open a given midi port. Passing no arguments will open a default port.
 midi.open_port(0);
@@ -40,7 +40,7 @@ midi.open_port(0);
 // it is up to you to protect your data structures afterwards.
 // For instance if you are using a GUI toolkit, don't do GUI actions
 // in that callback !
-midi.set_callback([](const rtmidi::message& message) {
+midi.set_callback([](const libremidi::message& message) {
   // how many bytes
   message.size();
   // access to the individual bytes
@@ -54,7 +54,7 @@ midi.set_callback([](const rtmidi::message& message) {
 
 ```C++
 // Create the midi object
-rtmidi::midi_in midi;
+libremidi::midi_in midi;
 
 // Open a given midi port. Passing no arguments will open a default port.
 midi.open_port(0);
@@ -69,7 +69,7 @@ while(1) {
 
 // Option B, with less copies
 while(1) {
-    rtmidi::message next_message;
+    libremidi::message next_message;
     if(midi.get_message(next_message)) {
         // next_message holds a valid message.
     }
@@ -80,7 +80,7 @@ while(1) {
 
 ```C++
 // Create the midi object
-rtmidi::midi_out midi;
+libremidi::midi_out midi;
 
 // Open a given midi port. Passing no arguments will open a default port.
 midi.open_port(0);
@@ -109,14 +109,14 @@ Note: this has not been implemented for every API so far.
 ```C++
 // The callbacks will be called when the relevant event happens.
 
-rtmidi::observer::callbacks cb;
+libremidi::observer::callbacks cb;
 cb.input_added = [] (int index, std::string name) { ... };
 cb.input_removed = [] (int index, std::string name) { ... };
 cb.output_added = [] (int index, std::string name) { ... };
 cb.output_removed = [] (int index, std::string name) { ... };
 
-rtmidi::observer observer{
-    rtmidi::API::WINDOWS_UWP,
+libremidi::observer observer{
+    libremidi::API::WINDOWS_UWP,
     std::move(cb)
 };
 
@@ -130,10 +130,10 @@ If exceptions are undesirable, it is also possible to set a callback function wh
 
 ```C++
 // Create the midi object
-rtmidi::midi_out midi;
+libremidi::midi_out midi;
 
 midi.set_error_callback(
-  [] (rtmidi::midi_error code, std::string_view info) {
+  [] (libremidi::midi_error code, std::string_view info) {
   // ... log error however you want
 });
 ```
