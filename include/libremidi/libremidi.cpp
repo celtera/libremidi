@@ -42,7 +42,7 @@
 #  include <libremidi/detail/dummy.hpp>
 #endif
 
-namespace rtmidi
+namespace libremidi
 {
 
 // The order here will control the order of the API search in
@@ -85,7 +85,7 @@ auto for_all_backends(F&& f)
 }
 
 template <typename F>
-auto for_backend(rtmidi::API api, F&& f)
+auto for_backend(libremidi::API api, F&& f)
 {
   for_all_backends([&](auto b) {
     if (b.API == api)
@@ -112,15 +112,15 @@ bool chunking_parameters::default_wait(std::chrono::microseconds time_to_wait, i
   return true;
 }
 
-[[nodiscard]] LIBREMIDI_INLINE std::vector<rtmidi::API> available_apis() noexcept
+[[nodiscard]] LIBREMIDI_INLINE std::vector<libremidi::API> available_apis() noexcept
 {
-  std::vector<rtmidi::API> apis;
+  std::vector<libremidi::API> apis;
   for_all_backends([&](auto b) { apis.push_back(b.API); });
   return apis;
 }
 
 [[nodiscard]] LIBREMIDI_INLINE std::unique_ptr<observer_api>
-open_midi_observer(rtmidi::API api, observer::callbacks&& cb)
+open_midi_observer(libremidi::API api, observer::callbacks&& cb)
 {
   std::unique_ptr<observer_api> ptr;
 
@@ -132,7 +132,7 @@ open_midi_observer(rtmidi::API api, observer::callbacks&& cb)
 }
 
 [[nodiscard]] LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
-open_midi_in(rtmidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
+open_midi_in(libremidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
 {
   std::unique_ptr<midi_in_api> ptr;
 
@@ -144,7 +144,7 @@ open_midi_in(rtmidi::API api, std::string_view clientName, unsigned int queueSiz
 }
 
 [[nodiscard]] LIBREMIDI_INLINE std::unique_ptr<midi_out_api>
-open_midi_out(rtmidi::API api, std::string_view clientName)
+open_midi_out(libremidi::API api, std::string_view clientName)
 {
 
   std::unique_ptr<midi_out_api> ptr;
@@ -155,7 +155,7 @@ open_midi_out(rtmidi::API api, std::string_view clientName)
   return ptr;
 }
 
-LIBREMIDI_INLINE observer::observer(rtmidi::API api, observer::callbacks cbs)
+LIBREMIDI_INLINE observer::observer(libremidi::API api, observer::callbacks cbs)
     : impl_{open_midi_observer(api, std::move(cbs))}
 {
 }
@@ -164,7 +164,7 @@ LIBREMIDI_INLINE
 observer::~observer() = default;
 
 LIBREMIDI_INLINE
-rtmidi::API midi_in::get_current_api() const noexcept
+libremidi::API midi_in::get_current_api() const noexcept
 {
   return rtapi_->get_current_api();
 }
@@ -242,7 +242,7 @@ void midi_in::set_error_callback(midi_error_callback errorCallback)
 }
 
 LIBREMIDI_INLINE
-rtmidi::API midi_out::get_current_api() noexcept
+libremidi::API midi_out::get_current_api() noexcept
 {
   return rtapi_->get_current_api();
 }
@@ -290,7 +290,7 @@ void midi_out::send_message(const std::vector<unsigned char>& message)
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_message(const rtmidi::message& message)
+void midi_out::send_message(const libremidi::message& message)
 {
   send_message(message.bytes.data(), message.bytes.size());
 }
@@ -322,9 +322,9 @@ std::string get_version() noexcept
 }
 
 LIBREMIDI_INLINE
-midi_in::midi_in(rtmidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
+midi_in::midi_in(libremidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
 {
-  if (api != rtmidi::API::UNSPECIFIED)
+  if (api != libremidi::API::UNSPECIFIED)
   {
     // Attempt to open the specified API.
     if ((rtapi_ = open_midi_in(api, clientName, queueSizeLimit)))
@@ -367,9 +367,9 @@ void midi_in::set_port_name(std::string_view portName)
 }
 
 LIBREMIDI_INLINE
-midi_out::midi_out(rtmidi::API api, std::string_view clientName)
+midi_out::midi_out(libremidi::API api, std::string_view clientName)
 {
-  if (api != rtmidi::API::UNSPECIFIED)
+  if (api != libremidi::API::UNSPECIFIED)
   {
     // Attempt to open the specified API.
     rtapi_ = open_midi_out(api, clientName);

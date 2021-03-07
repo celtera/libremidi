@@ -26,7 +26,7 @@
 // preprocessor definition AVOID_TIMESTAMPING to save resources
 // associated with the ALSA sequencer queues.
 
-namespace rtmidi
+namespace libremidi
 {
 // This function is used to count or get the pinfo structure for a given port
 // number.
@@ -111,7 +111,7 @@ public:
     }
 
     err = snd_seq_create_simple_port(
-        seq_, "rtmidi-observe",
+        seq_, "libremidi-observe",
         SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_READ
             | SND_SEQ_PORT_CAP_SUBS_WRITE,
         SND_SEQ_PORT_TYPE_APPLICATION);
@@ -332,9 +332,9 @@ public:
     snd_seq_close(data.seq);
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  libremidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::LINUX_ALSA;
+    return libremidi::API::LINUX_ALSA;
   }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
@@ -860,9 +860,9 @@ public:
     snd_seq_close(data.seq);
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  libremidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::LINUX_ALSA;
+    return libremidi::API::LINUX_ALSA;
   }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
@@ -1060,6 +1060,6 @@ struct alsa_backend
   using midi_in = midi_in_alsa;
   using midi_out = midi_out_alsa;
   using midi_observer = observer_alsa;
-  static const constexpr auto API = rtmidi::API::LINUX_ALSA;
+  static const constexpr auto API = libremidi::API::LINUX_ALSA;
 };
 }

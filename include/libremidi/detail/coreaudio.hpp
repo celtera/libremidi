@@ -11,7 +11,7 @@
 #  define AudioConvertHostTimeToNanos CAHostTimeBase::ConvertToNanos
 #endif
 
-namespace rtmidi
+namespace libremidi
 {
 // This function was submitted by Douglas Casey Tucker and apparently
 // derived largely from PortMidi.
@@ -219,9 +219,9 @@ public:
     if (data.endpoint)
       MIDIEndpointDispose(data.endpoint);
   }
-  rtmidi::API get_current_api() const noexcept override
+  libremidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::MACOSX_CORE;
+    return libremidi::API::MACOSX_CORE;
   }
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
@@ -586,9 +586,9 @@ public:
     if (data.endpoint)
       MIDIEndpointDispose(data.endpoint);
   }
-  rtmidi::API get_current_api() const noexcept override
+  libremidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::MACOSX_CORE;
+    return libremidi::API::MACOSX_CORE;
   }
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
@@ -805,6 +805,6 @@ struct core_backend
   using midi_in = midi_in_core;
   using midi_out = midi_out_core;
   using midi_observer = observer_core;
-  static const constexpr auto API = rtmidi::API::MACOSX_CORE;
+  static const constexpr auto API = libremidi::API::MACOSX_CORE;
 };
 }

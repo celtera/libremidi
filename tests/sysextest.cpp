@@ -24,7 +24,7 @@
 // an exception.  It offers the user a choice of MIDI ports to open.
 // It returns false if there are no ports available.
 
-bool chooseMidiPort(rtmidi::midi_in& rtmidi)
+bool chooseMidiPort(libremidi::midi_in& libremidi)
 {
   std::cout << "\nWould you like to open a virtual input port? [y/N] ";
 
@@ -32,12 +32,12 @@ bool chooseMidiPort(rtmidi::midi_in& rtmidi)
   std::getline(std::cin, keyHit);
   if (keyHit == "y")
   {
-    rtmidi.open_virtual_port();
+    libremidi.open_virtual_port();
     return true;
   }
 
   std::string portName;
-  unsigned int i = 0, nPorts = rtmidi.get_port_count();
+  unsigned int i = 0, nPorts = libremidi.get_port_count();
   if (nPorts == 0)
   {
     std::cout << "No input ports available!" << std::endl;
@@ -46,13 +46,13 @@ bool chooseMidiPort(rtmidi::midi_in& rtmidi)
 
   if (nPorts == 1)
   {
-    std::cout << "\nOpening " << rtmidi.get_port_name() << std::endl;
+    std::cout << "\nOpening " << libremidi.get_port_name() << std::endl;
   }
   else
   {
     for (i = 0; i < nPorts; i++)
     {
-      portName = rtmidi.get_port_name(i);
+      portName = libremidi.get_port_name(i);
       std::cout << "  Input port #" << i << ": " << portName << '\n';
     }
 
@@ -64,12 +64,12 @@ bool chooseMidiPort(rtmidi::midi_in& rtmidi)
   }
 
   std::cout << std::endl;
-  rtmidi.open_port(i);
+  libremidi.open_port(i);
 
   return true;
 }
 
-bool chooseMidiPort(rtmidi::midi_out& rtmidi)
+bool chooseMidiPort(libremidi::midi_out& libremidi)
 {
   std::cout << "\nWould you like to open a virtual output port? [y/N] ";
 
@@ -77,12 +77,12 @@ bool chooseMidiPort(rtmidi::midi_out& rtmidi)
   std::getline(std::cin, keyHit);
   if (keyHit == "y")
   {
-    rtmidi.open_virtual_port();
+    libremidi.open_virtual_port();
     return true;
   }
 
   std::string portName;
-  unsigned int i = 0, nPorts = rtmidi.get_port_count();
+  unsigned int i = 0, nPorts = libremidi.get_port_count();
   if (nPorts == 0)
   {
     std::cout << "No output ports available!" << std::endl;
@@ -91,13 +91,13 @@ bool chooseMidiPort(rtmidi::midi_out& rtmidi)
 
   if (nPorts == 1)
   {
-    std::cout << "\nOpening " << rtmidi.get_port_name() << std::endl;
+    std::cout << "\nOpening " << libremidi.get_port_name() << std::endl;
   }
   else
   {
     for (i = 0; i < nPorts; i++)
     {
-      portName = rtmidi.get_port_name(i);
+      portName = libremidi.get_port_name(i);
       std::cout << "  Output port #" << i << ": " << portName << '\n';
     }
 
@@ -109,7 +109,7 @@ bool chooseMidiPort(rtmidi::midi_out& rtmidi)
   }
 
   std::cout << std::endl;
-  rtmidi.open_port(i);
+  libremidi.open_port(i);
 
   return true;
 }
@@ -118,8 +118,8 @@ int main(int argc, char* argv[])
 try
 {
   using namespace std::literals;
-  rtmidi::midi_out midiout;
-  rtmidi::midi_in midiin;
+  libremidi::midi_out midiout;
+  libremidi::midi_in midiin;
 
   // Minimal command-line check.
   if (argc != 2)
@@ -134,7 +134,7 @@ try
   if (chooseMidiPort(midiout) == false)
     return 0;
 
-  midiin.set_callback([](const rtmidi::message& message) {
+  midiin.set_callback([](const libremidi::message& message) {
     auto nBytes = message.size();
     for (auto i = 0U; i < nBytes; i++)
       std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
@@ -161,7 +161,7 @@ try
     std::this_thread::sleep_for(500ms); // pause a little
   }
 }
-catch (rtmidi::midi_exception& error)
+catch (libremidi::midi_exception& error)
 {
   std::cerr << error.what() << std::endl;
   return 0;

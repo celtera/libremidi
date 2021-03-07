@@ -27,7 +27,7 @@
 //  http://msdn.microsoft.com/library/default.asp?url=/library/en-us/multimed/htm/_win32_midi_reference.asp
 
 // Thanks to Jean-Baptiste Berruchon for the sysex code.
-namespace rtmidi
+namespace libremidi
 {
 
 #define RT_WINMM_OBSERVER_POLL_PERIOD_MS 100
@@ -42,7 +42,7 @@ struct WinMidiData
   HMIDIIN inHandle;   // Handle to Midi Input Device
   HMIDIOUT outHandle; // Handle to Midi Output Device
   DWORD lastTime;
-  rtmidi::message message;
+  libremidi::message message;
   LPMIDIHDR sysexBuffer[RT_SYSEX_BUFFER_COUNT];
   CRITICAL_SECTION
   _mutex; // [Patrice] see
@@ -228,9 +228,9 @@ public:
     DeleteCriticalSection(&(data._mutex));
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  libremidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::WINDOWS_MM;
+    return libremidi::API::WINDOWS_MM;
   }
 
   void open_port(unsigned int portNumber, std::string_view) override
@@ -537,9 +537,9 @@ public:
     midi_out_winmm::close_port();
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  libremidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::WINDOWS_MM;
+    return libremidi::API::WINDOWS_MM;
   }
 
   void open_port(unsigned int portNumber, std::string_view) override
@@ -726,6 +726,6 @@ struct winmm_backend
   using midi_in = midi_in_winmm;
   using midi_out = midi_out_winmm;
   using midi_observer = observer_winmm;
-  static const constexpr auto API = rtmidi::API::WINDOWS_MM;
+  static const constexpr auto API = libremidi::API::WINDOWS_MM;
 };
 }

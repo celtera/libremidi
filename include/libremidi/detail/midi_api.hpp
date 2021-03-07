@@ -4,7 +4,7 @@
 #include <libremidi/detail/midi_queue.hpp>
 #include <string_view>
 
-namespace rtmidi
+namespace libremidi
 {
 class observer_api
 {
@@ -29,7 +29,7 @@ public:
   midi_api& operator=(const midi_api&) = delete;
   midi_api& operator=(midi_api&&) = delete;
 
-  virtual rtmidi::API get_current_api() const noexcept = 0;
+  virtual libremidi::API get_current_api() const noexcept = 0;
   virtual void open_port(unsigned int portNumber, std::string_view portName) = 0;
   virtual void open_virtual_port(std::string_view) = 0;
   virtual void close_port() = 0;
@@ -106,7 +106,7 @@ public:
     inputData_.queue.ringSize = queueSizeLimit;
     if (inputData_.queue.ringSize > 0)
     {
-      inputData_.queue.ring = std::make_unique<rtmidi::message[]>(inputData_.queue.ringSize);
+      inputData_.queue.ring = std::make_unique<libremidi::message[]>(inputData_.queue.ringSize);
     }
   }
   ~midi_in_api() override = default;
@@ -178,7 +178,7 @@ public:
   struct in_data
   {
     midi_queue queue{};
-    rtmidi::message message{};
+    libremidi::message message{};
     unsigned char ignoreFlags{7};
     bool doInput{false};
     bool firstMessage{true};

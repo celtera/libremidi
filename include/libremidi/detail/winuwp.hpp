@@ -12,7 +12,7 @@
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Storage.Streams.h>
 
-namespace rtmidi
+namespace libremidi
 {
 
 inline void winrt_init()
@@ -303,9 +303,9 @@ public:
       port_.Close();
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  libremidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::WINDOWS_UWP;
+    return libremidi::API::WINDOWS_UWP;
   }
 
   void open_port(unsigned int portNumber, std::string_view) override
@@ -331,7 +331,7 @@ public:
 
           double t = static_cast<double>(msg.Timestamp().count());
 
-          rtmidi::message m{{bs.begin(), bs.end()}, t};
+          libremidi::message m{{bs.begin(), bs.end()}, t};
           if (inputData_.userCallback)
           {
             inputData_.userCallback(m);
@@ -394,9 +394,9 @@ public:
     close_port();
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  libremidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::WINDOWS_UWP;
+    return libremidi::API::WINDOWS_UWP;
   }
 
   void open_port(unsigned int portNumber, std::string_view) override
@@ -465,7 +465,7 @@ struct winuwp_backend
   using midi_in = midi_in_winuwp;
   using midi_out = midi_out_winuwp;
   using midi_observer = observer_winuwp;
-  static const constexpr auto API = rtmidi::API::WINDOWS_UWP;
+  static const constexpr auto API = libremidi::API::WINDOWS_UWP;
 };
 } // namespace
-} // namespace rtmidi
+} // namespace libremidi

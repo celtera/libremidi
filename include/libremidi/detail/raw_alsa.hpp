@@ -14,7 +14,7 @@
 // https://ccrma.stanford.edu/~craig/articles/linuxmidi/alsa-1.0/alsarawportlist.c
 // Thanks Craig Stuart Sapp <craig@ccrma.stanford.edu>
 
-namespace rtmidi
+namespace libremidi
 {
 struct midi_stream_decoder
 {
@@ -143,9 +143,9 @@ public:
     midi_in_raw_alsa::close_port();
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  libremidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::LINUX_ALSA_RAW;
+    return libremidi::API::LINUX_ALSA_RAW;
   }
 
   void open_port(unsigned int portNumber, std::string_view) override
@@ -338,9 +338,9 @@ public:
     midi_out_raw_alsa::close_port();
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  libremidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::LINUX_ALSA_RAW;
+    return libremidi::API::LINUX_ALSA_RAW;
   }
 
   void open_port(unsigned int portNumber, std::string_view) override
@@ -525,6 +525,6 @@ struct raw_alsa_backend
   using midi_in = midi_in_raw_alsa;
   using midi_out = midi_out_raw_alsa;
   using midi_observer = observer_dummy;
-  static const constexpr auto API = rtmidi::API::LINUX_ALSA_RAW;
+  static const constexpr auto API = libremidi::API::LINUX_ALSA_RAW;
 };
 }

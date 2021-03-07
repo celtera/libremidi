@@ -11,12 +11,12 @@
 
 #if __has_include(<boost/container/small_vector.hpp>) && !defined(LIBREMIDI_NO_BOOST)
 #  include <boost/container/small_vector.hpp>
-namespace rtmidi
+namespace libremidi
 {
 using midi_bytes = boost::container::small_vector<unsigned char, 4>;
 }
 #else
-namespace rtmidi
+namespace libremidi
 {
 using midi_bytes = std::vector<unsigned char>;
 }
@@ -28,7 +28,7 @@ using midi_bytes = std::vector<unsigned char>;
 #  define LIBREMIDI_INLINE
 #endif
 
-namespace rtmidi
+namespace libremidi
 {
 enum class message_type : uint8_t
 {

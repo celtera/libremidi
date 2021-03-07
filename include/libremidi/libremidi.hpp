@@ -1,7 +1,7 @@
 #pragma once
 /* This software is based on the RtMidi and ModernMidi libraries.
 
-  RtMidi WWW site: http://music.mcgill.ca/~gary/rtmidi/
+  RtMidi WWW site: http://music.mcgill.ca/~gary/libremidi/
 
   RtMidi: realtime MIDI i/o C++ classes
   Copyright (c) 2003-2017 Gary P. Scavone
@@ -88,7 +88,7 @@
 
 #define LIBREMIDI_VERSION "1.0.0"
 
-namespace rtmidi
+namespace libremidi
 {
 //! Defines various error types.
 enum midi_error
@@ -191,7 +191,7 @@ enum class API
   the enumerated list values.  Note that there can be more than one
   API compiled for certain operating systems.
 */
-std::vector<rtmidi::API> available_apis() noexcept;
+std::vector<libremidi::API> available_apis() noexcept;
 
 //! A static function to determine the current version.
 std::string get_version() noexcept;
@@ -209,7 +209,7 @@ public:
     std::function<void(int, std::string)> output_removed;
   };
 
-  observer(rtmidi::API, callbacks);
+  observer(libremidi::API, callbacks);
   ~observer();
 
 private:
@@ -278,7 +278,7 @@ public:
     specified.
   */
   midi_in(
-      rtmidi::API api = API::UNSPECIFIED,
+      libremidi::API api = API::UNSPECIFIED,
       std::string_view clientName = "RtMidi Input Client",
       unsigned int queueSizeLimit = 100);
 
@@ -286,7 +286,7 @@ public:
   ~midi_in();
 
   //! Returns the MIDI API specifier for the current instance of RtMidiIn.
-  rtmidi::API get_current_api() const noexcept;
+  libremidi::API get_current_api() const noexcept;
 
   //! Open a MIDI input connection given by enumeration number.
   /*!
@@ -432,9 +432,9 @@ public:
     compiled, the default order of use is ALSA, JACK (Linux) and CORE,
     JACK (OS-X).
   */
-  midi_out(rtmidi::API api, std::string_view clientName);
+  midi_out(libremidi::API api, std::string_view clientName);
 
-  midi_out() : midi_out{rtmidi::API::UNSPECIFIED, "RtMidi client"}
+  midi_out() : midi_out{libremidi::API::UNSPECIFIED, "RtMidi client"}
   {
   }
 
@@ -442,7 +442,7 @@ public:
   ~midi_out();
 
   //! Returns the MIDI API specifier for the current instance of RtMidiOut.
-  rtmidi::API get_current_api() noexcept;
+  libremidi::API get_current_api() noexcept;
 
   //! Open a MIDI output connection.
   /*!
@@ -505,7 +505,7 @@ public:
   */
   void send_message(const std::vector<unsigned char>& message);
 
-  void send_message(const rtmidi::message& message);
+  void send_message(const libremidi::message& message);
 
   //! Immediately send a single message out an open MIDI output port.
   /*!

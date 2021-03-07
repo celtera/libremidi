@@ -19,11 +19,11 @@
 // an exception.  It offers the user a choice of MIDI ports to open.
 // It returns false if there are no ports available.
 template <typename RT>
-bool choosePort(RT& rtmidi, const std::string& dir)
+bool choosePort(RT& libremidi, const std::string& dir)
 {
   std::string portName;
   auto port = 0U;
-  auto nPorts = rtmidi.get_port_count();
+  auto nPorts = libremidi.get_port_count();
 
   if (nPorts == 0)
   {
@@ -32,13 +32,13 @@ bool choosePort(RT& rtmidi, const std::string& dir)
   }
   else if (nPorts == 1)
   {
-    std::cout << "\nOpening " << rtmidi.get_port_name() << std::endl;
+    std::cout << "\nOpening " << libremidi.get_port_name() << std::endl;
   }
   else
   {
     for (auto i = 0U; i < nPorts; i++)
     {
-      portName = rtmidi.get_port_name(i);
+      portName = libremidi.get_port_name(i);
       std::cout << "  " << dir << " port #" << i << ": " << portName << '\n';
     }
 
@@ -51,7 +51,7 @@ bool choosePort(RT& rtmidi, const std::string& dir)
 
   std::cout << "\n";
 
-  rtmidi.open_port(port);
+  libremidi.open_port(port);
 
   return true;
 }
@@ -59,7 +59,7 @@ bool choosePort(RT& rtmidi, const std::string& dir)
 int main(int, const char* argv[])
 try
 {
-  rtmidi::midi_in midiin;
+  libremidi::midi_in midiin;
 
   // Call function to select port.
   if (!choosePort(midiin, "input"))
@@ -69,7 +69,7 @@ try
   // opening the port to avoid having incoming messages written to the
   // queue instead of sent to the callback function.
   unsigned int clock_count = 0;
-  midiin.set_callback([&](const rtmidi::message& message) {
+  midiin.set_callback([&](const libremidi::message& message) {
     // Ignore longer messages
     if (message.size() != 1)
       return;
@@ -102,7 +102,7 @@ try
   std::cin.get(input);
   return 0;
 }
-catch (const rtmidi::midi_exception& error)
+catch (const libremidi::midi_exception& error)
 {
   std::cerr << error.what() << std::endl;
   return 0;

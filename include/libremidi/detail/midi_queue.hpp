@@ -2,7 +2,7 @@
 #include <memory>
 #include <libremidi/message.hpp>
 
-namespace rtmidi
+namespace libremidi
 {
 
 struct midi_queue

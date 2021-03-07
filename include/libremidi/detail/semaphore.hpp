@@ -3,7 +3,7 @@
 #include <mutex>
 
 // Based on https://stackoverflow.com/a/27852868/1495627
-namespace rtmidi
+namespace libremidi
 {
 class semaphore
 {

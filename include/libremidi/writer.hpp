@@ -28,7 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <libremidi/message.hpp>
 #include <vector>
 
-namespace rtmidi
+namespace libremidi
 {
 class writer
 {

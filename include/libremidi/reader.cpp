@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // [] Event too short
 // ==============================
 
-namespace rtmidi
+namespace libremidi
 {
 namespace util
 {
@@ -103,7 +103,7 @@ LIBREMIDI_INLINE
 track_event
 parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEventTypeByte)
 {
-  using namespace rtmidi::util;
+  using namespace libremidi::util;
   message_type type = (message_type)*dataStart++;
 
   track_event event{tick, track, message{}};
@@ -335,7 +335,7 @@ reader::~reader()
 LIBREMIDI_INLINE
 void reader::parse_impl(const std::vector<uint8_t>& buffer)
 {
-  using namespace rtmidi::util;
+  using namespace libremidi::util;
   const uint8_t* dataPtr = buffer.data();
 
   int headerId = read_uint32_be(dataPtr);

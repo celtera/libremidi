@@ -20,7 +20,7 @@
 //
 //  *********************************************************************//
 
-namespace rtmidi
+namespace libremidi
 {
 struct jack_data
 {
@@ -31,8 +31,8 @@ struct jack_data
   jack_ringbuffer_t* buffMessage{};
   jack_time_t lastTime{};
 
-  rtmidi::semaphore sem_cleanup;
-  rtmidi::semaphore sem_needpost{};
+  libremidi::semaphore sem_cleanup;
+  libremidi::semaphore sem_needpost{};
 
   midi_in_api::in_data* rtMidiIn{};
 };
@@ -72,9 +72,9 @@ public:
       jack_client_close(data.client);
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  libremidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::UNIX_JACK;
+    return libremidi::API::UNIX_JACK;
   }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
@@ -333,9 +333,9 @@ public:
     }
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  libremidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::UNIX_JACK;
+    return libremidi::API::UNIX_JACK;
   }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
@@ -523,7 +523,7 @@ struct jack_backend
   using midi_in = midi_in_jack;
   using midi_out = midi_out_jack;
   using midi_observer = observer_jack;
-  static const constexpr auto API = rtmidi::API::UNIX_JACK;
+  static const constexpr auto API = libremidi::API::UNIX_JACK;
 };
 }
 #endif

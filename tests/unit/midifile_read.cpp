@@ -21,7 +21,7 @@ TEST_CASE("read files from corpus", "[midi_reader]" ) {
 
         bytes.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
 
-        rtmidi::reader r;
+        libremidi::reader r;
         REQUIRE_NOTHROW(r.parse(bytes));
 
 

@@ -27,7 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  include <libremidi/writer.hpp>
 #endif
 #include <iostream>
-namespace rtmidi
+namespace libremidi
 {
 namespace util
 {

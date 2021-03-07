@@ -2,7 +2,7 @@
 #include <libremidi/detail/midi_api.hpp>
 #include <libremidi/libremidi.hpp>
 
-namespace rtmidi
+namespace libremidi
 {
 class observer_dummy final : public observer_api
 {
@@ -25,9 +25,9 @@ public:
     warning("midi_in_dummy: This class provides no functionality.");
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  libremidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::DUMMY;
+    return libremidi::API::DUMMY;
   }
 
   void open_port(unsigned int /*portNumber*/, std::string_view /*portName*/) override
@@ -70,9 +70,9 @@ public:
     warning("midi_out_dummy: This class provides no functionality.");
   }
 
-  rtmidi::API get_current_api() const noexcept override
+  libremidi::API get_current_api() const noexcept override
   {
-    return rtmidi::API::DUMMY;
+    return libremidi::API::DUMMY;
   }
 
   void open_port(unsigned int /*portNumber*/, std::string_view /*portName*/) override
@@ -109,6 +109,6 @@ struct dummy_backend
   using midi_in = midi_in_dummy;
   using midi_out = midi_out_dummy;
   using midi_observer = observer_dummy;
-  static const constexpr auto API = rtmidi::API::DUMMY;
+  static const constexpr auto API = libremidi::API::DUMMY;
 };
 }
