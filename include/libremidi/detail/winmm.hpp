@@ -496,7 +496,7 @@ private:
     // Save the time of the last non-filtered message
     apiData.lastTime = timestamp;
 
-    this->data.on_message_received(std::move(apiData.message));
+    data.on_message_received(std::move(apiData.message));
   }
 
   WinMidiData data;
