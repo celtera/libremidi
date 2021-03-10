@@ -1,11 +1,11 @@
 sudo: required
-
+dist: focal
 language: cpp
 
 before_install:
-  - apt -y -qq update
-  - apt -y -qq full-upgrade
-  - apt -y -qq install git gcc-10 g++-10 cmake libboost-dev libasound-dev libjack-dev ninja-build
+  - sudo apt -y -qq update
+  - sudo apt -y -qq full-upgrade
+  - sudo apt -y -qq install git gcc-10 g++-10 cmake libboost-dev libasound-dev libjack-dev ninja-build
 
 script:
   - mkdir build
