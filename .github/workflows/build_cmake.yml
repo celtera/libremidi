@@ -1,7 +1,14 @@
 name: Build
 
-on: [push]
-
+on:  
+  push:
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
 jobs:
   build:
     name: ${{ matrix.config.name }}
