@@ -1,4 +1,8 @@
-
+docs/_build
+# wherever you told breathe_projects to look
+docs/doxyoutput
+# wherever you told Exhale containmentFolder is
+docs/api
 # Created by https://www.gitignore.io/api/c,c++,cmake
 *.user
 
