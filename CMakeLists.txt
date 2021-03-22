@@ -179,6 +179,9 @@ if(LIBREMIDI_EXAMPLES)
   add_executable(midiout tests/midiout.cpp)
   target_link_libraries(midiout PRIVATE libremidi)
 
+  add_executable(multithread_midiout tests/multithread_midiout.cpp)
+  target_link_libraries(multithread_midiout PRIVATE libremidi)
+
   add_executable(midiprobe tests/midiprobe.cpp)
   target_link_libraries(midiprobe PRIVATE libremidi)
 
