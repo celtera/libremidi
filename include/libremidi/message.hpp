@@ -101,8 +101,7 @@ struct message
       : bytes(src_bytes), timestamp(src_timestamp)
   {
   }
-  template <typename... Args>
-  message(Args... args) noexcept : bytes{(uint8_t)args...}
+  message(std::initializer_list<unsigned char> args) noexcept : bytes{args}
   {
   }
   static uint8_t make_command(const message_type type, const int channel) noexcept
