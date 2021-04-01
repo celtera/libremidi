@@ -10,6 +10,8 @@ option(LIBREMIDI_NO_ALSA "Disable ALSA back-end" OFF)
 option(LIBREMIDI_EXAMPLES "Enable examples" OFF)
 
 include(CheckSymbolExists)
+include(CheckCXXSourceCompiles)
+
 ### Main library ###
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -179,8 +181,13 @@ if(LIBREMIDI_EXAMPLES)
   add_executable(midiout tests/midiout.cpp)
   target_link_libraries(midiout PRIVATE libremidi)
 
-  add_executable(multithread_midiout tests/multithread_midiout.cpp)
-  target_link_libraries(multithread_midiout PRIVATE libremidi)
+  set(CMAKE_REQUIRED_FLAGS -std=c++2a)
+  check_cxx_source_compiles("#include <thread>\nint main() { std::jthread t; }" HAS_STD_JTHREAD)
+
+  if(HAS_STD_JTHREAD)
+    add_executable(multithread_midiout tests/multithread_midiout.cpp)
+    target_link_libraries(multithread_midiout PRIVATE libremidi)
+  endif()
 
   add_executable(midiprobe tests/midiprobe.cpp)
   target_link_libraries(midiprobe PRIVATE libremidi)

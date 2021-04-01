@@ -374,7 +374,8 @@ inline void midi_in_emscripten::open_port(unsigned int portNumber, std::string_v
   }
 
   midi.open_input(portNumber, *this);
-  connected_ = portNumber;
+  portNumber_ = portNumber;
+  connected_ = true;
 }
 
 inline void midi_in_emscripten::close_port()
@@ -383,8 +384,8 @@ inline void midi_in_emscripten::close_port()
   {
     auto& midi = webmidi_helpers::midi_access_emscripten::instance();
 
-    midi.close_input(*connected_, *this);
-    connected_ = std::nullopt;
+    midi.close_input(portNumber_, *this);
+    connected_ = false;
   }
 }
 
@@ -446,7 +447,8 @@ inline void midi_out_emscripten::open_port(unsigned int portNumber, std::string_
     return;
   }
 
-  connected_ = portNumber;
+  portNumber_ = portNumber;
+  connected_ = true;
 }
 
 inline void midi_out_emscripten::close_port()
@@ -455,7 +457,7 @@ inline void midi_out_emscripten::close_port()
   {
     auto& midi = webmidi_helpers::midi_access_emscripten::instance();
 
-    connected_ = std::nullopt;
+    connected_ = false;
   }
 }
 
@@ -485,7 +487,7 @@ inline void midi_out_emscripten::send_message(const unsigned char* message, size
     error<invalid_use_error>(
           "midi_out_emscripten::send_message: trying to send a message without an open port.");
 
-  webmidi_helpers::midi_access_emscripten::instance().send_message(*connected_, reinterpret_cast<const char*>(message), size);
+  webmidi_helpers::midi_access_emscripten::instance().send_message(portNumber_, reinterpret_cast<const char*>(message), size);
 }
 }
 

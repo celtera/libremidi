@@ -91,8 +91,8 @@ public:
   }
 
 protected:
-  std::optional<int> connected_{};
   midi_error_callback errorCallback_{};
+  bool connected_{};
   mutable bool firstErrorOccurred_{};
 };
 

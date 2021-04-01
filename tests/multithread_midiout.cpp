@@ -1,10 +1,8 @@
 #include <libremidi/libremidi.hpp>
 #include <thread>
-#include <ranges>
 #include <vector>
 #include <mutex>
 #include <deque>
-#include <valgrind/callgrind.h>
 /**
  * @file multithread_midiout.cpp
  *

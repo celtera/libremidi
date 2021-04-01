@@ -56,6 +56,9 @@ public:
 
   unsigned int get_port_count() override;
   std::string get_port_name(unsigned int portNumber) override;
+
+private:
+  int portNumber_{};
 };
 
 class midi_out_emscripten final : public midi_out_default<midi_out_emscripten>
@@ -78,6 +81,9 @@ public:
   std::string get_port_name(unsigned int portNumber) override;
 
   void send_message(const unsigned char* message, size_t size) override;
+
+private:
+  int portNumber_{};
 };
 
 }
