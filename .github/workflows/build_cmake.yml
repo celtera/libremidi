@@ -1,6 +1,6 @@
 name: Build
 
-on:  
+on:
   push:
     paths-ignore:
       - 'docs/**'
@@ -20,12 +20,12 @@ jobs:
         - {
             name: "Windows",
             os: windows-latest,
-            cmakeflags: ""
+            cmakeflags: "-DLIBREMIDI_EXAMPLES=1"
           }
         - {
             name: "Ubuntu",
             os: ubuntu-latest,
-            cmakeflags: ""
+            cmakeflags: "-DLIBREMIDI_EXAMPLES=1"
           }
         - {
             name: 'Tarball',
@@ -35,11 +35,11 @@ jobs:
         - {
             name: "macOS",
             os: macos-latest,
-            cmakeflags: ""
+            cmakeflags: "-DLIBREMIDI_EXAMPLES=1"
           }
     steps:
     - uses: actions/checkout@v2
-    
+
     - name: Get latest release version number
       id: get_version
       uses: battila7/get-version-action@v2
@@ -48,10 +48,10 @@ jobs:
       if: matrix.config.name != 'Tarball'
       run:  |
         git submodule update --init --recursive
-        
+
         if [ "$RUNNER_OS" == "Linux" ]; then
           sudo apt update
-          sudo apt install cmake ninja-build libboost-dev
+          sudo apt install cmake ninja-build libboost-dev libasound-dev
         elif [ "$RUNNER_OS" == "Windows" ]; then
           echo "nothing to do"
           # maybe choco install ninja
@@ -77,5 +77,5 @@ jobs:
       if: matrix.config.name != 'Tarball'
       run: |
         cd build && ctest -V
-        
+
       shell: bash
