@@ -35,7 +35,12 @@ public:
   reader(bool useAbsolute = false);
   ~reader();
 
+  void parse(const uint8_t* data, std::size_t size);
   void parse(const std::vector<uint8_t>& buffer);
+#if defined(LIBREMIDI_HAS_SPAN)
+  void parse(std::span<uint8_t> buffer);
+#endif
+
   double get_end_time();
 
   float ticksPerBeat{}; // precision (number of ticks distinguishable per second)
@@ -44,7 +49,6 @@ public:
   std::vector<midi_track> tracks;
 
 private:
-  void parse_impl(const std::vector<uint8_t>& buffer);
   bool useAbsoluteTicks{};
 };
 }

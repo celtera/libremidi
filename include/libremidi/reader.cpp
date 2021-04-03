@@ -45,28 +45,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace libremidi
 {
-namespace util
+// Used when we know that we have enough space
+namespace util_unchecked
 {
-// Read a MIDI-style variable-length integer (big-endian value in groups of 7 bits,
-// with top bit set to signify that another byte follows).
-inline uint32_t read_variable_length(uint8_t const*& data)
-{
-  uint32_t result = 0;
-  while (true)
-  {
-    uint8_t b = *data++;
-    if (b & 0x80)
-    {
-      result += (b & 0x7F);
-      result <<= 7;
-    }
-    else
-    {
-      return result + b; // b is the last byte
-    }
-  }
-}
-
 inline void read_bytes(midi_bytes& buffer, uint8_t const*& data, int num)
 {
   buffer.reserve(buffer.size() + num);
@@ -99,11 +80,67 @@ inline uint32_t read_uint32_be(uint8_t const*& data)
 }
 }
 
+namespace util_checked
+{
+// Read a MIDI-style variable-length integer (big-endian value in groups of 7 bits,
+// with top bit set to signify that another byte follows).
+
+inline void ensure_size(const uint8_t* begin, const uint8_t* end, int64_t needed)
+{
+  if(int64_t available = (end - begin); available < needed)
+    throw std::runtime_error("MIDI reader: not enough data to process");
+}
+
+inline uint32_t read_variable_length(uint8_t const*& data, uint8_t const* end)
+{
+  uint32_t result = 0;
+  while (true)
+  {
+    ensure_size(data, end, 1);
+    uint8_t b = *data++;
+    if (b & 0x80)
+    {
+      result += (b & 0x7F);
+      result <<= 7;
+    }
+    else
+    {
+      return result + b; // b is the last byte
+    }
+  }
+}
+
+inline void read_bytes(midi_bytes& buffer, uint8_t const*& data, int num, uint8_t const* end)
+{
+  ensure_size(data, end, num);
+  util_unchecked::read_bytes(buffer, data, num);
+}
+
+inline uint16_t read_uint16_be(uint8_t const*& data, uint8_t const* end)
+{
+  ensure_size(data, end, 2);
+  return util_unchecked::read_uint16_be(data);
+}
+
+inline uint32_t read_uint24_be(uint8_t const*& data, uint8_t const* end)
+{
+  ensure_size(data, end, 3);
+  return util_unchecked::read_uint24_be(data);
+}
+
+inline uint32_t read_uint32_be(uint8_t const*& data, uint8_t const* end)
+{
+  ensure_size(data, end, 4);
+  return util_unchecked::read_uint32_be(data);
+}
+
+}
+
 LIBREMIDI_INLINE
 track_event
-parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEventTypeByte)
+parseEvent(int tick, int track, const uint8_t*& dataStart, const uint8_t* dataEnd, message_type lastEventTypeByte)
 {
-  using namespace libremidi::util;
+  using namespace libremidi::util_unchecked;
   message_type type = (message_type)*dataStart++;
 
   track_event event{tick, track, message{}};
@@ -114,7 +151,7 @@ parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEven
     if ((uint8_t)type == 0xFF)
     {
       meta_event_type subtype = (meta_event_type)*dataStart++;
-      uint32_t length = read_variable_length(dataStart);
+      uint32_t length = util_checked::read_variable_length(dataStart, dataEnd);
 
       if (length > 0x7F)
         throw(std::invalid_argument("Implementation does not allow meta event length over 127 bytes"));
@@ -219,7 +256,7 @@ parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEven
 
     else if (type == message_type::SYSTEM_EXCLUSIVE)
     {
-      int length = read_variable_length(dataStart);
+      int length = util_checked::read_variable_length(dataStart, dataEnd);
       event.m.bytes = { (uint8_t)type };
       read_bytes(event.m.bytes, dataStart, length);
       return event;
@@ -227,7 +264,7 @@ parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEven
 
     else if (type == message_type::EOX)
     {
-      int length = read_variable_length(dataStart);
+      int length = util_checked::read_variable_length(dataStart, dataEnd);
       read_bytes(event.m.bytes, dataStart, length);
       return event;
     }
@@ -323,7 +360,7 @@ parseEvent(int tick, int track, uint8_t const*& dataStart, message_type lastEven
 
 LIBREMIDI_INLINE
 reader::reader(bool useAbsolute)
-    : tracks(0), ticksPerBeat(480), startingTempo(120), useAbsoluteTicks(useAbsolute)
+    : ticksPerBeat(480), startingTempo(120), useAbsoluteTicks(useAbsolute)
 {
 }
 
@@ -333,30 +370,39 @@ reader::~reader()
 }
 
 LIBREMIDI_INLINE
-void reader::parse_impl(const std::vector<uint8_t>& buffer)
+void reader::parse(const uint8_t* dataPtr, std::size_t size)
 {
-  using namespace libremidi::util;
-  const uint8_t* dataPtr = buffer.data();
+  using namespace libremidi;
 
-  int headerId = read_uint32_be(dataPtr);
-  int headerLength = read_uint32_be(dataPtr);
+  tracks.clear();
 
-  if (headerId != 'MThd' || headerLength != 6)
+  if(size == 0)
   {
-    std::cerr << "Bad .mid file - couldn't parse header" << std::endl;
+    std::cerr << "libremidi::reader: empty buffer passed to parse." << std::endl;
     return;
   }
 
-  read_uint16_be(dataPtr); //@tofix format type -> save for later eventually
+  const uint8_t* const dataEnd = dataPtr + size;
 
-  int trackCount = read_uint16_be(dataPtr);
-  int timeDivision = read_uint16_be(dataPtr);
+  int headerId = util_checked::read_uint32_be(dataPtr, dataEnd);
+  int headerLength = util_checked::read_uint32_be(dataPtr, dataEnd);
+
+  if (headerId != 'MThd' || headerLength != 6)
+  {
+    std::cerr << "libremidi::reader: couldn't parse header" << std::endl;
+    return;
+  }
+
+  util_checked::read_uint16_be(dataPtr, dataEnd); //@tofix format type -> save for later eventually
+
+  int trackCount = util_checked::read_uint16_be(dataPtr, dataEnd);
+  int timeDivision = util_checked::read_uint16_be(dataPtr, dataEnd);
 
   // CBB: deal with the SMPTE style time coding
   // timeDivision is described here http://www.sonicspot.com/guide/midifiles.html
   if (timeDivision & 0x8000)
   {
-    std::cerr << "Found SMPTE time frames" << std::endl;
+    std::cerr << "libremidi::reader: found SMPTE time frames (unsupported)" << std::endl;
     // int fps = (timeDivision >> 16) & 0x7f;
     // int ticksPerFrame = timeDivision & 0xff;
     // given beats per second, timeDivision should be derivable.
@@ -370,23 +416,33 @@ void reader::parse_impl(const std::vector<uint8_t>& buffer)
   {
     midi_track track;
 
-    headerId = read_uint32_be(dataPtr);
-    headerLength = read_uint32_be(dataPtr);
+    headerId = util_checked::read_uint32_be(dataPtr, dataEnd);
+    headerLength = util_checked::read_uint32_be(dataPtr, dataEnd);
 
     if (headerId != 'MTrk')
     {
-      throw std::runtime_error("Bad .mid file - couldn't find track header");
+      std::cerr << "libremidi::reader: couldn't find track header" << std::endl;
+      return;
     }
 
-    uint8_t const* dataEnd = dataPtr + headerLength;
+    int64_t available = dataEnd - dataPtr;
+    if(available < headerLength)
+    {
+      std::cerr << "libremidi::reader: not enough data available" << std::endl;
+      return;
+    }
+
+    track.reserve(headerLength / 3);
+
+    const uint8_t* const trackEnd = dataPtr + headerLength;
 
     message_type runningEvent = message_type::INVALID;
 
     int tickCount = 0;
 
-    while (dataPtr < dataEnd)
+    while (dataPtr < trackEnd)
     {
-      auto tick = read_variable_length(dataPtr);
+      auto tick = util_checked::read_variable_length(dataPtr, trackEnd);
 
       if (useAbsoluteTicks)
       {
@@ -399,22 +455,30 @@ void reader::parse_impl(const std::vector<uint8_t>& buffer)
 
       try
       {
-        track_event ev = parseEvent(tickCount, i, dataPtr, runningEvent);
+        track_event ev = parseEvent(tickCount, i, dataPtr, trackEnd, runningEvent);
 
-        if (!ev.m.is_meta_event())
+        if(!ev.m.bytes.empty())
         {
-          runningEvent = message_type(ev.m.bytes[0]);
+          if (!ev.m.is_meta_event())
+          {
+            runningEvent = message_type(ev.m.bytes[0]);
+          }
+        }
+        else
+        {
+          std::cerr << "libremidi::reader: could not read event" << std::endl;
+          return;
         }
 
-        track.push_back(ev);
+        track.push_back(std::move(ev));
       }
-      catch (const std::runtime_error& e)
+      catch (const std::exception& e)
       {
-        std::cerr << e.what() << "\n";
+        std::cerr << "libremidi::reader: " << e.what() << std::endl;
       }
     }
 
-    tracks.push_back(track);
+    tracks.push_back(std::move(track));
   }
 }
 
@@ -438,14 +502,14 @@ double reader::get_end_time()
 LIBREMIDI_INLINE
 void reader::parse(const std::vector<uint8_t>& buffer)
 {
-  tracks.clear();
-
-  if(buffer.empty())
-  {
-    std::cerr << "libremidi::reader: empty buffer passed to parse." << std::endl;
-    return;
-  }
-  parse_impl(buffer);
+  parse(buffer.data(), buffer.size());
 }
 
+#if defined(LIBREMIDI_HAS_SPAN)
+LIBREMIDI_INLINE
+void reader::parse(std::span<uint8_t> buffer)
+{
+  parse(buffer.data(), buffer.size());
+}
+#endif
 }

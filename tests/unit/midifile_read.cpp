@@ -8,7 +8,7 @@ TEST_CASE("read files from corpus", "[midi_reader]" ) {
 
   using recursive_directory_iterator = std::filesystem::recursive_directory_iterator;
   std::vector<uint8_t> bytes;
-  for (const auto& dirEntry : recursive_directory_iterator(RTMIDI_TEST_CORPUS))
+  for (const auto& dirEntry : recursive_directory_iterator(RTMIDI_TEST_CORPUS, std::filesystem::directory_options::follow_directory_symlink))
   {
     std::cout << dirEntry << std::endl;
     if(dirEntry.is_regular_file())
