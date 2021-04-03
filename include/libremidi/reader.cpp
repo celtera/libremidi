@@ -45,24 +45,79 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace libremidi
 {
-// Used when we know that we have enough space
-namespace util_unchecked
+namespace util
 {
-inline void read_bytes(midi_bytes& buffer, uint8_t const*& data, int num)
+struct no_validator
+{
+  static inline bool validate_track(const midi_track& track)
+  {
+    return true;
+  }
+};
+
+struct validator
+{
+  static inline bool validate_track(const midi_track& track)
+  {
+    if(track.empty())
+    {
+      std::cerr << "libremidi::reader: empty track" << std::endl;
+      return false;
+    }
+
+    auto& last_event = track.back();
+    if(last_event.m.bytes != midi_bytes{0xFF, (unsigned char)meta_event_type::END_OF_TRACK, 0})
+    {
+      std::cerr << "libremidi::reader: track does not end with END OF TRACK" << std::endl;
+      return false;
+    }
+
+    return true;
+  }
+};
+
+// Used when we know that we have enough space
+struct read_unchecked
+{
+// Read a MIDI-style variable-length integer (big-endian value in groups of 7 bits,
+// with top bit set to signify that another byte follows).
+static inline void ensure_size(const uint8_t* begin, const uint8_t* end, int64_t needed)
+{
+}
+
+static inline uint32_t read_variable_length(uint8_t const*& data, uint8_t const* end)
+{
+  uint32_t result = 0;
+  while (true)
+  {
+    uint8_t b = *data++;
+    if (b & 0x80)
+    {
+      result += (b & 0x7F);
+      result <<= 7;
+    }
+    else
+    {
+      return result + b; // b is the last byte
+    }
+  }
+}
+
+static inline void read_bytes(midi_bytes& buffer, uint8_t const*& data, const uint8_t* end, int num)
 {
   buffer.reserve(buffer.size() + num);
   for (int i = 0; i < num; ++i)
     buffer.push_back(uint8_t(*data++));
 }
 
-inline uint16_t read_uint16_be(uint8_t const*& data)
+static inline uint16_t read_uint16_be(uint8_t const*& data, const uint8_t* end)
 {
   uint16_t result = int(*data++) << 8;
   result += int(*data++);
   return result;
 }
 
-inline uint32_t read_uint24_be(uint8_t const*& data)
+static inline uint32_t read_uint24_be(uint8_t const*& data, const uint8_t* end)
 {
   uint32_t result = int(*data++) << 16;
   result += int(*data++) << 8;
@@ -70,7 +125,7 @@ inline uint32_t read_uint24_be(uint8_t const*& data)
   return result;
 }
 
-inline uint32_t read_uint32_be(uint8_t const*& data)
+static inline uint32_t read_uint32_be(uint8_t const*& data, const uint8_t* end)
 {
   uint32_t result = int(*data++) << 24;
   result += int(*data++) << 16;
@@ -78,20 +133,20 @@ inline uint32_t read_uint32_be(uint8_t const*& data)
   result += int(*data++);
   return result;
 }
-}
+};
 
-namespace util_checked
+// Used when we do not know if we have enough bytes and have to check before reading
+struct read_checked
 {
 // Read a MIDI-style variable-length integer (big-endian value in groups of 7 bits,
 // with top bit set to signify that another byte follows).
-
-inline void ensure_size(const uint8_t* begin, const uint8_t* end, int64_t needed)
+static inline void ensure_size(const uint8_t* begin, const uint8_t* end, int64_t needed)
 {
   if(int64_t available = (end - begin); available < needed)
     throw std::runtime_error("MIDI reader: not enough data to process");
 }
 
-inline uint32_t read_variable_length(uint8_t const*& data, uint8_t const* end)
+static inline uint32_t read_variable_length(uint8_t const*& data, uint8_t const* end)
 {
   uint32_t result = 0;
   while (true)
@@ -110,37 +165,49 @@ inline uint32_t read_variable_length(uint8_t const*& data, uint8_t const* end)
   }
 }
 
-inline void read_bytes(midi_bytes& buffer, uint8_t const*& data, int num, uint8_t const* end)
+static inline void read_bytes(midi_bytes& buffer, uint8_t const*& data, uint8_t const* end, int num)
 {
   ensure_size(data, end, num);
-  util_unchecked::read_bytes(buffer, data, num);
+  read_unchecked::read_bytes(buffer, data, end, num);
 }
 
-inline uint16_t read_uint16_be(uint8_t const*& data, uint8_t const* end)
+static inline uint16_t read_uint16_be(uint8_t const*& data, uint8_t const* end)
 {
   ensure_size(data, end, 2);
-  return util_unchecked::read_uint16_be(data);
+  return read_unchecked::read_uint16_be(data, end);
 }
 
-inline uint32_t read_uint24_be(uint8_t const*& data, uint8_t const* end)
+static inline uint32_t read_uint24_be(uint8_t const*& data, uint8_t const* end)
 {
   ensure_size(data, end, 3);
-  return util_unchecked::read_uint24_be(data);
+  return read_unchecked::read_uint24_be(data, end);
 }
 
-inline uint32_t read_uint32_be(uint8_t const*& data, uint8_t const* end)
+static inline uint32_t read_uint32_be(uint8_t const*& data, uint8_t const* end)
 {
   ensure_size(data, end, 4);
-  return util_unchecked::read_uint32_be(data);
+  return read_unchecked::read_uint32_be(data, end);
 }
 
+};
 }
+
+#if defined(LIBREMIDI_UNCHECKED)
+using byte_reader = util::read_unchecked;
+#else
+using byte_reader = util::read_checked;
+#endif
+
+#if defined(LIBREMIDI_UNVALIDATED)
+using validator = util::no_validator;
+#else
+using validator = util::validator;
+#endif
 
 LIBREMIDI_INLINE
-track_event
-parseEvent(int tick, int track, const uint8_t*& dataStart, const uint8_t* dataEnd, message_type lastEventTypeByte)
+track_event parse_event(int tick, int track, const uint8_t*& dataStart, const uint8_t* dataEnd, message_type lastEventTypeByte)
 {
-  using namespace libremidi::util_unchecked;
+  byte_reader::ensure_size(dataStart, dataEnd, 1);
   message_type type = (message_type)*dataStart++;
 
   track_event event{tick, track, message{}};
@@ -150,16 +217,33 @@ parseEvent(int tick, int track, const uint8_t*& dataStart, const uint8_t* dataEn
     // Meta event
     if ((uint8_t)type == 0xFF)
     {
+      byte_reader::ensure_size(dataStart, dataEnd, 1);
       meta_event_type subtype = (meta_event_type)*dataStart++;
-      uint32_t length = util_checked::read_variable_length(dataStart, dataEnd);
 
-      if (length > 0x7F)
-        throw(std::invalid_argument("Implementation does not allow meta event length over 127 bytes"));
+      event.m.bytes.reserve(3);
+      event.m.bytes.push_back((uint8_t)type);
+      event.m.bytes.push_back((uint8_t)subtype);
 
-      event.m.bytes.resize(3);
-      event.m.bytes[0] = (uint8_t)type;
-      event.m.bytes[1] = (uint8_t)subtype;
-      event.m.bytes[2] = (uint8_t)length;
+      uint32_t length = 0;
+      // Here we read the meta-event length manually, as this way we can also put it into event.m.bytes
+      while (true)
+      {
+        byte_reader::ensure_size(dataStart, dataEnd, 1);
+        uint8_t b = *dataStart++;
+        event.m.bytes.push_back(b);
+        if (b & 0x80)
+        {
+          uint8_t byte = (b & 0x7F);
+
+          length += byte;
+          length <<= 7;
+        }
+        else
+        {
+          length += b; // b is the last byte
+          break;
+        }
+      }
 
       switch (subtype)
       {
@@ -170,7 +254,7 @@ parseEvent(int tick, int track, const uint8_t*& dataStart, const uint8_t* dataEn
             case 0:
               return event;
             case 2:
-              read_bytes(event.m.bytes, dataStart, 2);
+              byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, 2);
               return event;
             default:
               throw std::invalid_argument("Expected length for SEQUENCE_NUMBER event is 0 or 2");
@@ -186,7 +270,7 @@ parseEvent(int tick, int track, const uint8_t*& dataStart, const uint8_t* dataEn
         case meta_event_type::PATCH_NAME:
         case meta_event_type::DEVICE_NAME:
         {
-          read_bytes(event.m.bytes, dataStart, length);
+          byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
           return event;
         }
 
@@ -201,54 +285,54 @@ parseEvent(int tick, int track, const uint8_t*& dataStart, const uint8_t* dataEn
           if (length != 3)
             throw std::invalid_argument("Expected length for TEMPO_CHANGE event is 3");
           // event.m.bytes[3] = read_uint24_be(dataStart); // @dimitri TOFIX
-          read_bytes(event.m.bytes, dataStart, length);
+          byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
           return event;
         }
         case meta_event_type::SMPTE_OFFSET:
         {
           if (length != 5)
             throw std::invalid_argument("Expected length for SMPTE_OFFSET event is 5");
-          read_bytes(event.m.bytes, dataStart, length);
+          byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
           return event;
         }
         case meta_event_type::TIME_SIGNATURE:
         {
           if (length != 4)
             throw std::invalid_argument("Expected length for TIME_SIGNATURE event is 4");
-          read_bytes(event.m.bytes, dataStart, length);
+          byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
           return event;
         }
         case meta_event_type::KEY_SIGNATURE:
         {
           if (length != 2)
             throw std::invalid_argument("Expected length for KEY_SIGNATURE event is 2");
-          read_bytes(event.m.bytes, dataStart, length);
+          byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
           return event;
         }
         case meta_event_type::PROPRIETARY:
         {
-          read_bytes(event.m.bytes, dataStart, length);
+          byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
           return event;
         }
         case meta_event_type::CHANNEL_PREFIX:
         {
           if (length != 1)
             throw std::invalid_argument("Expected length for CHANNEL_PREFIX event is 1");
-          read_bytes(event.m.bytes, dataStart, length);
+          byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
           return event;
         }
         case meta_event_type::MIDI_PORT:
         {
           if (length != 1)
             throw std::invalid_argument("Expected length for MIDI_PORT event is 1");
-          read_bytes(event.m.bytes, dataStart, length);
+          byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
           return event;
         }
         case meta_event_type::UNKNOWN:
         default:
         {
           // Unknown events?
-          read_bytes(event.m.bytes, dataStart, length);
+          byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
           return event;
         }
       }
@@ -256,16 +340,16 @@ parseEvent(int tick, int track, const uint8_t*& dataStart, const uint8_t* dataEn
 
     else if (type == message_type::SYSTEM_EXCLUSIVE)
     {
-      int length = util_checked::read_variable_length(dataStart, dataEnd);
+      int length = byte_reader::read_variable_length(dataStart, dataEnd);
       event.m.bytes = { (uint8_t)type };
-      read_bytes(event.m.bytes, dataStart, length);
+      byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
       return event;
     }
 
     else if (type == message_type::EOX)
     {
-      int length = util_checked::read_variable_length(dataStart, dataEnd);
-      read_bytes(event.m.bytes, dataStart, length);
+      int length = byte_reader::read_variable_length(dataStart, dataEnd);
+      byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
       return event;
     }
     else
@@ -291,6 +375,8 @@ parseEvent(int tick, int track, const uint8_t*& dataStart, const uint8_t* dataEn
     else
     {
       event.m.bytes.push_back((uint8_t)type);
+
+      byte_reader::ensure_size(dataStart, dataEnd, 1);
       event.m.bytes.push_back((uint8_t)*dataStart++);
       lastEventTypeByte = type;
     }
@@ -298,15 +384,19 @@ parseEvent(int tick, int track, const uint8_t*& dataStart, const uint8_t* dataEn
     switch (message_type((uint8_t)type & 0xF0))
     {
       case message_type::NOTE_OFF:
+        byte_reader::ensure_size(dataStart, dataEnd, 1);
         event.m.bytes.push_back(*dataStart++);
         return event;
       case message_type::NOTE_ON:
+        byte_reader::ensure_size(dataStart, dataEnd, 1);
         event.m.bytes.push_back(*dataStart++);
         return event;
       case message_type::POLY_PRESSURE:
+        byte_reader::ensure_size(dataStart, dataEnd, 1);
         event.m.bytes.push_back(*dataStart++);
         return event;
       case message_type::CONTROL_CHANGE:
+        byte_reader::ensure_size(dataStart, dataEnd, 1);
         event.m.bytes.push_back(*dataStart++);
         return event;
       case message_type::PROGRAM_CHANGE:
@@ -314,6 +404,7 @@ parseEvent(int tick, int track, const uint8_t*& dataStart, const uint8_t* dataEn
       case message_type::AFTERTOUCH:
         return event;
       case message_type::PITCH_BEND:
+        byte_reader::ensure_size(dataStart, dataEnd, 1);
         event.m.bytes.push_back(*dataStart++);
         return event;
 
@@ -370,33 +461,34 @@ reader::~reader()
 }
 
 LIBREMIDI_INLINE
-void reader::parse(const uint8_t* dataPtr, std::size_t size)
+auto reader::parse(const uint8_t* dataPtr, std::size_t size) noexcept -> parse_result
+try
 {
-  using namespace libremidi;
+  using namespace libremidi::util;
 
   tracks.clear();
 
   if(size == 0)
   {
     std::cerr << "libremidi::reader: empty buffer passed to parse." << std::endl;
-    return;
+    return parse_result::invalid;
   }
 
   const uint8_t* const dataEnd = dataPtr + size;
 
-  int headerId = util_checked::read_uint32_be(dataPtr, dataEnd);
-  int headerLength = util_checked::read_uint32_be(dataPtr, dataEnd);
+  int headerId = read_checked::read_uint32_be(dataPtr, dataEnd);
+  int headerLength = read_checked::read_uint32_be(dataPtr, dataEnd);
 
   if (headerId != 'MThd' || headerLength != 6)
   {
     std::cerr << "libremidi::reader: couldn't parse header" << std::endl;
-    return;
+    return parse_result::invalid;
   }
 
-  util_checked::read_uint16_be(dataPtr, dataEnd); //@tofix format type -> save for later eventually
+  read_checked::read_uint16_be(dataPtr, dataEnd); //@tofix format type -> save for later eventually
 
-  int trackCount = util_checked::read_uint16_be(dataPtr, dataEnd);
-  int timeDivision = util_checked::read_uint16_be(dataPtr, dataEnd);
+  int trackCount = read_checked::read_uint16_be(dataPtr, dataEnd);
+  int timeDivision = read_checked::read_uint16_be(dataPtr, dataEnd);
 
   // CBB: deal with the SMPTE style time coding
   // timeDivision is described here http://www.sonicspot.com/guide/midifiles.html
@@ -406,30 +498,32 @@ void reader::parse(const uint8_t* dataPtr, std::size_t size)
     // int fps = (timeDivision >> 16) & 0x7f;
     // int ticksPerFrame = timeDivision & 0xff;
     // given beats per second, timeDivision should be derivable.
-    return;
+    return parse_result::invalid;
   }
 
   startingTempo = 120.0f;             // midi default
   ticksPerBeat = float(timeDivision); // ticks per beat (a beat is defined as a quarter note)
 
+  parse_result result = parse_result::validated;
+
   for (int i = 0; i < trackCount; ++i)
   {
     midi_track track;
 
-    headerId = util_checked::read_uint32_be(dataPtr, dataEnd);
-    headerLength = util_checked::read_uint32_be(dataPtr, dataEnd);
+    headerId = read_checked::read_uint32_be(dataPtr, dataEnd);
+    headerLength = read_checked::read_uint32_be(dataPtr, dataEnd);
 
     if (headerId != 'MTrk')
     {
       std::cerr << "libremidi::reader: couldn't find track header" << std::endl;
-      return;
+      return parse_result::incomplete;
     }
 
     int64_t available = dataEnd - dataPtr;
     if(available < headerLength)
     {
       std::cerr << "libremidi::reader: not enough data available" << std::endl;
-      return;
+      return parse_result::incomplete;
     }
 
     track.reserve(headerLength / 3);
@@ -442,8 +536,7 @@ void reader::parse(const uint8_t* dataPtr, std::size_t size)
 
     while (dataPtr < trackEnd)
     {
-      auto tick = util_checked::read_variable_length(dataPtr, trackEnd);
-
+      auto tick = read_checked::read_variable_length(dataPtr, trackEnd);
       if (useAbsoluteTicks)
       {
         tickCount += tick;
@@ -455,7 +548,7 @@ void reader::parse(const uint8_t* dataPtr, std::size_t size)
 
       try
       {
-        track_event ev = parseEvent(tickCount, i, dataPtr, trackEnd, runningEvent);
+        track_event ev = parse_event(tickCount, i, dataPtr, trackEnd, runningEvent);
 
         if(!ev.m.bytes.empty())
         {
@@ -467,7 +560,9 @@ void reader::parse(const uint8_t* dataPtr, std::size_t size)
         else
         {
           std::cerr << "libremidi::reader: could not read event" << std::endl;
-          return;
+          dataPtr = trackEnd;
+          result = parse_result::incomplete;
+          continue;
         }
 
         track.push_back(std::move(ev));
@@ -475,11 +570,27 @@ void reader::parse(const uint8_t* dataPtr, std::size_t size)
       catch (const std::exception& e)
       {
         std::cerr << "libremidi::reader: " << e.what() << std::endl;
+        dataPtr = trackEnd;
+        result = parse_result::incomplete;
+        continue;
       }
     }
 
+    if(result == parse_result::validated)
+    {
+      if(!validator::validate_track(track))
+      {
+        result = parse_result::complete;
+      }
+    }
     tracks.push_back(std::move(track));
   }
+  return result;
+}
+catch(const std::exception& e)
+{
+  std::cerr << "libremidi::reader: " << e.what() << std::endl;
+  return parse_result::invalid;
 }
 
 // In ticks
@@ -500,16 +611,16 @@ double reader::get_end_time()
 }
 
 LIBREMIDI_INLINE
-void reader::parse(const std::vector<uint8_t>& buffer)
+auto reader::parse(const std::vector<uint8_t>& buffer) noexcept -> parse_result
 {
-  parse(buffer.data(), buffer.size());
+  return parse(buffer.data(), buffer.size());
 }
 
 #if defined(LIBREMIDI_HAS_SPAN)
 LIBREMIDI_INLINE
-void reader::parse(std::span<uint8_t> buffer)
+auto reader::parse(std::span<uint8_t> buffer) noexcept -> parse_result
 {
-  parse(buffer.data(), buffer.size());
+  return parse(buffer.data(), buffer.size());
 }
 #endif
 }

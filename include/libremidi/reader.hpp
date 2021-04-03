@@ -29,16 +29,32 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace libremidi
 {
+/**
+ * @brief reads Standard MIDI files (SMF).
+ *
+ * Usage:
+
+ * ```
+ * libremidi::reader r;
+ * auto res = r.parse(midi_bytes, num_bytes);
+ * ```
+ */
 class reader
 {
 public:
-  reader(bool useAbsolute = false);
+  enum parse_result {
+    invalid,    //! Nothing could be parsed
+    incomplete, //! Some of the data could be parsed, but not all: there may be missing events / tracks
+    complete,   //! All the data could be parsed but not necessarily validated
+    validated   //! The data could be parsed and conforms to SMF rules
+  };
+  explicit reader(bool useAbsolute = false);
   ~reader();
 
-  void parse(const uint8_t* data, std::size_t size);
-  void parse(const std::vector<uint8_t>& buffer);
+  parse_result parse(const uint8_t* data, std::size_t size) noexcept;
+  parse_result parse(const std::vector<uint8_t>& buffer) noexcept;
 #if defined(LIBREMIDI_HAS_SPAN)
-  void parse(std::span<uint8_t> buffer);
+  parse_result parse(std::span<uint8_t> buffer) noexcept;
 #endif
 
   double get_end_time();
