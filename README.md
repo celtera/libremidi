@@ -43,3 +43,7 @@ this directly modernizes the RtMidi codebase with new C++ features and improveme
 * More tests and compliance checks.
 * Work even more towards this library being a zero-cost abstraction on top of native MIDI APIs.
 * Rethink some design issues with the original RtMidi, for instance the way port numbers work is not reliable.
+
+# They use this library
+
+* ![ossia.io](https://ossia.io) : libremidi is used for every MIDI operation. [Comes with a WebMIDI showcase](https://ossia.io/score-web) !
