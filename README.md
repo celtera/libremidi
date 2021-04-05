@@ -46,4 +46,4 @@ this directly modernizes the RtMidi codebase with new C++ features and improveme
 
 # They use this library
 
-* ![ossia.io](https://ossia.io) : libremidi is used for every MIDI operation. [Comes with a WebMIDI showcase](https://ossia.io/score-web) !
+* [ossia.io](https://ossia.io): libremidi is used for every MIDI operation. [Comes with a WebMIDI showcase](https://ossia.io/score-web) !
