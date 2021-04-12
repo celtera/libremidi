@@ -219,11 +219,16 @@ if(TARGET Catch2::Catch2 AND Catch2_FOUND)
 
   add_executable(midifile_read_test tests/unit/midifile_read.cpp)
   target_link_libraries(midifile_read_test PRIVATE libremidi Catch2::Catch2)
-  target_compile_definitions(midifile_read_test PRIVATE "RTMIDI_TEST_CORPUS=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus\"")
+  target_compile_definitions(midifile_read_test PRIVATE "LIBREMIDI_TEST_CORPUS=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus\"")
+
+  add_executable(midifile_write_test tests/unit/midifile_write.cpp)
+  target_link_libraries(midifile_write_test PRIVATE libremidi Catch2::Catch2)
+  target_compile_definitions(midifile_write_test PRIVATE "LIBREMIDI_TEST_CORPUS=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus\"")
 
   include(CTest)
   include(Catch)
   catch_discover_tests(midiin_test)
   catch_discover_tests(midiout_test)
   catch_discover_tests(midifile_read_test)
+  catch_discover_tests(midifile_write_test)
 endif()
