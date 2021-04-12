@@ -280,13 +280,13 @@ public:
   */
   midi_in(
       libremidi::API api = API::UNSPECIFIED,
-      std::string_view clientName = "RtMidi Input Client",
+      std::string_view clientName = "libremidi input client",
       unsigned int queueSizeLimit = 100);
 
   //! If a MIDI connection is still open, it will be closed by the destructor.
   ~midi_in();
 
-  //! Returns the MIDI API specifier for the current instance of RtMidiIn.
+  //! Returns the MIDI API specifier for the current instance of midi_in.
   libremidi::API get_current_api() const noexcept;
 
   //! Open a MIDI input connection given by enumeration number.
@@ -435,14 +435,14 @@ public:
   */
   midi_out(libremidi::API api, std::string_view clientName);
 
-  midi_out() : midi_out{libremidi::API::UNSPECIFIED, "RtMidi client"}
+  midi_out() : midi_out{libremidi::API::UNSPECIFIED, "libremidi client"}
   {
   }
 
   //! The destructor closes any open MIDI connections.
   ~midi_out();
 
-  //! Returns the MIDI API specifier for the current instance of RtMidiOut.
+  //! Returns the MIDI API specifier for the current instance of midi_out.
   libremidi::API get_current_api() noexcept;
 
   //! Open a MIDI output connection.
