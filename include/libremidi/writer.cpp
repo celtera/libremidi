@@ -26,7 +26,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #if !defined(LIBREMIDI_HEADER_ONLY)
 #  include <libremidi/writer.hpp>
 #endif
-#include <iostream>
+#include <ostream>
+#include <numeric>
 namespace libremidi
 {
 namespace util
@@ -155,24 +156,10 @@ void write_variable_length(uint32_t aValue, std::vector<uint8_t>& outdata)
 }
 
 LIBREMIDI_INLINE
-writer::writer(int ticks) : ticksPerQuarterNote{ticks}
-{
-}
-
-LIBREMIDI_INLINE
-writer::~writer() = default;
-
-LIBREMIDI_INLINE
-void writer::add_track()
-{
-  tracks.emplace_back(midi_track());
-}
-
-LIBREMIDI_INLINE
 void writer::add_event(int tick, int track, message m)
 {
   if (track > tracks.size())
-    throw std::out_of_range("track idx exceeds availble tracks");
+    throw std::out_of_range("track idx exceeds available tracks");
 
   tracks[track].push_back({tick, track, m});
 }
@@ -181,7 +168,7 @@ LIBREMIDI_INLINE
 void writer::add_event(int track, track_event m)
 {
   if (track > tracks.size())
-    throw std::out_of_range("track idx exceeds availble tracks");
+    throw std::out_of_range("track idx exceeds available tracks");
 
   tracks[track].push_back(m);
 }
@@ -195,11 +182,14 @@ void writer::write(std::ostream& out)
   out << 'h';
   out << 'd';
   util::write_uint32_be(out, 6);
-  util::write_uint16_be(out, (get_num_tracks() == 1) ? 0 : 1);
-  util::write_uint16_be(out, static_cast<uint16_t>(get_num_tracks()));
+  util::write_uint16_be(out, (tracks.size() == 1) ? 0 : 1);
+  util::write_uint16_be(out, static_cast<uint16_t>(tracks.size()));
   util::write_uint16_be(out, ticksPerQuarterNote);
 
   std::vector<uint8_t> trackRawData;
+  // Rough estimation of the memory to allocate
+  const int num_events = std::accumulate(tracks.begin(), tracks.end(), 0, [] (int lhs, const auto& rhs) { return lhs + rhs.size(); });
+  trackRawData.reserve(num_events * 3);
 
   for (const auto& event_list : tracks)
   {

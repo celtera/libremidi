@@ -10,7 +10,7 @@ TEST_CASE("read valid files from corpus", "[midi_reader]" )
   std::vector<uint8_t> bytes;
   constexpr const auto recursive = std::filesystem::directory_options::follow_directory_symlink;
 
-  std::filesystem::path folder = RTMIDI_TEST_CORPUS;
+  std::filesystem::path folder = LIBREMIDI_TEST_CORPUS;
   folder /= "Valid";
 
   const auto valid_midi_files = recursive_directory_iterator(folder, recursive);
@@ -42,7 +42,7 @@ TEST_CASE("read invalid files from corpus", "[midi_reader]" )
   std::vector<uint8_t> bytes;
   constexpr const auto recursive = std::filesystem::directory_options::follow_directory_symlink;
 
-  std::filesystem::path folder = RTMIDI_TEST_CORPUS;
+  std::filesystem::path folder = LIBREMIDI_TEST_CORPUS;
   folder /= "Invalid";
 
   const auto valid_midi_files = recursive_directory_iterator(folder, recursive);

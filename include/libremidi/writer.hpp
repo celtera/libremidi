@@ -30,16 +30,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace libremidi
 {
-class writer
+struct writer
 {
 public:
-  writer(int ticks);
-  ~writer();
-
-  size_t get_num_tracks()
-  {
-    return tracks.size();
-  }
+  int ticksPerQuarterNote{120};
+  std::vector<midi_track> tracks;
 
   void add_event(int tick, int track, message m);
   void add_event(int track, track_event m);
@@ -47,15 +42,6 @@ public:
   void add_track();
 
   void write(std::ostream& out);
-
-  const std::vector<midi_track>& get_tracks()
-  {
-    return tracks;
-  }
-
-private:
-  std::vector<midi_track> tracks;
-  const int ticksPerQuarterNote = 120;
 };
 }
 
