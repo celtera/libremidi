@@ -211,6 +211,9 @@ find_package(Catch2)
 if(TARGET Catch2::Catch2 AND Catch2_FOUND)
   target_compile_features(libremidi PUBLIC cxx_std_20)
 
+  add_executable(midiin_test tests/unit/midi_in.cpp)
+  target_link_libraries(midiin_test PRIVATE libremidi Catch2::Catch2)
+
   add_executable(midiout_test tests/unit/midi_out.cpp)
   target_link_libraries(midiout_test PRIVATE libremidi Catch2::Catch2)
 
@@ -220,6 +223,7 @@ if(TARGET Catch2::Catch2 AND Catch2_FOUND)
 
   include(CTest)
   include(Catch)
+  catch_discover_tests(midiin_test)
   catch_discover_tests(midiout_test)
   catch_discover_tests(midifile_read_test)
 endif()
