@@ -205,7 +205,9 @@ void writer::write(std::ostream& out)
   {
     for (const auto& event : event_list)
     {
-      const auto msg = event.m;
+      const auto& msg = event.m;
+      if(msg.bytes.empty())
+        continue;
 
       // Suppress end-of-track meta messages (one will be added
       // automatically after all track data has been written).
@@ -233,7 +235,6 @@ void writer::write(std::ostream& out)
           trackRawData.emplace_back(msg[static_cast<int>(k)]);
         }
       }
-
       else
       {
         // Non-sysex type of message, so just output the bytes of the message:
