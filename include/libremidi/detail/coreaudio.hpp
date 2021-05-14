@@ -1,5 +1,4 @@
 #pragma once
-#include <CoreAudio/HostTime.h>
 #include <CoreMIDI/CoreMIDI.h>
 #include <CoreServices/CoreServices.h>
 #include <cmath>
@@ -7,12 +6,37 @@
 #include <libremidi/libremidi.hpp>
 
 #if TARGET_OS_IPHONE
-#  define AudioGetCurrentHostTime CAHostTimeBase::GetCurrentTime
-#  define AudioConvertHostTimeToNanos CAHostTimeBase::ConvertToNanos
+#include <CoreAudio/CoreAudioTypes.h>
+#include <mach/mach_time.h>
+#define AudioGetCurrentHostTime mach_absolute_time
+#else
+#include <CoreAudio/HostTime.h>
 #endif
 
 namespace libremidi
 {
+#if TARGET_OS_IPHONE
+namespace {
+inline uint64_t AudioConvertHostTimeToNanos(uint64_t hostTime)
+{
+    static const struct mach_timebase_info timebase = [] {
+        struct mach_timebase_info theTimeBaseInfo;
+        mach_timebase_info(&theTimeBaseInfo);
+        return theTimeBaseInfo;
+    }();
+    const auto numer = timebase.numer;
+    const auto denom = timebase.denom;
+
+    __uint128_t res = hostTime;
+    if(numer != denom)
+    {
+      res *= numer;
+      res /= denom;
+    }
+    return static_cast<uint64_t>(res);
+}
+}
+#endif
 // This function was submitted by Douglas Casey Tucker and apparently
 // derived largely from PortMidi.
 inline CFStringRef EndpointName(MIDIEndpointRef endpoint, bool isExternal)
@@ -118,7 +142,7 @@ inline CFStringRef ConnectedEndpointName(MIDIEndpointRef endpoint)
       const SInt32* pid = (const SInt32*)(CFDataGetBytePtr(connections));
       for (i = 0; i < nConnected; ++i, ++pid)
       {
-        MIDIUniqueID id = EndianS32_BtoN(*pid);
+        MIDIUniqueID id = CFSwapInt32BigToHost(*pid);
         MIDIObjectRef connObject;
         MIDIObjectType connObjectType;
         err = MIDIObjectFindByUniqueID(id, &connObject, &connObjectType);
@@ -786,3 +810,6 @@ struct core_backend
   static const constexpr auto API = libremidi::API::MACOSX_CORE;
 };
 }
+#if TARGET_OS_IPHONE
+#undef AudioGetCurrentHostTime
+#endif
