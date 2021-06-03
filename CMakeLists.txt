@@ -207,7 +207,7 @@ if(LIBREMIDI_EXAMPLES)
   endif()
 endif()
 
-find_package(Catch2)
+find_package(Catch2 QUIET)
 if(TARGET Catch2::Catch2 AND Catch2_FOUND)
   target_compile_features(libremidi PUBLIC cxx_std_20)
 
