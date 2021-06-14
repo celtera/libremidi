@@ -5,22 +5,30 @@ The library can be used header-only, with minimal modifications to your build sy
 * Define LIBREMIDI_HEADER_ONLY=1
 * Define macros for the APIs you wish to build. The possible macros are as follows: 
 
-  * macOS: `LIBREMIDI_COREAUDIO=1` and linkg against `-framework CoreMIDI -framework CoreAudio -framework CoreFoundation`z
-  * Linux: `LIBREMIDI_ALSA=1` and link against `-lasound -phtread`
-  * Windows (WinMM): `LIBREMIDI_WINMM=1` and link against `winmm`
+  * macOS: `LIBREMIDI_COREAUDIO=1` and linkg against `-framework CoreMIDI -framework CoreAudio -framework CoreFoundation`.
+  * Linux: `LIBREMIDI_ALSA=1` and link against `-lasound -phtread`.
+  * Windows (WinMM): `LIBREMIDI_WINMM=1` and link against `winmm`.
   * Windows (UWP): `LIBREMIDI_WINUWP=1` ; note that there is complex linking logic detailed in the CMakeLists.txt when using UWP.
-  * emscripten: `LIBREMIDI_EMSCRIPTEN=1`
-  * Any platform with JACK: `LIBREMIDI_JACK=1`
+  * emscripten: `LIBREMIDI_EMSCRIPTEN=1`.
+  * Any platform with JACK: `LIBREMIDI_JACK=1`.
 
 * Add the `include` folder to your include path.
 * `#include <libremidi/libremidi.hpp>` in your source code.
 
-For instance, to build the `midiprobe` example on Linux with only JACK support, one would run :
+For instance, to build the `midiprobe` example on Linux with only ALSA support, one would run:
 
-    
     $ g++ ~/libremidi/tests/midiprobe.cpp \
           -std=c++17 \
           -DLIBREMIDI_ALSA=1 \
           -DLIBREMIDI_HEADER_ONLY=1 \
           -I ~/libremidi/include \
           -lasound -pthread
+
+To build it on macOS, one would run:
+
+    $ clang++ ~/libremidi/tests/midiprobe.cpp \
+          -std=c++17 \
+          -DLIBREMIDI_COREAUDIO=1 \
+          -DLIBREMIDI_HEADER_ONLY=1 \
+          -I ~/libremidi/include \
+          -framework CoreMIDI -framework CoreAudio -framework CoreFoundation
