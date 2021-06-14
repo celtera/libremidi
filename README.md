@@ -13,10 +13,7 @@ This is a fork based on two libraries:
 Instead of adding another abstraction layer like ModernMIDI does, 
 this directly modernizes the RtMidi codebase with new C++ features and improvements: 
 
-* The library can be used header-only:
-  * Define `LIBREMIDI_HEADER_ONLY=1`.
-  * Add the `include` folder to your include path.
-  * `#include <libremidi/libremidi.hpp>`
+* The library can be used header-only, [as explained in the docs](docs/header-only.md)
 
 * Callbacks are passed by `std::function` and generally simplified.
 * Ability to use `boost::small_vector` to pass midi bytes instead of `std::vector` to reduce allocations.
