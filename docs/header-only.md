@@ -2,10 +2,10 @@
 
 The library can be used header-only, with minimal modifications to your build system if you aren't using CMake:
 
-* Define LIBREMIDI_HEADER_ONLY=1
+* Define `LIBREMIDI_HEADER_ONLY=1`
 * Define macros for the APIs you wish to build. The possible macros are as follows: 
 
-  * macOS: `LIBREMIDI_COREAUDIO=1` and linkg against `-framework CoreMIDI -framework CoreAudio -framework CoreFoundation`.
+  * macOS: `LIBREMIDI_COREAUDIO=1` and link against `-framework CoreMIDI -framework CoreAudio -framework CoreFoundation`.
   * Linux: `LIBREMIDI_ALSA=1` and link against `-lasound -phtread`.
   * Windows (WinMM): `LIBREMIDI_WINMM=1` and link against `winmm`.
   * Windows (UWP): `LIBREMIDI_WINUWP=1` ; note that there is complex linking logic detailed in the CMakeLists.txt when using UWP.
