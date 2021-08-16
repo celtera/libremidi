@@ -61,6 +61,7 @@ public:
 
   float ticksPerBeat{}; // precision (number of ticks distinguishable per second)
   float startingTempo{};
+  int format{};
 
   std::vector<midi_track> tracks;
 

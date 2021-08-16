@@ -485,7 +485,7 @@ try
     return parse_result::invalid;
   }
 
-  read_checked::read_uint16_be(dataPtr, dataEnd); //@tofix format type -> save for later eventually
+  format = read_checked::read_uint16_be(dataPtr, dataEnd); //@tofix format type -> save for later eventually
 
   int trackCount = read_checked::read_uint16_be(dataPtr, dataEnd);
   int timeDivision = read_checked::read_uint16_be(dataPtr, dataEnd);
