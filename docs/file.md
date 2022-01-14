@@ -4,7 +4,7 @@
 
 See `midifile_dump.cpp` for a more complete example.
 
-```
+```C++
 // Read raw from a MIDI file
 std::ifstream file{"path/to/a.mid, std::ios::binary};
 
@@ -29,7 +29,7 @@ if(result != libremidi::reader::invalid) {
 
 ## Writing a .mid file
 
-```
+```C++
 // Initialize a writer object
 libremidi::writer writer;
 
