@@ -32,7 +32,7 @@ namespace libremidi
 {
 namespace util
 {
-LIBREMIDI_INLINE
+static LIBREMIDI_INLINE
 std::ostream& write_uint16_be(std::ostream& out, uint16_t value)
 {
   union
@@ -46,7 +46,7 @@ std::ostream& write_uint16_be(std::ostream& out, uint16_t value)
   return out;
 }
 
-LIBREMIDI_INLINE
+static LIBREMIDI_INLINE
 std::ostream& write_int16_be(std::ostream& out, int16_t value)
 {
   union
@@ -60,7 +60,7 @@ std::ostream& write_int16_be(std::ostream& out, int16_t value)
   return out;
 }
 
-LIBREMIDI_INLINE
+static LIBREMIDI_INLINE
 std::ostream& write_uint32_be(std::ostream& out, uint32_t value)
 {
   union
@@ -76,7 +76,7 @@ std::ostream& write_uint32_be(std::ostream& out, uint32_t value)
   return out;
 }
 
-LIBREMIDI_INLINE
+static LIBREMIDI_INLINE
 std::ostream& write_int32_be(std::ostream& out, int32_t value)
 {
   union
@@ -92,7 +92,7 @@ std::ostream& write_int32_be(std::ostream& out, int32_t value)
   return out;
 }
 
-LIBREMIDI_INLINE
+static LIBREMIDI_INLINE
 std::ostream& write_float_be(std::ostream& out, float value)
 {
   union
@@ -108,7 +108,7 @@ std::ostream& write_float_be(std::ostream& out, float value)
   return out;
 }
 
-LIBREMIDI_INLINE
+static LIBREMIDI_INLINE
 std::ostream& write_double_be(std::ostream& out, double value)
 {
   union
@@ -131,7 +131,7 @@ std::ostream& write_double_be(std::ostream& out, double value)
 // Write a number to the midifile
 // as a variable length value which segments a file into 7-bit
 // values.  Maximum size of aValue is 0x7fffffff
-LIBREMIDI_INLINE
+static LIBREMIDI_INLINE
 void write_variable_length(uint32_t aValue, std::vector<uint8_t>& outdata)
 {
   uint8_t bytes[5] = {0};
@@ -153,13 +153,24 @@ void write_variable_length(uint32_t aValue, std::vector<uint8_t>& outdata)
   }
   outdata.push_back(bytes[4]);
 }
+
+static LIBREMIDI_INLINE
+void add_event_track_count_check(std::vector<midi_track>& tracks, int track)
+{
+  if(track < 0)
+    throw std::out_of_range("Refusing to add an event to track " + std::to_string(track) + ".");
+  if(track > 65535)
+    throw std::out_of_range("Refusing to add an event to track " + std::to_string(track) + " ; change add_event_track_count_check in libremidi writer.cpp to increase the limit.");
+
+  while(tracks.size() < track + 1)
+    tracks.push_back({});
+}
 }
 
 LIBREMIDI_INLINE
 void writer::add_event(int tick, int track, message m)
 {
-  if (track > tracks.size())
-    throw std::out_of_range("track idx exceeds available tracks");
+  util::add_event_track_count_check(tracks, track);
 
   tracks[track].push_back({tick, track, m});
 }
@@ -167,11 +178,17 @@ void writer::add_event(int tick, int track, message m)
 LIBREMIDI_INLINE
 void writer::add_event(int track, track_event m)
 {
-  if (track > tracks.size())
-    throw std::out_of_range("track idx exceeds available tracks");
-
+  util::add_event_track_count_check(tracks, track);
+    
   tracks[track].push_back(m);
 }
+
+LIBREMIDI_INLINE
+void writer::add_track()
+{
+  util::add_event_track_count_check(tracks, tracks.size() + 1);
+}
+
 
 LIBREMIDI_INLINE
 void writer::write(std::ostream& out)

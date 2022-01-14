@@ -28,3 +28,30 @@ if(result != libremidi::reader::invalid) {
 ```
 
 ## Writing a .mid file
+
+```
+// Initialize a writer object
+libremidi::writer writer;
+
+// Create tracks and events declaratively by changing the track vector directly:
+writer.tracks.push_back(
+  libremidi::midi_track{
+    libremidi::track_event{0, 0, libremidi::message::note_on(1, 45, 35)},
+    libremidi::track_event{140, 0, libremidi::message::note_off(1, 45, 0)},
+  }
+);
+
+// Or through a builder API:
+{
+  int tick = 500;
+  int track = 3;
+  libremidi::message msg = libremidi::message::note_on(1, 45, 35);
+
+  // Tracks will be added as needed within safe limits
+  writer.add_event(tick, track, msg);
+}
+
+// Read raw from a MIDI file
+std::ofstream output{"output.mid", std::ios::binary};
+writer.write(output);
+```

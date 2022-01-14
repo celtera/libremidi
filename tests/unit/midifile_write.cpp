@@ -44,3 +44,27 @@ TEST_CASE("write a track with a note", "[midi_writer]" )
   std::ofstream empty;
   writer.write(empty);
 }
+
+TEST_CASE("adding tracks", "[midi_writer]" )
+{
+  libremidi::writer writer;
+  writer.add_track();
+  writer.add_track();
+  writer.add_track();
+}
+
+TEST_CASE("adding events in tracks", "[midi_writer]" )
+{
+  libremidi::writer writer;
+  writer.add_event(4, {});
+  writer.add_event(2, {});
+  writer.add_event(7, {});
+  writer.add_event(500, {});
+}
+
+TEST_CASE("adding events in invalid tracks", "[midi_writer]" )
+{
+  libremidi::writer writer;
+  REQUIRE_THROWS(writer.add_event(-1, {}));
+  REQUIRE_THROWS(writer.add_event(500000, {}));
+}
