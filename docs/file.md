@@ -6,7 +6,7 @@ See `midifile_dump.cpp` for a more complete example.
 
 ```C++
 // Read raw from a MIDI file
-std::ifstream file{"path/to/a.mid, std::ios::binary};
+std::ifstream file{"path/to/a.mid", std::ios::binary};
 
 std::vector<uint8_t> bytes;
 bytes.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
