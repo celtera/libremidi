@@ -28,6 +28,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 #include <ostream>
 #include <numeric>
+#include <string>
+
 namespace libremidi
 {
 namespace util
