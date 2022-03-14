@@ -55,7 +55,7 @@ try
   signal(SIGINT, [](int) { done = true; });
 
   // Periodically check input queue.
-  std::cout << "Reading MIDI from port " << midiin.get_port_name() << " ... quit with Ctrl-C.\n";
+  std::cout << "Reading MIDI from port " << midiin.get_port_name(port) << " ... quit with Ctrl-C.\n";
   while (!done)
   {
     auto msg = midiin.get_message();
