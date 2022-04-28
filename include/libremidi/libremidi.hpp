@@ -307,8 +307,6 @@ public:
     leaving some messages in the queue.
 
     \param callback A callback function must be given.
-    \param userData Optionally, a pointer to additional data can be
-                    passed to the callback function whenever it is called.
   */
   void set_callback(message_callback callback);
 
