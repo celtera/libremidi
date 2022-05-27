@@ -479,7 +479,7 @@ try
   int headerId = read_checked::read_uint32_be(dataPtr, dataEnd);
   int headerLength = read_checked::read_uint32_be(dataPtr, dataEnd);
 
-  if (headerId != 'MThd' || headerLength != 6)
+  if (headerId != ENCODE_INT("MThd") || headerLength != 6)
   {
     std::cerr << "libremidi::reader: couldn't parse header" << std::endl;
     return parse_result::invalid;
@@ -513,7 +513,7 @@ try
     headerId = read_checked::read_uint32_be(dataPtr, dataEnd);
     headerLength = read_checked::read_uint32_be(dataPtr, dataEnd);
 
-    if (headerId != 'MTrk')
+    if (headerId != ENCODE_INT("MTrk"))
     {
       std::cerr << "libremidi::reader: couldn't find track header" << std::endl;
       return parse_result::incomplete;

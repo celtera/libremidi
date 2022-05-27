@@ -27,6 +27,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <libremidi/libremidi.hpp>
 
+#define ENCODE_INT(chars) ((chars[0] << 24) | (chars[1] << 16) | (chars[2] << 8) | (chars[3]))
+
 namespace libremidi
 {
 /**
