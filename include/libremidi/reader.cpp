@@ -460,6 +460,11 @@ reader::~reader()
 {
 }
 
+constexpr int str_to_headerid(const char *str)
+{
+  return str[0] << 24 | str[1] << 16 | str[2] << 8 | str[3];
+}
+
 LIBREMIDI_INLINE
 auto reader::parse(const uint8_t* dataPtr, std::size_t size) noexcept -> parse_result
 try
@@ -479,7 +484,7 @@ try
   int headerId = read_checked::read_uint32_be(dataPtr, dataEnd);
   int headerLength = read_checked::read_uint32_be(dataPtr, dataEnd);
 
-  if (headerId != ENCODE_INT("MThd") || headerLength != 6)
+  if (headerId != str_to_headerid("MThd") || headerLength != 6)
   {
     std::cerr << "libremidi::reader: couldn't parse header" << std::endl;
     return parse_result::invalid;
@@ -513,7 +518,7 @@ try
     headerId = read_checked::read_uint32_be(dataPtr, dataEnd);
     headerLength = read_checked::read_uint32_be(dataPtr, dataEnd);
 
-    if (headerId != ENCODE_INT("MTrk"))
+    if (headerId != str_to_headerid("MTrk"))
     {
       std::cerr << "libremidi::reader: couldn't find track header" << std::endl;
       return parse_result::incomplete;
