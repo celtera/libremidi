@@ -61,6 +61,15 @@ struct midi_stream_decoder
       // TODO special message
       return sz;
     }
+    else if(((uint8_t)bytes[0] & 0xF8 ) == 0xF8)
+    {
+      // Clk messages
+      msg.bytes.reserve( 1 );
+      msg.bytes.push_back( *bytes++ );
+      runningStatusType_ = msg.bytes[0];
+
+      return 1;
+    }    
     else
     {
       if (sz <= 1)
