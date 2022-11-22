@@ -212,6 +212,11 @@ class midi_out_api : public midi_api
 {
 public:
   virtual void send_message(const unsigned char* message, size_t size) = 0;
+  virtual void send_message(int64_t ts, const unsigned char* message, size_t size)
+  {
+    // Most APIs do not support timestamps so we revert back to the default case
+    send_message(message, size);
+  }
 
   void set_chunking_parameters(std::optional<chunking_parameters> parameters)
   {

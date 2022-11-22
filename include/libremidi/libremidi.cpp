@@ -299,7 +299,7 @@ void midi_out::send_message(const std::vector<unsigned char>& message)
 LIBREMIDI_INLINE
 void midi_out::send_message(const libremidi::message& message)
 {
-  send_message(message.bytes.data(), message.bytes.size());
+  send_message(message.timestamp, message.bytes.data(), message.bytes.size());
 }
 
 #if LIBREMIDI_HAS_SPAN
@@ -314,6 +314,26 @@ LIBREMIDI_INLINE
 void midi_out::send_message(const unsigned char* message, size_t size)
 {
   (static_cast<midi_out_api*>(rtapi_.get()))->send_message(message, size);
+}
+
+LIBREMIDI_INLINE
+void midi_out::send_message(int64_t ts, const std::vector<unsigned char>& message)
+{
+  send_message(ts, message.data(), message.size());
+}
+
+#if LIBREMIDI_HAS_SPAN
+LIBREMIDI_INLINE
+void midi_out::send_message(int64_t ts, std::span<unsigned char> message)
+{
+  send_message(ts, message.data(), message.size());
+}
+
+#endif
+LIBREMIDI_INLINE
+void midi_out::send_message(int64_t ts, const unsigned char* message, size_t size)
+{
+  (static_cast<midi_out_api*>(rtapi_.get()))->send_message(ts, message, size);
 }
 
 LIBREMIDI_INLINE

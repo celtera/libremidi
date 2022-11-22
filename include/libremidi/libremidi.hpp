@@ -481,6 +481,9 @@ public:
   */
   void send_message(const std::vector<unsigned char>& message);
 
+  //! Variant which takes a timestamp in samples, for hosts which support it
+  void send_message(int64_t timestamp, const std::vector<unsigned char>& message);
+
   void send_message(const libremidi::message& message);
 
   //! Immediately send a single message out an open MIDI output port.
@@ -492,9 +495,11 @@ public:
       \param size    Length of the MIDI message in bytes
   */
   void send_message(const unsigned char* message, size_t size);
+  void send_message(int64_t timestamp, const unsigned char* message, size_t size);
 
   #if LIBREMIDI_HAS_SPAN
   void send_message(std::span<unsigned char>);
+  void send_message(int64_t timestamp, std::span<unsigned char>);
   #endif
 
   //! Set an error callback function to be invoked when an error has occured.

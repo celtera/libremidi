@@ -29,6 +29,7 @@ struct jack_data
   jack_port_t* port{};
   jack_ringbuffer_t* buffSize{};
   jack_ringbuffer_t* buffMessage{};
+  jack_ringbuffer_t* buffTimestamp{};
   jack_time_t lastTime{};
 
   libremidi::semaphore sem_cleanup;
@@ -317,6 +318,7 @@ public:
     // Cleanup
     jack_ringbuffer_free(data.buffSize);
     jack_ringbuffer_free(data.buffMessage);
+    jack_ringbuffer_free(data.buffTimestamp);
     if (data.client)
     {
       jack_client_close(data.client);
@@ -448,12 +450,19 @@ public:
 
   void send_message(const unsigned char* message, size_t size) override
   {
+    this->send_message(0, message, size);
+  }
+
+  void send_message(int64_t ts, const unsigned char* message, size_t size) override
+  {
     int nBytes = static_cast<int>(size);
 
     // Write full message to buffer
     jack_ringbuffer_write(data.buffMessage, (const char*)message, nBytes);
+    jack_ringbuffer_write(data.buffTimestamp, (const char*)&ts, sizeof(ts));
     jack_ringbuffer_write(data.buffSize, (char*)&nBytes, sizeof(nBytes));
   }
+
 
 private:
   std::string clientName;
@@ -466,6 +475,7 @@ private:
     // Initialize output ringbuffers
     data.buffSize = jack_ringbuffer_create(jack_data::ringbuffer_size);
     data.buffMessage = jack_ringbuffer_create(jack_data::ringbuffer_size);
+    data.buffTimestamp = jack_ringbuffer_create(jack_data::ringbuffer_size);
 
     // Initialize JACK client
     data.client = jack_client_open(clientName.c_str(), JackNoStartServer, nullptr);
@@ -494,7 +504,9 @@ private:
     {
       int space{};
       jack_ringbuffer_read(data.buffSize, (char*)&space, sizeof(int));
-      auto midiData = jack_midi_event_reserve(buff, 0, space);
+      int64_t ts{};
+      jack_ringbuffer_read(data.buffTimestamp, (char*)&ts, sizeof(int64_t));
+      auto midiData = jack_midi_event_reserve(buff, ts, space);
 
       jack_ringbuffer_read(data.buffMessage, (char*)midiData, space);
     }
