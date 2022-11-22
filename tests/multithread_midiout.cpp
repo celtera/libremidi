@@ -2,7 +2,9 @@
 #include <thread>
 #include <vector>
 #include <mutex>
+#include <stop_token>
 #include <deque>
+
 /**
  * @file multithread_midiout.cpp
  *
