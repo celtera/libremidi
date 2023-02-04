@@ -1,10 +1,9 @@
-#define CATCH_CONFIG_MAIN
-#include <catch2/catch.hpp>
-#include <libremidi/reader.hpp>
+#include "include_catch.hpp"
 
 #include <filesystem>
+#include <libremidi/reader.hpp>
 
-TEST_CASE("read valid files from corpus", "[midi_reader]" )
+TEST_CASE("read valid files from corpus", "[midi_reader]")
 {
   using recursive_directory_iterator = std::filesystem::recursive_directory_iterator;
   std::vector<uint8_t> bytes;
@@ -17,9 +16,9 @@ TEST_CASE("read valid files from corpus", "[midi_reader]" )
   for (const auto& dirEntry : valid_midi_files)
   {
     std::cout << dirEntry << std::endl;
-    if(dirEntry.is_regular_file())
+    if (dirEntry.is_regular_file())
     {
-      if(dirEntry.path().extension() == ".mid")
+      if (dirEntry.path().extension() == ".mid")
       {
         bytes.clear();
 
@@ -36,7 +35,7 @@ TEST_CASE("read valid files from corpus", "[midi_reader]" )
   }
 }
 
-TEST_CASE("read invalid files from corpus", "[midi_reader]" )
+TEST_CASE("read invalid files from corpus", "[midi_reader]")
 {
   using recursive_directory_iterator = std::filesystem::recursive_directory_iterator;
   std::vector<uint8_t> bytes;
@@ -49,9 +48,9 @@ TEST_CASE("read invalid files from corpus", "[midi_reader]" )
   for (const auto& dirEntry : valid_midi_files)
   {
     std::cout << dirEntry << std::endl;
-    if(dirEntry.is_regular_file())
+    if (dirEntry.is_regular_file())
     {
-      if(dirEntry.path().extension() == ".mid")
+      if (dirEntry.path().extension() == ".mid")
       {
         bytes.clear();
 

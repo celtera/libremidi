@@ -1,9 +1,9 @@
-#define CATCH_CONFIG_MAIN
-#include <catch2/catch.hpp>
+#include "include_catch.hpp"
+
 #include <libremidi/libremidi.hpp>
 
 #if defined(LIBREMIDI_JACK)
-#include <jack/jack.h>
+#  include <jack/jack.h>
 TEST_CASE("poly aftertouch", "[midi_in]")
 {
   libremidi::midi_out midi_out{libremidi::API::UNIX_JACK, "libremidi-test-out"};
@@ -17,9 +17,10 @@ TEST_CASE("poly aftertouch", "[midi_in]")
   auto jack_client = jack_client_open("libremidi-tester", opt, &status);
   jack_activate(jack_client);
 
-  jack_connect(jack_client, "libremidi-test-out:libremidi Output", "libremidi-test:libremidi Input");
+  jack_connect(
+      jack_client, "libremidi-test-out:libremidi Output", "libremidi-test:libremidi Input");
 
-  while(!midi.get_message().bytes.empty())
+  while (!midi.get_message().bytes.empty())
     ;
 
   midi_out.send_message(libremidi::message::poly_pressure(0, 60, 100));
