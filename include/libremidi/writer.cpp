@@ -205,13 +205,12 @@ void writer::write(std::ostream& out)
   util::write_uint16_be(out, static_cast<uint16_t>(tracks.size()));
   util::write_uint16_be(out, ticksPerQuarterNote);
 
-  std::vector<uint8_t> trackRawData;
-  // Rough estimation of the memory to allocate
-  const int num_events = std::accumulate(tracks.begin(), tracks.end(), 0, [] (int lhs, const auto& rhs) { return lhs + rhs.size(); });
-  trackRawData.reserve(num_events * 3);
-
   for (const auto& event_list : tracks)
   {
+    std::vector<uint8_t> trackRawData;
+    // Rough estimation of the memory to allocate
+    trackRawData.reserve(event_list.size() * 3);
+
     for (const auto& event : event_list)
     {
       const auto& msg = event.m;
@@ -253,25 +252,25 @@ void writer::write(std::ostream& out)
         }
       }
     }
+
+    auto size = trackRawData.size();
+    const auto eot = meta_events::end_of_track();
+
+    if ((size < 3) || !((trackRawData[size - 3] == 0xFF) && (trackRawData[size - 2] == 0x2F)))
+    {
+      trackRawData.emplace_back(0x0); // tick
+      trackRawData.emplace_back(eot[0]);
+      trackRawData.emplace_back(eot[1]);
+      trackRawData.emplace_back(eot[2]);
+    }
+
+    // Write the track ID marker "MTrk":
+    out << 'M';
+    out << 'T';
+    out << 'r';
+    out << 'k';
+    util::write_uint32_be(out, static_cast<uint32_t>(trackRawData.size()));
+    out.write((char*)trackRawData.data(), trackRawData.size());
   }
-
-  auto size = trackRawData.size();
-  const auto eot = meta_events::end_of_track();
-
-  if ((size < 3) || !((trackRawData[size - 3] == 0xFF) && (trackRawData[size - 2] == 0x2F)))
-  {
-    trackRawData.emplace_back(0x0); // tick
-    trackRawData.emplace_back(eot[0]);
-    trackRawData.emplace_back(eot[1]);
-    trackRawData.emplace_back(eot[2]);
-  }
-
-  // Write the track ID marker "MTrk":
-  out << 'M';
-  out << 'T';
-  out << 'r';
-  out << 'k';
-  util::write_uint32_be(out, static_cast<uint32_t>(trackRawData.size()));
-  out.write((char*)trackRawData.data(), trackRawData.size());
 }
 }
