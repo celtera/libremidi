@@ -1,4 +1,4 @@
-#include "include_catch.hpp"
+#include "../include_catch.hpp"
 
 #include <filesystem>
 #include <libremidi/reader.hpp>
