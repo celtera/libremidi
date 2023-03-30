@@ -30,7 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace libremidi
 {
-struct writer
+struct LIBREMIDI_EXPORT writer
 {
 public:
   int ticksPerQuarterNote{120};

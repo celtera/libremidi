@@ -77,18 +77,6 @@
 #include <span>
 #endif
 
-#if defined(LIBREMIDI_EXPORTS)
-#  if defined(_MSC_VER)
-#    define LIBREMIDI_EXPORT __declspec(dllexport)
-#  elif defined(__GNUC__) || defined(__clang__)
-#    define LIBREMIDI_EXPORT __attribute__((visibility("default")))
-#  endif
-#else
-#  define LIBREMIDI_EXPORT
-#endif
-
-#define LIBREMIDI_VERSION "1.0.0"
-
 namespace libremidi
 {
 //! Defines various error types.

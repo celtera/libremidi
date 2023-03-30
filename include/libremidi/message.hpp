@@ -9,6 +9,18 @@
 #include <stdexcept>
 #include <vector>
 
+#if defined(LIBREMIDI_EXPORTS)
+#  if defined(_MSC_VER)
+#    define LIBREMIDI_EXPORT __declspec(dllexport)
+#  elif defined(__GNUC__) || defined(__clang__)
+#    define LIBREMIDI_EXPORT __attribute__((visibility("default")))
+#  endif
+#else
+#  define LIBREMIDI_EXPORT
+#endif
+
+#define LIBREMIDI_VERSION "1.0.0"
+
 #if __has_include(<boost/container/small_vector.hpp>) && !defined(LIBREMIDI_NO_BOOST)
 #  include <boost/container/small_vector.hpp>
 namespace libremidi

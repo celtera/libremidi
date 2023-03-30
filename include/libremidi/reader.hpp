@@ -39,7 +39,7 @@ namespace libremidi
  * auto res = r.parse(midi_bytes, num_bytes);
  * ```
  */
-class reader
+class LIBREMIDI_EXPORT reader
 {
 public:
   enum parse_result {
