@@ -20,6 +20,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if(LIBREMIDI_HEADER_ONLY)
   add_library(libremidi INTERFACE)
   set(_public INTERFACE)
+  set(_private INTERFACE)
   target_compile_definitions(libremidi ${_public} LIBREMIDI_HEADER_ONLY)
 else()
   add_library(libremidi
@@ -46,10 +47,11 @@ else()
     include/libremidi/writer.cpp
   )
   set(_public PUBLIC)
+  set(_private PRIVATE)
 endif()
 
 if(NOT LIBREMIDI_NO_EXPORTS)
-  target_compile_definitions(libremidi PRIVATE LIBREMIDI_EXPORTS)
+  target_compile_definitions(libremidi ${_private} LIBREMIDI_EXPORTS)
 endif()
 
 target_compile_features(libremidi ${_public} cxx_std_17)
