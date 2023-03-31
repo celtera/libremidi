@@ -7,6 +7,7 @@ option(LIBREMIDI_NO_WINMM "Disable WinMM back-end" OFF)
 option(LIBREMIDI_NO_WINUWP "Disable UWP back-end" ON)
 option(LIBREMIDI_NO_JACK "Disable JACK back-end" OFF)
 option(LIBREMIDI_NO_ALSA "Disable ALSA back-end" OFF)
+option(LIBREMIDI_NO_EXPORTS "Disable dynamic symbol exporting" OFF)
 option(LIBREMIDI_EXAMPLES "Enable examples" OFF)
 
 include(CheckSymbolExists)
@@ -45,6 +46,10 @@ else()
     include/libremidi/writer.cpp
   )
   set(_public PUBLIC)
+endif()
+
+if(NOT LIBREMIDI_NO_EXPORTS)
+  target_compile_definitions(libremidi PRIVATE LIBREMIDI_EXPORTS)
 endif()
 
 target_compile_features(libremidi ${_public} cxx_std_17)
