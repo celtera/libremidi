@@ -48,6 +48,12 @@ else()
   )
   set(_public PUBLIC)
   set(_private PRIVATE)
+
+  if(TARGET Boost::boost)
+    target_link_libraries(libremidi PRIVATE Boost::boost)
+  elseif(Boost_INCLUDE_DIR)
+    target_include_directories(libremidi PRIVATE ${Boost_INCLUDE_DIR})
+  endif()
 endif()
 
 if(NOT LIBREMIDI_NO_EXPORTS)
