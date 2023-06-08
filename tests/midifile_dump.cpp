@@ -153,25 +153,25 @@ int main(int argc, char** argv)
             	{
 					switch(event.m.bytes[3])
 					{
-					  case 0x87:
+					  case 0xf9:
 						std::cout << "C sharp ";
 						break;
-					  case 0x86:
+					  case 0xfa:
 						std::cout << "F sharp ";
 						break;
-					  case 0x85:
+					  case 0xfb:
 						std::cout << "B ";
 						break;
-					  case 0x84:
+					  case 0xfc:
 						std::cout << "E ";
 						break;
-					  case 0x83:
+					  case 0xfd:
 						std::cout << "A ";
 						break;
-					  case 0x82:
+					  case 0xfe:
 						std::cout << "D ";
 						break;
-					  case 0x81:
+					  case 0xff:
 						std::cout << "G ";
 						break;
 					  case 0x00:
@@ -207,25 +207,25 @@ int main(int argc, char** argv)
             	{
 					switch(event.m.bytes[3])
 					{
-					  case 0x87:
+					  case 0xf9:
 						std::cout << "a flat ";
 						break;
-					  case 0x86:
+					  case 0xfa:
 						std::cout << "e flat ";
 						break;
-					  case 0x85:
+					  case 0xfb:
 						std::cout << "b flat ";
 						break;
-					  case 0x84:
+					  case 0xfc:
 						std::cout << "f ";
 						break;
-					  case 0x83:
+					  case 0xfd:
 						std::cout << "c ";
 						break;
-					  case 0x82:
+					  case 0xfe:
 						std::cout << "g ";
 						break;
-					  case 0x81:
+					  case 0xff:
 						std::cout << "d ";
 						break;
 					  case 0x00:
