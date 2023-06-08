@@ -605,12 +605,9 @@ double reader::get_end_time()
   double totalLength = 0;
   for (const auto& t : tracks)
   {
-    double localLength = 0;
     for (const auto& e : t)
-      localLength += e.tick;
-
-    if (localLength > totalLength)
-      totalLength = localLength;
+      if (e.tick > totalLength)
+        totalLength = e.tick;
   }
   return totalLength;
 }
