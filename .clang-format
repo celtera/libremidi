@@ -1,29 +1,10 @@
-BreakBeforeInheritanceComma: true
-
-IndentPPDirectives: AfterHash
-IncludeBlocks: Regroup
-
 BasedOnStyle: WebKit
-AccessModifierOffset: -2
-AlignAfterOpenBracket: AlwaysBreak
-AlignEscapedNewlinesLeft: true
-AlignOperands: true
-AlignTrailingComments: true
-AlignConsecutiveDeclarations: false
-AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortBlocksOnASingleLine: false
-AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: None
-AllowShortIfStatementsOnASingleLine: false
-AllowShortLoopsOnASingleLine: false
-AlwaysBreakAfterDefinitionReturnType: false
-AlwaysBreakBeforeMultilineStrings: true
-AlwaysBreakTemplateDeclarations: true
 
 BraceWrapping:
   AfterClass:      true
   AfterControlStatement: true
   AfterEnum:       true
+  AfterExternBlock: false
   AfterFunction:   true
   AfterNamespace:  true
   AfterStruct:     true
@@ -31,27 +12,52 @@ BraceWrapping:
   BeforeCatch:     true
   BeforeElse:      true
   IndentBraces:    false
-  
+
+# BreakBeforeConceptDeclarations: Always
+# IndentRequiresClause: false
+AccessModifierOffset: -2
+AlignAfterOpenBracket: AlwaysBreak
+AlignConsecutiveDeclarations: false
+AlignEscapedNewlinesLeft: true
+AlignOperands: true
+AlignTrailingComments: true
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterDefinitionReturnType: false
+AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakTemplateDeclarations: true
 BinPackArguments: true
-BinPackParameters: false
+BinPackParameters: true
 BreakBeforeBinaryOperators: All
-BreakBeforeBraces: Allman
+BreakBeforeBraces: Custom
+BreakBeforeConceptDeclarations: true
 BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeComma
 BreakConstructorInitializersBeforeComma: true
+BreakInheritanceList: BeforeComma
 ColumnLimit: 99
-CommentPragmas: '^ IWYU pragma:'
-ConstructorInitializerAllOnOneLineOrOnePerLine: true
+CommentPragmas: '^ clang-format:'
 ConstructorInitializerIndentWidth: 4
 ContinuationIndentWidth: 4
 Cpp11BracedListStyle: true
 DerivePointerAlignment: false
+IncludeBlocks: Regroup
+IndentPPDirectives: BeforeHash
 IndentCaseLabels: true
+IndentExternBlock: NoIndent
 IndentWidth: 2
 IndentWrappedFunctionNames: false
 KeepEmptyLinesAtTheStartOfBlocks: true
+LambdaBodyIndentation: OuterScope
 Language: Cpp
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
+PackConstructorInitializers: Never
 PenaltyBreakBeforeFirstCallParameter: 19
 PenaltyBreakComment: 300
 PenaltyBreakFirstLessLess: 120
@@ -59,27 +65,38 @@ PenaltyBreakString: 1000
 PenaltyExcessCharacter: 1000000
 PenaltyReturnTypeOnItsOwnLine: 60
 PointerAlignment: Left
+ReferenceAlignment: Left
+ReflowComments: false
+SortIncludes: true
 SpaceAfterCStyleCast: false
+SpaceAroundPointerQualifiers: Default
 SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
 SpaceBeforeParens: ControlStatements
-SpaceBeforeSquareBrackets: false
 SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 1
-SpaceBeforeCpp11BracedList: false
 SpacesInAngles: false
-SpacesInCStyleCastParentheses: false
 SpacesInContainerLiterals: true
+SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard: Cpp11
+Standard: Latest
 TabWidth: 2
 UseTab: Never
+
 
 SortIncludes: true
 IncludeCategories:
   - Regex:           '^"'
     Priority:        1
-  - Regex:           '^<ossia/'
+  - Regex:           '^<libremidi/'
     Priority:        2
   - Regex:           '.\*'
     Priority:        3
+  - Regex:           '<([[:alnum:]_]+\/)+([[:alnum:]_])+.(h|hpp)>'
+    Priority:        700
+  - Regex:           '<([[:alnum:]_]+\/?)+.(h|hpp)>'
+    Priority:        800
+  - Regex:           '<[[:alnum:]_]+>'
+    Priority:        900
+

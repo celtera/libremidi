@@ -1,12 +1,15 @@
 #pragma once
-#include <alsa/asoundlib.h>
-#include <atomic>
-#include <map>
-#include <pthread.h>
 #include <libremidi/detail/midi_api.hpp>
 #include <libremidi/libremidi.hpp>
-#include <sstream>
+
+#include <alsa/asoundlib.h>
 #include <sys/time.h>
+
+#include <pthread.h>
+
+#include <atomic>
+#include <map>
+#include <sstream>
 #include <thread>
 
 //*********************************************************************//
@@ -89,7 +92,8 @@ struct alsa_data
 class observer_alsa final : public observer_api
 {
 public:
-  observer_alsa(observer::callbacks&& c) : observer_api{std::move(c)}
+  observer_alsa(observer::callbacks&& c)
+      : observer_api{std::move(c)}
   {
     using namespace std::literals;
     int err = snd_seq_open(&seq_, "default", SND_SEQ_OPEN_DUPLEX, SND_SEQ_NONBLOCK);
@@ -187,8 +191,7 @@ public:
   {
     switch (ev->type)
     {
-      case SND_SEQ_EVENT_PORT_START:
-      {
+      case SND_SEQ_EVENT_PORT_START: {
         auto p = get_info(ev->data.addr.client, ev->data.addr.port);
         if (p.client == client_)
           return;
@@ -205,8 +208,7 @@ public:
         }
         break;
       }
-      case SND_SEQ_EVENT_PORT_EXIT:
-      {
+      case SND_SEQ_EVENT_PORT_EXIT: {
         auto p = get_info(ev->data.addr.client, ev->data.addr.port);
         if (p.client == client_)
           return;
@@ -229,8 +231,7 @@ public:
         }
         break;
       }
-      case SND_SEQ_EVENT_PORT_CHANGE:
-      {
+      case SND_SEQ_EVENT_PORT_CHANGE: {
         break;
       }
       default:
@@ -332,10 +333,7 @@ public:
     snd_seq_close(data.seq);
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::LINUX_ALSA;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::LINUX_ALSA; }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
@@ -700,8 +698,7 @@ private:
             doDecode = true;
           break;
 
-        case SND_SEQ_EVENT_SYSEX:
-        {
+        case SND_SEQ_EVENT_SYSEX: {
           if ((data.ignoreFlags & 0x01))
             break;
           if (ev->data.ext.len > apidata.bufferSize)
@@ -850,10 +847,7 @@ public:
     snd_seq_close(data.seq);
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::LINUX_ALSA;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::LINUX_ALSA; }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
   {

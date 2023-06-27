@@ -1,6 +1,7 @@
 #pragma once
-#include <memory>
 #include <libremidi/message.hpp>
+
+#include <memory>
 
 namespace libremidi
 {

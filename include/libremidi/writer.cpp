@@ -24,18 +24,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #if !defined(LIBREMIDI_HEADER_ONLY)
-#  include <libremidi/writer.hpp>
+  #include <libremidi/writer.hpp>
 #endif
-#include <ostream>
 #include <numeric>
+#include <ostream>
 #include <string>
 
 namespace libremidi
 {
 namespace util
 {
-static LIBREMIDI_INLINE
-std::ostream& write_uint16_be(std::ostream& out, uint16_t value)
+static LIBREMIDI_INLINE std::ostream& write_uint16_be(std::ostream& out, uint16_t value)
 {
   union
   {
@@ -48,8 +47,7 @@ std::ostream& write_uint16_be(std::ostream& out, uint16_t value)
   return out;
 }
 
-static LIBREMIDI_INLINE
-std::ostream& write_int16_be(std::ostream& out, int16_t value)
+static LIBREMIDI_INLINE std::ostream& write_int16_be(std::ostream& out, int16_t value)
 {
   union
   {
@@ -62,8 +60,7 @@ std::ostream& write_int16_be(std::ostream& out, int16_t value)
   return out;
 }
 
-static LIBREMIDI_INLINE
-std::ostream& write_uint32_be(std::ostream& out, uint32_t value)
+static LIBREMIDI_INLINE std::ostream& write_uint32_be(std::ostream& out, uint32_t value)
 {
   union
   {
@@ -78,8 +75,7 @@ std::ostream& write_uint32_be(std::ostream& out, uint32_t value)
   return out;
 }
 
-static LIBREMIDI_INLINE
-std::ostream& write_int32_be(std::ostream& out, int32_t value)
+static LIBREMIDI_INLINE std::ostream& write_int32_be(std::ostream& out, int32_t value)
 {
   union
   {
@@ -94,8 +90,7 @@ std::ostream& write_int32_be(std::ostream& out, int32_t value)
   return out;
 }
 
-static LIBREMIDI_INLINE
-std::ostream& write_float_be(std::ostream& out, float value)
+static LIBREMIDI_INLINE std::ostream& write_float_be(std::ostream& out, float value)
 {
   union
   {
@@ -110,8 +105,7 @@ std::ostream& write_float_be(std::ostream& out, float value)
   return out;
 }
 
-static LIBREMIDI_INLINE
-std::ostream& write_double_be(std::ostream& out, double value)
+static LIBREMIDI_INLINE std::ostream& write_double_be(std::ostream& out, double value)
 {
   union
   {
@@ -133,8 +127,7 @@ std::ostream& write_double_be(std::ostream& out, double value)
 // Write a number to the midifile
 // as a variable length value which segments a file into 7-bit
 // values.  Maximum size of aValue is 0x7fffffff
-static LIBREMIDI_INLINE
-void write_variable_length(uint32_t aValue, std::vector<uint8_t>& outdata)
+static LIBREMIDI_INLINE void write_variable_length(uint32_t aValue, std::vector<uint8_t>& outdata)
 {
   uint8_t bytes[5] = {0};
 
@@ -156,15 +149,17 @@ void write_variable_length(uint32_t aValue, std::vector<uint8_t>& outdata)
   outdata.push_back(bytes[4]);
 }
 
-static LIBREMIDI_INLINE
-void add_event_track_count_check(std::vector<midi_track>& tracks, int track)
+static LIBREMIDI_INLINE void
+add_event_track_count_check(std::vector<midi_track>& tracks, int track)
 {
-  if(track < 0)
+  if (track < 0)
     throw std::out_of_range("Refusing to add an event to track " + std::to_string(track) + ".");
-  if(track > 65535)
-    throw std::out_of_range("Refusing to add an event to track " + std::to_string(track) + " ; change add_event_track_count_check in libremidi writer.cpp to increase the limit.");
+  if (track > 65535)
+    throw std::out_of_range(
+        "Refusing to add an event to track " + std::to_string(track)
+        + " ; change add_event_track_count_check in libremidi writer.cpp to increase the limit.");
 
-  while(tracks.size() < track + 1)
+  while (tracks.size() < track + 1)
     tracks.push_back({});
 }
 }
@@ -181,7 +176,7 @@ LIBREMIDI_INLINE
 void writer::add_event(int track, track_event m)
 {
   util::add_event_track_count_check(tracks, track);
-    
+
   tracks[track].push_back(m);
 }
 
@@ -190,7 +185,6 @@ void writer::add_track()
 {
   util::add_event_track_count_check(tracks, tracks.size() + 1);
 }
-
 
 LIBREMIDI_INLINE
 void writer::write(std::ostream& out)
@@ -214,7 +208,7 @@ void writer::write(std::ostream& out)
     for (const auto& event : event_list)
     {
       const auto& msg = event.m;
-      if(msg.bytes.empty())
+      if (msg.bytes.empty())
         continue;
 
       // Suppress end-of-track meta messages (one will be added

@@ -1,18 +1,18 @@
 #pragma once
 #if __has_include(<weak_libjack.h>) || __has_include(<jack/jack.h>)
 
-#  if __has_include(<weakjack/weak_libjack.h>)
-#    include <weakjack/weak_libjack.h>
-#  elif __has_include(<weak_libjack.h>)
-#    include <weak_libjack.h>
-#  elif __has_include(<jack/jack.h>)
-#    include <jack/jack.h>
-#    include <jack/midiport.h>
-#    include <jack/ringbuffer.h>
-#  endif
-#  include <libremidi/detail/midi_api.hpp>
-#  include <libremidi/detail/semaphore.hpp>
-#  include <libremidi/libremidi.hpp>
+  #if __has_include(<weakjack/weak_libjack.h>)
+    #include <weakjack/weak_libjack.h>
+  #elif __has_include(<weak_libjack.h>)
+    #include <weak_libjack.h>
+  #elif __has_include(<jack/jack.h>)
+    #include <jack/jack.h>
+    #include <jack/midiport.h>
+    #include <jack/ringbuffer.h>
+  #endif
+  #include <libremidi/detail/midi_api.hpp>
+  #include <libremidi/detail/semaphore.hpp>
+  #include <libremidi/libremidi.hpp>
 
 //*********************************************************************//
 //  API: UNIX JACK
@@ -42,13 +42,12 @@ struct jack_data
 class observer_jack final : public observer_api
 {
 public:
-  observer_jack(observer::callbacks&& c) : observer_api{std::move(c)}
+  observer_jack(observer::callbacks&& c)
+      : observer_api{std::move(c)}
   {
   }
 
-  ~observer_jack()
-  {
-  }
+  ~observer_jack() { }
 };
 
 class midi_in_jack final : public midi_in_api
@@ -74,10 +73,7 @@ public:
       jack_client_close(data.client);
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::UNIX_JACK;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::UNIX_JACK; }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
@@ -133,11 +129,11 @@ public:
 
   void set_port_name(std::string_view portName) override
   {
-#  if defined(LIBREMIDI_JACK_HAS_PORT_RENAME)
+  #if defined(LIBREMIDI_JACK_HAS_PORT_RENAME)
     jack_port_rename(data.client, data.port, portName.data());
-#  else
+  #else
     jack_port_set_name(data.port, portName.data());
-#  endif
+  #endif
   }
 
   unsigned int get_port_count() override
@@ -325,10 +321,7 @@ public:
     }
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::UNIX_JACK;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::UNIX_JACK; }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
@@ -389,11 +382,11 @@ public:
 
   void set_port_name(std::string_view portName) override
   {
-#  if defined(LIBREMIDI_JACK_HAS_PORT_RENAME)
+  #if defined(LIBREMIDI_JACK_HAS_PORT_RENAME)
     jack_port_rename(data.client, data.port, portName.data());
-#  else
+  #else
     jack_port_set_name(data.port, portName.data());
-#  endif
+  #endif
   }
 
   unsigned int get_port_count() override

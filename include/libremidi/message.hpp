@@ -1,7 +1,7 @@
 #pragma once
 #if defined(MSC_VER)
-#  define NOMINMAX 1
-#  define WIN32_LEAN_AND_MEAN
+  #define NOMINMAX 1
+  #define WIN32_LEAN_AND_MEAN
 #endif
 #include <algorithm>
 #include <cinttypes>
@@ -10,19 +10,19 @@
 #include <vector>
 
 #if defined(LIBREMIDI_EXPORTS)
-#  if defined(_MSC_VER)
-#    define LIBREMIDI_EXPORT __declspec(dllexport)
-#  elif defined(__GNUC__) || defined(__clang__)
-#    define LIBREMIDI_EXPORT __attribute__((visibility("default")))
-#  endif
+  #if defined(_MSC_VER)
+    #define LIBREMIDI_EXPORT __declspec(dllexport)
+  #elif defined(__GNUC__) || defined(__clang__)
+    #define LIBREMIDI_EXPORT __attribute__((visibility("default")))
+  #endif
 #else
-#  define LIBREMIDI_EXPORT
+  #define LIBREMIDI_EXPORT
 #endif
 
 #define LIBREMIDI_VERSION "1.0.0"
 
 #if __has_include(<boost/container/small_vector.hpp>) && !defined(LIBREMIDI_NO_BOOST)
-#  include <boost/container/small_vector.hpp>
+  #include <boost/container/small_vector.hpp>
 namespace libremidi
 {
 using midi_bytes = boost::container::small_vector<unsigned char, 4>;
@@ -35,9 +35,9 @@ using midi_bytes = std::vector<unsigned char>;
 #endif
 
 #if defined(LIBREMIDI_HEADER_ONLY)
-#  define LIBREMIDI_INLINE inline
+  #define LIBREMIDI_INLINE inline
 #else
-#  define LIBREMIDI_INLINE
+  #define LIBREMIDI_INLINE
 #endif
 
 namespace libremidi
@@ -110,10 +110,12 @@ struct message
 
   message() noexcept = default;
   message(const midi_bytes& src_bytes, double src_timestamp)
-      : bytes(src_bytes), timestamp(src_timestamp)
+      : bytes(src_bytes)
+      , timestamp(src_timestamp)
   {
   }
-  message(std::initializer_list<unsigned char> args) noexcept : bytes{args}
+  message(std::initializer_list<unsigned char> args) noexcept
+      : bytes{args}
   {
   }
   static uint8_t make_command(const message_type type, const int channel) noexcept
@@ -177,10 +179,7 @@ struct message
     return 0;
   }
 
-  bool is_meta_event() const
-  {
-    return bytes[0] == 0xFF;
-  }
+  bool is_meta_event() const { return bytes[0] == 0xFF; }
 
   meta_event_type get_meta_event_type() const
   {
@@ -207,35 +206,14 @@ struct message
     return (status == message_type::NOTE_ON) || (status == message_type::NOTE_OFF);
   }
 
-  auto size() const
-  {
-    return bytes.size();
-  }
+  auto size() const { return bytes.size(); }
 
-  auto& front() const
-  {
-    return bytes.front();
-  }
-  auto& back() const
-  {
-    return bytes.back();
-  }
-  auto& operator[](int i) const
-  {
-    return bytes[i];
-  }
-  auto& front()
-  {
-    return bytes.front();
-  }
-  auto& back()
-  {
-    return bytes.back();
-  }
-  auto& operator[](int i)
-  {
-    return bytes[i];
-  }
+  auto& front() const { return bytes.front(); }
+  auto& back() const { return bytes.back(); }
+  auto& operator[](int i) const { return bytes[i]; }
+  auto& front() { return bytes.front(); }
+  auto& back() { return bytes.back(); }
+  auto& operator[](int i) { return bytes[i]; }
 
   template <typename... Args>
   auto assign(Args&&... args)
@@ -247,72 +225,27 @@ struct message
   {
     return bytes.insert(std::forward<Args>(args)...);
   }
-  auto clear()
-  {
-    bytes.clear();
-  }
+  auto clear() { bytes.clear(); }
 
-  auto begin() const
-  {
-    return bytes.begin();
-  }
-  auto end() const
-  {
-    return bytes.end();
-  }
-  auto begin()
-  {
-    return bytes.begin();
-  }
-  auto end()
-  {
-    return bytes.end();
-  }
-  auto cbegin() const
-  {
-    return bytes.cbegin();
-  }
-  auto cend() const
-  {
-    return bytes.cend();
-  }
-  auto cbegin()
-  {
-    return bytes.cbegin();
-  }
-  auto cend()
-  {
-    return bytes.cend();
-  }
-  auto rbegin() const
-  {
-    return bytes.rbegin();
-  }
-  auto rend() const
-  {
-    return bytes.rend();
-  }
-  auto rbegin()
-  {
-    return bytes.rbegin();
-  }
-  auto rend()
-  {
-    return bytes.rend();
-  }
+  auto begin() const { return bytes.begin(); }
+  auto end() const { return bytes.end(); }
+  auto begin() { return bytes.begin(); }
+  auto end() { return bytes.end(); }
+  auto cbegin() const { return bytes.cbegin(); }
+  auto cend() const { return bytes.cend(); }
+  auto cbegin() { return bytes.cbegin(); }
+  auto cend() { return bytes.cend(); }
+  auto rbegin() const { return bytes.rbegin(); }
+  auto rend() const { return bytes.rend(); }
+  auto rbegin() { return bytes.rbegin(); }
+  auto rend() { return bytes.rend(); }
 };
 
 struct meta_events
 {
-  static message end_of_track()
-  {
-    return {0xFF, 0x2F, 0};
-  }
+  static message end_of_track() { return {0xFF, 0x2F, 0}; }
 
-  static message channel(int channel)
-  {
-    return {0xff, 0x20, 0x01, clamp(0, 0xff, channel - 1)};
-  }
+  static message channel(int channel) { return {0xff, 0x20, 0x01, clamp(0, 0xff, channel - 1)}; }
 
   static message tempo(int mpqn)
   {

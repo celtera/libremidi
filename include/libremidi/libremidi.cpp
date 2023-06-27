@@ -1,49 +1,50 @@
 #include <cmath>
+
 #include <sstream>
 #include <thread>
 
 #if !defined(LIBREMIDI_HEADER_ONLY)
-#  include <libremidi/libremidi.hpp>
+  #include <libremidi/libremidi.hpp>
 #endif
 
 #include <libremidi/detail/midi_api.hpp>
 #if !__has_include(<weak_libjack.h>) && !__has_include(<jack/jack.h>)
-#  if defined(LIBREMIDI_JACK)
-#    undef LIBREMIDI_JACK
-#  endif
+  #if defined(LIBREMIDI_JACK)
+    #undef LIBREMIDI_JACK
+  #endif
 #endif
 #if !defined(LIBREMIDI_ALSA) && !defined(LIBREMIDI_JACK) && !defined(LIBREMIDI_COREAUDIO) \
     && !defined(LIBREMIDI_WINMM)
-#  define LIBREMIDI_DUMMY
+  #define LIBREMIDI_DUMMY
 #endif
 
 #if defined(LIBREMIDI_ALSA)
-#  include <libremidi/detail/alsa.hpp>
-#  include <libremidi/detail/raw_alsa.hpp>
+  #include <libremidi/detail/alsa.hpp>
+  #include <libremidi/detail/raw_alsa.hpp>
 #endif
 
 #if defined(LIBREMIDI_JACK)
-#  include <libremidi/detail/jack.hpp>
+  #include <libremidi/detail/jack.hpp>
 #endif
 
 #if defined(LIBREMIDI_COREAUDIO)
-#  include <libremidi/detail/coreaudio.hpp>
+  #include <libremidi/detail/coreaudio.hpp>
 #endif
 
 #if defined(LIBREMIDI_WINMM)
-#  include <libremidi/detail/winmm.hpp>
+  #include <libremidi/detail/winmm.hpp>
 #endif
 
 #if defined(LIBREMIDI_WINUWP)
-#  include <libremidi/detail/winuwp.hpp>
+  #include <libremidi/detail/winuwp.hpp>
 #endif
 
 #if defined(LIBREMIDI_EMSCRIPTEN)
-#  include <libremidi/detail/emscripten.hpp>
+  #include <libremidi/detail/emscripten.hpp>
 #endif
 
 #if defined(LIBREMIDI_DUMMY)
-#  include <libremidi/detail/dummy.hpp>
+  #include <libremidi/detail/dummy.hpp>
 #endif
 
 namespace libremidi
@@ -59,26 +60,32 @@ constexpr auto make_tl(unused, Args...)
 static constexpr auto available_backends = make_tl(
     0
 #if defined(LIBREMIDI_ALSA)
-      , raw_alsa_backend {}
-    , alsa_backend {}
+    ,
+    raw_alsa_backend{}, alsa_backend{}
 #endif
 #if defined(LIBREMIDI_COREAUDIO)
-    , core_backend {}
+    ,
+    core_backend{}
 #endif
 #if defined(LIBREMIDI_JACK)
-    , jack_backend {}
+    ,
+    jack_backend{}
 #endif
 #if defined(LIBREMIDI_WINMM)
-    , winmm_backend {}
+    ,
+    winmm_backend{}
 #endif
 #if defined(LIBREMIDI_WINUWP)
-    , winuwp_backend {}
+    ,
+    winuwp_backend{}
 #endif
 #if defined(LIBREMIDI_EMSCRIPTEN)
-    , emscripten_backend {}
+    ,
+    emscripten_backend{}
 #endif
 #if defined(LIBREMIDI_DUMMY)
-    , dummy_backend {}
+    ,
+    dummy_backend{}
 #endif
 );
 
@@ -114,7 +121,8 @@ LIBREMIDI_INLINE midi_in::~midi_in() = default;
 LIBREMIDI_INLINE midi_out::~midi_out() = default;
 
 LIBREMIDI_INLINE
-bool chunking_parameters::default_wait(std::chrono::microseconds time_to_wait, int written_bytes) {
+bool chunking_parameters::default_wait(std::chrono::microseconds time_to_wait, int written_bytes)
+{
   std::this_thread::sleep_for(time_to_wait);
   return true;
 }

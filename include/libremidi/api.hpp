@@ -8,14 +8,14 @@ enum class API
 {
   UNSPECIFIED, /*!< Search for a working compiled API. */
   MACOSX_CORE, /*!< Macintosh OS-X Core Midi API. */
-  LINUX_ALSA, /*!< The Advanced Linux Sound Architecture API. */
+  LINUX_ALSA,  /*!< The Advanced Linux Sound Architecture API. */
   LINUX_ALSA_SEQ = LINUX_ALSA,
-  LINUX_ALSA_RAW, /*!< Raw ALSA API. */
-  UNIX_JACK, /*!< The JACK Low-Latency MIDI Server API. */
-  WINDOWS_MM, /*!< The Microsoft Multimedia MIDI API. */
-  WINDOWS_UWP, /*!< The Microsoft WinRT MIDI API. */
+  LINUX_ALSA_RAW,     /*!< Raw ALSA API. */
+  UNIX_JACK,          /*!< The JACK Low-Latency MIDI Server API. */
+  WINDOWS_MM,         /*!< The Microsoft Multimedia MIDI API. */
+  WINDOWS_UWP,        /*!< The Microsoft WinRT MIDI API. */
   EMSCRIPTEN_WEBMIDI, /*!< Web MIDI API through Emscripten */
-  DUMMY       /*!< A compilable but non-functional API. */
+  DUMMY               /*!< A compilable but non-functional API. */
 };
 
 /**

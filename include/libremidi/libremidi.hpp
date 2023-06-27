@@ -57,8 +57,8 @@
  POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <libremidi/message.hpp>
 #include <libremidi/api.hpp>
+#include <libremidi/message.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -73,8 +73,8 @@
 #include <vector>
 
 #if defined(__cpp_lib_span) && __cpp_lib_span >= 202002
-#define LIBREMIDI_HAS_SPAN 1
-#include <span>
+  #define LIBREMIDI_HAS_SPAN 1
+  #include <span>
 #endif
 
 namespace libremidi
@@ -185,7 +185,8 @@ private:
 /**
  * Used to determine how large sent messages will be chunked.
  */
-struct LIBREMIDI_EXPORT chunking_parameters {
+struct LIBREMIDI_EXPORT chunking_parameters
+{
   std::chrono::milliseconds interval{};
   int32_t size{};
 
@@ -245,8 +246,7 @@ public:
   */
   midi_in(
       libremidi::API api = API::UNSPECIFIED,
-      std::string_view clientName = "libremidi input client",
-      unsigned int queueSizeLimit = 100);
+      std::string_view clientName = "libremidi input client", unsigned int queueSizeLimit = 100);
 
   //! If a MIDI connection is still open, it will be closed by the destructor.
   ~midi_in();
@@ -262,14 +262,8 @@ public:
     connect to portId can be specified.
   */
   void open_port(unsigned int portNumber, std::string_view portName);
-  void open_port()
-  {
-    open_port(0, "libremidi Input");
-  }
-  void open_port(unsigned int port)
-  {
-    open_port(port, "libremidi Input");
-  }
+  void open_port() { open_port(0, "libremidi Input"); }
+  void open_port(unsigned int port) { open_port(port, "libremidi Input"); }
 
   //! Create a virtual input port, with optional name, to allow software
   //! connections (OS X, JACK and ALSA only).
@@ -283,10 +277,7 @@ public:
                     used to connect to portId can be specified.
   */
   void open_virtual_port(std::string_view portName);
-  void open_virtual_port()
-  {
-    open_virtual_port("libremidi virtual port");
-  }
+  void open_virtual_port() { open_virtual_port("libremidi virtual port"); }
   //! Set a callback function to be invoked for incoming MIDI messages.
   /*!
     The callback function will be called whenever an incoming MIDI
@@ -398,7 +389,8 @@ public:
   */
   midi_out(libremidi::API api, std::string_view clientName);
 
-  midi_out() : midi_out{libremidi::API::UNSPECIFIED, "libremidi client"}
+  midi_out()
+      : midi_out{libremidi::API::UNSPECIFIED, "libremidi client"}
   {
   }
 
@@ -416,14 +408,8 @@ public:
       the port connection.
   */
   void open_port(unsigned int portNumber, std::string_view portName);
-  void open_port()
-  {
-    open_port(0, "libremidi Output");
-  }
-  void open_port(unsigned int port)
-  {
-    open_port(port, "libremidi Output");
-  }
+  void open_port() { open_port(0, "libremidi Output"); }
+  void open_port(unsigned int port) { open_port(port, "libremidi Output"); }
 
   //! Close an open MIDI connection (if one exists).
   void close_port();
@@ -446,10 +432,7 @@ public:
       create the virtual port.
   */
   void open_virtual_port(std::string_view portName);
-  void open_virtual_port()
-  {
-    open_virtual_port("libremidi virtual port");
-  }
+  void open_virtual_port() { open_virtual_port("libremidi virtual port"); }
 
   //! Return the number of available MIDI output ports.
   unsigned int get_port_count();
@@ -481,9 +464,9 @@ public:
   */
   void send_message(const unsigned char* message, size_t size);
 
-  #if LIBREMIDI_HAS_SPAN
+#if LIBREMIDI_HAS_SPAN
   void send_message(std::span<unsigned char>);
-  #endif
+#endif
 
   //! Set an error callback function to be invoked when an error has occured.
   /*!
@@ -508,5 +491,5 @@ private:
 }
 
 #if defined(LIBREMIDI_HEADER_ONLY)
-#  include <libremidi/libremidi.cpp>
+  #include <libremidi/libremidi.cpp>
 #endif

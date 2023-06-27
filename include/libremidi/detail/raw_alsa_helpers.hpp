@@ -1,8 +1,9 @@
 #pragma once
 #include <alsa/asoundlib.h>
+
+#include <functional>
 #include <ostream>
 #include <sstream>
-#include <functional>
 #include <vector>
 
 // Credits: greatly inspired from
@@ -38,11 +39,10 @@ struct raw_alsa_helpers
       int status = snd_ctl_open(&ctl, name, 0);
       if (status < 0)
       {
-        self.error("raw_alsa_helpers::enumerator::snd_ctl_wrapper: "
-                   "cannot open control for card",
-                   name,
-                   snd_strerror(status)
-        );
+        self.error(
+            "raw_alsa_helpers::enumerator::snd_ctl_wrapper: "
+            "cannot open control for card",
+            name, snd_strerror(status));
       }
     }
 
@@ -54,18 +54,9 @@ struct raw_alsa_helpers
       }
     }
 
-    snd_ctl_t& operator*() const noexcept
-    {
-      return *ctl;
-    }
-    snd_ctl_t* operator->() const noexcept
-    {
-      return ctl;
-    }
-    operator snd_ctl_t*() const noexcept
-    {
-      return ctl;
-    }
+    snd_ctl_t& operator*() const noexcept { return *ctl; }
+    snd_ctl_t* operator->() const noexcept { return ctl; }
+    operator snd_ctl_t*() const noexcept { return ctl; }
   };
 
   struct enumerator
@@ -146,8 +137,9 @@ struct raw_alsa_helpers
 
       if (card < 0)
       {
-        error("raw_alsa_helpers::enumerator::enumerate_cards: "
-              "no sound cards found");
+        error(
+            "raw_alsa_helpers::enumerator::enumerate_cards: "
+            "no sound cards found");
         return;
       }
 
@@ -184,8 +176,10 @@ struct raw_alsa_helpers
         const int status = snd_ctl_rawmidi_next_device(ctl, &device);
         if (status < 0)
         {
-          error("raw_alsa_helpers::enumerator::enumerate_devices: "
-                "cannot determine device number: ", snd_strerror(status));
+          error(
+              "raw_alsa_helpers::enumerator::enumerate_devices: "
+              "cannot determine device number: ",
+              snd_strerror(status));
           break;
         }
 
@@ -223,7 +217,7 @@ struct raw_alsa_helpers
       d.card_name = get_card_name(card);
       d.device_name = snd_rawmidi_info_get_name(info);
 
-      auto read_subdevice_info = [&] (int sub) {
+      auto read_subdevice_info = [&](int sub) {
         snd_rawmidi_info_set_subdevice(info, sub);
         snd_ctl_rawmidi_info(ctl, info);
 

@@ -24,8 +24,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#include <cstdint>
 #include <libremidi/message.hpp>
+
+#include <cstdint>
 #include <vector>
 
 namespace libremidi
@@ -46,5 +47,5 @@ public:
 }
 
 #if defined(LIBREMIDI_HEADER_ONLY)
-#  include <libremidi/writer.cpp>
+  #include <libremidi/writer.cpp>
 #endif

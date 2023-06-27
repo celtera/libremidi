@@ -1,22 +1,23 @@
 #pragma once
 #define NOMINMAX 1
 #define WIN32_LEAN_AND_MEAN 1
+#include <libremidi/detail/midi_api.hpp>
+#include <libremidi/libremidi.hpp>
+
+#include <mmsystem.h>
 #include <windows.h>
 
 #include <algorithm>
 #include <chrono>
 #include <condition_variable>
-#include <mmsystem.h>
 #include <mutex>
 #include <ostream>
-#include <libremidi/detail/midi_api.hpp>
-#include <libremidi/libremidi.hpp>
 #include <sstream>
 #include <thread>
 
 // Default for Windows is to add an identifier to the port names; this
 // flag can be defined (e.g. in your project file) to disable this behaviour.
-//#define LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+// #define LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
 
 //*********************************************************************//
 //  API: Windows Multimedia Library (MM)
@@ -99,7 +100,8 @@ public:
 
   PortList inputPortList;
   PortList outputPortList;
-  observer_winmm(observer::callbacks&& c) : observer_api{std::move(c)}
+  observer_winmm(observer::callbacks&& c)
+      : observer_api{std::move(c)}
   {
     inputPortList = get_port_list(INPUT);
     outputPortList = get_port_list(OUTPUT);
@@ -134,9 +136,7 @@ private:
   }
 
   void compare_port_lists_and_notify_clients(
-      const PortList& prevList,
-      const PortList& currList,
-      const CallbackFunc& portAddedFunc,
+      const PortList& prevList, const PortList& currList, const CallbackFunc& portAddedFunc,
       const CallbackFunc& portRemovedFunc)
   {
     if (portAddedFunc)
@@ -228,10 +228,7 @@ public:
     DeleteCriticalSection(&(data._mutex));
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::WINDOWS_MM;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
   void open_port(unsigned int portNumber, std::string_view) override
   {
@@ -341,10 +338,7 @@ public:
     }
   }
 
-  unsigned int get_port_count() override
-  {
-    return midiInGetNumDevs();
-  }
+  unsigned int get_port_count() override { return midiInGetNumDevs(); }
 
   std::string get_port_name(unsigned int portNumber) override
   {
@@ -390,10 +384,7 @@ public:
 
 private:
   static void CALLBACK midiInputCallback(
-      HMIDIIN /*hmin*/,
-      UINT inputStatus,
-      DWORD_PTR instancePtr,
-      DWORD_PTR midiMessage,
+      HMIDIIN /*hmin*/, UINT inputStatus, DWORD_PTR instancePtr, DWORD_PTR midiMessage,
       DWORD timestamp)
   {
     if (inputStatus != MIM_DATA && inputStatus != MIM_LONGDATA && inputStatus != MIM_LONGERROR)
@@ -525,10 +516,7 @@ public:
     midi_out_winmm::close_port();
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::WINDOWS_MM;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
   void open_port(unsigned int portNumber, std::string_view) override
   {
@@ -577,10 +565,7 @@ public:
     }
   }
 
-  unsigned int get_port_count() override
-  {
-    return midiOutGetNumDevs();
-  }
+  unsigned int get_port_count() override { return midiOutGetNumDevs(); }
 
   std::string get_port_name(unsigned int portNumber) override
   {

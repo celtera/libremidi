@@ -1,12 +1,14 @@
 #pragma once
 #define NOMINMAX 1
 #define WIN32_LEAN_AND_MEAN 1
-#include <mutex>
 #include <libremidi/detail/midi_api.hpp>
 #include <libremidi/libremidi.hpp>
+
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
+
 #include <winrt/Windows.Devices.Enumeration.h>
 #include <winrt/Windows.Devices.Midi.h>
 #include <winrt/Windows.Foundation.h>
@@ -69,14 +71,8 @@ public:
     hstring name;
   };
 
-  observer_winuwp_internal(hstring deviceSelector)
-  {
-    initialize(deviceSelector);
-  }
-  ~observer_winuwp_internal()
-  {
-    terminate();
-  }
+  observer_winuwp_internal(hstring deviceSelector) { initialize(deviceSelector); }
+  ~observer_winuwp_internal() { terminate(); }
 
   std::vector<port_info> get_ports() const
   {
@@ -116,20 +112,14 @@ public:
     return portAddedEvent_.add(handler);
   }
 
-  void PortAdded(event_token const& token) noexcept
-  {
-    portAddedEvent_.remove(token);
-  }
+  void PortAdded(event_token const& token) noexcept { portAddedEvent_.remove(token); }
 
   event_token PortRemoved(TypedEventHandler<int, hstring> const& handler)
   {
     return portRemovedEvent_.add(handler);
   }
 
-  void PortRemoved(event_token const& token) noexcept
-  {
-    portRemovedEvent_.remove(token);
-  }
+  void PortRemoved(event_token const& token) noexcept { portRemovedEvent_.remove(token); }
 
 private:
   observer_winuwp_internal(const observer_winuwp_internal&) = delete;
@@ -194,13 +184,9 @@ private:
       portRemovedEvent_(portNumber, name);
   }
 
-  void on_device_updated(DeviceWatcher sender, DeviceInformationUpdate deviceUpdate)
-  {
-  }
+  void on_device_updated(DeviceWatcher sender, DeviceInformationUpdate deviceUpdate) { }
 
-  void on_device_enumeration_completed(DeviceWatcher sender, IInspectable const&)
-  {
-  }
+  void on_device_enumeration_completed(DeviceWatcher sender, IInspectable const&) { }
 
 private:
   std::vector<port_info> portList_;
@@ -219,7 +205,8 @@ private:
 class observer_winuwp final : public observer_api
 {
 public:
-  observer_winuwp(observer::callbacks&& c) : observer_api{std::move(c)}
+  observer_winuwp(observer::callbacks&& c)
+      : observer_api{std::move(c)}
   {
     evTokenOnInputAdded_
         = internalInPortObserver_.PortAdded({this, &observer_winuwp::on_input_added});
@@ -303,10 +290,7 @@ public:
       port_.Close();
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::WINDOWS_UWP;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 
   void open_port(unsigned int portNumber, std::string_view) override
   {
@@ -374,20 +358,11 @@ class midi_out_winuwp final : public midi_out_default<midi_out_winuwp>
 {
 public:
   static const constexpr auto backend = "UWP";
-  midi_out_winuwp(std::string_view)
-  {
-    winrt_init();
-  }
+  midi_out_winuwp(std::string_view) { winrt_init(); }
 
-  ~midi_out_winuwp() override
-  {
-    close_port();
-  }
+  ~midi_out_winuwp() override { close_port(); }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::WINDOWS_UWP;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 
   void open_port(unsigned int portNumber, std::string_view) override
   {

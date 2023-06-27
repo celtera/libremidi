@@ -1,7 +1,8 @@
 #pragma once
-#include <iostream>
-#include <libremidi/libremidi.hpp>
 #include <libremidi/detail/midi_queue.hpp>
+#include <libremidi/libremidi.hpp>
+
+#include <iostream>
 #include <string_view>
 
 namespace libremidi
@@ -9,7 +10,8 @@ namespace libremidi
 class observer_api
 {
 public:
-  observer_api(observer::callbacks c) : callbacks_{std::move(c)}
+  observer_api(observer::callbacks c)
+      : callbacks_{std::move(c)}
   {
   }
 
@@ -39,10 +41,7 @@ public:
   virtual unsigned int get_port_count() = 0;
   virtual std::string get_port_name(unsigned int portNumber) = 0;
 
-  bool is_port_open() const noexcept
-  {
-    return bool(connected_);
-  }
+  bool is_port_open() const noexcept { return bool(connected_); }
 
   void set_error_callback(midi_error_callback errorCallback) noexcept
   {
@@ -138,10 +137,7 @@ public:
     inputData_.userCallback = std::move(callback);
   }
 
-  void cancel_callback()
-  {
-    inputData_.userCallback = midi_in::message_callback{};
-  }
+  void cancel_callback() { inputData_.userCallback = midi_in::message_callback{}; }
 
   message get_message()
   {

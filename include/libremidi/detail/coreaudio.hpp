@@ -1,39 +1,42 @@
 #pragma once
-#include <CoreMIDI/CoreMIDI.h>
-#include <CoreServices/CoreServices.h>
-#include <cmath>
 #include <libremidi/detail/midi_api.hpp>
 #include <libremidi/libremidi.hpp>
 
+#include <CoreMIDI/CoreMIDI.h>
+#include <CoreServices/CoreServices.h>
+
+#include <cmath>
+
 #if TARGET_OS_IPHONE
-#include <CoreAudio/CoreAudioTypes.h>
-#include <mach/mach_time.h>
-#define AudioGetCurrentHostTime mach_absolute_time
+  #include <CoreAudio/CoreAudioTypes.h>
+  #include <mach/mach_time.h>
+  #define AudioGetCurrentHostTime mach_absolute_time
 #else
-#include <CoreAudio/HostTime.h>
+  #include <CoreAudio/HostTime.h>
 #endif
 
 namespace libremidi
 {
 #if TARGET_OS_IPHONE
-namespace {
+namespace
+{
 inline uint64_t AudioConvertHostTimeToNanos(uint64_t hostTime)
 {
-    static const struct mach_timebase_info timebase = [] {
-        struct mach_timebase_info theTimeBaseInfo;
-        mach_timebase_info(&theTimeBaseInfo);
-        return theTimeBaseInfo;
-    }();
-    const auto numer = timebase.numer;
-    const auto denom = timebase.denom;
+  static const struct mach_timebase_info timebase = [] {
+    struct mach_timebase_info theTimeBaseInfo;
+    mach_timebase_info(&theTimeBaseInfo);
+    return theTimeBaseInfo;
+  }();
+  const auto numer = timebase.numer;
+  const auto denom = timebase.denom;
 
-    __uint128_t res = hostTime;
-    if(numer != denom)
-    {
-      res *= numer;
-      res /= denom;
-    }
-    return static_cast<uint64_t>(res);
+  __uint128_t res = hostTime;
+  if (numer != denom)
+  {
+    res *= numer;
+    res /= denom;
+  }
+  return static_cast<uint64_t>(res);
 }
 }
 #endif
@@ -199,13 +202,12 @@ struct coremidi_data
 class observer_core final : public observer_api
 {
 public:
-  observer_core(observer::callbacks&& c) : observer_api{std::move(c)}
+  observer_core(observer::callbacks&& c)
+      : observer_api{std::move(c)}
   {
   }
 
-  ~observer_core()
-  {
-  }
+  ~observer_core() { }
 };
 
 class midi_in_core final : public midi_in_api
@@ -243,10 +245,7 @@ public:
     if (data.endpoint)
       MIDIEndpointDispose(data.endpoint);
   }
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::MACOSX_CORE;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::MACOSX_CORE; }
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
     if (connected_)
@@ -588,10 +587,7 @@ public:
     if (data.endpoint)
       MIDIEndpointDispose(data.endpoint);
   }
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::MACOSX_CORE;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::MACOSX_CORE; }
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
     if (connected_)
@@ -811,5 +807,5 @@ struct core_backend
 };
 }
 #if TARGET_OS_IPHONE
-#undef AudioGetCurrentHostTime
+  #undef AudioGetCurrentHostTime
 #endif

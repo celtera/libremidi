@@ -1,13 +1,15 @@
 #pragma once
-#include <alsa/asoundlib.h>
-#include <ostream>
 #include <libremidi/detail/dummy.hpp>
 #include <libremidi/detail/midi_api.hpp>
 #include <libremidi/detail/raw_alsa_helpers.hpp>
 #include <libremidi/libremidi.hpp>
-#include <thread>
+
+#include <alsa/asoundlib.h>
+
 #include <atomic>
+#include <ostream>
 #include <sstream>
+#include <thread>
 
 // Credits: greatly inspired from
 // https://ccrma.stanford.edu/~craig/articles/linuxmidi/alsa-1.0/alsarawmidiout.c
@@ -23,27 +25,27 @@ struct midi_stream_decoder
   message msg;
 
   midi_stream_decoder(midi_in_api::in_data& data)
-    : data{data}
+      : data{data}
   {
     bytes.reserve(16);
   }
 
   void add_bytes(unsigned char* data, std::size_t sz)
   {
-    for(std::size_t i = 0; i < sz; i++)
+    for (std::size_t i = 0; i < sz; i++)
       bytes.push_back(data[i]);
 
     int read = 0;
     unsigned char* begin = bytes.data();
     unsigned char* end = bytes.data() + bytes.size();
-    while((read = parse(begin, end)) && read > 0)
+    while ((read = parse(begin, end)) && read > 0)
     {
       begin += read;
       this->data.on_message_received(std::move(msg));
     }
 
     // Remove the read bytes
-    if(begin != bytes.data())
+    if (begin != bytes.data())
       bytes.erase(bytes.begin(), bytes.begin() + (begin - bytes.data()));
   }
 
@@ -61,15 +63,15 @@ struct midi_stream_decoder
       // TODO special message
       return sz;
     }
-    else if(((uint8_t)bytes[0] & 0xF8 ) == 0xF8)
+    else if (((uint8_t)bytes[0] & 0xF8) == 0xF8)
     {
       // Clk messages
-      msg.bytes.reserve( 1 );
-      msg.bytes.push_back( *bytes++ );
+      msg.bytes.reserve(1);
+      msg.bytes.push_back(*bytes++);
       runningStatusType_ = msg.bytes[0];
 
       return 1;
-    }    
+    }
     else
     {
       if (sz <= 1)
@@ -86,7 +88,7 @@ struct midi_stream_decoder
       }
       else
       {
-        if(sz < 2)
+        if (sz < 2)
           return 0;
 
         msg.bytes.push_back(*bytes++);
@@ -101,7 +103,7 @@ struct midi_stream_decoder
         case message_type::POLY_PRESSURE:
         case message_type::CONTROL_CHANGE:
         case message_type::PITCH_BEND:
-          if(sz < 3)
+          if (sz < 3)
             return 0;
 
           msg.bytes.push_back(*bytes++);
@@ -125,7 +127,7 @@ public:
   static const constexpr auto backend = "Raw ALSA";
 
   midi_in_raw_alsa(std::string_view clientName, unsigned int queueSizeLimit)
-    : midi_in_default<midi_in_raw_alsa>{nullptr, queueSizeLimit}
+      : midi_in_default<midi_in_raw_alsa>{nullptr, queueSizeLimit}
   {
   }
 
@@ -191,14 +193,14 @@ public:
 
     init_pollfd();
 
-    while(this->running_)
+    while (this->running_)
     {
       // Poll
       int err = poll(fds_.data(), fds_.size(), poll_timeout);
       if (err < 0)
         return;
 
-      if(!this->running_)
+      if (!this->running_)
         return;
 
       // Read events
@@ -226,7 +228,7 @@ public:
 
     unsigned char bytes[nbytes];
     const int err = snd_rawmidi_read(this->midiport_, bytes, nbytes);
-    if(err > 0)
+    if (err > 0)
     {
       // err is the amount of bytes read in that case
       const int length = filter_input_buffer(bytes, err);
@@ -247,7 +249,7 @@ public:
 
   int filter_input_buffer(unsigned char* data, int size)
   {
-    if(!filter_active_sensing_)
+    if (!filter_active_sensing_)
       return size;
 
     return std::remove(data, data + size, 0xFE) - data;
@@ -300,9 +302,8 @@ public:
   raw_alsa_helpers::enumerator get_device_enumerator() const noexcept
   {
     raw_alsa_helpers::enumerator device_list;
-    device_list.error_callback = [this] (std::string_view text) {
-      this->error<driver_error>(text);
-    };
+    device_list.error_callback
+        = [this](std::string_view text) { this->error<driver_error>(text); };
     return device_list;
   }
 
@@ -320,9 +321,7 @@ class midi_out_raw_alsa final : public midi_out_default<midi_out_raw_alsa>
 public:
   static const constexpr auto backend = "Raw ALSA";
 
-  midi_out_raw_alsa(std::string_view)
-  {
-  }
+  midi_out_raw_alsa(std::string_view) { }
 
   ~midi_out_raw_alsa() override
   {
@@ -410,7 +409,8 @@ public:
   {
     if (!midiport_)
       error<invalid_use_error>(
-          "midi_out_raw_alsa::send_message: trying to send a message without an open port.");
+          "midi_out_raw_alsa::send_message: trying to send a message without an open "
+          "port.");
 
     if (!this->chunking)
     {
@@ -503,9 +503,8 @@ public:
   raw_alsa_helpers::enumerator get_device_enumerator() const noexcept
   {
     raw_alsa_helpers::enumerator device_list;
-    device_list.error_callback = [this] (std::string_view text) {
-      this->error<driver_error>(text);
-    };
+    device_list.error_callback
+        = [this](std::string_view text) { this->error<driver_error>(text); };
     return device_list;
   }
 
