@@ -590,19 +590,36 @@ catch (const std::exception& e)
 
 // In ticks
 LIBREMIDI_INLINE
-double reader::get_end_time()
+double reader::get_end_time() const noexcept
 {
-  double totalLength = 0;
-  for (const auto& t : tracks)
+  if (useAbsoluteTicks)
   {
-    double localLength = 0;
-    for (const auto& e : t)
-      localLength += e.tick;
-
-    if (localLength > totalLength)
-      totalLength = localLength;
+    double totalLength = 0.;
+    for (const auto& t : tracks)
+    {
+      if (!t.empty())
+      {
+        const auto& last_event = t.back();
+        if (last_event.tick > totalLength)
+          totalLength = last_event.tick;
+      }
+    }
+    return totalLength;
   }
-  return totalLength;
+  else
+  {
+    double totalLength = 0.;
+    for (const auto& t : tracks)
+    {
+      double trackLength = 0.;
+      for (const auto& e : t)
+        trackLength += e.tick;
+
+      if (trackLength > totalLength)
+        totalLength = trackLength;
+    }
+    return totalLength;
+  }
 }
 
 LIBREMIDI_INLINE

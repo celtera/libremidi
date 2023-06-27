@@ -59,7 +59,7 @@ public:
   parse_result parse(std::span<uint8_t> buffer) noexcept;
 #endif
 
-  double get_end_time();
+  double get_end_time() const noexcept;
 
   float ticksPerBeat{}; // precision (number of ticks distinguishable per second)
   float startingTempo{};

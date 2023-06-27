@@ -1,7 +1,8 @@
 #include "../include_catch.hpp"
 
-#include <filesystem>
 #include <libremidi/reader.hpp>
+
+#include <filesystem>
 
 TEST_CASE("read valid files from corpus", "[midi_reader]")
 {
@@ -64,5 +65,37 @@ TEST_CASE("read invalid files from corpus", "[midi_reader]")
         CHECK(result != libremidi::reader::validated);
       }
     }
+  }
+}
+
+TEST_CASE("midi file duration in relative mode", "[midi_reader]")
+{
+  std::vector<uint8_t> bytes;
+  std::ifstream file{
+      LIBREMIDI_TEST_CORPUS "/Valid/MultiTrack/Middle/pilgrim.mid", std::ios::binary};
+  bytes.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+
+  {
+    libremidi::reader r{false};
+    libremidi::reader::parse_result result{};
+    REQUIRE_NOTHROW(result = r.parse(bytes));
+    CHECK(result == libremidi::reader::validated);
+    REQUIRE(r.get_end_time() == 75388.);
+  }
+}
+
+TEST_CASE("midi file duration in absolute mode", "[midi_reader]")
+{
+  std::vector<uint8_t> bytes;
+  std::ifstream file{
+      LIBREMIDI_TEST_CORPUS "/Valid/MultiTrack/Middle/pilgrim.mid", std::ios::binary};
+  bytes.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+
+  {
+    libremidi::reader r{true};
+    libremidi::reader::parse_result result{};
+    REQUIRE_NOTHROW(result = r.parse(bytes));
+    CHECK(result == libremidi::reader::validated);
+    REQUIRE(r.get_end_time() == 75388.);
   }
 }
