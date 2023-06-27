@@ -4,9 +4,6 @@
 #include <libremidi/detail/midi_api.hpp>
 #include <libremidi/libremidi.hpp>
 
-#include <mmsystem.h>
-#include <windows.h>
-
 #include <algorithm>
 #include <chrono>
 #include <condition_variable>
@@ -14,6 +11,11 @@
 #include <ostream>
 #include <sstream>
 #include <thread>
+
+// clang-format off
+#include <windows.h>
+#include <mmsystem.h>
+// clang-format on
 
 // Default for Windows is to add an identifier to the port names; this
 // flag can be defined (e.g. in your project file) to disable this behaviour.
@@ -390,8 +392,6 @@ private:
     if (inputStatus != MIM_DATA && inputStatus != MIM_LONGDATA && inputStatus != MIM_LONGERROR)
       return;
 
-    // midi_in_api::RtMidiInData *data = static_cast<midi_in_api::RtMidiInData *>
-    // (instancePtr);
     midi_in_api::in_data& data = *(midi_in_api::in_data*)instancePtr;
     WinMidiData& apiData = *static_cast<WinMidiData*>(data.apiData);
 
