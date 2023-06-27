@@ -18,7 +18,7 @@ public:
 
   const bool available() const noexcept
   {
-    return EM_ASM_INT(return typeof globalThis.__libreMidi_access != = undefined;);
+    return EM_ASM_INT(return typeof globalThis.__libreMidi_access !== undefined;);
   }
 
   const int input_count() const noexcept
@@ -33,7 +33,7 @@ public:
 
   const void load_current_infos() noexcept
   {
-  #define get_js_string(variable_to_read, ...)    \
+  #define get_js_string(variable_to_read, ...) \
     (char*)EM_ASM_INT(                            \
         {                                         \
           var jsstr = variable_to_read;           \
@@ -82,7 +82,7 @@ public:
       char* midi_name = get_js_string(globalThis.__libreMidi_currentInputs[$0].name, i);
 
       const bool connected
-          = EM_ASM_INT(return globalThis.__libreMidi_currentInputs[$0].state == = "connected", i);
+          = EM_ASM_INT(return globalThis.__libreMidi_currentInputs[$0].state === "connected", i);
 
       m_current_inputs[device_index].id = midi_id;
       m_current_inputs[device_index].name = midi_name;
@@ -111,7 +111,7 @@ public:
       char* midi_name = get_js_string(globalThis.__libreMidi_currentOutputs[$0].name, i);
 
       const bool connected
-          = EM_ASM_INT(return globalThis.__libreMidi_currentOutputs[$0].state == = "connected", i);
+          = EM_ASM_INT(return globalThis.__libreMidi_currentOutputs[$0].state === "connected", i);
 
       m_current_outputs[device_index].id = midi_id;
       m_current_outputs[device_index].name = midi_name;
@@ -217,8 +217,8 @@ private:
     EM_ASM(
         if (navigator.requestMIDIAccess) {
           navigator.requestMIDIAccess().then(
-              (midiAccess) = > globalThis.__libreMidi_access = midiAccess,
-              () = > console.log('MIDI support rejected, MIDI will not be available;'));
+              (midiAccess) => globalThis.__libreMidi_access = midiAccess,
+              () => console.log('MIDI support rejected, MIDI will not be available;'));
         } else { console.log('WebMIDI is not supported in this browser.'); });
   }
 

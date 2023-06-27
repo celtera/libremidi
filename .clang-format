@@ -83,6 +83,10 @@ SpacesInSquareBrackets: false
 Standard: Latest
 TabWidth: 2
 UseTab: Never
+WhitespaceSensitiveMacros:
+  - EM_ASM
+  - EM_ASM_INT
+  - get_js_string
 
 
 SortIncludes: true
