@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-project(libremidi CXX)
+project(libremidi 
+  VERSION 3.0
+  DESCRIPTION "A cross-platform MIDI library"
+  LANGUAGES CXX
+  HOMEPAGE_URL "https://github.com/jcelerier/libremidi"
+)
 
 option(LIBREMIDI_HEADER_ONLY "Header-only mode" OFF)
 option(LIBREMIDI_NO_COREMIDI "Disable CoreMidi back-end" OFF)
@@ -8,6 +13,8 @@ option(LIBREMIDI_NO_WINUWP "Disable UWP back-end" ON)
 option(LIBREMIDI_NO_JACK "Disable JACK back-end" OFF)
 option(LIBREMIDI_NO_ALSA "Disable ALSA back-end" OFF)
 option(LIBREMIDI_NO_EXPORTS "Disable dynamic symbol exporting" OFF)
+option(LIBREMIDI_NO_BOOST "Do not use Boost if available" OFF)
+option(LIBREMIDI_FIND_BOOST "Actively look for Boost" OFF)
 option(LIBREMIDI_EXAMPLES "Enable examples" OFF)
 option(LIBREMIDI_TESTS "Enable tests" ON)
 
@@ -17,6 +24,14 @@ include(CheckCXXSourceCompiles)
 ### Main library ###
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+if(LIBREMIDI_NO_BOOST AND LIBREMIDI_FIND_BOOST)
+  message(FATAL_ERROR "LIBREMIDI_NO_BOOST and LIBREMIDI_FIND_BOOST are incompatible")
+endif()
+
+if(LIBREMIDI_FIND_BOOST)
+  find_package(Boost REQUIRED)
+endif()
 
 if(LIBREMIDI_HEADER_ONLY)
   add_library(libremidi INTERFACE)
@@ -38,6 +53,7 @@ else()
     include/libremidi/detail/winmm.hpp
     include/libremidi/detail/winuwp.hpp
 
+    include/libremidi/config.hpp
     include/libremidi/message.hpp
     include/libremidi/reader.hpp
     include/libremidi/writer.hpp
@@ -49,11 +65,23 @@ else()
   )
   set(_public PUBLIC)
   set(_private PRIVATE)
+endif()
 
+if(LIBREMIDI_NO_BOOST)
+  target_compile_definitions(libremidi ${_public} LIBREMIDI_NO_BOOST)
+  message(STATUS "libremidi: Using std::vector for libremidi::message")
+else()
+  # Use of boost is public as it changes the ABI of libremidi::message
   if(TARGET Boost::boost)
-    target_link_libraries(libremidi PRIVATE Boost::boost)
+    target_compile_definitions(libremidi ${_public} LIBREMIDI_USE_BOOST)
+    target_link_libraries(libremidi ${_public} $<BUILD_INTERFACE:Boost::boost>)
+    message(STATUS "libremidi: Using boost::small_vector for libremidi::message")
   elseif(Boost_INCLUDE_DIR)
-    target_include_directories(libremidi PRIVATE ${Boost_INCLUDE_DIR})
+    target_compile_definitions(libremidi ${_public} LIBREMIDI_USE_BOOST)
+    target_include_directories(libremidi ${_public} $<BUILD_INTERFACE:${Boost_INCLUDE_DIR}>)
+    message(STATUS "libremidi: Using boost::small_vector for libremidi::message")
+  else()
+    message(STATUS "libremidi: Using std::vector for libremidi::message")
   endif()
 endif()
 
@@ -68,14 +96,17 @@ target_link_libraries(libremidi ${_public} ${CMAKE_THREAD_LIBS_INIT})
 
 target_include_directories(libremidi ${_public}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
 )
 
 if(EMSCRIPTEN)
+  message(STATUS "libremidi: using Emscripten MIDI")
   set(CMAKE_EXECUTABLE_SUFFIX .html)
   target_compile_definitions(libremidi ${_public} LIBREMIDI_EMSCRIPTEN)
 elseif(APPLE)
   ## CoreMIDI support ##
   if(NOT LIBREMIDI_NO_COREMIDI)
+    message(STATUS "libremidi: using CoreMIDI")
     target_compile_definitions(libremidi ${_public} LIBREMIDI_COREAUDIO)
 
     find_library(COREMIDI_LIBRARY CoreMIDI)
@@ -93,6 +124,7 @@ elseif(APPLE)
 elseif(WIN32)
   ## WinMM support ##
   if(NOT LIBREMIDI_NO_WINMM)
+    message(STATUS "libremidi: using WinMM")
     target_compile_definitions(libremidi
       ${_public}
         LIBREMIDI_WINMM
@@ -112,13 +144,14 @@ elseif(WIN32)
             ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt
             Include/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt)
     if(CPPWINRT_PATH)
+      message(STATUS "libremidi: using WinUWP")
       target_include_directories(libremidi ${_public} "${CPPWINRT_PATH}")
       target_compile_definitions(libremidi ${_public} LIBREMIDI_WINUWP)
       target_link_libraries(libremidi INTERFACE RuntimeObject)
       # We don't need /ZW option here (support for C++/CX)' as we use C++/WinRT
       target_compile_options(libremidi ${_public} /EHsc /await)
     else()
-      message(STATUS "libremidi : Failed to find Windows SDK, UWP MIDI backend will not be available")
+      message(STATUS "libremidi: Failed to find Windows SDK, UWP MIDI backend will not be available")
     endif()
   endif()
 
@@ -127,6 +160,7 @@ elseif(UNIX)
   if(NOT LIBREMIDI_NO_ALSA)
     find_package(ALSA)
     if(ALSA_FOUND)
+      message(STATUS "libremidi: using ALSA")
       target_compile_definitions(libremidi ${_public} LIBREMIDI_ALSA)
       target_link_libraries(libremidi ${_public} ${ALSA_LIBRARIES})
     endif()
@@ -138,11 +172,11 @@ if(NOT LIBREMIDI_NO_JACK)
   find_path(WEAKJACK_PATH weakjack/weak_libjack.h HINTS ${WEAKJACK_FOLDER})
   find_path(JACK_PATH jack/jack.h)
   if(WEAKJACK_PATH AND JACK_PATH)
-    message(STATUS "libremidi : Using WeakJACK")
+    message(STATUS "libremidi: using WeakJACK")
     set(HAS_JACK 1)
     target_include_directories(libremidi ${_public} $<BUILD_INTERFACE:${WEAKJACK_PATH}> $<BUILD_INTERFACE:${JACK_PATH}>)
   elseif(JACK_PATH)
-    message(STATUS "libremidi : Using linked JACK")
+    message(STATUS "libremidi: using linked JACK")
     find_library(JACK_LIBRARIES jack)
     if(JACK_LIBRARIES)
       set(HAS_JACK 1)
@@ -164,19 +198,43 @@ endif()
 ### Install  ###
 if(NOT LIBREMIDI_HEADER_ONLY)
   install(TARGETS libremidi
-          EXPORT libremidi-exports
+          EXPORT libremidi-targets
           ARCHIVE DESTINATION lib/static
           RUNTIME DESTINATION bin
           LIBRARY DESTINATION lib
-          )
+  )
 else()
-    install(TARGETS libremidi
-            EXPORT libremidi-exports
-            )
+  install(TARGETS libremidi
+          EXPORT libremidi-targets
+  )
 endif()
-install(EXPORT libremidi-exports
+install(EXPORT libremidi-targets
         DESTINATION lib/cmake/libremidi)
-export(EXPORT libremidi-exports)
+install(DIRECTORY include
+        DESTINATION .)
+export(EXPORT libremidi-targets)
+
+include(CMakePackageConfigHelpers)
+
+# generate the config file that includes the exports
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/libremidi-config.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/libremidi-config.cmake"
+  INSTALL_DESTINATION "lib/cmake/libremidi"
+  NO_SET_AND_CHECK_MACRO
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO
+)
+
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/libremidi-config-version.cmake"
+  VERSION "${CMAKE_PROJECT_VERSION}"
+  COMPATIBILITY AnyNewerVersion
+)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/libremidi-config.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/libremidi-config-version.cmake
+  DESTINATION lib/cmake/libremidi
+)
 
 ### Examples ###
 if(LIBREMIDI_EXAMPLES)
@@ -229,7 +287,7 @@ endif()
 if(LIBREMIDI_TESTS)
   find_package(Catch2 QUIET)
   if(TARGET Catch2::Catch2WithMain AND Catch2_FOUND)
-    message(STATUS "libremidi : compiling tests")
+    message(STATUS "libremidi: compiling tests")
     target_compile_features(libremidi ${_public} cxx_std_20)
 
     add_executable(midiin_test tests/unit/midi_in.cpp)
@@ -257,6 +315,6 @@ if(LIBREMIDI_TESTS)
     catch_discover_tests(midifile_write_test)
     catch_discover_tests(midifile_write_tracks_test)
   else()
-    message(STATUS "libremidi : not compiling tests")
+    message(STATUS "libremidi: not compiling tests")
   endif()
 endif()
