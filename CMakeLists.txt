@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-project(libremidi 
+project(libremidi
   VERSION 3.0
   DESCRIPTION "A cross-platform MIDI library"
   LANGUAGES CXX
@@ -66,6 +66,8 @@ else()
   set(_public PUBLIC)
   set(_private PRIVATE)
 endif()
+
+add_library(libremidi::libremidi ALIAS libremidi)
 
 if(LIBREMIDI_NO_BOOST)
   target_compile_definitions(libremidi ${_public} LIBREMIDI_NO_BOOST)
