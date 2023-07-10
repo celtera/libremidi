@@ -646,7 +646,7 @@ public:
         buffer[i] = message[i];
 
       // Create and prepare MIDIHDR structure.
-      MIDIHDR sysex;
+      MIDIHDR sysex{};
       sysex.lpData = (LPSTR)buffer.data();
       sysex.dwBufferLength = nBytes;
       sysex.dwFlags = 0;
