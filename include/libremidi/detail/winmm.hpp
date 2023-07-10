@@ -100,9 +100,8 @@ inline void MakeUniqueInPortName(std::string& deviceName, unsigned int portNumbe
       x++;
     }
   }
-  std::ostringstream os;
-  os << " " << x;
-  deviceName += os.str();
+  deviceName += " ";
+  deviceName += std::to_string(x);
 }
 
 inline void MakeUniqueOutPortName(std::string& deviceName, unsigned int portNumber)
@@ -118,9 +117,8 @@ inline void MakeUniqueOutPortName(std::string& deviceName, unsigned int portNumb
       x++;
     }
   }
-  std::ostringstream os;
-  os << " " << x;
-  deviceName += os.str();
+  deviceName += " ";
+  deviceName += std::to_string(x);
 }
 
 class observer_winmm final : public observer_api
