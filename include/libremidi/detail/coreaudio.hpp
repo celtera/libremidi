@@ -224,7 +224,8 @@ public:
     if (result != noErr)
     {
       std::ostringstream ost;
-      ost << "midi_in_core::initialize: error creating OS-X MIDI client object (" << result << ").";
+      ost << "midi_in_core::initialize: error creating OS-X MIDI client object (" << result
+          << ").";
       error<driver_error>(ost.str());
       return;
     }
@@ -265,7 +266,8 @@ public:
     if (portNumber >= nSrc)
     {
       std::ostringstream ost;
-      ost << "midi_in_core::open_port: the 'portNumber' argument (" << portNumber << ") is invalid.";
+      ost << "midi_in_core::open_port: the 'portNumber' argument (" << portNumber
+          << ") is invalid.";
       error<invalid_parameter_error>(ost.str());
       return;
     }
@@ -567,7 +569,8 @@ public:
     if (result != noErr)
     {
       std::ostringstream ost;
-      ost << "midi_in_core::initialize: error creating OS-X MIDI client object (" << result << ").";
+      ost << "midi_in_core::initialize: error creating OS-X MIDI client object (" << result
+          << ").";
       error<driver_error>(ost.str());
       return;
     }
@@ -600,14 +603,16 @@ public:
     unsigned int nDest = MIDIGetNumberOfDestinations();
     if (nDest < 1)
     {
-      error<no_devices_found_error>("midi_out_core::open_port: no MIDI output destinations found!");
+      error<no_devices_found_error>(
+          "midi_out_core::open_port: no MIDI output destinations found!");
       return;
     }
 
     if (portNumber >= nDest)
     {
       std::ostringstream ost;
-      ost << "midi_out_core::open_port: the 'portNumber' argument (" << portNumber << ") is invalid.";
+      ost << "midi_out_core::open_port: the 'portNumber' argument (" << portNumber
+          << ") is invalid.";
       error<invalid_parameter_error>(ost.str());
       return;
     }
@@ -804,6 +809,8 @@ struct core_backend
   using midi_out = midi_out_core;
   using midi_observer = observer_core;
   static const constexpr auto API = libremidi::API::MACOSX_CORE;
+  static const constexpr auto name = "core";
+  static const constexpr auto display_name = "CoreMIDI";
 };
 }
 #if TARGET_OS_IPHONE

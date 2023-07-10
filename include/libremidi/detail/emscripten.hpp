@@ -296,6 +296,8 @@ struct emscripten_backend
   using midi_out = midi_out_emscripten;
   using midi_observer = observer_emscripten;
   static const constexpr auto API = libremidi::API::EMSCRIPTEN_WEBMIDI;
+  static const constexpr auto name = "webmidi";
+  static const constexpr auto display_name = "WebMIDI";
 };
 
 // Some implementation goes there

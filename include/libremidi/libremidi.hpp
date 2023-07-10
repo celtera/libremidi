@@ -160,7 +160,12 @@ struct LIBREMIDI_EXPORT thread_error final : public midi_exception
 using midi_error_callback = std::function<void(midi_error type, std::string_view errorText)>;
 
 //! A static function to determine the current version.
-std::string get_version() noexcept;
+LIBREMIDI_EXPORT std::string_view get_version() noexcept;
+
+//! Map from and to API names
+LIBREMIDI_EXPORT std::string_view get_api_name(libremidi::API api);
+LIBREMIDI_EXPORT std::string_view get_api_display_name(libremidi::API api);
+LIBREMIDI_EXPORT libremidi::API get_compiled_api_by_name(std::string_view api);
 
 //! The callbacks will be called whenever a device is added or removed
 //! for a given API.

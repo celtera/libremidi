@@ -49,7 +49,8 @@
 
 namespace libremidi
 {
-
+namespace
+{
 // The order here will control the order of the API search in
 // the constructor.
 template <typename unused, typename... Args>
@@ -101,10 +102,40 @@ auto for_all_backends(F&& f)
 template <typename F>
 auto for_backend(libremidi::API api, F&& f)
 {
-  for_all_backends([&](auto b) {
-    if (b.API == api)
-      f(b);
+  static constexpr auto is_api
+      = [](auto& backend, libremidi::API api) { return backend.API == api; };
+  std::apply([&](auto&&... b) { ((is_api(b, api) && (f(b), true)) || ...); }, available_backends);
+}
+}
+
+LIBREMIDI_INLINE
+std::string_view get_version() noexcept
+{
+  return LIBREMIDI_VERSION;
+}
+
+LIBREMIDI_INLINE std::string_view get_api_name(libremidi::API api)
+{
+  std::string_view ret;
+  for_backend(api, [&](auto& b) { ret = b.name; });
+  return ret;
+}
+
+LIBREMIDI_INLINE std::string_view get_api_display_name(libremidi::API api)
+{
+  std::string_view ret;
+  for_backend(api, [&](auto& b) { ret = b.display_name; });
+  return ret;
+}
+
+LIBREMIDI_INLINE libremidi::API get_compiled_api_by_name(std::string_view name)
+{
+  libremidi::API ret = libremidi::API::UNSPECIFIED;
+  for_all_backends([&](auto& b) {
+    if (name == b.name)
+      ret = b.API;
   });
+  return ret;
 }
 
 LIBREMIDI_INLINE midi_exception::~midi_exception() = default;
@@ -331,12 +362,6 @@ void midi_out::set_error_callback(midi_error_callback errorCallback) noexcept
 }
 
 LIBREMIDI_INLINE
-std::string get_version() noexcept
-{
-  return std::string{LIBREMIDI_VERSION};
-}
-
-LIBREMIDI_INLINE
 midi_in::midi_in(libremidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
 {
   if (api != libremidi::API::UNSPECIFIED)
@@ -349,7 +374,7 @@ midi_in::midi_in(libremidi::API api, std::string_view clientName, unsigned int q
 
     // No compiled support for specified API value.  Issue a warning
     // and continue as if no API was specified.
-    std::cerr << "\nRtMidiIn: no compiled support for specified API argument!\n\n" << std::endl;
+    std::cerr << "\nmidi_in: no compiled support for specified API argument!\n\n" << std::endl;
   }
 
   // Iterate through the compiled APIs and return as soon as we find
@@ -395,7 +420,7 @@ midi_out::midi_out(libremidi::API api, std::string_view clientName)
 
     // No compiled support for specified API value.  Issue a warning
     // and continue as if no API was specified.
-    std::cerr << "\nRtMidiOut: no compiled support for specified API argument!\n\n" << std::endl;
+    std::cerr << "\nmidi_in: no compiled support for specified API argument!\n\n" << std::endl;
   }
 
   // Iterate through the compiled APIs and return as soon as we find
@@ -418,7 +443,7 @@ midi_out::midi_out(libremidi::API api, std::string_view clientName)
   // definition LIBREMIDI_DUMMY is automatically defined if no
   // API-specific definitions are passed to the compiler. But just in
   // case something weird happens, we'll thrown an error.
-  throw midi_exception{"RtMidiOut: no compiled API support found ... critical error!!"};
+  throw midi_exception{"midi_in: no compiled API support found ... critical error!!"};
 }
 
 LIBREMIDI_INLINE
