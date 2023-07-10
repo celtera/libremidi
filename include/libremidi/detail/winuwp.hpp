@@ -296,7 +296,7 @@ public:
   {
     if (connected_)
     {
-      warning("midi_in_winuwp::openPort: a valid connection already exists!");
+      warning("midi_in_winuwp::open_port: a valid connection already exists!");
       return;
     }
 

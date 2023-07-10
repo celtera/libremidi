@@ -139,7 +139,7 @@ public:
 
   PortList inputPortList;
   PortList outputPortList;
-  observer_winmm(observer::callbacks&& c)
+  explicit observer_winmm(observer::callbacks&& c)
       : observer_api{std::move(c)}
   {
     inputPortList = get_port_list(INPUT);
@@ -258,12 +258,12 @@ public:
     unsigned int nDevices = get_port_count();
     if (nDevices == 0)
     {
-      warning("MidiInWinMM::initialize: no MIDI input devices currently available.");
+      warning("midi_in_winmm::initialize: no MIDI input devices currently available.");
     }
 
     if (!InitializeCriticalSectionAndSpinCount(&(data._mutex), 0x00000400))
     {
-      warning("MidiInWinMM::initialize: InitializeCriticalSectionAndSpinCount failed.");
+      warning("midi_in_winmm::initialize: InitializeCriticalSectionAndSpinCount failed.");
     }
   }
 
@@ -281,21 +281,22 @@ public:
   {
     if (connected_)
     {
-      warning("MidiInWinMM::openPort: a valid connection already exists!");
+      warning("midi_in_winmm::open_port: a valid connection already exists!");
       return;
     }
 
     unsigned int nDevices = midiInGetNumDevs();
     if (nDevices == 0)
     {
-      error<no_devices_found_error>("MidiInWinMM::openPort: no MIDI input sources found!");
+      error<no_devices_found_error>("midi_in_winmm::open_port: no MIDI input sources found!");
       return;
     }
 
     if (portNumber >= nDevices)
     {
       std::ostringstream ost;
-      ost << "MidiInWinMM::openPort: the 'portNumber' argument (" << portNumber << ") is invalid.";
+      ost << "midi_in_winmm::open_port: the 'portNumber' argument (" << portNumber
+          << ") is invalid.";
       error<invalid_parameter_error>(ost.str());
       return;
     }
@@ -305,7 +306,7 @@ public:
         CALLBACK_FUNCTION);
     if (result != MMSYSERR_NOERROR)
     {
-      error<driver_error>("MidiInWinMM::openPort: error creating Windows MM MIDI input port.");
+      error<driver_error>("midi_in_winmm::open_port: error creating Windows MM MIDI input port.");
       return;
     }
 
@@ -324,7 +325,7 @@ public:
         midiInClose(data.inHandle);
         data.inHandle = nullptr;
         error<driver_error>(
-            "MidiInWinMM::openPort: error starting Windows MM MIDI input port "
+            "midi_in_winmm::open_port: error starting Windows MM MIDI input port "
             "(PrepareHeader).");
         return;
       }
@@ -336,7 +337,7 @@ public:
         midiInClose(data.inHandle);
         data.inHandle = nullptr;
         error<driver_error>(
-            "MidiInWinMM::openPort: error starting Windows MM MIDI input port "
+            "midi_in_winmm::open_port: error starting Windows MM MIDI input port "
             "(AddBuffer).");
         return;
       }
@@ -347,7 +348,7 @@ public:
     {
       midiInClose(data.inHandle);
       data.inHandle = nullptr;
-      error<driver_error>("MidiInWinMM::openPort: error starting Windows MM MIDI input port.");
+      error<driver_error>("midi_in_winmm::open_port: error starting Windows MM MIDI input port.");
       return;
     }
 
@@ -372,7 +373,7 @@ public:
           midiInClose(data.inHandle);
           data.inHandle = nullptr;
           error<driver_error>(
-              "MidiInWinMM::openPort: error closing Windows MM MIDI input "
+              "midi_in_winmm::open_port: error closing Windows MM MIDI input "
               "port (midiInUnprepareHeader).");
           return;
         }
@@ -394,7 +395,7 @@ public:
     if (portNumber >= nDevices)
     {
       std::ostringstream ost;
-      ost << "MidiInWinMM::getPortName: the 'portNumber' argument (" << portNumber
+      ost << "midi_in_winmm::get_port_name: the 'portNumber' argument (" << portNumber
           << ") is invalid.";
       warning(ost.str());
       return stringName;
@@ -524,7 +525,7 @@ class midi_out_winmm final : public midi_out_default<midi_out_winmm>
 {
 public:
   static const constexpr auto backend = "WinMM";
-  midi_out_winmm(std::string_view)
+  explicit midi_out_winmm(std::string_view)
   {
     // We'll issue a warning here if no devices are available but not
     // throw an error since the user can plug something in later.
@@ -532,7 +533,7 @@ public:
     if (nDevices == 0)
     {
       warning(
-          "MidiOutWinMM::initialize: no MIDI output devices currently "
+          "midi_out_winmm::initialize: no MIDI output devices currently "
           "available.");
     }
   }
@@ -549,21 +550,22 @@ public:
   {
     if (connected_)
     {
-      warning("MidiOutWinMM::openPort: a valid connection already exists!");
+      warning("midi_out_winmm::open_port: a valid connection already exists!");
       return;
     }
 
     unsigned int nDevices = midiOutGetNumDevs();
     if (nDevices < 1)
     {
-      error<no_devices_found_error>("MidiOutWinMM::openPort: no MIDI output destinations found!");
+      error<no_devices_found_error>(
+          "midi_out_winmm::open_port: no MIDI output destinations found!");
       return;
     }
 
     if (portNumber >= nDevices)
     {
       std::ostringstream ost;
-      ost << "MidiOutWinMM::openPort: the 'portNumber' argument (" << portNumber
+      ost << "midi_out_winmm::open_port: the 'portNumber' argument (" << portNumber
           << ") is invalid.";
       error<invalid_parameter_error>(ost.str());
       return;
@@ -573,7 +575,7 @@ public:
     if (result != MMSYSERR_NOERROR)
     {
       error<driver_error>(
-          "MidiOutWinMM::openPort: error creating Windows MM MIDI output "
+          "midi_out_winmm::open_port: error creating Windows MM MIDI output "
           "port.");
       return;
     }
@@ -601,7 +603,7 @@ public:
     if (portNumber >= nDevices)
     {
       std::ostringstream ost;
-      ost << "MidiOutWinMM::getPortName: the 'portNumber' argument (" << portNumber
+      ost << "midi_out_winmm::get_port_name: the 'portNumber' argument (" << portNumber
           << ") is invalid.";
       warning(ost.str());
       return stringName;
@@ -627,7 +629,7 @@ public:
     unsigned int nBytes = static_cast<unsigned int>(size);
     if (nBytes == 0)
     {
-      warning("MidiOutWinMM::sendMessage: message argument is empty!");
+      warning("midi_out_winmm::send_message: message argument is empty!");
       return;
     }
 
@@ -651,7 +653,7 @@ public:
       result = midiOutPrepareHeader(data.outHandle, &sysex, sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
       {
-        error<driver_error>("MidiOutWinMM::sendMessage: error preparing sysex header.");
+        error<driver_error>("midi_out_winmm::send_message: error preparing sysex header.");
         return;
       }
 
@@ -659,7 +661,7 @@ public:
       result = midiOutLongMsg(data.outHandle, &sysex, sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
       {
-        error<driver_error>("MidiOutWinMM::sendMessage: error sending sysex message.");
+        error<driver_error>("midi_out_winmm::send_message: error sending sysex message.");
         return;
       }
 
@@ -675,7 +677,7 @@ public:
       if (nBytes > 3)
       {
         warning(
-            "MidiOutWinMM::sendMessage: message size is greater than 3 bytes "
+            "midi_out_winmm::send_message: message size is greater than 3 bytes "
             "(and not sysex)!");
         return;
       }
@@ -693,7 +695,7 @@ public:
       result = midiOutShortMsg(data.outHandle, packet);
       if (result != MMSYSERR_NOERROR)
       {
-        error<driver_error>("MidiOutWinMM::sendMessage: error sending MIDI message.");
+        error<driver_error>("midi_out_winmm::send_message: error sending MIDI message.");
       }
     }
   }

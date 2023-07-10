@@ -8,7 +8,7 @@ namespace libremidi
 class semaphore
 {
 public:
-  explicit semaphore(size_t count = 0)
+  explicit semaphore(size_t count = 0) noexcept
       : count_{count}
   {
   }

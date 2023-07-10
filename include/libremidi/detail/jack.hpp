@@ -86,7 +86,7 @@ public:
 
     if (data.port == nullptr)
     {
-      error<driver_error>("MidiInJack::openPort: JACK error creating port");
+      error<driver_error>("midi_in_jack::open_port: JACK error creating port");
       return;
     }
 
@@ -106,7 +106,7 @@ public:
 
     if (!data.port)
     {
-      error<driver_error>("MidiInJack::openVirtualPort: JACK error creating virtual port");
+      error<driver_error>("midi_in_jack::open_virtual_port: JACK error creating virtual port");
     }
   }
 
@@ -123,7 +123,7 @@ public:
   void set_client_name(std::string_view clientName) override
   {
     warning(
-        "MidiInJack::setClientName: this function is not implemented for the "
+        "midi_in_jack::setClientName: this function is not implemented for the "
         "UNIX_JACK API!");
   }
 
@@ -169,14 +169,14 @@ public:
     // Check port validity
     if (ports == nullptr)
     {
-      warning("MidiInJack::getPortName: no ports available!");
+      warning("midi_in_jack::get_port_name: no ports available!");
       return retStr;
     }
 
     if (ports[portNumber] == nullptr)
     {
       std::ostringstream ost;
-      ost << "MidiInJack::getPortName: the 'portNumber' argument (" << portNumber
+      ost << "midi_in_jack::get_port_name: the 'portNumber' argument (" << portNumber
           << ") is invalid.";
       warning(ost.str());
     }
@@ -197,7 +197,7 @@ private:
     data.client = jack_client_open(clientName.c_str(), JackNoStartServer, nullptr);
     if (data.client == nullptr)
     {
-      warning("MidiInJack::initialize: JACK server not running?");
+      warning("midi_in_jack::initialize: JACK server not running?");
       return;
     }
 
@@ -334,7 +334,7 @@ public:
 
     if (!data.port)
     {
-      error<driver_error>("MidiOutJack::openPort: JACK error creating port");
+      error<driver_error>("midi_out_jack::open_port: JACK error creating port");
       return;
     }
 
@@ -354,7 +354,7 @@ public:
 
     if (data.port == nullptr)
     {
-      error<driver_error>("MidiOutJack::openVirtualPort: JACK error creating virtual port");
+      error<driver_error>("midi_out_jack::open_virtual_port: JACK error creating virtual port");
     }
   }
 
@@ -376,7 +376,7 @@ public:
   void set_client_name(std::string_view clientName) override
   {
     warning(
-        "MidiOutJack::setClientName: this function is not implemented for the "
+        "midi_out_jack::setClientName: this function is not implemented for the "
         "UNIX_JACK API!");
   }
 
@@ -423,14 +423,14 @@ public:
     // Check port validity
     if (ports == nullptr)
     {
-      warning("MidiOutJack::getPortName: no ports available!");
+      warning("midi_out_jack::get_port_name: no ports available!");
       return retStr;
     }
 
     if (ports[portNumber] == nullptr)
     {
       std::ostringstream ost;
-      ost << "MidiOutJack::getPortName: the 'portNumber' argument (" << portNumber
+      ost << "midi_out_jack::get_port_name: the 'portNumber' argument (" << portNumber
           << ") is invalid.";
       warning(ost.str());
     }
@@ -466,7 +466,7 @@ private:
     data.client = jack_client_open(clientName.c_str(), JackNoStartServer, nullptr);
     if (data.client == nullptr)
     {
-      warning("MidiOutJack::initialize: JACK server not running?");
+      warning("midi_out_jack::initialize: JACK server not running?");
       return;
     }
 

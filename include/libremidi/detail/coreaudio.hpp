@@ -224,7 +224,7 @@ public:
     if (result != noErr)
     {
       std::ostringstream ost;
-      ost << "MidiInCore::initialize: error creating OS-X MIDI client object (" << result << ").";
+      ost << "midi_in_core::initialize: error creating OS-X MIDI client object (" << result << ").";
       error<driver_error>(ost.str());
       return;
     }
@@ -250,7 +250,7 @@ public:
   {
     if (connected_)
     {
-      warning("MidiInCore::openPort: a valid connection already exists!");
+      warning("midi_in_core::open_port: a valid connection already exists!");
       return;
     }
 
@@ -258,14 +258,14 @@ public:
     unsigned int nSrc = MIDIGetNumberOfSources();
     if (nSrc < 1)
     {
-      error<no_devices_found_error>("MidiInCore::openPort: no MIDI input sources found!");
+      error<no_devices_found_error>("midi_in_core::open_port: no MIDI input sources found!");
       return;
     }
 
     if (portNumber >= nSrc)
     {
       std::ostringstream ost;
-      ost << "MidiInCore::openPort: the 'portNumber' argument (" << portNumber << ") is invalid.";
+      ost << "midi_in_core::open_port: the 'portNumber' argument (" << portNumber << ") is invalid.";
       error<invalid_parameter_error>(ost.str());
       return;
     }
@@ -280,7 +280,7 @@ public:
     if (result != noErr)
     {
       MIDIClientDispose(data.client);
-      error<driver_error>("MidiInCore::openPort: error creating OS-X MIDI input port.");
+      error<driver_error>("midi_in_core::open_port: error creating OS-X MIDI input port.");
       return;
     }
 
@@ -290,7 +290,7 @@ public:
     {
       MIDIPortDispose(port);
       MIDIClientDispose(data.client);
-      error<driver_error>("MidiInCore::openPort: error getting MIDI input source reference.");
+      error<driver_error>("midi_in_core::open_port: error getting MIDI input source reference.");
       return;
     }
 
@@ -300,7 +300,7 @@ public:
     {
       MIDIPortDispose(port);
       MIDIClientDispose(data.client);
-      error<driver_error>("MidiInCore::openPort: error connecting OS-X MIDI input port.");
+      error<driver_error>("midi_in_core::open_port: error connecting OS-X MIDI input port.");
       return;
     }
 
@@ -322,7 +322,7 @@ public:
     if (result != noErr)
     {
       error<driver_error>(
-          "MidiInCore::openVirtualPort: error creating virtual OS-X MIDI "
+          "midi_in_core::open_virtual_port: error creating virtual OS-X MIDI "
           "destination.");
       return;
     }
@@ -349,13 +349,13 @@ public:
   void set_client_name(std::string_view clientName) override
   {
     warning(
-        "MidiInCore::setClientName: this function is not implemented for the "
+        "midi_in_core::setClientName: this function is not implemented for the "
         "MACOSX_CORE API!");
   }
   void set_port_name(std::string_view portName) override
   {
     warning(
-        "MidiInCore::setPortName: this function is not implemented for the "
+        "midi_in_core::setPortName: this function is not implemented for the "
         "MACOSX_CORE API!");
   }
   unsigned int get_port_count() override
@@ -374,7 +374,7 @@ public:
     if (portNumber >= MIDIGetNumberOfSources())
     {
       std::ostringstream ost;
-      ost << "MidiInCore::getPortName: the 'portNumber' argument (" << portNumber
+      ost << "midi_in_core::get_port_name: the 'portNumber' argument (" << portNumber
           << ") is invalid.";
       warning(ost.str());
       return stringName;
@@ -567,7 +567,7 @@ public:
     if (result != noErr)
     {
       std::ostringstream ost;
-      ost << "MidiInCore::initialize: error creating OS-X MIDI client object (" << result << ").";
+      ost << "midi_in_core::initialize: error creating OS-X MIDI client object (" << result << ").";
       error<driver_error>(ost.str());
       return;
     }
@@ -592,7 +592,7 @@ public:
   {
     if (connected_)
     {
-      warning("MidiOutCore::openPort: a valid connection already exists!");
+      warning("midi_out_core::open_port: a valid connection already exists!");
       return;
     }
 
@@ -600,14 +600,14 @@ public:
     unsigned int nDest = MIDIGetNumberOfDestinations();
     if (nDest < 1)
     {
-      error<no_devices_found_error>("MidiOutCore::openPort: no MIDI output destinations found!");
+      error<no_devices_found_error>("midi_out_core::open_port: no MIDI output destinations found!");
       return;
     }
 
     if (portNumber >= nDest)
     {
       std::ostringstream ost;
-      ost << "MidiOutCore::openPort: the 'portNumber' argument (" << portNumber << ") is invalid.";
+      ost << "midi_out_core::open_port: the 'portNumber' argument (" << portNumber << ") is invalid.";
       error<invalid_parameter_error>(ost.str());
       return;
     }
@@ -620,7 +620,7 @@ public:
     if (result != noErr)
     {
       MIDIClientDispose(data.client);
-      error<driver_error>("MidiOutCore::openPort: error creating OS-X MIDI output port.");
+      error<driver_error>("midi_out_core::open_port: error creating OS-X MIDI output port.");
       return;
     }
 
@@ -631,7 +631,7 @@ public:
       MIDIPortDispose(port);
       MIDIClientDispose(data.client);
       error<driver_error>(
-          "MidiOutCore::openPort: error getting MIDI output destination "
+          "midi_out_core::open_port: error getting MIDI output destination "
           "reference.");
       return;
     }
@@ -646,7 +646,7 @@ public:
     if (data.endpoint)
     {
       warning(
-          "MidiOutCore::openVirtualPort: a virtual output port already "
+          "midi_out_core::open_virtual_port: a virtual output port already "
           "exists!");
       return;
     }
@@ -660,7 +660,7 @@ public:
 
     if (result != noErr)
     {
-      error<driver_error>("MidiOutCore::initialize: error creating OS-X virtual MIDI source.");
+      error<driver_error>("midi_out_core::initialize: error creating OS-X virtual MIDI source.");
       return;
     }
 
@@ -686,14 +686,14 @@ public:
   void set_client_name(std::string_view clientName) override
   {
     warning(
-        "MidiOutCore::set_client_name: this function is not implemented for "
+        "midi_out_core::set_client_name: this function is not implemented for "
         "the "
         "MACOSX_CORE API!");
   }
   void set_port_name(std::string_view portName) override
   {
     warning(
-        "MidiOutCore::set_port_name: this function is not implemented for the "
+        "midi_out_core::set_port_name: this function is not implemented for the "
         "MACOSX_CORE API!");
   }
   unsigned int get_port_count() override
@@ -712,7 +712,7 @@ public:
     if (portNumber >= MIDIGetNumberOfDestinations())
     {
       std::ostringstream ost;
-      ost << "MidiOutCore::getPortName: the 'portNumber' argument (" << portNumber
+      ost << "midi_out_core::get_port_name: the 'portNumber' argument (" << portNumber
           << ") is invalid.";
       warning(ost.str());
       return stringName;
@@ -732,7 +732,7 @@ public:
     unsigned int nBytes = static_cast<unsigned int>(size);
     if (nBytes == 0)
     {
-      warning("MidiOutCore::sendMessage: no data in message argument!");
+      warning("midi_out_core::send_message: no data in message argument!");
       return;
     }
 
@@ -742,7 +742,7 @@ public:
     if (message[0] != 0xF0 && nBytes > 3)
     {
       warning(
-          "MidiOutCore::sendMessage: message format problem ... not sysex but "
+          "midi_out_core::send_message: message format problem ... not sysex but "
           "> 3 bytes?");
       return;
     }
@@ -767,7 +767,7 @@ public:
 
     if (!packet)
     {
-      error<driver_error>("MidiOutCore::sendMessage: could not allocate packet list");
+      error<driver_error>("midi_out_core::send_message: could not allocate packet list");
       return;
     }
 
@@ -778,7 +778,7 @@ public:
       if (result != noErr)
       {
         warning(
-            "MidiOutCore::sendMessage: error sending MIDI to virtual "
+            "midi_out_core::send_message: error sending MIDI to virtual "
             "destinations.");
       }
     }
@@ -789,7 +789,7 @@ public:
       result = MIDISend(data.port, data.destinationId, packetList);
       if (result != noErr)
       {
-        warning("MidiOutCore::sendMessage: error sending MIDI message to port.");
+        warning("midi_out_core::send_message: error sending MIDI message to port.");
       }
     }
   }

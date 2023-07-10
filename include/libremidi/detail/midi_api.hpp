@@ -48,7 +48,7 @@ public:
     errorCallback_ = std::move(errorCallback);
   }
 
-  //! Error reporting function for RtMidi classes. Throws.
+  //! Error reporting function for libremidi classes. Throws.
   template <typename Error_T>
   void error(std::string_view errorString) const
   {
@@ -70,7 +70,7 @@ public:
     }
   }
 
-  //! Warning reporting function for RtMidi classes.
+  //! Warning reporting function for libremidi classes.
   void warning(std::string_view errorString) const
   {
     if (errorCallback_)
@@ -144,7 +144,7 @@ public:
     if (inputData_.userCallback)
     {
       warning(
-          "RtMidiIn::getNextMessage: a user callback is currently set for "
+          "midi_in_api::getNextMessage: a user callback is currently set for "
           "this port.");
       return {};
     }
@@ -162,7 +162,7 @@ public:
     if (inputData_.userCallback)
     {
       warning(
-          "RtMidiIn::getNextMessage: a user callback is currently set for "
+          "midi_in_api::get_message: a user callback is currently set for "
           "this port.");
       return {};
     }
