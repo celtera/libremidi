@@ -587,7 +587,6 @@ public:
   {
     if (connected_)
     {
-      midiOutReset(data.outHandle);
       midiOutClose(data.outHandle);
       data.outHandle = nullptr;
       connected_ = false;
