@@ -999,14 +999,13 @@ public:
     return stringName;
   }
 
-  void send_message(const unsigned char* message, size_t size) override
+  void send_message(const unsigned char* message, std::size_t size) override
   {
     int64_t result{};
-    unsigned int nBytes = static_cast<unsigned int>(size);
-    if (nBytes > data.bufferSize)
+    if (size > data.bufferSize)
     {
-      data.bufferSize = nBytes;
-      result = snd_midi_event_resize_buffer(data.coder, nBytes);
+      data.bufferSize = size;
+      result = snd_midi_event_resize_buffer(data.coder, size);
       if (result != 0)
       {
         error<driver_error>(
@@ -1016,25 +1015,41 @@ public:
       }
     }
 
-    snd_seq_event_t ev;
-    snd_seq_ev_clear(&ev);
-    snd_seq_ev_set_source(&ev, data.vport);
-    snd_seq_ev_set_subs(&ev);
-    snd_seq_ev_set_direct(&ev);
+    auto& buffer = data.buffer;
+    buffer.assign(message, message + size);
 
-    result = snd_midi_event_encode(data.coder, message, nBytes, &ev);
-    if (result < nBytes)
+    std::size_t offset = 0;
+    while (offset < size)
     {
-      warning("midi_out_alsa::send_message: event parsing error!");
-      return;
-    }
+      snd_seq_event_t ev;
+      snd_seq_ev_clear(&ev);
+      snd_seq_ev_set_source(&ev, data.vport);
+      snd_seq_ev_set_subs(&ev);
+      snd_seq_ev_set_direct(&ev);
 
-    // Send the event.
-    result = snd_seq_event_output(data.seq, &ev);
-    if (result < 0)
-    {
-      warning("midi_out_alsa::send_message: error sending MIDI message to port.");
-      return;
+      const int64_t nBytes = size; // signed to avoir potential overflow with size - offset below
+      result = snd_midi_event_encode(
+          data.coder, data.buffer.data() + offset, (long)(nBytes - offset), &ev);
+      if (result < 0)
+      {
+        warning("midi_out_alsa::send_message: event parsing error!");
+        return;
+      }
+
+      if (ev.type == SND_SEQ_EVENT_NONE)
+      {
+        warning("midi_out_alsa::send_message: incomplete message!");
+        return;
+      }
+
+      offset += result;
+
+      result = snd_seq_event_output(data.seq, &ev);
+      if (result < 0)
+      {
+        warning("midi_out_alsa::send_message: error sending MIDI message to port.");
+        return;
+      }
     }
     snd_seq_drain_output(data.seq);
   }
