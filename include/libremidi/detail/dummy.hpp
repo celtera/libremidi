@@ -75,5 +75,7 @@ struct dummy_backend
   using midi_out = midi_out_dummy;
   using midi_observer = observer_dummy;
   static const constexpr auto API = libremidi::API::DUMMY;
+  static const constexpr auto name = "dummy";
+  static const constexpr auto display_name = "Dummy";
 };
 }

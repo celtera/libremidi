@@ -509,6 +509,8 @@ struct jack_backend
   using midi_out = midi_out_jack;
   using midi_observer = observer_jack;
   static const constexpr auto API = libremidi::API::UNIX_JACK;
+  static const constexpr auto name = "jack";
+  static const constexpr auto display_name = "JACK";
 };
 }
 #endif

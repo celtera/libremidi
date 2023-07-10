@@ -502,7 +502,7 @@ private:
             apiData.inHandle, apiData.sysexBuffer[sysex->dwUser], sizeof(MIDIHDR));
         LeaveCriticalSection(&(apiData._mutex));
         if (result != MMSYSERR_NOERROR)
-          std::cerr << "\nRtMidiIn::midiInputCallback: error sending sysex to "
+          std::cerr << "\nmidi_in::midiInputCallback: error sending sysex to "
                        "Midi device!!\n\n";
 
         if (data.ignoreFlags & 0x01)
@@ -711,5 +711,7 @@ struct winmm_backend
   using midi_out = midi_out_winmm;
   using midi_observer = observer_winmm;
   static const constexpr auto API = libremidi::API::WINDOWS_MM;
+  static const constexpr auto name = "winmm";
+  static const constexpr auto display_name = "Windows Multimedia";
 };
 }

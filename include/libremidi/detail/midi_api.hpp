@@ -170,7 +170,7 @@ public:
     return inputData_.queue.pop(m);
   }
 
-  // The RtMidiInData structure is used to pass private class data to
+  // The in_data structure is used to pass private class data to
   // the MIDI input handling function or thread.
   struct in_data
   {

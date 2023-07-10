@@ -1049,5 +1049,7 @@ struct alsa_backend
   using midi_out = midi_out_alsa;
   using midi_observer = observer_alsa;
   static const constexpr auto API = libremidi::API::LINUX_ALSA;
+  static const constexpr auto name = "alsa_seq";
+  static const constexpr auto display_name = "ALSA (sequencer)";
 };
 }

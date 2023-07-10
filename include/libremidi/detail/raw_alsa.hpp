@@ -517,5 +517,7 @@ struct raw_alsa_backend
   using midi_out = midi_out_raw_alsa;
   using midi_observer = observer_dummy;
   static const constexpr auto API = libremidi::API::LINUX_ALSA_RAW;
+  static const constexpr auto name = "alsa_raw";
+  static const constexpr auto display_name = "ALSA (raw)";
 };
 }
