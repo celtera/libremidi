@@ -14,6 +14,9 @@
   #include <libremidi/detail/semaphore.hpp>
   #include <libremidi/libremidi.hpp>
 
+  #include <ostream>
+  #include <sstream>
+
 //*********************************************************************//
 //  API: UNIX JACK
 //
@@ -50,7 +53,24 @@ public:
   ~observer_jack() { }
 };
 
-class midi_in_jack final : public midi_in_api
+struct jack_helpers
+{
+  static bool check_port_name_length(
+      midi_api& self, std::string_view clientName, std::string_view portName) noexcept
+  {
+    // full name: "client_name:port_name\0"
+    if (clientName.size() + portName.size() + 1 + 1 >= jack_port_name_size())
+    {
+      self.error<invalid_use_error>("JACK: port name length limit exceeded");
+      return false;
+    }
+    return true;
+  }
+};
+
+class midi_in_jack final
+    : public midi_in_api
+    , private jack_helpers
 {
 public:
   midi_in_jack(std::string_view cname, unsigned int queueSizeLimit)
@@ -77,6 +97,9 @@ public:
 
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
+    if (!check_port_name_length(*this, clientName, portName))
+      return;
+
     connect();
 
     // Creating new port
@@ -99,6 +122,9 @@ public:
 
   void open_virtual_port(std::string_view portName) override
   {
+    if (!check_port_name_length(*this, clientName, portName))
+      return;
+
     connect();
     if (!data.port)
       data.port = jack_port_register(
@@ -296,7 +322,9 @@ private:
   jack_data data;
 };
 
-class midi_out_jack final : public midi_out_api
+class midi_out_jack final
+    : public midi_out_api
+    , private jack_helpers
 {
 public:
   midi_out_jack(std::string_view cname)
@@ -325,6 +353,9 @@ public:
 
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
+    if (!check_port_name_length(*this, clientName, portName))
+      return;
+
     connect();
 
     // Creating new port
@@ -347,6 +378,9 @@ public:
 
   void open_virtual_port(std::string_view portName) override
   {
+    if (!check_port_name_length(*this, clientName, portName))
+      return;
+
     connect();
     if (data.port == nullptr)
       data.port = jack_port_register(
