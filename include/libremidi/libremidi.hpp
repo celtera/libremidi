@@ -244,7 +244,7 @@ public:
     \param queueSizeLimit An optional size of the MIDI input queue can be
     specified.
   */
-  midi_in(
+  explicit midi_in(
       libremidi::API api = API::UNSPECIFIED,
       std::string_view clientName = "libremidi input client", unsigned int queueSizeLimit = 100);
 
@@ -387,9 +387,9 @@ public:
     compiled, the default order of use is ALSA, JACK (Linux) and CORE,
     JACK (OS-X).
   */
-  midi_out(libremidi::API api, std::string_view clientName);
+  explicit midi_out(libremidi::API api, std::string_view clientName);
 
-  midi_out()
+  explicit midi_out()
       : midi_out{libremidi::API::UNSPECIFIED, "libremidi client"}
   {
   }

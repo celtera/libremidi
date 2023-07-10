@@ -92,7 +92,7 @@ struct alsa_data
 class observer_alsa final : public observer_api
 {
 public:
-  observer_alsa(observer::callbacks&& c)
+  explicit observer_alsa(observer::callbacks&& c)
       : observer_api{std::move(c)}
   {
     using namespace std::literals;
@@ -262,7 +262,7 @@ private:
 class midi_in_alsa final : public midi_in_api
 {
 public:
-  midi_in_alsa(std::string_view clientName, unsigned int queueSizeLimit)
+  explicit midi_in_alsa(std::string_view clientName, unsigned int queueSizeLimit)
       : midi_in_api{&data, queueSizeLimit}
   {
     // Set up the ALSA sequencer client.
@@ -271,7 +271,7 @@ public:
     if (result < 0)
     {
       error<driver_error>(
-          "MidiInAlsa::initialize: error creating ALSA sequencer client "
+          "midi_in_alsa::initialize: error creating ALSA sequencer client "
           "object.");
       return;
     }
@@ -290,13 +290,13 @@ public:
 
     if (pipe(data.trigger_fds) == -1)
     {
-      error<driver_error>("MidiInAlsa::initialize: error creating pipe objects.");
+      error<driver_error>("midi_in_alsa::initialize: error creating pipe objects.");
       return;
     }
 
     // Create the input queue
 #ifndef AVOID_TIMESTAMPING
-    data.queue_id = snd_seq_alloc_named_queue(seq, "RtMidi Queue");
+    data.queue_id = snd_seq_alloc_named_queue(seq, "libremidi queue");
     // Set arbitrary tempo (mm=100) and resolution (240)
     snd_seq_queue_tempo_t* qtempo;
     snd_seq_queue_tempo_alloca(&qtempo);
@@ -339,14 +339,14 @@ public:
   {
     if (connected_)
     {
-      warning("MidiInAlsa::openPort: a valid connection already exists!");
+      warning("midi_in_alsa::open_port: a valid connection already exists!");
       return;
     }
 
     unsigned int nSrc = this->get_port_count();
     if (nSrc < 1)
     {
-      error<no_devices_found_error>("MidiInAlsa::openPort: no MIDI input sources found!");
+      error<no_devices_found_error>("midi_in_alsa::open_port: no MIDI input sources found!");
       return;
     }
 
@@ -358,7 +358,8 @@ public:
         == 0)
     {
       std::ostringstream ost;
-      ost << "MidiInAlsa::openPort: the 'portNumber' argument (" << portNumber << ") is invalid.";
+      ost << "midi_in_alsa::open_port: the 'portNumber' argument (" << portNumber
+          << ") is invalid.";
       error<invalid_parameter_error>(ost.str());
       return;
     }
@@ -389,7 +390,7 @@ public:
 
       if (data.vport < 0)
       {
-        error<driver_error>("MidiInAlsa::openPort: ALSA error creating input port.");
+        error<driver_error>("midi_in_alsa::open_port: ALSA error creating input port.");
         return;
       }
       data.vport = snd_seq_port_info_get_port(pinfo);
@@ -402,7 +403,7 @@ public:
       // Make subscription
       if (snd_seq_port_subscribe_malloc(&data.subscription) < 0)
       {
-        error<driver_error>("MidiInAlsa::openPort: ALSA error allocation port subscription.");
+        error<driver_error>("midi_in_alsa::open_port: ALSA error allocation port subscription.");
         return;
       }
       snd_seq_port_subscribe_set_sender(data.subscription, &sender);
@@ -411,7 +412,7 @@ public:
       {
         snd_seq_port_subscribe_free(data.subscription);
         data.subscription = nullptr;
-        error<driver_error>("MidiInAlsa::openPort: ALSA error making port connection.");
+        error<driver_error>("midi_in_alsa::open_port: ALSA error making port connection.");
         return;
       }
     }
@@ -438,13 +439,14 @@ public:
         snd_seq_port_subscribe_free(data.subscription);
         data.subscription = nullptr;
         inputData_.doInput = false;
-        error<thread_error>("MidiInAlsa::openPort: error starting MIDI input thread!");
+        error<thread_error>("midi_in_alsa::open_port: error starting MIDI input thread!");
         return;
       }
     }
 
     connected_ = true;
   }
+
   void open_virtual_port(std::string_view portName) override
   {
     if (data.vport < 0)
@@ -466,7 +468,7 @@ public:
 
       if (data.vport < 0)
       {
-        error<driver_error>("MidiInAlsa::openVirtualPort: ALSA error creating virtual port.");
+        error<driver_error>("midi_in_alsa::open_virtual_port: ALSA error creating virtual port.");
         return;
       }
       data.vport = snd_seq_port_info_get_port(pinfo);
@@ -501,7 +503,7 @@ public:
           data.subscription = nullptr;
         }
         inputData_.doInput = false;
-        error<thread_error>("MidiInAlsa::openPort: error starting MIDI input thread!");
+        error<thread_error>("midi_in_alsa::open_virtual_port: error starting MIDI input thread!");
         return;
       }
     }
@@ -554,6 +556,7 @@ public:
 
     return portInfo(data.seq, pinfo, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ, -1);
   }
+
   std::string get_port_name(unsigned int portNumber) override
   {
     snd_seq_client_info_t* cinfo;
@@ -581,7 +584,7 @@ public:
     }
 
     // If we get here, we didn't find a match.
-    warning("MidiInAlsa::getPortName: error looking for port name!");
+    warning("midi_in_alsa::get_port_name: error looking for port name!");
     return stringName;
   }
 
@@ -605,7 +608,7 @@ private:
     if (result < 0)
     {
       data.doInput = false;
-      std::cerr << "\nMidiInAlsa::alsaMidiHandler: error initializing MIDI "
+      std::cerr << "\nmidi_in_alsa::alsaMidiHandler: error initializing MIDI "
                    "event parser!\n\n";
       return nullptr;
     }
@@ -643,12 +646,12 @@ private:
       result = snd_seq_event_input(apidata.seq, &ev);
       if (result == -ENOSPC)
       {
-        std::cerr << "\nMidiInAlsa::alsaMidiHandler: MIDI input buffer overrun!\n\n";
+        std::cerr << "\nmidi_in_alsa::alsaMidiHandler: MIDI input buffer overrun!\n\n";
         continue;
       }
       else if (result <= 0)
       {
-        std::cerr << "\nMidiInAlsa::alsaMidiHandler: unknown MIDI input error!\n";
+        std::cerr << "\nmidi_in_alsa::alsaMidiHandler: unknown MIDI input error!\n";
         perror("System reports");
         continue;
       }
@@ -664,13 +667,13 @@ private:
 
         case SND_SEQ_EVENT_PORT_SUBSCRIBED:
 #if defined(__LIBREMIDI_DEBUG__)
-          std::cout << "MidiInAlsa::alsaMidiHandler: port connection made!\n";
+          std::cout << "midi_in_alsa::alsaMidiHandler: port connection made!\n";
 #endif
           break;
 
         case SND_SEQ_EVENT_PORT_UNSUBSCRIBED:
 #if defined(__LIBREMIDI_DEBUG__)
-          std::cerr << "MidiInAlsa::alsaMidiHandler: port connection has closed!\n";
+          std::cerr << "midi_in_alsa::alsaMidiHandler: port connection has closed!\n";
           std::cout << "sender = " << (int)ev->data.connect.sender.client << ":"
                     << (int)ev->data.connect.sender.port
                     << ", dest = " << (int)ev->data.connect.dest.client << ":"
@@ -777,7 +780,7 @@ private:
           else
           {
 #if defined(__LIBREMIDI_DEBUG__)
-            std::cerr << "\nMidiInAlsa::alsaMidiHandler: event parsing error or "
+            std::cerr << "\nmidi_in_alsa::alsaMidiHandler: event parsing error or "
                          "not a MIDI event!\n\n";
 #endif
           }
@@ -802,7 +805,7 @@ private:
 class midi_out_alsa final : public midi_out_api
 {
 public:
-  midi_out_alsa(std::string_view clientName)
+  explicit midi_out_alsa(std::string_view clientName)
   {
     // Set up the ALSA sequencer client.
     snd_seq_t* seq{};
@@ -810,7 +813,7 @@ public:
     if (result1 < 0)
     {
       error<driver_error>(
-          "MidiOutAlsa::initialize: error creating ALSA sequencer client "
+          "midi_out_alsa::initialize: error creating ALSA sequencer client "
           "object.");
       return;
     }
@@ -827,7 +830,7 @@ public:
     if (result < 0)
     {
       error<driver_error>(
-          "MidiOutAlsa::initialize: error initializing MIDI event "
+          "midi_out_alsa::initialize: error initializing MIDI event "
           "parser!\n\n");
       return;
     }
@@ -853,14 +856,14 @@ public:
   {
     if (connected_)
     {
-      warning("MidiOutAlsa::openPort: a valid connection already exists!");
+      warning("midi_out_alsa::open_port: a valid connection already exists!");
       return;
     }
 
     unsigned int nSrc = this->get_port_count();
     if (nSrc < 1)
     {
-      error<no_devices_found_error>("MidiOutAlsa::openPort: no MIDI output sources found!");
+      error<no_devices_found_error>("midi_out_alsa::open_port: no MIDI output sources found!");
       return;
     }
 
@@ -871,7 +874,8 @@ public:
         == 0)
     {
       std::ostringstream ost;
-      ost << "MidiOutAlsa::openPort: the 'portNumber' argument (" << portNumber << ") is invalid.";
+      ost << "midi_out_alsa::open_port: the 'portNumber' argument (" << portNumber
+          << ") is invalid.";
       error<invalid_parameter_error>(ost.str());
       return;
     }
@@ -888,7 +892,7 @@ public:
           SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
       if (data.vport < 0)
       {
-        error<driver_error>("MidiOutAlsa::openPort: ALSA error creating output port.");
+        error<driver_error>("midi_out_alsa::open_port: ALSA error creating output port.");
         return;
       }
     }
@@ -899,7 +903,7 @@ public:
     if (snd_seq_port_subscribe_malloc(&data.subscription) < 0)
     {
       snd_seq_port_subscribe_free(data.subscription);
-      error<driver_error>("MidiOutAlsa::openPort: error allocating port subscription.");
+      error<driver_error>("midi_out_alsa::open_port: error allocating port subscription.");
       return;
     }
     snd_seq_port_subscribe_set_sender(data.subscription, &sender);
@@ -909,7 +913,7 @@ public:
     if (snd_seq_subscribe_port(data.seq, data.subscription))
     {
       snd_seq_port_subscribe_free(data.subscription);
-      error<driver_error>("MidiOutAlsa::openPort: ALSA error making port connection.");
+      error<driver_error>("midi_out_alsa::open_port: ALSA error making port connection.");
       return;
     }
 
@@ -926,7 +930,7 @@ public:
 
       if (data.vport < 0)
       {
-        error<driver_error>("MidiOutAlsa::openVirtualPort: ALSA error creating virtual port.");
+        error<driver_error>("midi_out_alsa::open_virtual_port: ALSA error creating virtual port.");
       }
     }
   }
@@ -991,7 +995,7 @@ public:
     }
 
     // If we get here, we didn't find a match.
-    warning("MidiOutAlsa::getPortName: error looking for port name!");
+    warning("midi_out_alsa::get_port_name: error looking for port name!");
     return stringName;
   }
 
@@ -1006,7 +1010,7 @@ public:
       if (result != 0)
       {
         error<driver_error>(
-            "MidiOutAlsa::sendMessage: ALSA error resizing MIDI event "
+            "midi_out_alsa::send_message: ALSA error resizing MIDI event "
             "buffer.");
         return;
       }
@@ -1021,7 +1025,7 @@ public:
     result = snd_midi_event_encode(data.coder, message, nBytes, &ev);
     if (result < nBytes)
     {
-      warning("MidiOutAlsa::sendMessage: event parsing error!");
+      warning("midi_out_alsa::send_message: event parsing error!");
       return;
     }
 
@@ -1029,7 +1033,7 @@ public:
     result = snd_seq_event_output(data.seq, &ev);
     if (result < 0)
     {
-      warning("MidiOutAlsa::sendMessage: error sending MIDI message to port.");
+      warning("midi_out_alsa::send_message: error sending MIDI message to port.");
       return;
     }
     snd_seq_drain_output(data.seq);
