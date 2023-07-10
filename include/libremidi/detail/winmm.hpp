@@ -84,6 +84,45 @@ inline std::string ConvertToUTF8(const TCHAR* str)
   return u8str;
 }
 
+// Next functions add the portNumber to the name so that
+// the device's names are sure to be listed with individual names
+// even when they have the same brand name
+inline void MakeUniqueInPortName(std::string& deviceName, unsigned int portNumber)
+{
+  int x = 1;
+  for (unsigned int i = 0; i < portNumber; i++)
+  {
+    MIDIINCAPS deviceCaps;
+    midiInGetDevCaps(i, &deviceCaps, sizeof(MIDIINCAPS));
+    auto stringName = ConvertToUTF8(deviceCaps.szPname);
+    if (deviceName == stringName)
+    {
+      x++;
+    }
+  }
+  std::ostringstream os;
+  os << " " << x;
+  deviceName += os.str();
+}
+
+inline void MakeUniqueOutPortName(std::string& deviceName, unsigned int portNumber)
+{
+  int x = 1;
+  for (unsigned int i = 0; i < portNumber; i++)
+  {
+    MIDIOUTCAPS deviceCaps;
+    midiOutGetDevCaps(i, &deviceCaps, sizeof(MIDIOUTCAPS));
+    auto stringName = ConvertToUTF8(deviceCaps.szPname);
+    if (deviceName == stringName)
+    {
+      x++;
+    }
+  }
+  std::ostringstream os;
+  os << " " << x;
+  deviceName += os.str();
+}
+
 class observer_winmm final : public observer_api
 {
 private:
@@ -188,12 +227,20 @@ public:
         MIDIINCAPS deviceCaps;
         midiInGetDevCaps(ix, &deviceCaps, sizeof(MIDIINCAPS));
         portName = ConvertToUTF8(deviceCaps.szPname);
+
+#ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+        MakeUniqueInPortName(portName, ix);
+#endif
       }
       else
       {
         MIDIOUTCAPS deviceCaps;
         midiOutGetDevCaps(ix, &deviceCaps, sizeof(MIDIOUTCAPS));
         portName = ConvertToUTF8(deviceCaps.szPname);
+
+#ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+        MakeUniqueOutPortName(portName, ix);
+#endif
       }
       portList.push_back(portName);
     }
@@ -359,26 +406,8 @@ public:
     midiInGetDevCaps(portNumber, &deviceCaps, sizeof(MIDIINCAPS));
     stringName = ConvertToUTF8(deviceCaps.szPname);
 
-    // Next lines added to add the portNumber to the name so that
-    // the device's names are sure to be listed with individual names
-    // even when they have the same brand name
 #ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
-    int x = 1;
-    for (unsigned int i = 0; i < portNumber; i++)
-    {
-      MIDIINCAPS deviceCaps2;
-      midiInGetDevCaps(i, &deviceCaps2, sizeof(MIDIINCAPS));
-      auto stringName2 = ConvertToUTF8(deviceCaps2.szPname);
-      if (stringName == stringName2)
-      {
-        x++;
-      }
-    }
-    std::ostringstream os;
-    os << " ";
-    os << x;
-    stringName += os.str();
-    x = 1;
+    MakeUniqueInPortName(stringName, portNumber);
 #endif
 
     return stringName;
@@ -585,26 +614,8 @@ public:
     midiOutGetDevCaps(portNumber, &deviceCaps, sizeof(MIDIOUTCAPS));
     stringName = ConvertToUTF8(deviceCaps.szPname);
 
-    // Next lines added to add the portNumber to the name so that
-    // the device's names are sure to be listed with individual names
-    // even when they have the same brand name
-    std::ostringstream os;
 #ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
-    int x = 1;
-    for (unsigned int i = 0; i < portNumber; i++)
-    {
-      MIDIOUTCAPS deviceCaps2;
-      midiOutGetDevCaps(i, &deviceCaps2, sizeof(MIDIOUTCAPS));
-      auto sn2 = ConvertToUTF8(deviceCaps2.szPname);
-      if (stringName == sn2)
-      {
-        x++;
-      }
-    }
-    os << " ";
-    os << x;
-    stringName += os.str();
-    x = 1;
+    MakeUniqueOutPortName(stringName, portNumber);
 #endif
 
     return stringName;
