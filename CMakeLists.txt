@@ -40,24 +40,59 @@ if(LIBREMIDI_HEADER_ONLY)
   target_compile_definitions(libremidi ${_public} LIBREMIDI_HEADER_ONLY)
 else()
   add_library(libremidi
-    include/libremidi/detail/alsa.hpp
-    include/libremidi/detail/coreaudio.hpp
-    include/libremidi/detail/dummy.hpp
-    include/libremidi/detail/emscripten.hpp
-    include/libremidi/detail/emscripten_api.hpp
-    include/libremidi/detail/jack.hpp
-    include/libremidi/detail/midi_api.hpp
-    include/libremidi/detail/raw_alsa.hpp
-    include/libremidi/detail/raw_alsa_helpers.hpp
-    include/libremidi/detail/semaphore.hpp
-    include/libremidi/detail/winmm.hpp
-    include/libremidi/detail/winuwp.hpp
+    include/libremidi/backends/alsa_seq/config.hpp
+    include/libremidi/backends/alsa_seq/midi_in.hpp
+    include/libremidi/backends/alsa_seq/midi_out.hpp
+    include/libremidi/backends/alsa_seq/observer.hpp
+    include/libremidi/backends/alsa_raw/helpers.hpp
+    include/libremidi/backends/alsa_raw/config.hpp
+    include/libremidi/backends/alsa_raw/midi_out.hpp
+    include/libremidi/backends/alsa_raw/observer.hpp
+    include/libremidi/backends/alsa_raw/midi_in.hpp
+    include/libremidi/backends/coreaudio/config.hpp
+    include/libremidi/backends/coreaudio/observer.hpp
+    include/libremidi/backends/coreaudio/midi_in.hpp
+    include/libremidi/backends/coreaudio/midi_out.hpp
+    include/libremidi/backends/jack/config.hpp
+    include/libremidi/backends/jack/observer.hpp
+    include/libremidi/backends/jack/midi_out.hpp
+    include/libremidi/backends/jack/midi_in.hpp
+    include/libremidi/backends/emscripten/config.hpp
+    include/libremidi/backends/emscripten/midi_out.hpp
+    include/libremidi/backends/emscripten/midi_in.hpp
+    include/libremidi/backends/emscripten/observer.hpp
+    include/libremidi/backends/winmm/config.hpp
+    include/libremidi/backends/winmm/observer.hpp
+    include/libremidi/backends/winmm/midi_in.hpp
+    include/libremidi/backends/winmm/midi_out.hpp
+    include/libremidi/backends/winuwp/config.hpp
+    include/libremidi/backends/winuwp/observer.hpp
+    include/libremidi/backends/winuwp/midi_out.hpp
+    include/libremidi/backends/winuwp/midi_in.hpp
+    include/libremidi/backends/alsa.hpp
+    include/libremidi/backends/coreaudio.hpp
+    include/libremidi/backends/dummy.hpp
+    include/libremidi/backends/emscripten_api.hpp
+    include/libremidi/backends/emscripten.hpp
+    include/libremidi/backends/jack.hpp
+    include/libremidi/backends/raw_alsa.hpp
+    include/libremidi/backends/winmm.hpp
+    include/libremidi/backends/winuwp.hpp
 
-    include/libremidi/config.hpp
-    include/libremidi/message.hpp
+    include/libremidi/detail/midi_stream_decoder.hpp
+    include/libremidi/detail/midi_out.hpp
+    include/libremidi/detail/midi_in.hpp
+    include/libremidi/detail/observer.hpp
+    include/libremidi/detail/midi_queue.hpp
+    include/libremidi/detail/semaphore.hpp
+    include/libremidi/detail/midi_api.hpp
+
     include/libremidi/reader.hpp
     include/libremidi/writer.hpp
+    include/libremidi/config.hpp
+    include/libremidi/message.hpp
     include/libremidi/libremidi.hpp
+    include/libremidi/api.hpp
 
     include/libremidi/libremidi.cpp
     include/libremidi/reader.cpp

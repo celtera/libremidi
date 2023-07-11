@@ -19,32 +19,32 @@
 #endif
 
 #if defined(LIBREMIDI_ALSA)
-  #include <libremidi/detail/alsa.hpp>
-  #include <libremidi/detail/raw_alsa.hpp>
+  #include <libremidi/backends/alsa.hpp>
+  #include <libremidi/backends/raw_alsa.hpp>
 #endif
 
 #if defined(LIBREMIDI_JACK)
-  #include <libremidi/detail/jack.hpp>
+  #include <libremidi/backends/jack.hpp>
 #endif
 
 #if defined(LIBREMIDI_COREAUDIO)
-  #include <libremidi/detail/coreaudio.hpp>
+  #include <libremidi/backends/coreaudio.hpp>
 #endif
 
 #if defined(LIBREMIDI_WINMM)
-  #include <libremidi/detail/winmm.hpp>
+  #include <libremidi/backends/winmm.hpp>
 #endif
 
 #if defined(LIBREMIDI_WINUWP)
-  #include <libremidi/detail/winuwp.hpp>
+  #include <libremidi/backends/winuwp.hpp>
 #endif
 
 #if defined(LIBREMIDI_EMSCRIPTEN)
-  #include <libremidi/detail/emscripten.hpp>
+  #include <libremidi/backends/emscripten.hpp>
 #endif
 
 #if defined(LIBREMIDI_DUMMY)
-  #include <libremidi/detail/dummy.hpp>
+  #include <libremidi/backends/dummy.hpp>
 #endif
 
 namespace libremidi
@@ -138,6 +138,13 @@ LIBREMIDI_INLINE libremidi::API get_compiled_api_by_name(std::string_view name)
   return ret;
 }
 
+[[nodiscard]] LIBREMIDI_INLINE std::vector<libremidi::API> available_apis() noexcept
+{
+  std::vector<libremidi::API> apis;
+  for_all_backends([&](auto b) { apis.push_back(b.API); });
+  return apis;
+}
+
 LIBREMIDI_INLINE midi_exception::~midi_exception() = default;
 LIBREMIDI_INLINE no_devices_found_error::~no_devices_found_error() = default;
 LIBREMIDI_INLINE invalid_device_error::~invalid_device_error() = default;
@@ -180,13 +187,6 @@ bool chunking_parameters::default_wait(std::chrono::microseconds time_to_wait, i
 {
   std::this_thread::sleep_for(time_to_wait);
   return true;
-}
-
-[[nodiscard]] LIBREMIDI_INLINE std::vector<libremidi::API> available_apis() noexcept
-{
-  std::vector<libremidi::API> apis;
-  for_all_backends([&](auto b) { apis.push_back(b.API); });
-  return apis;
 }
 
 [[nodiscard]] LIBREMIDI_INLINE std::unique_ptr<observer_api>

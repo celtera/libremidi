@@ -5,7 +5,6 @@
 
 namespace libremidi
 {
-
 struct midi_queue
 {
   unsigned int front{};

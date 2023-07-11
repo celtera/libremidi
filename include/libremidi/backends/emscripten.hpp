@@ -1,7 +1,7 @@
 #pragma once
 
 #if defined(__EMSCRIPTEN__)
-  #include <libremidi/detail/emscripten_api.hpp>
+  #include <libremidi/backends/emscripten_api.hpp>
 
 namespace libremidi
 {

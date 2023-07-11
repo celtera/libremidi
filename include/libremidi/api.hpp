@@ -1,4 +1,7 @@
 #pragma once
+#include <libremidi/config.hpp>
+
+#include <string_view>
 #include <vector>
 
 namespace libremidi
@@ -19,13 +22,21 @@ enum class API
 };
 
 /**
- * \brief A static function to determine the available compiled MIDI APIs.
+ * \brief A function to determine the available compiled MIDI APIs.
 
   The values returned in the std::vector can be compared against
   the enumerated list values.  Note that there can be more than one
   API compiled for certain operating systems.
 */
-std::vector<libremidi::API> available_apis() noexcept;
+LIBREMIDI_EXPORT std::vector<libremidi::API> available_apis() noexcept;
+
+//! A static function to determine the current version.
+LIBREMIDI_EXPORT std::string_view get_version() noexcept;
+
+//! Map from and to API names
+LIBREMIDI_EXPORT std::string_view get_api_name(libremidi::API api);
+LIBREMIDI_EXPORT std::string_view get_api_display_name(libremidi::API api);
+LIBREMIDI_EXPORT libremidi::API get_compiled_api_by_name(std::string_view api);
 
 /**
  * @brief Returns the default backend to use for the target OS.

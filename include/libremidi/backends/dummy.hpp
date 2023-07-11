@@ -1,5 +1,8 @@
 #pragma once
 #include <libremidi/detail/midi_api.hpp>
+#include <libremidi/detail/midi_in.hpp>
+#include <libremidi/detail/midi_out.hpp>
+#include <libremidi/detail/observer.hpp>
 #include <libremidi/libremidi.hpp>
 
 namespace libremidi
