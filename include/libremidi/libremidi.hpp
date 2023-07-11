@@ -253,6 +253,10 @@ public:
       libremidi::API api = API::UNSPECIFIED,
       std::string_view clientName = "libremidi input client", unsigned int queueSizeLimit = 100);
 
+  midi_in(const midi_in&) = delete;
+  midi_in(midi_in&& other) noexcept;
+  midi_in& operator=(const midi_in&) = delete;
+  midi_in& operator=(midi_in&& other) noexcept;
   //! If a MIDI connection is still open, it will be closed by the destructor.
   ~midi_in();
 
@@ -398,6 +402,11 @@ public:
       : midi_out{libremidi::API::UNSPECIFIED, "libremidi client"}
   {
   }
+
+  midi_out(const midi_out&) = delete;
+  midi_out(midi_out&& other) noexcept;
+  midi_out& operator=(const midi_out&) = delete;
+  midi_out& operator=(midi_out&& other) noexcept;
 
   //! The destructor closes any open MIDI connections.
   ~midi_out();

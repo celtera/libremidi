@@ -7,9 +7,10 @@
 //
 //*****************************************//
 
+#include <libremidi/libremidi.hpp>
+
 #include <cstdlib>
 #include <iostream>
-#include <libremidi/libremidi.hpp>
 
 [[noreturn]] void usage()
 {

@@ -149,7 +149,31 @@ LIBREMIDI_INLINE system_error::~system_error() = default;
 LIBREMIDI_INLINE thread_error::~thread_error() = default;
 
 LIBREMIDI_INLINE midi_in::~midi_in() = default;
+LIBREMIDI_INLINE midi_in::midi_in(midi_in&& other) noexcept
+    : rtapi_{std::move(other.rtapi_)}
+{
+  other.rtapi_ = std::make_unique<libremidi::midi_in_dummy>("", 0);
+}
+LIBREMIDI_INLINE midi_in& midi_in::operator=(midi_in&& other) noexcept
+{
+  this->rtapi_ = std::move(other.rtapi_);
+  other.rtapi_ = std::make_unique<libremidi::midi_in_dummy>("", 0);
+  return *this;
+}
+
 LIBREMIDI_INLINE midi_out::~midi_out() = default;
+
+LIBREMIDI_INLINE midi_out::midi_out(midi_out&& other) noexcept
+    : rtapi_{std::move(other.rtapi_)}
+{
+  other.rtapi_ = std::make_unique<libremidi::midi_out_dummy>("");
+}
+LIBREMIDI_INLINE midi_out& midi_out::operator=(midi_out&& other) noexcept
+{
+  this->rtapi_ = std::move(other.rtapi_);
+  other.rtapi_ = std::make_unique<libremidi::midi_out_dummy>("");
+  return *this;
+}
 
 LIBREMIDI_INLINE
 bool chunking_parameters::default_wait(std::chrono::microseconds time_to_wait, int written_bytes)
