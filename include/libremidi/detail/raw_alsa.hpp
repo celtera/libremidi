@@ -20,11 +20,12 @@ namespace libremidi
 {
 struct midi_stream_decoder
 {
+  uint8_t runningStatusType_{};
   midi_in_api::in_data& data;
   midi_bytes bytes;
   message msg;
 
-  midi_stream_decoder(midi_in_api::in_data& data)
+  explicit midi_stream_decoder(midi_in_api::in_data& data)
       : data{data}
   {
     bytes.reserve(16);
@@ -49,7 +50,6 @@ struct midi_stream_decoder
       bytes.erase(bytes.begin(), bytes.begin() + (begin - bytes.data()));
   }
 
-  uint8_t runningStatusType_{};
   int parse(unsigned char* bytes, unsigned char* end)
   {
     int sz = end - bytes;

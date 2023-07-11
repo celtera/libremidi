@@ -354,25 +354,17 @@ std::string midi_out::get_port_name(unsigned int portNumber)
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_message(const std::vector<unsigned char>& message)
-{
-  send_message(message.data(), message.size());
-}
-
-LIBREMIDI_INLINE
 void midi_out::send_message(const libremidi::message& message)
 {
   send_message(message.bytes.data(), message.bytes.size());
 }
 
-#if LIBREMIDI_HAS_SPAN
 LIBREMIDI_INLINE
-void midi_out::send_message(std::span<unsigned char> message)
+void midi_out::send_message(std::span<const unsigned char> message)
 {
   send_message(message.data(), message.size());
 }
 
-#endif
 LIBREMIDI_INLINE
 void midi_out::send_message(const unsigned char* message, size_t size)
 {

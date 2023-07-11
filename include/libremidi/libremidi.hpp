@@ -67,15 +67,11 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#if defined(__cpp_lib_span) && __cpp_lib_span >= 202002
-  #define LIBREMIDI_HAS_SPAN 1
-  #include <span>
-#endif
 
 namespace libremidi
 {
@@ -464,8 +460,6 @@ public:
       An exception is thrown if an error occurs during output or an
       output connection was not previously established.
   */
-  void send_message(const std::vector<unsigned char>& message);
-
   void send_message(const libremidi::message& message);
 
   //! Immediately send a single message out an open MIDI output port.
@@ -478,9 +472,7 @@ public:
   */
   void send_message(const unsigned char* message, size_t size);
 
-#if LIBREMIDI_HAS_SPAN
-  void send_message(std::span<unsigned char>);
-#endif
+  void send_message(std::span<const unsigned char>);
 
   //! Set an error callback function to be invoked when an error has occured.
   /*!

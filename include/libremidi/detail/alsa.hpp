@@ -26,10 +26,12 @@
 // time stamps and other assorted fixes!!!
 
 // If you don't need timestamping for incoming MIDI events, define the
-// preprocessor definition AVOID_TIMESTAMPING to save resources
+// preprocessor definition LIBREMIDI_ALSA_AVOID_TIMESTAMPING to save resources
 // associated with the ALSA sequencer queues.
 
 namespace libremidi
+{
+namespace
 {
 // This function is used to count or get the pinfo structure for a given port
 // number.
@@ -37,16 +39,16 @@ inline unsigned int
 portInfo(snd_seq_t* seq, snd_seq_port_info_t* pinfo, unsigned int type, int portNumber)
 {
   snd_seq_client_info_t* cinfo{};
-  int client;
   int count = 0;
   snd_seq_client_info_alloca(&cinfo);
 
   snd_seq_client_info_set_client(cinfo, -1);
   while (snd_seq_query_next_client(seq, cinfo) >= 0)
   {
-    client = snd_seq_client_info_get_client(cinfo);
+    int client = snd_seq_client_info_get_client(cinfo);
     if (client == 0)
       continue;
+
     // Reset query info
     snd_seq_port_info_set_client(pinfo, client);
     snd_seq_port_info_set_port(pinfo, -1);
@@ -295,7 +297,7 @@ public:
     }
 
     // Create the input queue
-#ifndef AVOID_TIMESTAMPING
+#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
     data.queue_id = snd_seq_alloc_named_queue(seq, "libremidi queue");
     // Set arbitrary tempo (mm=100) and resolution (240)
     snd_seq_queue_tempo_t* qtempo;
@@ -327,13 +329,16 @@ public:
     close(data.trigger_fds[1]);
     if (data.vport >= 0)
       snd_seq_delete_port(data.seq, data.vport);
-#ifndef AVOID_TIMESTAMPING
+#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
     snd_seq_free_queue(data.seq, data.queue_id);
 #endif
     snd_seq_close(data.seq);
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::LINUX_ALSA; }
+  libremidi::API get_current_api() const noexcept override
+  {
+    return libremidi::API::LINUX_ALSA_SEQ;
+  }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
@@ -350,7 +355,7 @@ public:
       return;
     }
 
-    snd_seq_port_info_t* src_pinfo;
+    snd_seq_port_info_t* src_pinfo{};
     snd_seq_port_info_alloca(&src_pinfo);
     if (portInfo(
             data.seq, src_pinfo, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
@@ -364,12 +369,12 @@ public:
       return;
     }
 
-    snd_seq_addr_t sender, receiver;
+    snd_seq_addr_t sender{}, receiver{};
     sender.client = snd_seq_port_info_get_client(src_pinfo);
     sender.port = snd_seq_port_info_get_port(src_pinfo);
     receiver.client = snd_seq_client_id(data.seq);
 
-    snd_seq_port_info_t* pinfo;
+    snd_seq_port_info_t* pinfo{};
     snd_seq_port_info_alloca(&pinfo);
     if (data.vport < 0)
     {
@@ -380,7 +385,7 @@ public:
       snd_seq_port_info_set_type(
           pinfo, SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
       snd_seq_port_info_set_midi_channels(pinfo, 16);
-#ifndef AVOID_TIMESTAMPING
+#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
       snd_seq_port_info_set_timestamping(pinfo, 1);
       snd_seq_port_info_set_timestamp_real(pinfo, 1);
       snd_seq_port_info_set_timestamp_queue(pinfo, data.queue_id);
@@ -420,7 +425,7 @@ public:
     if (inputData_.doInput == false)
     {
       // Start the input queue
-#ifndef AVOID_TIMESTAMPING
+#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
       snd_seq_start_queue(data.seq, data.queue_id, nullptr);
       snd_seq_drain_output(data.seq);
 #endif
@@ -451,14 +456,14 @@ public:
   {
     if (data.vport < 0)
     {
-      snd_seq_port_info_t* pinfo;
+      snd_seq_port_info_t* pinfo{};
       snd_seq_port_info_alloca(&pinfo);
       snd_seq_port_info_set_capability(
           pinfo, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
       snd_seq_port_info_set_type(
           pinfo, SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
       snd_seq_port_info_set_midi_channels(pinfo, 16);
-#ifndef AVOID_TIMESTAMPING
+#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
       snd_seq_port_info_set_timestamping(pinfo, 1);
       snd_seq_port_info_set_timestamp_real(pinfo, 1);
       snd_seq_port_info_set_timestamp_queue(pinfo, data.queue_id);
@@ -481,7 +486,7 @@ public:
         pthread_join(data.thread, nullptr);
 
         // Start the input queue
-#ifndef AVOID_TIMESTAMPING
+#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
       snd_seq_start_queue(data.seq, data.queue_id, nullptr);
       snd_seq_drain_output(data.seq);
 #endif
@@ -508,6 +513,7 @@ public:
       }
     }
   }
+
   void close_port() override
   {
     if (connected_)
@@ -519,7 +525,7 @@ public:
         data.subscription = nullptr;
       }
       // Stop the input queue
-#ifndef AVOID_TIMESTAMPING
+#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
       snd_seq_stop_queue(data.seq, data.queue_id, nullptr);
       snd_seq_drain_output(data.seq);
 #endif
@@ -537,10 +543,12 @@ public:
         pthread_join(data.thread, nullptr);
     }
   }
+
   void set_client_name(std::string_view clientName) override
   {
     snd_seq_set_client_name(data.seq, clientName.data());
   }
+
   void set_port_name(std::string_view portName) override
   {
     snd_seq_port_info_t* pinfo;
@@ -549,6 +557,7 @@ public:
     snd_seq_port_info_set_name(pinfo, portName.data());
     snd_seq_set_port_info(data.seq, data.vport, pinfo);
   }
+
   unsigned int get_port_count() override
   {
     snd_seq_port_info_t* pinfo;
@@ -601,7 +610,7 @@ private:
     int poll_fd_count{};
     pollfd* poll_fds{};
 
-    snd_seq_event_t* ev;
+    snd_seq_event_t* ev{};
 
     apidata.bufferSize = 32;
     int result = snd_midi_event_new(0, &apidata.coder);
@@ -739,7 +748,7 @@ private:
           {
 
             // Calculate the time stamp:
-            message.timestamp = 0.0;
+            message.timestamp = 0;
 
             // Method 1: Use the system time.
             // gettimeofday(&tv, (struct timezone *)nullptr);

@@ -1,6 +1,8 @@
 #pragma once
 #include <libremidi/config.hpp>
 
+#include <span>
+
 namespace libremidi
 {
 enum class message_type : uint8_t
@@ -59,18 +61,15 @@ enum class meta_event_type : uint8_t
   UNKNOWN = 0xFF
 };
 
-constexpr inline uint8_t clamp(uint8_t val, uint8_t min, uint8_t max)
-{
-  return std::max(std::min(val, max), min);
-}
-
 struct message
 {
   midi_bytes bytes;
-  double timestamp{};
+  int64_t timestamp{};
+
+  operator std::span<const unsigned char>() const noexcept { return bytes; }
 
   message() noexcept = default;
-  message(const midi_bytes& src_bytes, double src_timestamp)
+  message(const midi_bytes& src_bytes, int64_t src_timestamp)
       : bytes(src_bytes)
       , timestamp(src_timestamp)
   {
@@ -81,7 +80,7 @@ struct message
   }
   static uint8_t make_command(const message_type type, const int channel) noexcept
   {
-    return (uint8_t)((uint8_t)type | clamp(channel, 0, channel - 1));
+    return (uint8_t)((uint8_t)type | std::clamp(channel, 0, channel - 1));
   }
 
   static message note_on(uint8_t channel, uint8_t note, uint8_t velocity) noexcept
@@ -206,7 +205,10 @@ struct meta_events
 {
   static message end_of_track() { return {0xFF, 0x2F, 0}; }
 
-  static message channel(int channel) { return {0xff, 0x20, 0x01, clamp(0, 0xff, channel - 1)}; }
+  static message channel(int channel)
+  {
+    return {0xff, 0x20, 0x01, (uint8_t)std::clamp(0, 0xff, channel - 1)};
+  }
 
   static message tempo(int mpqn)
   {
