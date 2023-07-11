@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 project(libremidi
   VERSION 4.0
   DESCRIPTION "A cross-platform MIDI library"
@@ -91,7 +91,7 @@ if(NOT LIBREMIDI_NO_EXPORTS)
   target_compile_definitions(libremidi ${_private} LIBREMIDI_EXPORTS)
 endif()
 
-target_compile_features(libremidi ${_public} cxx_std_17)
+target_compile_features(libremidi ${_public} cxx_std_20)
 
 find_package(Threads)
 target_link_libraries(libremidi ${_public} ${CMAKE_THREAD_LIBS_INIT})
