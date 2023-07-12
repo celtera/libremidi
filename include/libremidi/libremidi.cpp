@@ -43,9 +43,7 @@
   #include <libremidi/backends/emscripten.hpp>
 #endif
 
-#if defined(LIBREMIDI_DUMMY)
-  #include <libremidi/backends/dummy.hpp>
-#endif
+#include <libremidi/backends/dummy.hpp>
 
 namespace libremidi
 {

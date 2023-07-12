@@ -66,7 +66,7 @@ struct message
   midi_bytes bytes;
   int64_t timestamp{};
 
-  operator std::span<const unsigned char>() const noexcept { return bytes; }
+  operator std::span<const unsigned char>() const noexcept { return {bytes.data(), bytes.size()}; }
 
   message() noexcept = default;
   message(const midi_bytes& src_bytes, int64_t src_timestamp)
