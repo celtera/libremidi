@@ -9,8 +9,8 @@ class midi_in_jack final
     , private jack_helpers
 {
 public:
-  midi_in_jack(std::string_view cname, unsigned int queueSizeLimit)
-      : midi_in_api{&data, queueSizeLimit}
+  explicit midi_in_jack(std::string_view cname)
+      : midi_in_api{&data}
   {
     // TODO do like the others
     data.rtMidiIn = &inputData_;

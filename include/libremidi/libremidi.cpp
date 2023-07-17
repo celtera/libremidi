@@ -156,12 +156,12 @@ LIBREMIDI_INLINE midi_in::~midi_in() = default;
 LIBREMIDI_INLINE midi_in::midi_in(midi_in&& other) noexcept
     : rtapi_{std::move(other.rtapi_)}
 {
-  other.rtapi_ = std::make_unique<libremidi::midi_in_dummy>("", 0);
+  other.rtapi_ = std::make_unique<libremidi::midi_in_dummy>("");
 }
 LIBREMIDI_INLINE midi_in& midi_in::operator=(midi_in&& other) noexcept
 {
   this->rtapi_ = std::move(other.rtapi_);
-  other.rtapi_ = std::make_unique<libremidi::midi_in_dummy>("", 0);
+  other.rtapi_ = std::make_unique<libremidi::midi_in_dummy>("");
   return *this;
 }
 
@@ -199,13 +199,12 @@ open_midi_observer(libremidi::API api, observer::callbacks&& cb)
 }
 
 [[nodiscard]] LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
-open_midi_in(libremidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
+open_midi_in(libremidi::API api, std::string_view clientName)
 {
   std::unique_ptr<midi_in_api> ptr;
 
-  for_backend(api, [&](auto b) {
-    ptr = std::make_unique<typename decltype(b)::midi_in>(clientName, queueSizeLimit);
-  });
+  for_backend(
+      api, [&](auto b) { ptr = std::make_unique<typename decltype(b)::midi_in>(clientName); });
 
   return ptr;
 }
@@ -291,18 +290,6 @@ void midi_in::ignore_types(bool midiSysex, bool midiTime, bool midiSense)
 }
 
 LIBREMIDI_INLINE
-message midi_in::get_message()
-{
-  return (static_cast<midi_in_api*>(rtapi_.get()))->get_message();
-}
-
-LIBREMIDI_INLINE
-bool midi_in::get_message(message& msg)
-{
-  return (static_cast<midi_in_api*>(rtapi_.get()))->get_message(msg);
-}
-
-LIBREMIDI_INLINE
 void midi_in::set_error_callback(midi_error_callback errorCallback)
 {
   rtapi_->set_error_callback(std::move(errorCallback));
@@ -375,12 +362,12 @@ void midi_out::set_error_callback(midi_error_callback errorCallback) noexcept
 }
 
 LIBREMIDI_INLINE
-midi_in::midi_in(libremidi::API api, std::string_view clientName, unsigned int queueSizeLimit)
+midi_in::midi_in(libremidi::API api, std::string_view clientName)
 {
   if (api != libremidi::API::UNSPECIFIED)
   {
     // Attempt to open the specified API.
-    if ((rtapi_ = open_midi_in(api, clientName, queueSizeLimit)))
+    if ((rtapi_ = open_midi_in(api, clientName)))
     {
       return;
     }
@@ -397,7 +384,7 @@ midi_in::midi_in(libremidi::API api, std::string_view clientName, unsigned int q
   // one with at least one port or we reach the end of the list.
   for (const auto& api : available_apis())
   {
-    rtapi_ = open_midi_in(api, clientName, queueSizeLimit);
+    rtapi_ = open_midi_in(api, clientName);
     if (rtapi_ && rtapi_->get_port_count() != 0)
     {
       break;

@@ -9,8 +9,8 @@ class midi_in_winmm final : public midi_in_default<midi_in_winmm>
 {
 public:
   static const constexpr auto backend = "WinMM";
-  midi_in_winmm(std::string_view, unsigned int queueSizeLimit)
-      : midi_in_default{&data, queueSizeLimit}
+  explicit midi_in_winmm(std::string_view)
+      : midi_in_default{&data}
   {
     // We'll issue a warning here if no devices are available but not
     // throw an error since the user can plugin something later.

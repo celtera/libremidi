@@ -7,8 +7,8 @@ namespace libremidi
 class midi_in_core final : public midi_in_api
 {
 public:
-  midi_in_core(std::string_view clientName, unsigned int queueSizeLimit)
-      : midi_in_api(&data, queueSizeLimit)
+  explicit midi_in_core(std::string_view clientName)
+      : midi_in_api(&data)
   {
     // Set up our client.
     MIDIClientRef client{};

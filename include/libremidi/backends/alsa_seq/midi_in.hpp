@@ -7,8 +7,8 @@ namespace libremidi
 class midi_in_alsa final : public midi_in_api
 {
 public:
-  explicit midi_in_alsa(std::string_view client_name, unsigned int queue_size)
-      : midi_in_api{&data, queue_size}
+  explicit midi_in_alsa(std::string_view client_name)
+      : midi_in_api{&data}
   {
     // Set up the ALSA sequencer client.
     snd_seq_t* seq;

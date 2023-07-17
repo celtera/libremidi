@@ -1,6 +1,5 @@
 #pragma once
 #include <libremidi/detail/midi_api.hpp>
-#include <libremidi/detail/midi_queue.hpp>
 
 namespace libremidi
 {
@@ -8,16 +7,12 @@ namespace libremidi
 class midi_in_api : public midi_api
 {
 public:
-  explicit midi_in_api(void* data, unsigned int queueSizeLimit)
+  explicit midi_in_api(void* data)
   {
+    cancel_callback();
     inputData_.apiData = data;
-    // Allocate the MIDI queue.
-    inputData_.queue.ringSize = queueSizeLimit;
-    if (inputData_.queue.ringSize > 0)
-    {
-      inputData_.queue.ring = std::make_unique<libremidi::message[]>(inputData_.queue.ringSize);
-    }
   }
+
   ~midi_in_api() override = default;
 
   midi_in_api(const midi_in_api&) = delete;
@@ -42,49 +37,21 @@ public:
     }
   }
 
+  // FIXME not thread safe
   void set_callback(midi_in::message_callback callback)
   {
     inputData_.userCallback = std::move(callback);
   }
 
-  void cancel_callback() { inputData_.userCallback = midi_in::message_callback{}; }
-
-  message get_message()
+  void cancel_callback()
   {
-    if (inputData_.userCallback)
-    {
-      warning(
-          "midi_in_api::getNextMessage: a user callback is currently set for "
-          "this port.");
-      return {};
-    }
-
-    message m;
-    if (inputData_.queue.pop(m))
-    {
-      return m;
-    }
-    return {};
-  }
-
-  bool get_message(message& m)
-  {
-    if (inputData_.userCallback)
-    {
-      warning(
-          "midi_in_api::get_message: a user callback is currently set for "
-          "this port.");
-      return {};
-    }
-
-    return inputData_.queue.pop(m);
+    inputData_.userCallback = [](libremidi::message m) {};
   }
 
   // The in_data structure is used to pass private class data to
   // the MIDI input handling function or thread.
   struct in_data
   {
-    midi_queue queue{};
     libremidi::message message{};
     unsigned char ignoreFlags{7};
     bool firstMessage{true};
@@ -94,21 +61,7 @@ public:
 
     void on_message_received(libremidi::message&& message)
     {
-      if (userCallback)
-      {
-        userCallback(std::move(message));
-      }
-      else
-      {
-        // As long as we haven't reached our queue size limit, push the
-        // message.
-        if (!queue.push(std::move(message)))
-        {
-#if defined(__LIBREMIDI_DEBUG__)
-          std::cerr << "\nmidi_in: message queue limit reached!!\n\n";
-#endif
-        }
-      }
+      userCallback(std::move(message));
       message.bytes.clear();
     }
   };

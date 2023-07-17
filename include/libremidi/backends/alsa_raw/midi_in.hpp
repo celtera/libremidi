@@ -13,8 +13,8 @@ class midi_in_raw_alsa final : public midi_in_default<midi_in_raw_alsa>
 public:
   static const constexpr auto backend = "Raw ALSA";
 
-  midi_in_raw_alsa(std::string_view clientName, unsigned int queueSizeLimit)
-      : midi_in_default<midi_in_raw_alsa>{nullptr, queueSizeLimit}
+  explicit midi_in_raw_alsa(std::string_view clientName)
+      : midi_in_default<midi_in_raw_alsa>{nullptr}
   {
   }
 

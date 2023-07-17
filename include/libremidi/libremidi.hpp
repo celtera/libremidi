@@ -215,7 +215,7 @@ class LIBREMIDI_EXPORT midi_in
 {
 public:
   //! User callback function type definition.
-  using message_callback = std::function<void(const message& message)>;
+  using message_callback = std::function<void(message&& message)>;
 
   //! Default constructor that allows an optional api, client name and queue
   //! size.
@@ -234,12 +234,11 @@ public:
     \param clientName An optional client name can be specified. This
                       will be used to group the ports that are created
                       by the application.
-    \param queueSizeLimit An optional size of the MIDI input queue can be
     specified.
   */
   explicit midi_in(
       libremidi::API api = API::UNSPECIFIED,
-      std::string_view clientName = "libremidi input client", unsigned int queueSizeLimit = 100);
+      std::string_view clientName = "libremidi input client");
 
   midi_in(const midi_in&) = delete;
   midi_in(midi_in&& other) noexcept;
@@ -327,20 +326,6 @@ public:
     ignored.
   */
   void ignore_types(bool midiSysex = true, bool midiTime = true, bool midiSense = true);
-
-  //! Fill the user-provided vector with the data bytes for the next available
-  //! MIDI message in the input queue and return the event delta-time in
-  //! seconds.
-  /*!
-    This function returns immediately whether a new message is
-    available or not.  A valid message is indicated by a non-zero
-    vector size.  An exception is thrown if an error occurs during
-    message retrieval or an input connection was not previously
-    established.
-  */
-  message get_message();
-
-  bool get_message(message&);
 
   //! Set an error callback function to be invoked when an error has occured.
   /*!

@@ -9,8 +9,8 @@ class midi_in_winuwp final : public midi_in_default<midi_in_winuwp>
 {
 public:
   static const constexpr auto backend = "UWP";
-  midi_in_winuwp(std::string_view, unsigned int queueSizeLimit)
-      : midi_in_default{nullptr, queueSizeLimit}
+  explicit midi_in_winuwp(std::string_view)
+      : midi_in_default{nullptr}
   {
     winrt_init();
   }
