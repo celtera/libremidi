@@ -149,7 +149,7 @@ private:
 
   static int jackProcessIn(jack_nframes_t nframes, void* arg)
   {
-    jack_data& jData = *(jack_data*)arg;
+    auto& jData = *(jack_in_data*)arg;
     midi_in_api::in_data& rtData = *jData.rtMidiIn;
     jack_midi_event_t event;
     jack_time_t time;
@@ -232,6 +232,6 @@ private:
   }
 
   std::string clientName;
-  jack_data data;
+  jack_in_data data;
 };
 }

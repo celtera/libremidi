@@ -11,8 +11,7 @@ public:
   {
     // Set up the ALSA sequencer client.
     snd_seq_t* seq{};
-    int result1 = snd_seq_open(&seq, "default", SND_SEQ_OPEN_OUTPUT, SND_SEQ_NONBLOCK);
-    if (result1 < 0)
+    if (snd_seq_open(&seq, "default", SND_SEQ_OPEN_OUTPUT, SND_SEQ_NONBLOCK) < 0)
     {
       error<driver_error>(
           "midi_out_alsa::initialize: error creating ALSA sequencer client "
@@ -75,10 +74,9 @@ public:
             data.seq, pinfo, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE, (int)portNumber)
         == 0)
     {
-      std::ostringstream ost;
-      ost << "midi_out_alsa::open_port: the 'portNumber' argument (" << portNumber
-          << ") is invalid.";
-      error<invalid_parameter_error>(ost.str());
+      error<invalid_parameter_error>(
+          "midi_out_alsa::open_port: invalid 'portNumber' argument: "
+          + std::to_string(portNumber));
       return;
     }
 
@@ -171,34 +169,19 @@ public:
 
   std::string get_port_name(unsigned int portNumber) override
   {
-    snd_seq_client_info_t* cinfo;
     snd_seq_port_info_t* pinfo;
-    snd_seq_client_info_alloca(&cinfo);
     snd_seq_port_info_alloca(&pinfo);
 
-    std::string stringName;
     if (portInfo(
             data.seq, pinfo, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
             (int)portNumber))
     {
-      int cnum = snd_seq_port_info_get_client(pinfo);
-      snd_seq_get_any_client_info(data.seq, cnum, cinfo);
-      std::ostringstream os;
-      os << snd_seq_client_info_get_name(cinfo);
-      os << ":";
-      os << snd_seq_port_info_get_name(pinfo);
-      os << " "; // These lines added to make sure devices are listed
-      os << snd_seq_port_info_get_client(pinfo); // with full portnames added to ensure individual
-                                                 // device names
-      os << ":";
-      os << snd_seq_port_info_get_port(pinfo);
-      stringName = os.str();
-      return stringName;
+      return portName(data.seq, pinfo);
     }
 
     // If we get here, we didn't find a match.
     warning("midi_out_alsa::get_port_name: error looking for port name!");
-    return stringName;
+    return {};
   }
 
   void send_message(const unsigned char* message, std::size_t size) override
@@ -257,6 +240,6 @@ public:
   }
 
 private:
-  alsa_data data;
+  alsa_out_data data;
 };
 }

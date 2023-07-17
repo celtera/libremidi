@@ -13,24 +13,29 @@
 #include <libremidi/detail/semaphore.hpp>
 #include <libremidi/libremidi.hpp>
 
-#include <ostream>
-#include <sstream>
-
 namespace libremidi
 {
 struct jack_data
 {
-  static const constexpr auto ringbuffer_size = 16384;
   jack_client_t* client{};
   jack_port_t* port{};
+};
+
+struct jack_in_data : jack_data
+{
+  jack_time_t lastTime{};
+
+  midi_in_api::in_data* rtMidiIn{};
+};
+
+struct jack_out_data : jack_data
+{
+  static const constexpr auto ringbuffer_size = 16384;
   jack_ringbuffer_t* buffSize{};
   jack_ringbuffer_t* buffMessage{};
-  jack_time_t lastTime{};
 
   libremidi::semaphore sem_cleanup;
   libremidi::semaphore sem_needpost{};
-
-  midi_in_api::in_data* rtMidiIn{};
 };
 
 struct jack_helpers

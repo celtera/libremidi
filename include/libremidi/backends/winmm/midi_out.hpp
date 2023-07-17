@@ -48,14 +48,13 @@ public:
 
     if (portNumber >= nDevices)
     {
-      std::ostringstream ost;
-      ost << "midi_out_winmm::open_port: the 'portNumber' argument (" << portNumber
-          << ") is invalid.";
-      error<invalid_parameter_error>(ost.str());
+      error<invalid_parameter_error>(
+          "midi_out_winmm::open_port: invalid 'portNumber' argument: "
+          + std::to_string(portNumber));
       return;
     }
 
-    MMRESULT result = midiOutOpen(&data.outHandle, portNumber, NULL, NULL, CALLBACK_NULL);
+    MMRESULT result = midiOutOpen(&data.outHandle, portNumber, 0, 0, CALLBACK_NULL);
     if (result != MMSYSERR_NOERROR)
     {
       error<driver_error>(
@@ -81,21 +80,19 @@ public:
 
   std::string get_port_name(unsigned int portNumber) override
   {
-    std::string stringName;
     unsigned int nDevices = midiOutGetNumDevs();
     if (portNumber >= nDevices)
     {
-      std::ostringstream ost;
-      ost << "midi_out_winmm::get_port_name: the 'portNumber' argument (" << portNumber
-          << ") is invalid.";
-      warning(ost.str());
-      return stringName;
+      error<invalid_parameter_error>(
+          "midi_out_winmm::get_port_name: invalid 'portNumber' argument: "
+          + std::to_string(portNumber));
+      return {};
     }
 
-    MIDIOUTCAPS deviceCaps;
+    MIDIOUTCAPS deviceCaps{};
 
     midiOutGetDevCaps(portNumber, &deviceCaps, sizeof(MIDIOUTCAPS));
-    stringName = ConvertToUTF8(deviceCaps.szPname);
+    std::string stringName = ConvertToUTF8(deviceCaps.szPname);
 
 #ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
     MakeUniqueOutPortName(stringName, portNumber);
@@ -109,8 +106,7 @@ public:
     if (!connected_)
       return;
 
-    unsigned int nBytes = static_cast<unsigned int>(size);
-    if (nBytes == 0)
+    if (size == 0)
     {
       warning("midi_out_winmm::send_message: message argument is empty!");
       return;
@@ -120,18 +116,15 @@ public:
     if (message[0] == 0xF0)
     { // Sysex message
 
-      // Allocate buffer for sysex data.
-      buffer.clear();
-      buffer.resize(nBytes);
+      buffer.assign(message, message + size);
 
-      // Copy data to buffer.
-      for (unsigned int i = 0; i < nBytes; ++i)
-        buffer[i] = message[i];
+      // FIXME this can be made asynchronous... see Chrome source.
+      // But need to know whe buffers are freed.
 
       // Create and prepare MIDIHDR structure.
       MIDIHDR sysex{};
       sysex.lpData = (LPSTR)buffer.data();
-      sysex.dwBufferLength = nBytes;
+      sysex.dwBufferLength = size;
       sysex.dwFlags = 0;
       result = midiOutPrepareHeader(data.outHandle, &sysex, sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
@@ -149,6 +142,7 @@ public:
       }
 
       // Unprepare the buffer and MIDIHDR.
+      // FIXME yuck
       while (MIDIERR_STILLPLAYING
              == midiOutUnprepareHeader(data.outHandle, &sysex, sizeof(MIDIHDR)))
         Sleep(1);
@@ -157,7 +151,7 @@ public:
     { // Channel or system message.
 
       // Make sure the message size isn't too big.
-      if (nBytes > 3)
+      if (size > 3)
       {
         warning(
             "midi_out_winmm::send_message: message size is greater than 3 bytes "
@@ -167,12 +161,7 @@ public:
 
       // Pack MIDI bytes into double word.
       DWORD packet;
-      unsigned char* ptr = (unsigned char*)&packet;
-      for (unsigned int i = 0; i < nBytes; ++i)
-      {
-        *ptr = message[i];
-        ++ptr;
-      }
+      std::copy_n(message, size, (unsigned char*)&packet);
 
       // Send the message immediately.
       result = midiOutShortMsg(data.outHandle, packet);
@@ -184,7 +173,7 @@ public:
   }
 
 private:
-  WinMidiData data;
+  winmm_out_data data;
   std::vector<char> buffer;
 };
 

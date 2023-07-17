@@ -53,10 +53,9 @@ public:
 
     if (portNumber >= nDevices)
     {
-      std::ostringstream ost;
-      ost << "midi_in_winmm::open_port: the 'portNumber' argument (" << portNumber
-          << ") is invalid.";
-      error<invalid_parameter_error>(ost.str());
+      error<invalid_parameter_error>(
+          "midi_in_winmm::open_port: invalid 'portNumber' argument: "
+          + std::to_string(portNumber));
       return;
     }
 
@@ -149,20 +148,18 @@ public:
 
   std::string get_port_name(unsigned int portNumber) override
   {
-    std::string stringName;
     unsigned int nDevices = midiInGetNumDevs();
     if (portNumber >= nDevices)
     {
-      std::ostringstream ost;
-      ost << "midi_in_winmm::get_port_name: the 'portNumber' argument (" << portNumber
-          << ") is invalid.";
-      warning(ost.str());
-      return stringName;
+      error<invalid_parameter_error>(
+          "midi_in_winmm::get_port_name: invalid 'portNumber' argument: "
+          + std::to_string(portNumber));
+      return {};
     }
 
-    MIDIINCAPS deviceCaps;
+    MIDIINCAPS deviceCaps{};
     midiInGetDevCaps(portNumber, &deviceCaps, sizeof(MIDIINCAPS));
-    stringName = ConvertToUTF8(deviceCaps.szPname);
+    std::string stringName = ConvertToUTF8(deviceCaps.szPname);
 
 #ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
     MakeUniqueInPortName(stringName, portNumber);
@@ -179,17 +176,19 @@ private:
     if (inputStatus != MIM_DATA && inputStatus != MIM_LONGDATA && inputStatus != MIM_LONGERROR)
       return;
 
-    midi_in_api::in_data& data = *(midi_in_api::in_data*)instancePtr;
-    WinMidiData& apiData = *static_cast<WinMidiData*>(data.apiData);
+    auto& data = *(midi_in_api::in_data*)instancePtr;
+    auto& apiData = *static_cast<winmm_in_data*>(data.apiData);
+
+    auto& message = data.message;
 
     // Calculate time stamp.
     if (data.firstMessage == true)
     {
-      apiData.message.timestamp = 0.0;
+      message.timestamp = 0.0;
       data.firstMessage = false;
     }
     else
-      apiData.message.timestamp = (double)(timestamp - apiData.lastTime) * 0.001;
+      message.timestamp = (double)(timestamp - apiData.lastTime) * 0.001;
 
     if (inputStatus == MIM_DATA)
     { // Channel or system message
@@ -231,9 +230,7 @@ private:
 
       // Copy bytes to our MIDI message.
       unsigned char* ptr = (unsigned char*)&midiMessage;
-      apiData.message.bytes.resize(nBytes);
-      for (int i = 0; i < nBytes; ++i)
-        apiData.message.bytes[i] = ptr[i];
+      message.bytes.assign(ptr, ptr + nBytes);
     }
     else
     { // Sysex message ( MIM_LONGDATA or MIM_LONGERROR )
@@ -241,8 +238,8 @@ private:
       if (!(data.ignoreFlags & 0x01) && inputStatus != MIM_LONGERROR)
       {
         // Sysex message and we're not ignoring it
-        for (int i = 0; i < (int)sysex->dwBytesRecorded; ++i)
-          apiData.message.bytes.push_back(sysex->lpData[i]);
+        message.bytes.insert(
+            message.bytes.end(), sysex->lpData, sysex->lpData + sysex->dwBytesRecorded);
       }
 
       // The WinMM API requires that the sysex buffer be requeued after
@@ -261,9 +258,11 @@ private:
             apiData.inHandle, apiData.sysexBuffer[sysex->dwUser], sizeof(MIDIHDR));
         LeaveCriticalSection(&(apiData._mutex));
         if (result != MMSYSERR_NOERROR)
+
+#if defined(__LIBREMIDI_DEBUG__)
           std::cerr << "\nmidi_in::midiInputCallback: error sending sysex to "
                        "Midi device!!\n\n";
-
+#endif
         if (data.ignoreFlags & 0x01)
           return;
       }
@@ -274,10 +273,10 @@ private:
     // Save the time of the last non-filtered message
     apiData.lastTime = timestamp;
 
-    data.on_message_received(std::move(apiData.message));
+    data.on_message_received(std::move(message));
   }
 
-  WinMidiData data;
+  winmm_in_data data;
 };
 
 }

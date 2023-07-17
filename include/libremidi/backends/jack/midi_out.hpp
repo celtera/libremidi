@@ -156,8 +156,8 @@ private:
       return;
 
     // Initialize output ringbuffers
-    data.buffSize = jack_ringbuffer_create(jack_data::ringbuffer_size);
-    data.buffMessage = jack_ringbuffer_create(jack_data::ringbuffer_size);
+    data.buffSize = jack_ringbuffer_create(jack_out_data::ringbuffer_size);
+    data.buffMessage = jack_ringbuffer_create(jack_out_data::ringbuffer_size);
 
     // Initialize JACK client
     data.client = jack_client_open(clientName.c_str(), JackNoStartServer, nullptr);
@@ -173,7 +173,7 @@ private:
 
   static int jackProcessOut(jack_nframes_t nframes, void* arg)
   {
-    auto& data = *(jack_data*)arg;
+    auto& data = *(jack_out_data*)arg;
 
     // Is port created?
     if (data.port == nullptr)
@@ -197,7 +197,7 @@ private:
     return 0;
   }
 
-  jack_data data;
+  jack_out_data data;
 };
 
 }

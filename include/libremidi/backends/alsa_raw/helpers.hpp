@@ -2,8 +2,6 @@
 #include <alsa/asoundlib.h>
 
 #include <functional>
-#include <ostream>
-#include <sstream>
 #include <vector>
 
 // Credits: greatly inspired from
@@ -69,9 +67,9 @@ struct raw_alsa_helpers
     template <typename... Args>
     void error(Args&&... args)
     {
-      std::ostringstream s;
-      ((s << args), ...);
-      error_callback(s.str());
+      std::string s;
+      ((s += args), ...);
+      error_callback(std::move(s));
     }
 
     // 1: is an input / output
@@ -116,9 +114,15 @@ struct raw_alsa_helpers
 
     static std::string device_identifier(int card, int device, int sub)
     {
-      std::ostringstream s;
-      s << "hw:" << card << "," << device << "," << sub;
-      return s.str();
+      std::string s;
+      s.reserve(12);
+      s += "hw:";
+      s += std::to_string(card);
+      s += ",";
+      s += std::to_string(device);
+      s += ",";
+      s += std::to_string(sub);
+      return s;
     }
 
     void enumerate_cards()

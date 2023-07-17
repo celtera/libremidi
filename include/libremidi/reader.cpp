@@ -59,14 +59,18 @@ struct validator
   {
     if (track.empty())
     {
+#if defined(__LIBREMIDI_DEBUG__)
       std::cerr << "libremidi::reader: empty track" << std::endl;
+#endif
       return false;
     }
 
     auto& last_event = track.back();
     if (last_event.m.bytes != midi_bytes{0xFF, (unsigned char)meta_event_type::END_OF_TRACK, 0})
     {
+#if defined(__LIBREMIDI_DEBUG__)
       std::cerr << "libremidi::reader: track does not end with END OF TRACK" << std::endl;
+#endif
       return false;
     }
 
@@ -464,7 +468,9 @@ try
 
   if (size == 0)
   {
+#if defined(__LIBREMIDI_DEBUG__)
     std::cerr << "libremidi::reader: empty buffer passed to parse." << std::endl;
+#endif
     return parse_result::invalid;
   }
 
@@ -475,7 +481,9 @@ try
 
   if (headerId != str_to_headerid("MThd") || headerLength != 6)
   {
+#if defined(__LIBREMIDI_DEBUG__)
     std::cerr << "libremidi::reader: couldn't parse header" << std::endl;
+#endif
     return parse_result::invalid;
   }
 
@@ -489,7 +497,9 @@ try
   // timeDivision is described here http://www.sonicspot.com/guide/midifiles.html
   if (timeDivision & 0x8000)
   {
+#if defined(__LIBREMIDI_DEBUG__)
     std::cerr << "libremidi::reader: found SMPTE time frames (unsupported)" << std::endl;
+#endif
     // int fps = (timeDivision >> 16) & 0x7f;
     // int ticksPerFrame = timeDivision & 0xff;
     // given beats per second, timeDivision should be derivable.
@@ -510,14 +520,18 @@ try
 
     if (headerId != str_to_headerid("MTrk"))
     {
+#if defined(__LIBREMIDI_DEBUG__)
       std::cerr << "libremidi::reader: couldn't find track header" << std::endl;
+#endif
       return parse_result::incomplete;
     }
 
     int64_t available = dataEnd - dataPtr;
     if (available < headerLength)
     {
+#if defined(__LIBREMIDI_DEBUG__)
       std::cerr << "libremidi::reader: not enough data available" << std::endl;
+#endif
       return parse_result::incomplete;
     }
 
@@ -554,7 +568,9 @@ try
         }
         else
         {
+#if defined(__LIBREMIDI_DEBUG__)
           std::cerr << "libremidi::reader: could not read event" << std::endl;
+#endif
           dataPtr = trackEnd;
           result = parse_result::incomplete;
           continue;
@@ -564,7 +580,9 @@ try
       }
       catch (const std::exception& e)
       {
+#if defined(__LIBREMIDI_DEBUG__)
         std::cerr << "libremidi::reader: " << e.what() << std::endl;
+#endif
         dataPtr = trackEnd;
         result = parse_result::incomplete;
         continue;
@@ -584,7 +602,9 @@ try
 }
 catch (const std::exception& e)
 {
+#if defined(__LIBREMIDI_DEBUG__)
   std::cerr << "libremidi::reader: " << e.what() << std::endl;
+#endif
   return parse_result::invalid;
 }
 

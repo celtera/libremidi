@@ -6,9 +6,7 @@
   #include <emscripten.h>
 
   #include <cstddef>
-  #include <iostream>
   #include <map>
-  #include <sstream>
 
 namespace libremidi
 {

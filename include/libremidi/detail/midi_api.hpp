@@ -50,7 +50,9 @@ public:
     }
     else
     {
+#if defined(__LIBREMIDI_DEBUG__)
       std::cerr << '\n' << errorString << "\n\n";
+#endif
       throw Error_T{errorString.data()};
     }
   }
@@ -71,7 +73,9 @@ public:
       return;
     }
 
+#if defined(__LIBREMIDI_DEBUG__)
     std::cerr << '\n' << errorString << "\n\n";
+#endif
   }
 
 protected:

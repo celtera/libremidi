@@ -8,8 +8,6 @@
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
-#include <ostream>
-#include <sstream>
 #include <thread>
 
 // clang-format off
@@ -27,16 +25,20 @@ namespace libremidi
 
 // A structure to hold variables related to the WinMM API
 // implementation.
-struct WinMidiData
+struct winmm_in_data
 {
-  HMIDIIN inHandle;   // Handle to Midi Input Device
-  HMIDIOUT outHandle; // Handle to Midi Output Device
+  HMIDIIN inHandle; // Handle to Midi Input Device
+
   DWORD lastTime;
-  libremidi::message message;
   LPMIDIHDR sysexBuffer[RT_SYSEX_BUFFER_COUNT];
   CRITICAL_SECTION
   _mutex; // [Patrice] see
           // https://groups.google.com/forum/#!topic/mididev/6OUjHutMpEo
+};
+
+struct winmm_out_data
+{
+  HMIDIOUT outHandle; // Handle to Midi Output Device
 };
 
 // The Windows MM API is based on the use of a callback function for

@@ -8,7 +8,6 @@
 
 #include <atomic>
 #include <map>
-#include <sstream>
 #include <thread>
 
 namespace libremidi
@@ -55,6 +54,28 @@ portInfo(snd_seq_t* seq, snd_seq_port_info_t* pinfo, unsigned int type, int port
     return count;
   return 0;
 }
+
+inline std::string portName(snd_seq_t* seq, snd_seq_port_info_t* pinfo)
+{
+  snd_seq_client_info_t* cinfo;
+  snd_seq_client_info_alloca(&cinfo);
+
+  int cnum = snd_seq_port_info_get_client(pinfo);
+  snd_seq_get_any_client_info(seq, cnum, cinfo);
+
+  std::string str;
+  str.reserve(64);
+  str += snd_seq_client_info_get_name(cinfo);
+  str += ":";
+  str += snd_seq_port_info_get_name(pinfo);
+  str += " "; // These lines added to make sure devices are listed
+  str += std::to_string(
+      snd_seq_port_info_get_client(pinfo)); // with full portnames added to ensure individual
+                                            // device names
+  str += ":";
+  str += std::to_string(snd_seq_port_info_get_port(pinfo));
+  return str;
+}
 }
 
 struct alsa_configuration
@@ -69,15 +90,27 @@ struct alsa_data
 {
   snd_seq_t* seq{};
   int vport{};
+
   snd_seq_port_subscribe_t* subscription{};
   snd_midi_event_t* coder{};
+
   unsigned int bufferSize{};
+  std::vector<unsigned char> buffer;
+};
+
+struct alsa_in_data : alsa_data
+{
   pthread_t thread{};
   pthread_t dummy_thread_id{};
-  snd_seq_real_time_t lastTime{};
   int queue_id{}; // an input queue is needed to get timestamped events
   int trigger_fds[2]{};
-  std::vector<unsigned char> buffer;
+  snd_seq_real_time_t lastTime{};
+
+  bool doInput{false};
+};
+
+struct alsa_out_data : alsa_data
+{
 };
 
 }

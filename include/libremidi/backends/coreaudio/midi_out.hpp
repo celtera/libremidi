@@ -16,10 +16,9 @@ public:
     OSStatus result = MIDIClientCreate(name, nullptr, nullptr, &client);
     if (result != noErr)
     {
-      std::ostringstream ost;
-      ost << "midi_in_core::initialize: error creating OS-X MIDI client object (" << result
-          << ").";
-      error<driver_error>(ost.str());
+      error<driver_error>(
+          "midi_out_core::initialize: error creating OS-X MIDI client object: "
+          + std::to_string(result));
       return;
     }
 
@@ -38,7 +37,9 @@ public:
     if (data.endpoint)
       MIDIEndpointDispose(data.endpoint);
   }
+
   libremidi::API get_current_api() const noexcept override { return libremidi::API::MACOSX_CORE; }
+
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
     if (connected_)
@@ -58,10 +59,9 @@ public:
 
     if (portNumber >= nDest)
     {
-      std::ostringstream ost;
-      ost << "midi_out_core::open_port: the 'portNumber' argument (" << portNumber
-          << ") is invalid.";
-      error<invalid_parameter_error>(ost.str());
+      error<invalid_parameter_error>(
+          "midi_out_core::open_port: invalid 'portNumber' argument: "
+          + std::to_string(portNumber));
       return;
     }
 
@@ -94,6 +94,7 @@ public:
     data.destinationId = destination;
     connected_ = true;
   }
+
   void open_virtual_port(std::string_view portName) override
   {
     if (data.endpoint)
@@ -120,6 +121,7 @@ public:
     // Save our api-specific connection information.
     data.endpoint = endpoint;
   }
+
   void close_port() override
   {
     if (data.endpoint)
@@ -136,6 +138,7 @@ public:
 
     connected_ = false;
   }
+
   void set_client_name(std::string_view clientName) override
   {
     warning(
@@ -143,17 +146,20 @@ public:
         "the "
         "MACOSX_CORE API!");
   }
+
   void set_port_name(std::string_view portName) override
   {
     warning(
         "midi_out_core::set_port_name: this function is not implemented for the "
         "MACOSX_CORE API!");
   }
+
   unsigned int get_port_count() override
   {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
     return MIDIGetNumberOfDestinations();
   }
+
   std::string get_port_name(unsigned int portNumber) override
   {
     CFStringRef nameRef;
@@ -164,11 +170,10 @@ public:
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
     if (portNumber >= MIDIGetNumberOfDestinations())
     {
-      std::ostringstream ost;
-      ost << "midi_out_core::get_port_name: the 'portNumber' argument (" << portNumber
-          << ") is invalid.";
-      warning(ost.str());
-      return stringName;
+      error<invalid_parameter_error>(
+          "midi_out_core::get_port_name: invalid 'portNumber' argument: "
+          + std::to_string(portNumber));
+      return {};
     }
 
     portRef = MIDIGetDestination(portNumber);

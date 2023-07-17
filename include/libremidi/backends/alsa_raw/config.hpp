@@ -5,6 +5,4 @@
 #include <libremidi/libremidi.hpp>
 
 #include <atomic>
-#include <ostream>
-#include <sstream>
 #include <thread>

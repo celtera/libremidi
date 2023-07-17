@@ -58,10 +58,10 @@ public:
     midi_in_alsa::close_port();
 
     // Shutdown the input thread.
-    if (inputData_.doInput)
+    if (data.doInput)
     {
-      inputData_.doInput = false;
-      write(data.trigger_fds[1], &inputData_.doInput, sizeof(inputData_.doInput));
+      data.doInput = false;
+      write(data.trigger_fds[1], &data.doInput, sizeof(data.doInput));
 
       if (!pthread_equal(data.thread, data.dummy_thread_id))
         pthread_join(data.thread, nullptr);
@@ -105,10 +105,8 @@ public:
             (int)portNumber)
         == 0)
     {
-      std::ostringstream ost;
-      ost << "midi_in_alsa::open_port: the 'portNumber' argument (" << portNumber
-          << ") is invalid.";
-      error<invalid_parameter_error>(ost.str());
+      error<invalid_parameter_error>(
+          "midi_in_alsa::open_port: invalid 'portNumber' argument: " + std::to_string(portNumber));
       return;
     }
 
@@ -165,7 +163,7 @@ public:
       }
     }
 
-    if (inputData_.doInput == false)
+    if (data.doInput == false)
     {
       // Start the input queue
 #ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
@@ -178,7 +176,7 @@ public:
       pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
       pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
 
-      inputData_.doInput = true;
+      data.doInput = true;
       int err = pthread_create(&data.thread, &attr, alsaMidiHandler, &inputData_);
       pthread_attr_destroy(&attr);
       if (err)
@@ -186,7 +184,7 @@ public:
         snd_seq_unsubscribe_port(data.seq, data.subscription);
         snd_seq_port_subscribe_free(data.subscription);
         data.subscription = nullptr;
-        inputData_.doInput = false;
+        data.doInput = false;
         error<thread_error>("midi_in_alsa::open_port: error starting MIDI input thread!");
         return;
       }
@@ -222,7 +220,7 @@ public:
       data.vport = snd_seq_port_info_get_port(pinfo);
     }
 
-    if (inputData_.doInput == false)
+    if (data.doInput == false)
     {
       // Wait for old thread to stop, if still running
       if (!pthread_equal(data.thread, data.dummy_thread_id))
@@ -239,7 +237,7 @@ public:
       pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
       pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
 
-      inputData_.doInput = true;
+      data.doInput = true;
       int err = pthread_create(&data.thread, &attr, alsaMidiHandler, &inputData_);
       pthread_attr_destroy(&attr);
       if (err)
@@ -250,7 +248,7 @@ public:
           snd_seq_port_subscribe_free(data.subscription);
           data.subscription = nullptr;
         }
-        inputData_.doInput = false;
+        data.doInput = false;
         error<thread_error>("midi_in_alsa::open_virtual_port: error starting MIDI input thread!");
         return;
       }
@@ -277,10 +275,10 @@ public:
 
     // Stop thread to avoid triggering the callback, while the port is intended
     // to be closed
-    if (inputData_.doInput)
+    if (data.doInput)
     {
-      inputData_.doInput = false;
-      write(data.trigger_fds[1], &inputData_.doInput, sizeof(inputData_.doInput));
+      data.doInput = false;
+      write(data.trigger_fds[1], &data.doInput, sizeof(data.doInput));
 
       if (!pthread_equal(data.thread, data.dummy_thread_id))
         pthread_join(data.thread, nullptr);
@@ -311,45 +309,30 @@ public:
 
   std::string get_port_name(unsigned int portNumber) override
   {
-    snd_seq_client_info_t* cinfo;
     snd_seq_port_info_t* pinfo;
-    snd_seq_client_info_alloca(&cinfo);
     snd_seq_port_info_alloca(&pinfo);
 
-    std::string stringName;
     if (portInfo(
             data.seq, pinfo, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ, (int)portNumber))
     {
-      int cnum = snd_seq_port_info_get_client(pinfo);
-      snd_seq_get_any_client_info(data.seq, cnum, cinfo);
-      std::ostringstream os;
-      os << snd_seq_client_info_get_name(cinfo);
-      os << ":";
-      os << snd_seq_port_info_get_name(pinfo);
-      os << " "; // These lines added to make sure devices are listed
-      os << snd_seq_port_info_get_client(pinfo); // with full portnames added to ensure individual
-                                                 // device names
-      os << ":";
-      os << snd_seq_port_info_get_port(pinfo);
-      stringName = os.str();
-      return stringName;
+      return portName(data.seq, pinfo);
     }
 
     // If we get here, we didn't find a match.
     warning("midi_in_alsa::get_port_name: error looking for port name!");
-    return stringName;
+    return {};
   }
 
 private:
   static void* alsaMidiHandler(void* ptr)
   {
     auto& data = *static_cast<midi_in_api::in_data*>(ptr);
-    auto& apidata = *static_cast<alsa_data*>(data.apiData);
+    auto& apidata = *static_cast<alsa_in_data*>(data.apiData);
 
     double time{};
     bool continueSysex = false;
     bool doDecode = false;
-    message message{};
+    message& message = data.message;
     int poll_fd_count{};
     pollfd* poll_fds{};
 
@@ -359,9 +342,11 @@ private:
     int result = snd_midi_event_new(0, &apidata.coder);
     if (result < 0)
     {
-      data.doInput = false;
+      apidata.doInput = false;
+#if defined(__LIBREMIDI_DEBUG__)
       std::cerr << "\nmidi_in_alsa::alsaMidiHandler: error initializing MIDI "
                    "event parser!\n\n";
+#endif
       return nullptr;
     }
 
@@ -378,7 +363,7 @@ private:
     poll_fds[0].fd = apidata.trigger_fds[0];
     poll_fds[0].events = POLLIN;
 
-    while (data.doInput)
+    while (apidata.doInput)
     {
       if (snd_seq_event_input_pending(apidata.seq, 1) == 0)
       {
@@ -398,13 +383,17 @@ private:
       result = snd_seq_event_input(apidata.seq, &ev);
       if (result == -ENOSPC)
       {
+#if defined(__LIBREMIDI_DEBUG__)
         std::cerr << "\nmidi_in_alsa::alsaMidiHandler: MIDI input buffer overrun!\n\n";
+#endif
         continue;
       }
       else if (result <= 0)
       {
+#if defined(__LIBREMIDI_DEBUG__)
         std::cerr << "\nmidi_in_alsa::alsaMidiHandler: unknown MIDI input error!\n";
         perror("System reports");
+#endif
         continue;
       }
 
@@ -419,14 +408,14 @@ private:
 
         case SND_SEQ_EVENT_PORT_SUBSCRIBED:
 #if defined(__LIBREMIDI_DEBUG__)
-          std::cout << "midi_in_alsa::alsaMidiHandler: port connection made!\n";
+          std::cerr << "midi_in_alsa::alsaMidiHandler: port connection made!\n";
 #endif
           break;
 
         case SND_SEQ_EVENT_PORT_UNSUBSCRIBED:
 #if defined(__LIBREMIDI_DEBUG__)
           std::cerr << "midi_in_alsa::alsaMidiHandler: port connection has closed!\n";
-          std::cout << "sender = " << (int)ev->data.connect.sender.client << ":"
+          std::cerr << "sender = " << (int)ev->data.connect.sender.client << ":"
                     << (int)ev->data.connect.sender.port
                     << ", dest = " << (int)ev->data.connect.dest.client << ":"
                     << (int)ev->data.connect.dest.port << std::endl;
@@ -551,7 +540,7 @@ private:
     apidata.thread = apidata.dummy_thread_id;
     return nullptr;
   }
-  alsa_data data;
+  alsa_in_data data;
 };
 
 }

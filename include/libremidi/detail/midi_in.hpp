@@ -87,7 +87,6 @@ public:
     midi_queue queue{};
     libremidi::message message{};
     unsigned char ignoreFlags{7};
-    bool doInput{false};
     bool firstMessage{true};
     void* apiData{};
     midi_in::message_callback userCallback{};
@@ -104,7 +103,11 @@ public:
         // As long as we haven't reached our queue size limit, push the
         // message.
         if (!queue.push(std::move(message)))
+        {
+#if defined(__LIBREMIDI_DEBUG__)
           std::cerr << "\nmidi_in: message queue limit reached!!\n\n";
+#endif
+        }
       }
       message.bytes.clear();
     }
