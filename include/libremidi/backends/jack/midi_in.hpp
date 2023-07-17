@@ -183,11 +183,9 @@ private:
     uint32_t evCount = jack_midi_get_event_count(buff);
     for (uint32_t j = 0; j < evCount; j++)
     {
-      message m;
+      message& m = jData.rtMidiIn->message;
 
       jack_midi_event_get(&event, buff, j);
-
-      m.bytes.assign(event.buffer, event.buffer + event.size);
 
       // Compute the delta time.
       time = jack_get_time();
@@ -209,8 +207,7 @@ private:
       {
         // Unless this is a (possibly continued) SysEx message and we're ignoring SysEx,
         // copy the event buffer into the MIDI message struct.
-        for (unsigned int i = 0; i < event.size; i++)
-          m.bytes.push_back(event.buffer[i]);
+        m.bytes.insert(m.bytes.end(), event.buffer, event.buffer + event.size);
       }
 
       switch (event.buffer[0])
