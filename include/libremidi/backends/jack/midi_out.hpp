@@ -129,33 +129,13 @@ public:
 
   std::string get_port_name(unsigned int portNumber) override
   {
-    std::string retStr("");
-
     connect();
 
     // List of available ports
-    const char** ports
-        = jack_get_ports(data.client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput);
+    unique_handle<const char*, jack_free> ports{
+        jack_get_ports(data.client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput)};
 
-    // Check port validity
-    if (ports == nullptr)
-    {
-      warning("midi_out_jack::get_port_name: no ports available!");
-      return retStr;
-    }
-
-    if (ports[portNumber] == nullptr)
-    {
-      std::ostringstream ost;
-      ost << "midi_out_jack::get_port_name: the 'portNumber' argument (" << portNumber
-          << ") is invalid.";
-      warning(ost.str());
-    }
-    else
-      retStr.assign(ports[portNumber]);
-
-    jack_free(ports);
-    return retStr;
+    return jack_helpers::get_port_name(*this, ports.get(), portNumber);
   }
 
   void send_message(const unsigned char* message, size_t size) override

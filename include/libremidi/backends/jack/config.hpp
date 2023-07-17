@@ -9,7 +9,7 @@
   #include <jack/midiport.h>
   #include <jack/ringbuffer.h>
 #endif
-#include <libremidi/detail/midi_api.hpp>
+#include <libremidi/detail/midi_in.hpp>
 #include <libremidi/detail/semaphore.hpp>
 #include <libremidi/libremidi.hpp>
 
@@ -45,6 +45,34 @@ struct jack_helpers
       return false;
     }
     return true;
+  }
+
+  static std::string get_port_name(midi_api& self, const char** ports, unsigned int portNumber)
+  {
+    // Check port validity
+    if (ports == nullptr)
+    {
+      self.warning("midi_jack::get_port_name: no ports available!");
+      return {};
+    }
+
+    for (int i = 0; i <= portNumber; i++)
+    {
+      if (ports[i] == nullptr)
+      {
+        self.error<invalid_parameter_error>(
+            "midi_jack::get_port_name: invalid 'portNumber' argument: "
+            + std::to_string(portNumber));
+        return {};
+      }
+
+      if (i == portNumber)
+      {
+        return ports[portNumber];
+      }
+    }
+
+    return {};
   }
 };
 }
