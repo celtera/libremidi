@@ -1,5 +1,6 @@
 #pragma once
 #include <libremidi/backends/coreaudio/config.hpp>
+#include <libremidi/backends/coreaudio/helpers.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
 namespace libremidi

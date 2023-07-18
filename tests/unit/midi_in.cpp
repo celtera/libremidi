@@ -7,19 +7,25 @@
 
 #if defined(LIBREMIDI_JACK)
   #include <jack/jack.h>
+
+#include <libremidi/backends/jack/config.hpp>
 TEST_CASE("poly aftertouch", "[midi_in]")
 {
+  std::vector<libremidi::message> queue;
+  std::mutex qmtx;
+
   libremidi::midi_out midi_out{libremidi::API::UNIX_JACK, "libremidi-test-out"};
   midi_out.open_port();
 
-  libremidi::midi_in midi{libremidi::API::UNIX_JACK, "libremidi-test"};
-
-  std::vector<libremidi::message> queue;
-  std::mutex qmtx;
-  midi.set_callback([&](libremidi::message&& msg) {
+  libremidi::midi_in midi{
+      libremidi::input_configuration{
+          .on_message
+          = [&](libremidi::message&& msg) {
     std::lock_guard _{qmtx};
     queue.push_back(std::move(msg));
-  });
+          }},
+      libremidi::jack_input_configuration{.client_name = "libremidi-test"}};
+
   midi.open_port();
 
   jack_options_t opt = JackNullOption;

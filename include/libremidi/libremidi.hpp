@@ -58,9 +58,13 @@
 */
 
 #include <libremidi/api.hpp>
+#include <libremidi/error.hpp>
+#include <libremidi/input_configuration.hpp>
 #include <libremidi/message.hpp>
+#include <libremidi/output_configuration.hpp>
 
 #include <algorithm>
+#include <any>
 #include <cassert>
 #include <chrono>
 #include <functional>
@@ -68,92 +72,12 @@
 #include <memory>
 #include <optional>
 #include <span>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace libremidi
 {
-//! Defines various error types.
-enum midi_error
-{
-  WARNING,           /*!< A non-critical error. */
-  UNSPECIFIED,       /*!< The default, unspecified error type. */
-  NO_DEVICES_FOUND,  /*!< No devices found on system. */
-  INVALID_DEVICE,    /*!< An invalid device ID was specified. */
-  MEMORY_ERROR,      /*!< An error occured during memory allocation. */
-  INVALID_PARAMETER, /*!< An invalid parameter was specified to a function. */
-  INVALID_USE,       /*!< The function was called incorrectly. */
-  DRIVER_ERROR,      /*!< A system driver error occured. */
-  SYSTEM_ERROR,      /*!< A system error occured. */
-  THREAD_ERROR       /*!< A thread error occured. */
-};
-
-//! Base exception class for MIDI problems
-struct LIBREMIDI_EXPORT midi_exception : public std::runtime_error
-{
-  using std::runtime_error::runtime_error;
-  ~midi_exception() override;
-};
-
-struct LIBREMIDI_EXPORT no_devices_found_error final : public midi_exception
-{
-  static constexpr auto code = midi_error::NO_DEVICES_FOUND;
-  using midi_exception::midi_exception;
-  ~no_devices_found_error() override;
-};
-struct LIBREMIDI_EXPORT invalid_device_error final : public midi_exception
-{
-  static constexpr auto code = midi_error::INVALID_DEVICE;
-  using midi_exception::midi_exception;
-  ~invalid_device_error() override;
-};
-struct LIBREMIDI_EXPORT memory_error final : public midi_exception
-{
-  static constexpr auto code = midi_error::MEMORY_ERROR;
-  using midi_exception::midi_exception;
-  ~memory_error() override;
-};
-struct LIBREMIDI_EXPORT invalid_parameter_error final : public midi_exception
-{
-  static constexpr auto code = midi_error::INVALID_PARAMETER;
-  using midi_exception::midi_exception;
-  ~invalid_parameter_error() override;
-};
-struct LIBREMIDI_EXPORT invalid_use_error final : public midi_exception
-{
-  static constexpr auto code = midi_error::INVALID_USE;
-  using midi_exception::midi_exception;
-  ~invalid_use_error() override;
-};
-struct LIBREMIDI_EXPORT driver_error final : public midi_exception
-{
-  static constexpr auto code = midi_error::DRIVER_ERROR;
-  using midi_exception::midi_exception;
-  ~driver_error() override;
-};
-struct LIBREMIDI_EXPORT system_error final : public midi_exception
-{
-  static constexpr auto code = midi_error::SYSTEM_ERROR;
-  using midi_exception::midi_exception;
-  ~system_error() override;
-};
-struct LIBREMIDI_EXPORT thread_error final : public midi_exception
-{
-  static constexpr auto code = midi_error::THREAD_ERROR;
-  using midi_exception::midi_exception;
-  ~thread_error() override;
-};
-
-/*! \brief Error callback function
-    \param type Type of error.
-    \param errorText Error description.
-
-    Note that class behaviour is undefined after a critical error (not
-    a warning) is reported.
- */
-using midi_error_callback = std::function<void(midi_error type, std::string_view errorText)>;
 
 //! The callbacks will be called whenever a device is added or removed
 //! for a given API.
@@ -175,26 +99,6 @@ private:
   std::unique_ptr<class observer_api> impl_;
 };
 
-/**
- * Used to determine how large sent messages will be chunked.
- */
-struct LIBREMIDI_EXPORT chunking_parameters
-{
-  std::chrono::milliseconds interval{};
-  int32_t size{};
-
-  /**
-   * @brief Will be called by the chunking code to allow the API user to wait.
-   *
-   * By default just calls sleep.
-   * Arguments are: the time that must be waited, the bytes currently written.
-   * Return false if you want to abort the transfer, and true otherwise.
-   */
-  std::function<bool(std::chrono::microseconds, int)> wait = chunking_parameters::default_wait;
-
-  static bool default_wait(std::chrono::microseconds time_to_wait, int written_bytes);
-};
-
 /**********************************************************************/
 /*! \class midi_in
     \brief A realtime MIDI input class.
@@ -211,11 +115,12 @@ struct LIBREMIDI_EXPORT chunking_parameters
 
     by Gary P. Scavone, 2003-2017.
 */
+
 class LIBREMIDI_EXPORT midi_in
 {
 public:
   //! User callback function type definition.
-  using message_callback = std::function<void(message&& message)>;
+  using message_callback = libremidi::message_callback;
 
   //! Default constructor that allows an optional api, client name and queue
   //! size.
@@ -239,6 +144,8 @@ public:
   explicit midi_in(
       libremidi::API api = API::UNSPECIFIED,
       std::string_view clientName = "libremidi input client");
+
+  explicit midi_in(input_configuration conf, std::any api_conf = {});
 
   midi_in(const midi_in&) = delete;
   midi_in(midi_in&& other) noexcept;
@@ -274,23 +181,6 @@ public:
   */
   void open_virtual_port(std::string_view portName);
   void open_virtual_port() { open_virtual_port("libremidi virtual port"); }
-  //! Set a callback function to be invoked for incoming MIDI messages.
-  /*!
-    The callback function will be called whenever an incoming MIDI
-    message is received.  While not absolutely necessary, it is best
-    to set the callback function before opening a MIDI port to avoid
-    leaving some messages in the queue.
-
-    \param callback A callback function must be given.
-  */
-  void set_callback(message_callback callback);
-
-  //! Cancel use of the current callback function (if one exists).
-  /*!
-    Subsequent incoming MIDI messages will be written to the queue
-    and can be retrieved with the \e getMessage function.
-  */
-  void cancel_callback();
 
   //! Close an open MIDI connection (if one exists).
   void close_port();
@@ -316,17 +206,6 @@ public:
   */
   [[nodiscard]] std::string get_port_name(unsigned int portNumber = 0);
 
-  //! Specify whether certain MIDI message types should be queued or ignored
-  //! during input.
-  /*!
-    By default, MIDI timing and active sensing messages are ignored
-    during message input because of their relative high data rates.
-    MIDI sysex messages are ignored by default as well.  Variable
-    values of "true" imply that the respective message type will be
-    ignored.
-  */
-  void ignore_types(bool midiSysex = true, bool midiTime = true, bool midiSense = true);
-
   //! Set an error callback function to be invoked when an error has occured.
   /*!
     The callback function will be called whenever an error has occured. It is
@@ -334,12 +213,10 @@ public:
   */
   void set_error_callback(midi_error_callback errorCallback);
 
-  void set_client_name(std::string_view clientName);
-
   void set_port_name(std::string_view portName);
 
 private:
-  std::unique_ptr<class midi_in_api> rtapi_;
+  std::unique_ptr<class midi_in_api> impl_;
 };
 
 /**********************************************************************/
@@ -369,12 +246,10 @@ public:
     compiled, the default order of use is ALSA, JACK (Linux) and CORE,
     JACK (OS-X).
   */
-  explicit midi_out(libremidi::API api, std::string_view clientName);
-
-  explicit midi_out()
-      : midi_out{libremidi::API::UNSPECIFIED, "libremidi client"}
-  {
-  }
+  explicit midi_out(
+      libremidi::API api = libremidi::API::UNSPECIFIED,
+      std::string_view clientName = "libremidi client");
+  explicit midi_out(output_configuration conf, std::any api_conf = {});
 
   midi_out(const midi_out&) = delete;
   midi_out(midi_out&& other) noexcept;
@@ -462,18 +337,10 @@ public:
   */
   void set_error_callback(midi_error_callback errorCallback) noexcept;
 
-  void set_client_name(std::string_view clientName);
-
   void set_port_name(std::string_view portName);
 
-  /**
-   * For large messages, chunk their content and wait.
-   * Setting a null optional will disable chunking.
-   */
-  void set_chunking_parameters(std::optional<chunking_parameters> parameters);
-
 private:
-  std::unique_ptr<class midi_out_api> rtapi_;
+  std::unique_ptr<class midi_out_api> impl_;
 };
 }
 

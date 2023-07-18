@@ -1,5 +1,6 @@
 #pragma once
 #include <libremidi/backends/winmm/config.hpp>
+#include <libremidi/backends/winmm/helpers.hpp>
 #include <libremidi/detail/midi_in.hpp>
 
 namespace libremidi
@@ -279,9 +280,9 @@ private:
 
   DWORD lastTime;
   LPMIDIHDR sysexBuffer[RT_SYSEX_BUFFER_COUNT];
-  CRITICAL_SECTION
-  _mutex; // [Patrice] see
-          // https://groups.google.com/forum/#!topic/mididev/6OUjHutMpEo
+  // [Patrice] see
+  // https://groups.google.com/forum/#!topic/mididev/6OUjHutMpEo
+  CRITICAL_SECTION _mutex;
 };
 
 }

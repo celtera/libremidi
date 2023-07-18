@@ -1,5 +1,6 @@
 #pragma once
 #include <libremidi/backends/jack/config.hpp>
+#include <libremidi/backends/jack/helpers.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
 #include <semaphore>
@@ -13,11 +14,17 @@ class midi_out_jack final
 public:
   static const constexpr auto backend = "JACK";
 
-  midi_out_jack(std::string_view cname)
+  struct
+      : output_configuration
+      , jack_output_configuration
+  {
+  } configuration;
+
+  midi_out_jack(output_configuration&& conf, jack_output_configuration&& apiconf)
+      : configuration{std::move(conf), std::move(apiconf)}
   {
     this->port = nullptr;
     this->client = nullptr;
-    this->clientName = cname;
 
     connect();
   }
@@ -39,7 +46,7 @@ public:
 
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
-    if (!check_port_name_length(*this, clientName, portName))
+    if (!check_port_name_length(*this, configuration.client_name, portName))
       return;
 
     connect();
@@ -64,7 +71,7 @@ public:
 
   void open_virtual_port(std::string_view portName) override
   {
-    if (!check_port_name_length(*this, clientName, portName))
+    if (!check_port_name_length(*this, configuration.client_name, portName))
       return;
 
     connect();
@@ -151,7 +158,7 @@ private:
     this->buffMessage = jack_ringbuffer_create(midi_out_jack::ringbuffer_size);
 
     // Initialize JACK client
-    this->client = jack_client_open(clientName.c_str(), JackNoStartServer, nullptr);
+    this->client = jack_client_open(configuration.client_name.c_str(), JackNoStartServer, nullptr);
     if (this->client == nullptr)
     {
       warning("midi_out_jack::initialize: JACK server not running?");
@@ -199,8 +206,6 @@ private:
 
   std::counting_semaphore<> sem_cleanup{0};
   std::counting_semaphore<> sem_needpost{0};
-
-  std::string clientName;
 };
 
 }

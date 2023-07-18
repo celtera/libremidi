@@ -6,15 +6,24 @@
 
 #include <alsa/asoundlib.h>
 
+#include <atomic>
+#include <thread>
+
 namespace libremidi
 {
 class midi_in_raw_alsa final : public midi_in_default<midi_in_raw_alsa>
 {
 public:
   static const constexpr auto backend = "Raw ALSA";
+  struct
+      : input_configuration
+      , alsa_raw_input_configuration
+  {
+  } configuration;
 
-  explicit midi_in_raw_alsa(std::string_view clientName)
+  explicit midi_in_raw_alsa(input_configuration&& conf, alsa_raw_input_configuration&& apiconf)
       : midi_in_default<midi_in_raw_alsa>{}
+      , configuration{std::move(conf), std::move(apiconf)}
   {
   }
 
@@ -188,7 +197,7 @@ public:
   std::thread thread_;
   std::atomic_bool running_{};
   std::vector<pollfd> fds_;
-  midi_stream_decoder decoder_{*this};
+  midi_stream_decoder decoder_{this->configuration.on_message};
 
   bool filter_active_sensing_ = false;
 };

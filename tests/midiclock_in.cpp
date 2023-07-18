@@ -9,10 +9,11 @@
 //
 //*****************************************//
 
+#include <libremidi/libremidi.hpp>
+
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
-#include <libremidi/libremidi.hpp>
 #include <thread>
 
 // These functions should be embedded in a try/catch block in case of
@@ -59,17 +60,8 @@ bool choosePort(RT& libremidi, const std::string& dir)
 int main(int, const char* argv[])
 try
 {
-  libremidi::midi_in midiin;
-
-  // Call function to select port.
-  if (!choosePort(midiin, "input"))
-    return 0;
-
-  // Set our callback function.  This should be done immediately after
-  // opening the port to avoid having incoming messages written to the
-  // queue instead of sent to the callback function.
   unsigned int clock_count = 0;
-  midiin.set_callback([&](const libremidi::message& message) {
+  auto midi_callback = [&](const libremidi::message& message) {
     // Ignore longer messages
     if (message.size() != 1)
       return;
@@ -92,10 +84,21 @@ try
     }
     else
       clock_count = 0;
-  });
+  };
 
-  // Don't ignore sysex, timing, or active sensing messages.
-  midiin.ignore_types(false, false, false);
+  libremidi::midi_in midiin{libremidi::input_configuration{
+      // Setup a callback
+      .on_message = midi_callback,
+
+      // Don't ignore sysex, timing, or active sensing messages.
+      .ignore_sysex = false,
+      .ignore_timing = false,
+      .ignore_sensing = false,
+  }};
+
+  // Call function to select port.
+  if (!choosePort(midiin, "input"))
+    return 0;
 
   std::cout << "\nReading MIDI input ... press <enter> to quit.\n";
   char input;

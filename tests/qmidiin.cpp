@@ -80,27 +80,10 @@ struct basic_queue
 // Example of how to get back the old queue-based API
 struct queued_midi_in : libremidi::midi_in
 {
-  basic_queue queue{};
-  explicit queued_midi_in(unsigned int queueSizeLimit, auto&&... args)
-      : midi_in{args...}
+  explicit queued_midi_in(
+      unsigned int queueSizeLimit, libremidi::input_configuration conf, auto&&... args)
+      : midi_in{set_queue_callback(queueSizeLimit, conf), args...}
   {
-    // Allocate the MIDI queue.
-    queue.ringSize = queueSizeLimit;
-    if (queue.ringSize > 0)
-    {
-      queue.ring = std::make_unique<libremidi::message[]>(queue.ringSize);
-    }
-
-    set_callback([this](libremidi::message m) {
-      // As long as we haven't reached our queue size limit, push the
-      // message.
-      if (!queue.push(std::move(m)))
-      {
-#if defined(__LIBREMIDI_DEBUG__)
-        std::cerr << "\nmidi_in: message queue limit reached!!\n\n";
-#endif
-      }
-    });
   }
 
   //! Fill the user-provided vector with the data bytes for the next available
@@ -124,6 +107,32 @@ struct queued_midi_in : libremidi::midi_in
   }
 
   bool get_message(message& m) { return queue.pop(m); }
+
+private:
+  libremidi::input_configuration&
+  set_queue_callback(unsigned int queueSizeLimit, libremidi::input_configuration& conf)
+  {
+    // Allocate the MIDI queue.
+    queue.ringSize = queueSizeLimit;
+    if (queue.ringSize > 0)
+    {
+      queue.ring = std::make_unique<libremidi::message[]>(queue.ringSize);
+    }
+
+    conf.on_message = [this](libremidi::message m) {
+      // As long as we haven't reached our queue size limit, push the
+      // message.
+      if (!queue.push(std::move(m)))
+      {
+#if defined(__LIBREMIDI_DEBUG__)
+        std::cerr << "\nmidi_in: message queue limit reached!!\n\n";
+#endif
+      }
+    };
+    return conf;
+  }
+
+  basic_queue queue{};
 };
 }
 
@@ -144,7 +153,13 @@ try
   if (argc > 2)
     usage();
 
-  libremidi::queued_midi_in midiin{1024};
+  libremidi::queued_midi_in midiin{
+      1024, libremidi::input_configuration{
+                // Don't ignore sysex, timing, or active sensing messages.
+                .ignore_sysex = false,
+                .ignore_timing = false,
+                .ignore_sensing = false,
+            }};
 
   // Check available ports vs. specified.
   auto port = 0U;
@@ -158,9 +173,6 @@ try
   }
 
   midiin.open_port(port);
-
-  // Don't ignore sysex, timing, or active sensing messages.
-  midiin.ignore_types(false, false, false);
 
   // Install an interrupt handler function.
   static std::atomic_bool done{};

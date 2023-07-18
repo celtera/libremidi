@@ -5,6 +5,9 @@
 
 #include <alsa/asoundlib.h>
 
+#include <atomic>
+#include <thread>
+
 namespace libremidi
 {
 class midi_out_raw_alsa final : public midi_out_default<midi_out_raw_alsa>
@@ -12,7 +15,16 @@ class midi_out_raw_alsa final : public midi_out_default<midi_out_raw_alsa>
 public:
   static const constexpr auto backend = "Raw ALSA";
 
-  midi_out_raw_alsa(std::string_view) { }
+  struct
+      : output_configuration
+      , alsa_raw_output_configuration
+  {
+  } configuration;
+
+  midi_out_raw_alsa(output_configuration&& conf, alsa_raw_output_configuration&& apiconf)
+      : configuration{std::move(conf), std::move(apiconf)}
+  {
+  }
 
   ~midi_out_raw_alsa() override
   {
@@ -93,7 +105,7 @@ public:
           "midi_out_raw_alsa::send_message: trying to send a message without an open "
           "port.");
 
-    if (!this->chunking)
+    if (!this->configuration.chunking)
     {
       write(message, size);
     }
@@ -121,7 +133,7 @@ public:
     snd_rawmidi_params_current(midiport_, param);
 
     std::size_t buffer_size = snd_rawmidi_params_get_buffer_size(param);
-    return std::min(buffer_size, (std::size_t)chunking->size);
+    return std::min(buffer_size, (std::size_t)configuration.chunking->size);
   }
 
   std::size_t get_available_bytes_to_write() const noexcept
@@ -156,12 +168,12 @@ public:
       std::size_t available{};
       while ((available = get_available_bytes_to_write()) < chunk_size)
       {
-        if (!chunking->wait(
+        if (!configuration.chunking->wait(
                 std::chrono::microseconds((chunk_size - available) * 320), written_bytes))
           return;
       };
 
-      if (!chunking->wait(chunking->interval, written_bytes))
+      if (!configuration.chunking->wait(configuration.chunking->interval, written_bytes))
         return;
 
       // Write more data

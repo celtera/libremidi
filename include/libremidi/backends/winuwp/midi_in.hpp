@@ -1,5 +1,6 @@
 #pragma once
 #include <libremidi/backends/winuwp/config.hpp>
+#include <libremidi/backends/winuwp/helpers.hpp>
 #include <libremidi/detail/midi_in.hpp>
 
 namespace libremidi

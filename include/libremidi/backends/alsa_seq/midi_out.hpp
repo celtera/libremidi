@@ -1,5 +1,6 @@
 #pragma once
 #include <libremidi/backends/alsa_seq/config.hpp>
+#include <libremidi/backends/alsa_seq/helpers.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
 namespace libremidi
@@ -8,9 +9,17 @@ namespace libremidi
 class midi_out_alsa final
     : public midi_out_api
     , private alsa_data
+    , private error_handler
 {
 public:
-  explicit midi_out_alsa(std::string_view clientName)
+  struct
+      : output_configuration
+      , alsa_sequencer_output_configuration
+  {
+  } configuration;
+
+  midi_out_alsa(output_configuration&& conf, alsa_sequencer_output_configuration&& apiconf)
+      : configuration{std::move(conf), std::move(apiconf)}
   {
     // Set up the ALSA sequencer client.
     snd_seq_t* seq{};
@@ -23,7 +32,7 @@ public:
     }
 
     // Set client name.
-    snd_seq_set_client_name(seq, clientName.data());
+    snd_seq_set_client_name(seq, configuration.client_name.c_str());
 
     // Save our api-specific connection information.
     this->seq = seq;

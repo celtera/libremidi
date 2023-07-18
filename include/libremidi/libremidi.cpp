@@ -156,28 +156,28 @@ LIBREMIDI_INLINE thread_error::~thread_error() = default;
 
 LIBREMIDI_INLINE midi_in::~midi_in() = default;
 LIBREMIDI_INLINE midi_in::midi_in(midi_in&& other) noexcept
-    : rtapi_{std::move(other.rtapi_)}
+    : impl_{std::move(other.impl_)}
 {
-  other.rtapi_ = std::make_unique<libremidi::midi_in_dummy>("");
+  other.impl_ = std::make_unique<libremidi::midi_in_dummy>("");
 }
 LIBREMIDI_INLINE midi_in& midi_in::operator=(midi_in&& other) noexcept
 {
-  this->rtapi_ = std::move(other.rtapi_);
-  other.rtapi_ = std::make_unique<libremidi::midi_in_dummy>("");
+  this->impl_ = std::move(other.impl_);
+  other.impl_ = std::make_unique<libremidi::midi_in_dummy>("");
   return *this;
 }
 
 LIBREMIDI_INLINE midi_out::~midi_out() = default;
 
 LIBREMIDI_INLINE midi_out::midi_out(midi_out&& other) noexcept
-    : rtapi_{std::move(other.rtapi_)}
+    : impl_{std::move(other.impl_)}
 {
-  other.rtapi_ = std::make_unique<libremidi::midi_out_dummy>("");
+  other.impl_ = std::make_unique<libremidi::midi_out_dummy>("");
 }
 LIBREMIDI_INLINE midi_out& midi_out::operator=(midi_out&& other) noexcept
 {
-  this->rtapi_ = std::move(other.rtapi_);
-  other.rtapi_ = std::make_unique<libremidi::midi_out_dummy>("");
+  this->impl_ = std::move(other.impl_);
+  other.impl_ = std::make_unique<libremidi::midi_out_dummy>("");
   return *this;
 }
 
@@ -200,25 +200,24 @@ open_midi_observer(libremidi::API api, observer::callbacks&& cb)
   return ptr;
 }
 
-[[nodiscard]] LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
+[[nodiscard]] static std::unique_ptr<midi_in_api>
 open_midi_in(libremidi::API api, std::string_view clientName)
 {
   std::unique_ptr<midi_in_api> ptr;
 
-  for_backend(
-      api, [&](auto b) { ptr = std::make_unique<typename decltype(b)::midi_in>(clientName); });
+  //  for_backend(
+  //      api, [&](auto b) { ptr = std::make_unique<typename decltype(b)::midi_in>(clientName); });
 
   return ptr;
 }
 
-[[nodiscard]] LIBREMIDI_INLINE std::unique_ptr<midi_out_api>
+[[nodiscard]] static std::unique_ptr<midi_out_api>
 open_midi_out(libremidi::API api, std::string_view clientName)
 {
-
   std::unique_ptr<midi_out_api> ptr;
 
-  for_backend(
-      api, [&](auto b) { ptr = std::make_unique<typename decltype(b)::midi_out>(clientName); });
+  //  for_backend(
+  //      api, [&](auto b) { ptr = std::make_unique<typename decltype(b)::midi_out>(clientName); });
 
   return ptr;
 }
@@ -234,109 +233,85 @@ observer::~observer() = default;
 LIBREMIDI_INLINE
 libremidi::API midi_in::get_current_api() const noexcept
 {
-  return rtapi_->get_current_api();
+  return impl_->get_current_api();
 }
 
 LIBREMIDI_INLINE
 void midi_in::open_port(unsigned int portNumber, std::string_view portName)
 {
-  rtapi_->open_port(portNumber, portName);
+  impl_->open_port(portNumber, portName);
 }
 
 LIBREMIDI_INLINE
 void midi_in::open_virtual_port(std::string_view portName)
 {
-  rtapi_->open_virtual_port(portName);
+  impl_->open_virtual_port(portName);
 }
 
 LIBREMIDI_INLINE
 void midi_in::close_port()
 {
-  rtapi_->close_port();
+  impl_->close_port();
 }
 
 LIBREMIDI_INLINE
 bool midi_in::is_port_open() const noexcept
 {
-  return rtapi_->is_port_open();
-}
-
-LIBREMIDI_INLINE
-void midi_in::set_callback(message_callback callback)
-{
-  (static_cast<midi_in_api*>(rtapi_.get()))->set_callback(std::move(callback));
-}
-
-LIBREMIDI_INLINE
-void midi_in::cancel_callback()
-{
-  (static_cast<midi_in_api*>(rtapi_.get()))->cancel_callback();
+  return impl_->is_port_open();
 }
 
 LIBREMIDI_INLINE
 unsigned int midi_in::get_port_count()
 {
-  return rtapi_->get_port_count();
+  return impl_->get_port_count();
 }
 
 LIBREMIDI_INLINE
 std::string midi_in::get_port_name(unsigned int portNumber)
 {
-  return rtapi_->get_port_name(portNumber);
-}
-
-LIBREMIDI_INLINE
-void midi_in::ignore_types(bool midiSysex, bool midiTime, bool midiSense)
-{
-  (static_cast<midi_in_api*>(rtapi_.get()))->ignore_types(midiSysex, midiTime, midiSense);
-}
-
-LIBREMIDI_INLINE
-void midi_in::set_error_callback(midi_error_callback errorCallback)
-{
-  rtapi_->set_error_callback(std::move(errorCallback));
+  return impl_->get_port_name(portNumber);
 }
 
 LIBREMIDI_INLINE
 libremidi::API midi_out::get_current_api() noexcept
 {
-  return rtapi_->get_current_api();
+  return impl_->get_current_api();
 }
 
 LIBREMIDI_INLINE
 void midi_out::open_port(unsigned int portNumber, std::string_view portName)
 {
-  rtapi_->open_port(portNumber, portName);
+  impl_->open_port(portNumber, portName);
 }
 
 LIBREMIDI_INLINE
 void midi_out::open_virtual_port(std::string_view portName)
 {
-  rtapi_->open_virtual_port(portName);
+  impl_->open_virtual_port(portName);
 }
 
 LIBREMIDI_INLINE
 void midi_out::close_port()
 {
-  rtapi_->close_port();
+  impl_->close_port();
 }
 
 LIBREMIDI_INLINE
 bool midi_out::is_port_open() const noexcept
 {
-  return rtapi_->is_port_open();
+  return impl_->is_port_open();
 }
 
 LIBREMIDI_INLINE
 unsigned int midi_out::get_port_count()
 {
-  return rtapi_->get_port_count();
+  return impl_->get_port_count();
 }
 
 LIBREMIDI_INLINE
 std::string midi_out::get_port_name(unsigned int portNumber)
 {
-  return rtapi_->get_port_name(portNumber);
+  return impl_->get_port_name(portNumber);
 }
 
 LIBREMIDI_INLINE
@@ -372,13 +347,21 @@ void midi_out::send_message(unsigned char b0, unsigned char b1, unsigned char b2
 LIBREMIDI_INLINE
 void midi_out::send_message(const unsigned char* message, size_t size)
 {
-  (static_cast<midi_out_api*>(rtapi_.get()))->send_message(message, size);
+  (static_cast<midi_out_api*>(impl_.get()))->send_message(message, size);
 }
 
 LIBREMIDI_INLINE
-void midi_out::set_error_callback(midi_error_callback errorCallback) noexcept
+midi_in::midi_in(input_configuration base_conf, std::any api_conf)
 {
-  rtapi_->set_error_callback(std::move(errorCallback));
+  auto from_api = [&]<typename T>(T& backend) mutable {
+    if (auto conf = std::any_cast<typename T::midi_in_configuration>(&api_conf))
+    {
+      this->impl_ = std::make_unique<typename T::midi_in>(std::move(base_conf), std::move(*conf));
+      return true;
+    }
+    return false;
+  };
+  std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
 }
 
 LIBREMIDI_INLINE
@@ -387,7 +370,7 @@ midi_in::midi_in(libremidi::API api, std::string_view clientName)
   if (api != libremidi::API::UNSPECIFIED)
   {
     // Attempt to open the specified API.
-    if ((rtapi_ = open_midi_in(api, clientName)))
+    if ((impl_ = open_midi_in(api, clientName)))
     {
       return;
     }
@@ -404,29 +387,41 @@ midi_in::midi_in(libremidi::API api, std::string_view clientName)
   // one with at least one port or we reach the end of the list.
   for (const auto& api : available_apis())
   {
-    rtapi_ = open_midi_in(api, clientName);
-    if (rtapi_ && rtapi_->get_port_count() != 0)
+    impl_ = open_midi_in(api, clientName);
+    if (impl_ && impl_->get_port_count() != 0)
     {
       break;
     }
   }
 
-  if (rtapi_)
+  if (!impl_)
   {
-    return;
+    // It should not be possible to get here because the preprocessor
+    // definition LIBREMIDI_DUMMY is automatically defined if no
+    // API-specific definitions are passed to the compiler. But just in
+    // case something weird happens, we'll thrown an error.
+    throw midi_exception{"midi_in: no compiled API support found ... critical error!!"};
   }
-}
-
-LIBREMIDI_INLINE
-void midi_in::set_client_name(std::string_view clientName)
-{
-  rtapi_->set_client_name(clientName);
 }
 
 LIBREMIDI_INLINE
 void midi_in::set_port_name(std::string_view portName)
 {
-  rtapi_->set_port_name(portName);
+  impl_->set_port_name(portName);
+}
+
+LIBREMIDI_INLINE
+midi_out::midi_out(output_configuration base_conf, std::any api_conf)
+{
+  auto from_api = [&]<typename T>(T& backend) mutable {
+    if (auto conf = std::any_cast<typename T::midi_out_configuration>(&api_conf))
+    {
+      this->impl_ = std::make_unique<typename T::midi_out>(std::move(base_conf), std::move(*conf));
+      return true;
+    }
+    return false;
+  };
+  std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
 }
 
 LIBREMIDI_INLINE
@@ -435,8 +430,8 @@ midi_out::midi_out(libremidi::API api, std::string_view clientName)
   if (api != libremidi::API::UNSPECIFIED)
   {
     // Attempt to open the specified API.
-    rtapi_ = open_midi_out(api, clientName);
-    if (rtapi_)
+    impl_ = open_midi_out(api, clientName);
+    if (impl_)
     {
       return;
     }
@@ -453,40 +448,26 @@ midi_out::midi_out(libremidi::API api, std::string_view clientName)
   // one with at least one port or we reach the end of the list.
   for (const auto& api : available_apis())
   {
-    rtapi_ = open_midi_out(api, clientName);
-    if (rtapi_ && rtapi_->get_port_count() != 0)
+    impl_ = open_midi_out(api, clientName);
+    if (impl_ && impl_->get_port_count() != 0)
     {
       break;
     }
   }
 
-  if (rtapi_)
+  if (!impl_)
   {
-    return;
+    // It should not be possible to get here because the preprocessor
+    // definition LIBREMIDI_DUMMY is automatically defined if no
+    // API-specific definitions are passed to the compiler. But just in
+    // case something weird happens, we'll thrown an error.
+    throw midi_exception{"midi_out: no compiled API support found ... critical error!!"};
   }
-
-  // It should not be possible to get here because the preprocessor
-  // definition LIBREMIDI_DUMMY is automatically defined if no
-  // API-specific definitions are passed to the compiler. But just in
-  // case something weird happens, we'll thrown an error.
-  throw midi_exception{"midi_in: no compiled API support found ... critical error!!"};
-}
-
-LIBREMIDI_INLINE
-void midi_out::set_client_name(std::string_view clientName)
-{
-  rtapi_->set_client_name(clientName);
 }
 
 LIBREMIDI_INLINE
 void midi_out::set_port_name(std::string_view portName)
 {
-  rtapi_->set_port_name(portName);
-}
-
-LIBREMIDI_INLINE
-void midi_out::set_chunking_parameters(std::optional<chunking_parameters> parameters)
-{
-  rtapi_->set_chunking_parameters(std::move(parameters));
+  impl_->set_port_name(portName);
 }
 }

@@ -8,12 +8,12 @@ namespace libremidi
 struct midi_stream_decoder
 {
   uint8_t runningStatusType_{};
-  midi_in_api& data;
+  message_callback& callback;
   midi_bytes bytes;
   message msg;
 
-  explicit midi_stream_decoder(midi_in_api& data)
-      : data{data}
+  explicit midi_stream_decoder(message_callback& data)
+      : callback{data}
   {
     bytes.reserve(16);
   }
@@ -29,7 +29,9 @@ struct midi_stream_decoder
     while ((read = parse(begin, end)) && read > 0)
     {
       begin += read;
-      this->data.on_message_received(std::move(msg));
+
+      callback(std::move(msg));
+      msg.clear();
     }
 
     // Remove the read bytes

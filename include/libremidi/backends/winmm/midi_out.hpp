@@ -1,5 +1,6 @@
 #pragma once
 #include <libremidi/backends/winmm/config.hpp>
+#include <libremidi/backends/winmm/helpers.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
 namespace libremidi

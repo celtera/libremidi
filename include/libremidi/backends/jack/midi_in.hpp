@@ -1,5 +1,6 @@
 #pragma once
 #include <libremidi/backends/jack/config.hpp>
+#include <libremidi/backends/jack/helpers.hpp>
 #include <libremidi/detail/midi_in.hpp>
 
 namespace libremidi
@@ -7,15 +8,22 @@ namespace libremidi
 class midi_in_jack final
     : public midi_in_api
     , private jack_helpers
+    , private error_handler
 {
 public:
-  explicit midi_in_jack(std::string_view cname)
+  struct
+      : input_configuration
+      , jack_input_configuration
+  {
+  } configuration;
+
+  explicit midi_in_jack(input_configuration&& conf, jack_input_configuration&& apiconf)
       : midi_in_api{}
+      , configuration{std::move(conf), std::move(apiconf)}
   {
     // TODO do like the others
     this->port = nullptr;
     this->client = nullptr;
-    this->clientName = cname;
 
     connect();
   }
@@ -32,7 +40,7 @@ public:
 
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
-    if (!check_port_name_length(*this, clientName, portName))
+    if (!check_port_name_length(*this, configuration.client_name, portName))
       return;
 
     connect();
@@ -57,7 +65,7 @@ public:
 
   void open_virtual_port(std::string_view portName) override
   {
-    if (!check_port_name_length(*this, clientName, portName))
+    if (!check_port_name_length(*this, configuration.client_name, portName))
       return;
 
     connect();
@@ -133,7 +141,8 @@ private:
       return;
 
     // Initialize JACK client
-    this->client = jack_client_open(clientName.c_str(), JackNoStartServer, nullptr);
+    this->client
+        = jack_client_open(this->configuration.client_name.c_str(), JackNoStartServer, nullptr);
     if (this->client == nullptr)
     {
       warning("midi_in_jack::initialize: JACK server not running?");
@@ -220,7 +229,8 @@ private:
       {
         // If not a continuation of a SysEx message,
         // invoke the user callback function or queue the message.
-        self.on_message_received(std::move(m));
+        self.configuration.on_message(std::move(m));
+        m.clear();
       }
     }
 
@@ -230,6 +240,5 @@ private:
   jack_client_t* client{};
   jack_port_t* port{};
   jack_time_t lastTime{};
-  std::string clientName;
 };
 }

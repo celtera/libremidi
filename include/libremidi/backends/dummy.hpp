@@ -7,6 +7,10 @@
 
 namespace libremidi
 {
+struct dummy_configuration
+{
+};
+
 class observer_dummy final : public observer_api
 {
 public:
@@ -18,7 +22,9 @@ public:
   ~observer_dummy() { }
 };
 
-class midi_in_dummy final : public midi_in_api
+class midi_in_dummy final
+    : public midi_in_api
+    , public error_handler
 {
 public:
   explicit midi_in_dummy(std::string_view /*clientName*/)
@@ -48,7 +54,9 @@ public:
   }
 };
 
-class midi_out_dummy final : public midi_out_api
+class midi_out_dummy final
+    : public midi_out_api
+    , public error_handler
 {
 public:
   explicit midi_out_dummy(std::string_view /*clientName*/)
@@ -76,6 +84,8 @@ struct dummy_backend
 {
   using midi_in = midi_in_dummy;
   using midi_out = midi_out_dummy;
+  using midi_in_configuration = dummy_configuration;
+  using midi_out_configuration = dummy_configuration;
   using midi_observer = observer_dummy;
   static const constexpr auto API = libremidi::API::DUMMY;
   static const constexpr auto name = "dummy";

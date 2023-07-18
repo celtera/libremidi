@@ -72,29 +72,30 @@ bool chooseMidiPort(libremidi::midi_in& libremidi)
 int main(int argc, char**)
 try
 {
-  libremidi::midi_in midiin;
-
-  // Minimal command-line check.
-  if (argc > 2)
-    usage();
-
-  // Call function to select port.
-  if (chooseMidiPort(midiin) == false)
-    return 0;
-
-  // Set our callback function.  This should be done immediately after
-  // opening the port to avoid having incoming messages written to the
-  // queue instead of sent to the callback function.
-  midiin.set_callback([](const libremidi::message& message) {
+  libremidi::midi_in midiin{libremidi::input_configuration{
+      // Set our callback function.
+      .on_message
+      = [](const libremidi::message& message) {
     auto nBytes = message.size();
     for (auto i = 0U; i < nBytes; i++)
       std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
     if (nBytes > 0)
       std::cout << "stamp = " << message.timestamp << std::endl;
-  });
+      },
 
-  // Don't ignore sysex, timing, or active sensing messages.
-  midiin.ignore_types(false, false, false);
+      // Don't ignore sysex, timing, or active sensing messages.
+      .ignore_sysex = false,
+      .ignore_timing = false,
+      .ignore_sensing = false,
+  }};
+
+  // Minimal command-line check.
+  if (argc > 2)
+    usage();
+
+  //// Call function to select port.
+  if (chooseMidiPort(midiin) == false)
+    return 0;
 
   std::cout << "\nReading MIDI input ... press <enter> to quit.\n";
   char input;

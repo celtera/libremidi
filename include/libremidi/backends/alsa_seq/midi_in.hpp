@@ -1,5 +1,6 @@
 #pragma once
 #include <libremidi/backends/alsa_seq/config.hpp>
+#include <libremidi/backends/alsa_seq/helpers.hpp>
 #include <libremidi/detail/midi_in.hpp>
 
 namespace libremidi
@@ -7,10 +8,18 @@ namespace libremidi
 class midi_in_alsa final
     : public midi_in_api
     , private alsa_data
+    , private error_handler
 {
 public:
-  explicit midi_in_alsa(std::string_view client_name)
+  struct
+      : input_configuration
+      , alsa_sequencer_input_configuration
+  {
+  } configuration;
+
+  explicit midi_in_alsa(input_configuration&& conf, alsa_sequencer_input_configuration&& apiconf)
       : midi_in_api{}
+      , configuration{std::move(conf), std::move(apiconf)}
   {
     // Set up the ALSA sequencer client.
     snd_seq_t* seq{};
@@ -24,7 +33,7 @@ public:
     }
 
     // Set client name.
-    snd_seq_set_client_name(seq, client_name.data());
+    snd_seq_set_client_name(seq, configuration.client_name.data());
 
     // Save our api-specific connection information.
     this->seq = seq;
@@ -484,7 +493,8 @@ private:
       if (message.bytes.size() == 0 || continueSysex)
         continue;
 
-      self.on_message_received(std::move(message));
+      self.configuration.on_message(std::move(message));
+      message.clear();
     }
 
     snd_midi_event_free(self.coder);

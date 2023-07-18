@@ -120,28 +120,31 @@ try
 {
   using namespace std::literals;
   libremidi::midi_out midiout;
-  libremidi::midi_in midiin;
+  libremidi::midi_in midiin{libremidi::input_configuration{
+      // Set our callback function.
+      .on_message
+      = [](const libremidi::message& message) {
+    auto nBytes = message.size();
+    for (auto i = 0U; i < nBytes; i++)
+      std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
+    if (nBytes > 0)
+      std::cout << "stamp = " << message.timestamp << std::endl;
+      },
+
+      .ignore_sysex = false,
+      .ignore_timing = true,
+      .ignore_sensing = true,
+  }};
 
   // Minimal command-line check.
   if (argc != 2)
     usage();
   auto nBytes = (unsigned int)atoi(argv[1]);
 
-  // Don't ignore sysex, timing, or active sensing messages.
-  midiin.ignore_types(false, true, true);
-
   if (chooseMidiPort(midiin) == false)
     return 0;
   if (chooseMidiPort(midiout) == false)
     return 0;
-
-  midiin.set_callback([](const libremidi::message& message) {
-    auto nBytes = message.size();
-    for (auto i = 0U; i < nBytes; i++)
-      std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
-    if (nBytes > 0)
-      std::cout << "stamp = " << message.timestamp << std::endl;
-  });
 
   midiout.send_message(0xF6);
   std::this_thread::sleep_for(500ms); // pause a little

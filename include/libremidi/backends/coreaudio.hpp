@@ -9,6 +9,8 @@ struct core_backend
 {
   using midi_in = midi_in_core;
   using midi_out = midi_out_core;
+  using midi_in_configuration = coremidi_input_configuration;
+  using midi_out_configuration = coremidi_output_configuration;
   using midi_observer = observer_core;
   static const constexpr auto API = libremidi::API::MACOSX_CORE;
   static const constexpr auto name = "core";
