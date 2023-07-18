@@ -83,6 +83,69 @@ public:
     return libremidi::API::LINUX_ALSA_SEQ;
   }
 
+  [[nodiscard]] bool create_port(std::string_view portName)
+  {
+    if (data.vport < 0)
+    {
+      snd_seq_port_info_t* pinfo{};
+      snd_seq_port_info_alloca(&pinfo);
+
+      snd_seq_port_info_set_client(pinfo, 0);
+      snd_seq_port_info_set_port(pinfo, 0);
+      snd_seq_port_info_set_capability(
+          pinfo, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
+      snd_seq_port_info_set_type(
+          pinfo, SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
+      snd_seq_port_info_set_midi_channels(pinfo, 16);
+#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
+      snd_seq_port_info_set_timestamping(pinfo, 1);
+      snd_seq_port_info_set_timestamp_real(pinfo, 1);
+      snd_seq_port_info_set_timestamp_queue(pinfo, data.queue_id);
+#endif
+      snd_seq_port_info_set_name(pinfo, portName.data());
+      data.vport = snd_seq_create_port(data.seq, pinfo);
+
+      if (data.vport < 0)
+      {
+        error<driver_error>("midi_in_alsa::open_port: ALSA error creating input port.");
+        return false;
+      }
+      data.vport = snd_seq_port_info_get_port(pinfo);
+    }
+    return true;
+  }
+
+  [[nodiscard]] bool start_thread()
+  {
+// Start the input queue
+#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
+    snd_seq_start_queue(data.seq, data.queue_id, nullptr);
+    snd_seq_drain_output(data.seq);
+#endif
+    // Start our MIDI input thread.
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
+
+    data.doInput = true;
+    int err = pthread_create(&data.thread, &attr, alsaMidiHandler, &inputData_);
+    pthread_attr_destroy(&attr);
+    if (err)
+    {
+      if (data.subscription)
+      {
+        snd_seq_unsubscribe_port(data.seq, data.subscription);
+        snd_seq_port_subscribe_free(data.subscription);
+        data.subscription = nullptr;
+      }
+      data.doInput = false;
+      error<thread_error>("midi_in_alsa::start_thread: error starting MIDI input thread!");
+      return false;
+    }
+    return true;
+  }
+
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
     if (connected_)
@@ -91,6 +154,7 @@ public:
       return;
     }
 
+    // Find the port to which we want to connect to
     unsigned int nSrc = this->get_port_count();
     if (nSrc < 1)
     {
@@ -115,35 +179,12 @@ public:
     sender.port = snd_seq_port_info_get_port(src_pinfo);
     receiver.client = snd_seq_client_id(data.seq);
 
-    snd_seq_port_info_t* pinfo{};
-    snd_seq_port_info_alloca(&pinfo);
-    if (data.vport < 0)
-    {
-      snd_seq_port_info_set_client(pinfo, 0);
-      snd_seq_port_info_set_port(pinfo, 0);
-      snd_seq_port_info_set_capability(
-          pinfo, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
-      snd_seq_port_info_set_type(
-          pinfo, SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
-      snd_seq_port_info_set_midi_channels(pinfo, 16);
-#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
-      snd_seq_port_info_set_timestamping(pinfo, 1);
-      snd_seq_port_info_set_timestamp_real(pinfo, 1);
-      snd_seq_port_info_set_timestamp_queue(pinfo, data.queue_id);
-#endif
-      snd_seq_port_info_set_name(pinfo, portName.data());
-      data.vport = snd_seq_create_port(data.seq, pinfo);
-
-      if (data.vport < 0)
-      {
-        error<driver_error>("midi_in_alsa::open_port: ALSA error creating input port.");
-        return;
-      }
-      data.vport = snd_seq_port_info_get_port(pinfo);
-    }
+    if (!create_port(portName))
+      return;
 
     receiver.port = data.vport;
 
+    // Create the connection between ports
     if (!data.subscription)
     {
       // Make subscription
@@ -163,62 +204,18 @@ public:
       }
     }
 
+    // Run
     if (data.doInput == false)
     {
-      // Start the input queue
-#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
-      snd_seq_start_queue(data.seq, data.queue_id, nullptr);
-      snd_seq_drain_output(data.seq);
-#endif
-      // Start our MIDI input thread.
-      pthread_attr_t attr;
-      pthread_attr_init(&attr);
-      pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-      pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
-
-      data.doInput = true;
-      int err = pthread_create(&data.thread, &attr, alsaMidiHandler, &inputData_);
-      pthread_attr_destroy(&attr);
-      if (err)
-      {
-        snd_seq_unsubscribe_port(data.seq, data.subscription);
-        snd_seq_port_subscribe_free(data.subscription);
-        data.subscription = nullptr;
-        data.doInput = false;
-        error<thread_error>("midi_in_alsa::open_port: error starting MIDI input thread!");
+      if (!start_thread())
         return;
-      }
     }
-
-    connected_ = true;
   }
 
   void open_virtual_port(std::string_view portName) override
   {
-    if (data.vport < 0)
-    {
-      snd_seq_port_info_t* pinfo{};
-      snd_seq_port_info_alloca(&pinfo);
-      snd_seq_port_info_set_capability(
-          pinfo, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
-      snd_seq_port_info_set_type(
-          pinfo, SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
-      snd_seq_port_info_set_midi_channels(pinfo, 16);
-#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
-      snd_seq_port_info_set_timestamping(pinfo, 1);
-      snd_seq_port_info_set_timestamp_real(pinfo, 1);
-      snd_seq_port_info_set_timestamp_queue(pinfo, data.queue_id);
-#endif
-      snd_seq_port_info_set_name(pinfo, portName.data());
-      data.vport = snd_seq_create_port(data.seq, pinfo);
-
-      if (data.vport < 0)
-      {
-        error<driver_error>("midi_in_alsa::open_virtual_port: ALSA error creating virtual port.");
-        return;
-      }
-      data.vport = snd_seq_port_info_get_port(pinfo);
-    }
+    if (!create_port(portName))
+      return;
 
     if (data.doInput == false)
     {
@@ -226,33 +223,10 @@ public:
       if (!pthread_equal(data.thread, data.dummy_thread_id))
         pthread_join(data.thread, nullptr);
 
-// Start the input queue
-#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
-      snd_seq_start_queue(data.seq, data.queue_id, nullptr);
-      snd_seq_drain_output(data.seq);
-#endif
-      // Start our MIDI input thread.
-      pthread_attr_t attr;
-      pthread_attr_init(&attr);
-      pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-      pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
-
-      data.doInput = true;
-      int err = pthread_create(&data.thread, &attr, alsaMidiHandler, &inputData_);
-      pthread_attr_destroy(&attr);
-      if (err)
-      {
-        if (data.subscription)
-        {
-          snd_seq_unsubscribe_port(data.seq, data.subscription);
-          snd_seq_port_subscribe_free(data.subscription);
-          data.subscription = nullptr;
-        }
-        data.doInput = false;
-        error<thread_error>("midi_in_alsa::open_virtual_port: error starting MIDI input thread!");
+      if (!start_thread())
         return;
-      }
     }
+    connected_ = true;
   }
 
   void close_port() override
@@ -380,7 +354,6 @@ private:
       doDecode = false;
       switch (ev->type)
       {
-
         case SND_SEQ_EVENT_PORT_SUBSCRIBED:
 #if defined(__LIBREMIDI_DEBUG__)
           std::cerr << "midi_in_alsa::alsaMidiHandler: port connection made!\n";
