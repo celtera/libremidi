@@ -6,6 +6,8 @@ namespace libremidi
 
 class midi_in_api : public midi_api
 {
+  friend struct midi_stream_decoder;
+
 public:
   explicit midi_in_api() { cancel_callback(); }
 

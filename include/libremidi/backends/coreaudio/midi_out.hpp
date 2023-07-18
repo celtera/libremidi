@@ -5,10 +5,12 @@
 namespace libremidi
 {
 class midi_out_core final
-    : public midi_out_api
+    : public midi_out_default<midi_out_core>
     , private coremidi_data
 {
 public:
+  static const constexpr auto backend = "CoreMIDI";
+
   midi_out_core(std::string_view clientName)
   {
     // Set up our client.
@@ -141,28 +143,13 @@ public:
     connected_ = false;
   }
 
-  void set_client_name(std::string_view clientName) override
-  {
-    warning(
-        "midi_out_core::set_client_name: this function is not implemented for "
-        "the "
-        "MACOSX_CORE API!");
-  }
-
-  void set_port_name(std::string_view portName) override
-  {
-    warning(
-        "midi_out_core::set_port_name: this function is not implemented for the "
-        "MACOSX_CORE API!");
-  }
-
-  unsigned int get_port_count() override
+  unsigned int get_port_count() const override
   {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
     return MIDIGetNumberOfDestinations();
   }
 
-  std::string get_port_name(unsigned int portNumber) override
+  std::string get_port_name(unsigned int portNumber) const override
   {
     CFStringRef nameRef;
     MIDIEndpointRef portRef;
@@ -185,6 +172,7 @@ public:
 
     return stringName = name;
   }
+
   void send_message(const unsigned char* message, size_t size) override
   {
     // We use the MIDISendSysex() function to asynchronously send sysex

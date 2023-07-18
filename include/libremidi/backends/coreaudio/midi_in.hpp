@@ -5,12 +5,14 @@
 namespace libremidi
 {
 class midi_in_core final
-    : public midi_in_api
+    : public midi_in_default<midi_in_core>
     , private coremidi_data
 {
 public:
+  static const constexpr auto backend = "CoreMIDI";
+
   explicit midi_in_core(std::string_view clientName)
-      : midi_in_api{}
+      : midi_in_default<midi_in_core>{}
   {
     // Set up our client.
     MIDIClientRef client{};
@@ -143,23 +145,13 @@ public:
 
     connected_ = false;
   }
-  void set_client_name(std::string_view clientName) override
-  {
-    warning(
-        "midi_in_core::setClientName: this function is not implemented for the "
-        "MACOSX_CORE API!");
-  }
-  void set_port_name(std::string_view portName) override
-  {
-    warning(
-        "midi_in_core::setPortName: this function is not implemented for the "
-        "MACOSX_CORE API!");
-  }
+
   unsigned int get_port_count() const override
   {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
     return MIDIGetNumberOfSources();
   }
+
   std::string get_port_name(unsigned int portNumber) const override
   {
     CFStringRef nameRef;
@@ -188,14 +180,13 @@ private:
   static void midiInputCallback(const MIDIPacketList* list, void* procRef, void* /*srcRef*/)
   {
     auto& self = *(midi_in_core*)procRef;
-    auto& data = self;
 
     unsigned char status{};
     unsigned short nBytes{}, iByte{}, size{};
     unsigned long long time{};
 
-    bool& continueSysex = data.continueSysex;
-    message& msg = data.message;
+    bool& continueSysex = self.continueSysex;
+    auto& msg = self.message;
 
     const MIDIPacket* packet = &list->packet[0];
     for (unsigned int i = 0; i < list->numPackets; ++i)
@@ -218,9 +209,9 @@ private:
       }
 
       // Calculate time stamp.
-      if (data.firstMessage)
+      if (self.firstMessage)
       {
-        data.firstMessage = false;
+        self.firstMessage = false;
         msg.timestamp = 0;
       }
       else
@@ -244,7 +235,7 @@ private:
       if (continueSysex)
       {
         // We have a continuing, segmented sysex message.
-        if (!(data.ignoreFlags & 0x01))
+        if (!(self.ignoreFlags & 0x01))
         {
           // If we're not ignoring sysex messages, copy the entire packet.
           for (unsigned int j = 0; j < nBytes; ++j)
@@ -252,11 +243,11 @@ private:
         }
         continueSysex = packet->data[nBytes - 1] != 0xF7;
 
-        if (!(data.ignoreFlags & 0x01) && !continueSysex)
+        if (!(self.ignoreFlags & 0x01) && !continueSysex)
         {
           // If not a continuing sysex message, invoke the user callback
           // function or queue the message.
-          data.on_message_received(std::move(msg));
+          self.on_message_received(std::move(msg));
         }
       }
       else
@@ -279,7 +270,7 @@ private:
           else if (status == 0xF0)
           {
             // A MIDI sysex
-            if (data.ignoreFlags & 0x01)
+            if (self.ignoreFlags & 0x01)
             {
               size = 0;
               iByte = nBytes;
@@ -291,7 +282,7 @@ private:
           else if (status == 0xF1)
           {
             // A MIDI time code message
-            if (data.ignoreFlags & 0x02)
+            if (self.ignoreFlags & 0x02)
             {
               size = 0;
               iByte += 2;
@@ -303,13 +294,13 @@ private:
             size = 3;
           else if (status == 0xF3)
             size = 2;
-          else if (status == 0xF8 && (data.ignoreFlags & 0x02))
+          else if (status == 0xF8 && (self.ignoreFlags & 0x02))
           {
             // A MIDI timing tick message and we're ignoring it.
             size = 0;
             iByte += 1;
           }
-          else if (status == 0xFE && (data.ignoreFlags & 0x04))
+          else if (status == 0xFE && (self.ignoreFlags & 0x04))
           {
             // A MIDI active sensing message and we're ignoring it.
             size = 0;
@@ -327,7 +318,7 @@ private:
             {
               // If not a continuing sysex message, invoke the user callback
               // function or queue the message.
-              data.on_message_received(std::move(msg));
+              self.on_message_received(std::move(msg));
             }
             iByte += size;
           }
