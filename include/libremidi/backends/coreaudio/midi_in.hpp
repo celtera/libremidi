@@ -4,11 +4,13 @@
 
 namespace libremidi
 {
-class midi_in_core final : public midi_in_api
+class midi_in_core final
+    : public midi_in_api
+    , private coremidi_data
 {
 public:
   explicit midi_in_core(std::string_view clientName)
-      : midi_in_api(&data)
+      : midi_in_api{}
   {
     // Set up our client.
     MIDIClientRef client{};
@@ -24,8 +26,8 @@ public:
     }
 
     // Save our api-specific connection information.
-    data.client = client;
-    data.endpoint = 0;
+    this->client = client;
+    this->endpoint = 0;
     CFRelease(name);
   }
 
@@ -35,9 +37,9 @@ public:
     midi_in_core::close_port();
 
     // Cleanup.
-    MIDIClientDispose(data.client);
-    if (data.endpoint)
-      MIDIEndpointDispose(data.endpoint);
+    MIDIClientDispose(this->client);
+    if (this->endpoint)
+      MIDIEndpointDispose(this->endpoint);
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::MACOSX_CORE; }
@@ -68,13 +70,13 @@ public:
     MIDIPortRef port;
     CFStringRef portNameRef
         = CFStringCreateWithCString(nullptr, portName.data(), kCFStringEncodingASCII);
-    OSStatus result = MIDIInputPortCreate(
-        data.client, portNameRef, midiInputCallback, (void*)&inputData_, &port);
+    OSStatus result
+        = MIDIInputPortCreate(this->client, portNameRef, midiInputCallback, (void*)this, &port);
     CFRelease(portNameRef);
 
     if (result != noErr)
     {
-      MIDIClientDispose(data.client);
+      MIDIClientDispose(this->client);
       error<driver_error>("midi_in_core::open_port: error creating OS-X MIDI input port.");
       return;
     }
@@ -84,7 +86,7 @@ public:
     if (endpoint == 0)
     {
       MIDIPortDispose(port);
-      MIDIClientDispose(data.client);
+      MIDIClientDispose(this->client);
       error<driver_error>("midi_in_core::open_port: error getting MIDI input source reference.");
       return;
     }
@@ -94,13 +96,13 @@ public:
     if (result != noErr)
     {
       MIDIPortDispose(port);
-      MIDIClientDispose(data.client);
+      MIDIClientDispose(this->client);
       error<driver_error>("midi_in_core::open_port: error connecting OS-X MIDI input port.");
       return;
     }
 
     // Save our api-specific port information.
-    data.port = port;
+    this->port = port;
 
     connected_ = true;
   }
@@ -111,7 +113,7 @@ public:
     CFStringRef portNameRef
         = CFStringCreateWithCString(nullptr, portName.data(), kCFStringEncodingASCII);
     OSStatus result = MIDIDestinationCreate(
-        data.client, portNameRef, midiInputCallback, (void*)&inputData_, &endpoint);
+        this->client, portNameRef, midiInputCallback, (void*)this, &endpoint);
     CFRelease(portNameRef);
 
     if (result != noErr)
@@ -123,20 +125,20 @@ public:
     }
 
     // Save our api-specific connection information.
-    data.endpoint = endpoint;
+    this->endpoint = endpoint;
   }
   void close_port() override
   {
-    if (data.endpoint)
+    if (this->endpoint)
     {
-      MIDIEndpointDispose(data.endpoint);
-      data.endpoint = 0;
+      MIDIEndpointDispose(this->endpoint);
+      this->endpoint = 0;
     }
 
-    if (data.port)
+    if (this->port)
     {
-      MIDIPortDispose(data.port);
-      data.port = 0;
+      MIDIPortDispose(this->port);
+      this->port = 0;
     }
 
     connected_ = false;
@@ -185,8 +187,8 @@ public:
 private:
   static void midiInputCallback(const MIDIPacketList* list, void* procRef, void* /*srcRef*/)
   {
-    auto& data = *static_cast<midi_in_api::in_data*>(procRef);
-    auto apiData = static_cast<coremidi_data*>(data.apiData);
+    auto& self = *(midi_in_core*)procRef;
+    auto& data = self.inputData_;
 
     unsigned char status{};
     unsigned short nBytes{}, iByte{}, size{};
@@ -228,7 +230,7 @@ private:
         { // this happens when receiving asynchronous sysex messages
           time = AudioGetCurrentHostTime();
         }
-        time -= apiData->lastTime;
+        time -= self.lastTime;
         time = AudioConvertHostTimeToNanos(time);
         if (!continueSysex)
           msg.timestamp = time * 0.000000001;
@@ -335,17 +337,16 @@ private:
       // Save the time of the last non-filtered message
       if (foundNonFiltered)
       {
-        apiData->lastTime = packet->timeStamp;
-        if (apiData->lastTime == 0)
+        self.lastTime = packet->timeStamp;
+        if (self.lastTime == 0)
         { // this happens when receiving asynchronous sysex messages
-          apiData->lastTime = AudioGetCurrentHostTime();
+          self.lastTime = AudioGetCurrentHostTime();
         }
       }
 
       packet = MIDIPacketNext(packet);
     }
   }
-  coremidi_data data;
 };
 
 }

@@ -54,7 +54,7 @@ public:
       return;
     }
 
-    MMRESULT result = midiOutOpen(&data.outHandle, portNumber, 0, 0, CALLBACK_NULL);
+    MMRESULT result = midiOutOpen(&this->outHandle, portNumber, 0, 0, CALLBACK_NULL);
     if (result != MMSYSERR_NOERROR)
     {
       error<driver_error>(
@@ -70,8 +70,8 @@ public:
   {
     if (connected_)
     {
-      midiOutClose(data.outHandle);
-      data.outHandle = nullptr;
+      midiOutClose(this->outHandle);
+      this->outHandle = nullptr;
       connected_ = false;
     }
   }
@@ -126,7 +126,7 @@ public:
       sysex.lpData = (LPSTR)buffer.data();
       sysex.dwBufferLength = size;
       sysex.dwFlags = 0;
-      result = midiOutPrepareHeader(data.outHandle, &sysex, sizeof(MIDIHDR));
+      result = midiOutPrepareHeader(this->outHandle, &sysex, sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
       {
         error<driver_error>("midi_out_winmm::send_message: error preparing sysex header.");
@@ -134,7 +134,7 @@ public:
       }
 
       // Send the message.
-      result = midiOutLongMsg(data.outHandle, &sysex, sizeof(MIDIHDR));
+      result = midiOutLongMsg(this->outHandle, &sysex, sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
       {
         error<driver_error>("midi_out_winmm::send_message: error sending sysex message.");
@@ -144,7 +144,7 @@ public:
       // Unprepare the buffer and MIDIHDR.
       // FIXME yuck
       while (MIDIERR_STILLPLAYING
-             == midiOutUnprepareHeader(data.outHandle, &sysex, sizeof(MIDIHDR)))
+             == midiOutUnprepareHeader(this->outHandle, &sysex, sizeof(MIDIHDR)))
         Sleep(1);
     }
     else
@@ -164,7 +164,7 @@ public:
       std::copy_n(message, size, (unsigned char*)&packet);
 
       // Send the message immediately.
-      result = midiOutShortMsg(data.outHandle, packet);
+      result = midiOutShortMsg(this->outHandle, packet);
       if (result != MMSYSERR_NOERROR)
       {
         error<driver_error>("midi_out_winmm::send_message: error sending MIDI message.");
@@ -173,7 +173,7 @@ public:
   }
 
 private:
-  winmm_out_data data;
+  HMIDIOUT outHandle; // Handle to Midi Output Device
   std::vector<char> buffer;
 };
 

@@ -23,24 +23,6 @@ namespace libremidi
 #define RT_SYSEX_BUFFER_SIZE 1024
 #define RT_SYSEX_BUFFER_COUNT 4
 
-// A structure to hold variables related to the WinMM API
-// implementation.
-struct winmm_in_data
-{
-  HMIDIIN inHandle; // Handle to Midi Input Device
-
-  DWORD lastTime;
-  LPMIDIHDR sysexBuffer[RT_SYSEX_BUFFER_COUNT];
-  CRITICAL_SECTION
-  _mutex; // [Patrice] see
-          // https://groups.google.com/forum/#!topic/mididev/6OUjHutMpEo
-};
-
-struct winmm_out_data
-{
-  HMIDIOUT outHandle; // Handle to Midi Output Device
-};
-
 // The Windows MM API is based on the use of a callback function for
 // MIDI input.  We convert the system specific time stamps to delta
 // time values.

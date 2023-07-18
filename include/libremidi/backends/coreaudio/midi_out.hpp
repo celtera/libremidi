@@ -4,7 +4,9 @@
 
 namespace libremidi
 {
-class midi_out_core final : public midi_out_api
+class midi_out_core final
+    : public midi_out_api
+    , private coremidi_data
 {
 public:
   midi_out_core(std::string_view clientName)
@@ -23,8 +25,8 @@ public:
     }
 
     // Save our api-specific connection information.
-    data.client = client;
-    data.endpoint = 0;
+    this->client = client;
+    this->endpoint = 0;
     CFRelease(name);
   }
   ~midi_out_core()
@@ -33,9 +35,9 @@ public:
     midi_out_core::close_port();
 
     // Cleanup.
-    MIDIClientDispose(data.client);
-    if (data.endpoint)
-      MIDIEndpointDispose(data.endpoint);
+    MIDIClientDispose(this->client);
+    if (this->endpoint)
+      MIDIEndpointDispose(this->endpoint);
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::MACOSX_CORE; }
@@ -68,11 +70,11 @@ public:
     MIDIPortRef port;
     CFStringRef portNameRef
         = CFStringCreateWithCString(nullptr, portName.data(), kCFStringEncodingASCII);
-    OSStatus result = MIDIOutputPortCreate(data.client, portNameRef, &port);
+    OSStatus result = MIDIOutputPortCreate(this->client, portNameRef, &port);
     CFRelease(portNameRef);
     if (result != noErr)
     {
-      MIDIClientDispose(data.client);
+      MIDIClientDispose(this->client);
       error<driver_error>("midi_out_core::open_port: error creating OS-X MIDI output port.");
       return;
     }
@@ -82,7 +84,7 @@ public:
     if (destination == 0)
     {
       MIDIPortDispose(port);
-      MIDIClientDispose(data.client);
+      MIDIClientDispose(this->client);
       error<driver_error>(
           "midi_out_core::open_port: error getting MIDI output destination "
           "reference.");
@@ -90,14 +92,14 @@ public:
     }
 
     // Save our api-specific connection information.
-    data.port = port;
-    data.destinationId = destination;
+    this->port = port;
+    this->destinationId = destination;
     connected_ = true;
   }
 
   void open_virtual_port(std::string_view portName) override
   {
-    if (data.endpoint)
+    if (this->endpoint)
     {
       warning(
           "midi_out_core::open_virtual_port: a virtual output port already "
@@ -109,7 +111,7 @@ public:
     MIDIEndpointRef endpoint;
     CFStringRef portNameRef
         = CFStringCreateWithCString(nullptr, portName.data(), kCFStringEncodingASCII);
-    OSStatus result = MIDISourceCreate(data.client, portNameRef, &endpoint);
+    OSStatus result = MIDISourceCreate(this->client, portNameRef, &endpoint);
     CFRelease(portNameRef);
 
     if (result != noErr)
@@ -119,21 +121,21 @@ public:
     }
 
     // Save our api-specific connection information.
-    data.endpoint = endpoint;
+    this->endpoint = endpoint;
   }
 
   void close_port() override
   {
-    if (data.endpoint)
+    if (this->endpoint)
     {
-      MIDIEndpointDispose(data.endpoint);
-      data.endpoint = 0;
+      MIDIEndpointDispose(this->endpoint);
+      this->endpoint = 0;
     }
 
-    if (data.port)
+    if (this->port)
     {
-      MIDIPortDispose(data.port);
-      data.port = 0;
+      MIDIPortDispose(this->port);
+      this->port = 0;
     }
 
     connected_ = false;
@@ -230,9 +232,9 @@ public:
     }
 
     // Send to any destinations that may have connected to us.
-    if (data.endpoint)
+    if (this->endpoint)
     {
-      result = MIDIReceived(data.endpoint, packetList);
+      result = MIDIReceived(this->endpoint, packetList);
       if (result != noErr)
       {
         warning(
@@ -244,15 +246,12 @@ public:
     // And send to an explicit destination port if we're connected.
     if (connected_)
     {
-      result = MIDISend(data.port, data.destinationId, packetList);
+      result = MIDISend(this->port, this->destinationId, packetList);
       if (result != noErr)
       {
         warning("midi_out_core::send_message: error sending MIDI message to port.");
       }
     }
   }
-
-private:
-  coremidi_data data;
 };
 }

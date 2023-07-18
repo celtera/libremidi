@@ -10,7 +10,7 @@ class midi_in_winuwp final : public midi_in_default<midi_in_winuwp>
 public:
   static const constexpr auto backend = "UWP";
   explicit midi_in_winuwp(std::string_view)
-      : midi_in_default{nullptr}
+      : midi_in_default{}
   {
     winrt_init();
   }

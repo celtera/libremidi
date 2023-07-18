@@ -7,11 +7,7 @@ namespace libremidi
 class midi_in_api : public midi_api
 {
 public:
-  explicit midi_in_api(void* data)
-  {
-    cancel_callback();
-    inputData_.apiData = data;
-  }
+  explicit midi_in_api() { cancel_callback(); }
 
   ~midi_in_api() override = default;
 
@@ -55,7 +51,6 @@ public:
   // the MIDI input handling function or thread.
   struct in_data
   {
-    void* apiData{};
     midi_in::message_callback userCallback{};
     libremidi::message message{};
     bool continueSysex{false};

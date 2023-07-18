@@ -63,6 +63,7 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <expected>
 #include <functional>
 #include <iostream>
 #include <memory>

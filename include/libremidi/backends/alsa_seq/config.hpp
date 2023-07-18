@@ -23,7 +23,6 @@ namespace libremidi
 struct alsa_configuration
 {
   std::string_view client_name;
-  uint32_t queue_size{};
 };
 
 // A structure to hold variables related to the ALSA API
@@ -35,8 +34,6 @@ struct alsa_data
 
   snd_seq_port_subscribe_t* subscription{};
   snd_midi_event_t* coder{};
-
-  unsigned int bufferSize{};
 
   void set_client_name(std::string_view clientName)
   {
@@ -59,6 +56,7 @@ struct alsa_data
 
     return alsa_seq::port_info(seq, pinfo, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ, -1);
   }
+
   std::string get_port_name(unsigned int portNumber, int caps) const
   {
     snd_seq_port_info_t* pinfo;
@@ -74,21 +72,6 @@ struct alsa_data
     // warning("midi_in_alsa::get_port_name: error looking for port name!");
     return {};
   }
-};
-
-struct alsa_in_data : alsa_data
-{
-  pthread_t thread{};
-  pthread_t dummy_thread_id{};
-  int queue_id{}; // an input queue is needed to get timestamped events
-  int trigger_fds[2]{};
-  snd_seq_real_time_t lastTime{};
-
-  bool doInput{false};
-};
-
-struct alsa_out_data : alsa_data
-{
 };
 
 }

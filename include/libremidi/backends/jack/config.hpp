@@ -21,21 +21,6 @@ struct jack_data
   jack_port_t* port{};
 };
 
-struct jack_in_data : jack_data
-{
-  jack_time_t lastTime{};
-};
-
-struct jack_out_data : jack_data
-{
-  static const constexpr auto ringbuffer_size = 16384;
-  jack_ringbuffer_t* buffSize{};
-  jack_ringbuffer_t* buffMessage{};
-
-  libremidi::semaphore sem_cleanup;
-  libremidi::semaphore sem_needpost{};
-};
-
 struct jack_helpers
 {
   static bool check_port_name_length(

@@ -10,7 +10,7 @@ class midi_in_winmm final : public midi_in_default<midi_in_winmm>
 public:
   static const constexpr auto backend = "WinMM";
   explicit midi_in_winmm(std::string_view)
-      : midi_in_default{&data}
+      : midi_in_default{}
   {
     // We'll issue a warning here if no devices are available but not
     // throw an error since the user can plugin something later.
@@ -20,7 +20,7 @@ public:
       warning("midi_in_winmm::initialize: no MIDI input devices currently available.");
     }
 
-    if (!InitializeCriticalSectionAndSpinCount(&(data._mutex), 0x00000400))
+    if (!InitializeCriticalSectionAndSpinCount(&(this->_mutex), 0x00000400))
     {
       warning("midi_in_winmm::initialize: InitializeCriticalSectionAndSpinCount failed.");
     }
@@ -31,7 +31,7 @@ public:
     // Close a connection if it exists.
     midi_in_winmm::close_port();
 
-    DeleteCriticalSection(&(data._mutex));
+    DeleteCriticalSection(&(this->_mutex));
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
@@ -60,7 +60,7 @@ public:
     }
 
     MMRESULT result = midiInOpen(
-        &data.inHandle, portNumber, (DWORD_PTR)&midiInputCallback, (DWORD_PTR)&inputData_,
+        &this->inHandle, portNumber, (DWORD_PTR)&midiInputCallback, (DWORD_PTR)this,
         CALLBACK_FUNCTION);
     if (result != MMSYSERR_NOERROR)
     {
@@ -71,17 +71,17 @@ public:
     // Allocate and init the sysex buffers.
     for (int i = 0; i < RT_SYSEX_BUFFER_COUNT; ++i)
     {
-      data.sysexBuffer[i] = (MIDIHDR*)new char[sizeof(MIDIHDR)];
-      data.sysexBuffer[i]->lpData = new char[RT_SYSEX_BUFFER_SIZE];
-      data.sysexBuffer[i]->dwBufferLength = RT_SYSEX_BUFFER_SIZE;
-      data.sysexBuffer[i]->dwUser = i; // We use the dwUser parameter as buffer indicator
-      data.sysexBuffer[i]->dwFlags = 0;
+      this->sysexBuffer[i] = (MIDIHDR*)new char[sizeof(MIDIHDR)];
+      this->sysexBuffer[i]->lpData = new char[RT_SYSEX_BUFFER_SIZE];
+      this->sysexBuffer[i]->dwBufferLength = RT_SYSEX_BUFFER_SIZE;
+      this->sysexBuffer[i]->dwUser = i; // We use the dwUser parameter as buffer indicator
+      this->sysexBuffer[i]->dwFlags = 0;
 
-      result = midiInPrepareHeader(data.inHandle, data.sysexBuffer[i], sizeof(MIDIHDR));
+      result = midiInPrepareHeader(this->inHandle, this->sysexBuffer[i], sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
       {
-        midiInClose(data.inHandle);
-        data.inHandle = nullptr;
+        midiInClose(this->inHandle);
+        this->inHandle = nullptr;
         error<driver_error>(
             "midi_in_winmm::open_port: error starting Windows MM MIDI input port "
             "(PrepareHeader).");
@@ -89,11 +89,11 @@ public:
       }
 
       // Register the buffer.
-      result = midiInAddBuffer(data.inHandle, data.sysexBuffer[i], sizeof(MIDIHDR));
+      result = midiInAddBuffer(this->inHandle, this->sysexBuffer[i], sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
       {
-        midiInClose(data.inHandle);
-        data.inHandle = nullptr;
+        midiInClose(this->inHandle);
+        this->inHandle = nullptr;
         error<driver_error>(
             "midi_in_winmm::open_port: error starting Windows MM MIDI input port "
             "(AddBuffer).");
@@ -101,11 +101,11 @@ public:
       }
     }
 
-    result = midiInStart(data.inHandle);
+    result = midiInStart(this->inHandle);
     if (result != MMSYSERR_NOERROR)
     {
-      midiInClose(data.inHandle);
-      data.inHandle = nullptr;
+      midiInClose(this->inHandle);
+      this->inHandle = nullptr;
       error<driver_error>("midi_in_winmm::open_port: error starting Windows MM MIDI input port.");
       return;
     }
@@ -117,19 +117,19 @@ public:
   {
     if (connected_)
     {
-      EnterCriticalSection(&(data._mutex));
-      midiInReset(data.inHandle);
-      midiInStop(data.inHandle);
+      EnterCriticalSection(&(this->_mutex));
+      midiInReset(this->inHandle);
+      midiInStop(this->inHandle);
 
       for (int i = 0; i < RT_SYSEX_BUFFER_COUNT; ++i)
       {
-        int result = midiInUnprepareHeader(data.inHandle, data.sysexBuffer[i], sizeof(MIDIHDR));
-        delete[] data.sysexBuffer[i]->lpData;
-        delete[] data.sysexBuffer[i];
+        int result = midiInUnprepareHeader(this->inHandle, this->sysexBuffer[i], sizeof(MIDIHDR));
+        delete[] this->sysexBuffer[i]->lpData;
+        delete[] this->sysexBuffer[i];
         if (result != MMSYSERR_NOERROR)
         {
-          midiInClose(data.inHandle);
-          data.inHandle = nullptr;
+          midiInClose(this->inHandle);
+          this->inHandle = nullptr;
           error<driver_error>(
               "midi_in_winmm::open_port: error closing Windows MM MIDI input "
               "port (midiInUnprepareHeader).");
@@ -137,10 +137,10 @@ public:
         }
       }
 
-      midiInClose(data.inHandle);
-      data.inHandle = 0;
+      midiInClose(this->inHandle);
+      this->inHandle = 0;
       connected_ = false;
-      LeaveCriticalSection(&(data._mutex));
+      LeaveCriticalSection(&(this->_mutex));
     }
   }
 
@@ -176,8 +176,8 @@ private:
     if (inputStatus != MIM_DATA && inputStatus != MIM_LONGDATA && inputStatus != MIM_LONGERROR)
       return;
 
-    auto& data = *(midi_in_api::in_data*)instancePtr;
-    auto& apiData = *static_cast<winmm_in_data*>(data.apiData);
+    auto& self = *(midi_in_winmm*)instancePtr;
+    auto& data = self.inputData_;
 
     auto& message = data.message;
 
@@ -188,7 +188,7 @@ private:
       message.timestamp = 0;
     }
     else
-      message.timestamp = (double)(timestamp - apiData.lastTime) * 0.001;
+      message.timestamp = (double)(timestamp - self.lastTime) * 0.001;
 
     if (inputStatus == MIM_DATA)
     { // Channel or system message
@@ -250,13 +250,13 @@ private:
       // buffer when an application closes and in this case, we should
       // avoid requeueing it, else the computer suddenly reboots after
       // one or two minutes.
-      if (apiData.sysexBuffer[sysex->dwUser]->dwBytesRecorded > 0)
+      if (self.sysexBuffer[sysex->dwUser]->dwBytesRecorded > 0)
       {
         // if ( sysex->dwBytesRecorded > 0 ) {
-        EnterCriticalSection(&(apiData._mutex));
-        MMRESULT result = midiInAddBuffer(
-            apiData.inHandle, apiData.sysexBuffer[sysex->dwUser], sizeof(MIDIHDR));
-        LeaveCriticalSection(&(apiData._mutex));
+        EnterCriticalSection(&(self._mutex));
+        MMRESULT result
+            = midiInAddBuffer(self.inHandle, self.sysexBuffer[sysex->dwUser], sizeof(MIDIHDR));
+        LeaveCriticalSection(&(self._mutex));
         if (result != MMSYSERR_NOERROR)
 
 #if defined(__LIBREMIDI_DEBUG__)
@@ -271,12 +271,18 @@ private:
     }
 
     // Save the time of the last non-filtered message
-    apiData.lastTime = timestamp;
+    self.lastTime = timestamp;
 
     data.on_message_received(std::move(message));
   }
 
-  winmm_in_data data;
+  HMIDIIN inHandle; // Handle to Midi Input Device
+
+  DWORD lastTime;
+  LPMIDIHDR sysexBuffer[RT_SYSEX_BUFFER_COUNT];
+  CRITICAL_SECTION
+  _mutex; // [Patrice] see
+          // https://groups.google.com/forum/#!topic/mididev/6OUjHutMpEo
 };
 
 }

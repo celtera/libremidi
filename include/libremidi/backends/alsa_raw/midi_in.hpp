@@ -14,7 +14,7 @@ public:
   static const constexpr auto backend = "Raw ALSA";
 
   explicit midi_in_raw_alsa(std::string_view clientName)
-      : midi_in_default<midi_in_raw_alsa>{nullptr}
+      : midi_in_default<midi_in_raw_alsa>{}
   {
   }
 

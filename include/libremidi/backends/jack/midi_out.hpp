@@ -8,12 +8,13 @@ namespace libremidi
 class midi_out_jack final
     : public midi_out_api
     , private jack_helpers
+    , private jack_data
 {
 public:
   midi_out_jack(std::string_view cname)
   {
-    data.port = nullptr;
-    data.client = nullptr;
+    this->port = nullptr;
+    this->client = nullptr;
     this->clientName = cname;
 
     connect();
@@ -24,11 +25,11 @@ public:
     midi_out_jack::close_port();
 
     // Cleanup
-    jack_ringbuffer_free(data.buffSize);
-    jack_ringbuffer_free(data.buffMessage);
-    if (data.client)
+    jack_ringbuffer_free(this->buffSize);
+    jack_ringbuffer_free(this->buffMessage);
+    if (this->client)
     {
-      jack_client_close(data.client);
+      jack_client_close(this->client);
     }
   }
 
@@ -42,11 +43,11 @@ public:
     connect();
 
     // Creating new port
-    if (!data.port)
-      data.port = jack_port_register(
-          data.client, portName.data(), JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+    if (!this->port)
+      this->port = jack_port_register(
+          this->client, portName.data(), JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
 
-    if (!data.port)
+    if (!this->port)
     {
       error<driver_error>("midi_out_jack::open_port: JACK error creating port");
       return;
@@ -54,7 +55,7 @@ public:
 
     // Connecting to the output
     std::string name = get_port_name(portNumber);
-    jack_connect(data.client, jack_port_name(data.port), name.c_str());
+    jack_connect(this->client, jack_port_name(this->port), name.c_str());
 
     connected_ = true;
   }
@@ -65,11 +66,11 @@ public:
       return;
 
     connect();
-    if (data.port == nullptr)
-      data.port = jack_port_register(
-          data.client, portName.data(), JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+    if (this->port == nullptr)
+      this->port = jack_port_register(
+          this->client, portName.data(), JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
 
-    if (data.port == nullptr)
+    if (this->port == nullptr)
     {
       error<driver_error>("midi_out_jack::open_virtual_port: JACK error creating virtual port");
     }
@@ -78,14 +79,14 @@ public:
   void close_port() override
   {
     using namespace std::literals;
-    if (data.port == nullptr)
+    if (this->port == nullptr)
       return;
 
-    data.sem_needpost.notify();
-    data.sem_cleanup.wait_for(1s);
+    this->sem_needpost.notify();
+    this->sem_cleanup.wait_for(1s);
 
-    jack_port_unregister(data.client, data.port);
-    data.port = nullptr;
+    jack_port_unregister(this->client, this->port);
+    this->port = nullptr;
 
     connected_ = false;
   }
@@ -100,21 +101,21 @@ public:
   void set_port_name(std::string_view portName) override
   {
 #if defined(LIBREMIDI_JACK_HAS_PORT_RENAME)
-    jack_port_rename(data.client, data.port, portName.data());
+    jack_port_rename(this->client, this->port, portName.data());
 #else
-    jack_port_set_name(data.port, portName.data());
+    jack_port_set_name(this->port, portName.data());
 #endif
   }
 
   unsigned int get_port_count() const override
   {
     int count = 0;
-    if (!data.client)
+    if (!this->client)
       return 0;
 
     // List of available ports
     const char** ports
-        = jack_get_ports(data.client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput);
+        = jack_get_ports(this->client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput);
 
     if (ports == nullptr)
       return 0;
@@ -130,7 +131,7 @@ public:
   {
     // List of available ports
     unique_handle<const char*, jack_free> ports{
-        jack_get_ports(data.client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput)};
+        jack_get_ports(this->client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput)};
 
     return jack_helpers::get_port_name(*this, ports.get(), portNumber);
   }
@@ -140,8 +141,8 @@ public:
     int nBytes = static_cast<int>(size);
 
     // Write full message to buffer
-    jack_ringbuffer_write(data.buffMessage, (const char*)message, nBytes);
-    jack_ringbuffer_write(data.buffSize, (char*)&nBytes, sizeof(nBytes));
+    jack_ringbuffer_write(this->buffMessage, (const char*)message, nBytes);
+    jack_ringbuffer_write(this->buffSize, (char*)&nBytes, sizeof(nBytes));
   }
 
 private:
@@ -149,52 +150,58 @@ private:
 
   void connect()
   {
-    if (data.client)
+    if (this->client)
       return;
 
     // Initialize output ringbuffers
-    data.buffSize = jack_ringbuffer_create(jack_out_data::ringbuffer_size);
-    data.buffMessage = jack_ringbuffer_create(jack_out_data::ringbuffer_size);
+    this->buffSize = jack_ringbuffer_create(midi_out_jack::ringbuffer_size);
+    this->buffMessage = jack_ringbuffer_create(midi_out_jack::ringbuffer_size);
 
     // Initialize JACK client
-    data.client = jack_client_open(clientName.c_str(), JackNoStartServer, nullptr);
-    if (data.client == nullptr)
+    this->client = jack_client_open(clientName.c_str(), JackNoStartServer, nullptr);
+    if (this->client == nullptr)
     {
       warning("midi_out_jack::initialize: JACK server not running?");
       return;
     }
 
-    jack_set_process_callback(data.client, jackProcessOut, &data);
-    jack_activate(data.client);
+    jack_set_process_callback(this->client, jackProcessOut, this);
+    jack_activate(this->client);
   }
 
   static int jackProcessOut(jack_nframes_t nframes, void* arg)
   {
-    auto& data = *(jack_out_data*)arg;
+    auto& self = *(midi_out_jack*)arg;
 
     // Is port created?
-    if (data.port == nullptr)
+    if (self.port == nullptr)
       return 0;
 
-    void* buff = jack_port_get_buffer(data.port, nframes);
+    void* buff = jack_port_get_buffer(self.port, nframes);
     jack_midi_clear_buffer(buff);
 
-    while (jack_ringbuffer_read_space(data.buffSize) > 0)
+    while (jack_ringbuffer_read_space(self.buffSize) > 0)
     {
       int space{};
-      jack_ringbuffer_read(data.buffSize, (char*)&space, sizeof(int));
+      jack_ringbuffer_read(self.buffSize, (char*)&space, sizeof(int));
       auto midiData = jack_midi_event_reserve(buff, 0, space);
 
-      jack_ringbuffer_read(data.buffMessage, (char*)midiData, space);
+      jack_ringbuffer_read(self.buffMessage, (char*)midiData, space);
     }
 
-    if (!data.sem_needpost.try_wait())
-      data.sem_cleanup.notify();
+    if (!self.sem_needpost.try_wait())
+      self.sem_cleanup.notify();
 
     return 0;
   }
 
-  jack_out_data data;
+private:
+  static const constexpr auto ringbuffer_size = 16384;
+  jack_ringbuffer_t* buffSize{};
+  jack_ringbuffer_t* buffMessage{};
+
+  libremidi::semaphore sem_cleanup{};
+  libremidi::semaphore sem_needpost{};
 };
 
 }

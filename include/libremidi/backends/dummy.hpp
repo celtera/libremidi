@@ -22,7 +22,7 @@ class midi_in_dummy final : public midi_in_api
 {
 public:
   explicit midi_in_dummy(std::string_view /*clientName*/)
-      : midi_in_api{nullptr}
+      : midi_in_api{}
   {
     warning("midi_in_dummy: This class provides no functionality.");
   }

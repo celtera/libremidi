@@ -80,11 +80,31 @@ public:
   }
 
 protected:
-  midi_error_callback errorCallback_{};
+  midi_error_callback errorCallback_;
   bool connected_{};
   mutable bool firstErrorOccurred_{};
 };
 
 template <typename T, auto func>
 using unique_handle = std::unique_ptr<T, decltype([](T* x) { func(x); })>;
+
+struct configuration
+{
+  midi_error_callback error_callback{};
+  midi_error_callback warn_callback{};
+};
+
+struct input_configuration : configuration
+{
+  enum timestamp_mode
+  {
+    NoTimestamp,
+    Relative, // Revert to old behaviour
+    Absolute  // In nanoseconds, as per std::high_resolution_clock::now()
+  };
+  uint32_t ignore_sysex : 1 = false;
+  uint32_t ignore_timing : 1 = false;
+  uint32_t ignore_sensing : 1 = false;
+  uint32_t timestamps : 2 = timestamp_mode::Relative;
+};
 }
