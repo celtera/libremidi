@@ -63,12 +63,13 @@ jobs:
 
         if [ "$RUNNER_OS" == "Linux" ]; then
           sudo apt update
-          sudo apt install cmake ninja-build libboost-dev libasound-dev clang++ libc++-dev
+          sudo apt install cmake libboost-dev libasound-dev clang libc++-dev
         elif [ "$RUNNER_OS" == "Windows" ]; then
-          echo "nothing to do"
-          # maybe choco install ninja
+          curl -L https://github.com/ossia/sdk/releases/download/sdk28/boost_1_82_0.tar.gz > boost.tar.gz
+          tar -xzf boost.tar.gz
+          rm boost.tar.gz
         else
-          brew install ninja boost
+          brew install boost
         fi
       shell: bash
 
@@ -82,6 +83,7 @@ jobs:
           -DLIBREMIDI_HEADER_ONLY=${{ matrix.header_only }} \
           -DLIBREMIDI_EXAMPLES=1 \
           -DLIBREMIDI_TESTS=1 \
+          -DCMAKE_PREFIX_PATH=$PWD/boost_* \
           -DCMAKE_INSTALL_PREFIX=install
 
     - name: Build
