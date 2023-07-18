@@ -4,6 +4,7 @@
 
 namespace libremidi
 {
+
 class midi_out_alsa final : public midi_out_api
 {
 public:
@@ -70,7 +71,7 @@ public:
 
     snd_seq_port_info_t* pinfo;
     snd_seq_port_info_alloca(&pinfo);
-    if (portInfo(
+    if (alsa_seq::port_info(
             data.seq, pinfo, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE, (int)portNumber)
         == 0)
     {
@@ -146,42 +147,18 @@ public:
     }
   }
 
-  void set_client_name(std::string_view clientName) override
-  {
-    snd_seq_set_client_name(data.seq, clientName.data());
-  }
+  void set_client_name(std::string_view clientName) override { data.set_client_name(clientName); }
 
-  void set_port_name(std::string_view portName) override
-  {
-    snd_seq_port_info_t* pinfo;
-    snd_seq_port_info_alloca(&pinfo);
-    snd_seq_get_port_info(data.seq, data.vport, pinfo);
-    snd_seq_port_info_set_name(pinfo, portName.data());
-    snd_seq_set_port_info(data.seq, data.vport, pinfo);
-  }
+  void set_port_name(std::string_view portName) override { data.set_port_name(portName); }
 
   unsigned int get_port_count() override
   {
-    snd_seq_port_info_t* pinfo;
-    snd_seq_port_info_alloca(&pinfo);
-    return portInfo(data.seq, pinfo, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE, -1);
+    return data.get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
   }
 
   std::string get_port_name(unsigned int portNumber) override
   {
-    snd_seq_port_info_t* pinfo;
-    snd_seq_port_info_alloca(&pinfo);
-
-    if (portInfo(
-            data.seq, pinfo, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
-            (int)portNumber))
-    {
-      return portName(data.seq, pinfo);
-    }
-
-    // If we get here, we didn't find a match.
-    warning("midi_out_alsa::get_port_name: error looking for port name!");
-    return {};
+    return data.get_port_name(portNumber, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
   }
 
   void send_message(const unsigned char* message, std::size_t size) override
@@ -200,9 +177,6 @@ public:
       }
     }
 
-    auto& buffer = data.buffer;
-    buffer.assign(message, message + size);
-
     std::size_t offset = 0;
     while (offset < size)
     {
@@ -210,11 +184,11 @@ public:
       snd_seq_ev_clear(&ev);
       snd_seq_ev_set_source(&ev, data.vport);
       snd_seq_ev_set_subs(&ev);
+      // FIXME direct is set but snd_seq_event_output_direct is not used...
       snd_seq_ev_set_direct(&ev);
 
       const int64_t nBytes = size; // signed to avoir potential overflow with size - offset below
-      result = snd_midi_event_encode(
-          data.coder, data.buffer.data() + offset, (long)(nBytes - offset), &ev);
+      result = snd_midi_event_encode(data.coder, message + offset, (long)(nBytes - offset), &ev);
       if (result < 0)
       {
         warning("midi_out_alsa::send_message: event parsing error!");

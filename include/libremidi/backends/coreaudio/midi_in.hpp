@@ -218,8 +218,8 @@ private:
       // Calculate time stamp.
       if (data.firstMessage)
       {
-        msg.timestamp = 0.0;
         data.firstMessage = false;
+        msg.timestamp = 0;
       }
       else
       {

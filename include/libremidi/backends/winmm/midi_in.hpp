@@ -184,8 +184,8 @@ private:
     // Calculate time stamp.
     if (data.firstMessage == true)
     {
-      message.timestamp = 0.0;
       data.firstMessage = false;
+      message.timestamp = 0;
     }
     else
       message.timestamp = (double)(timestamp - apiData.lastTime) * 0.001;

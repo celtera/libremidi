@@ -171,8 +171,8 @@ private:
       time = jack_get_time();
       if (rtData.firstMessage == true)
       {
-        m.timestamp = 0.;
         rtData.firstMessage = false;
+        m.timestamp = 0;
       }
       else
       {

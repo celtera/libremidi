@@ -65,16 +65,6 @@ public:
     }
   }
 
-  void set_client_name(std::string_view clientName) override
-  {
-    warning("midi_out_raw_alsa::set_client_name: unsupported.");
-  }
-
-  void set_port_name(std::string_view portName) override
-  {
-    warning("midi_out_raw_alsa::set_port_name: unsupported.");
-  }
-
   unsigned int get_port_count() override
   {
     auto device_list = get_device_enumerator();

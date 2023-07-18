@@ -100,7 +100,7 @@ public:
 
     snd_seq_port_info_t* src_pinfo{};
     snd_seq_port_info_alloca(&src_pinfo);
-    if (portInfo(
+    if (alsa_seq::port_info(
             data.seq, src_pinfo, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
             (int)portNumber)
         == 0)
@@ -285,42 +285,18 @@ public:
     }
   }
 
-  void set_client_name(std::string_view clientName) override
-  {
-    snd_seq_set_client_name(data.seq, clientName.data());
-  }
+  void set_client_name(std::string_view clientName) override { data.set_client_name(clientName); }
 
-  void set_port_name(std::string_view portName) override
-  {
-    snd_seq_port_info_t* pinfo;
-    snd_seq_port_info_alloca(&pinfo);
-    snd_seq_get_port_info(data.seq, data.vport, pinfo);
-    snd_seq_port_info_set_name(pinfo, portName.data());
-    snd_seq_set_port_info(data.seq, data.vport, pinfo);
-  }
+  void set_port_name(std::string_view portName) override { data.set_port_name(portName); }
 
   unsigned int get_port_count() override
   {
-    snd_seq_port_info_t* pinfo;
-    snd_seq_port_info_alloca(&pinfo);
-
-    return portInfo(data.seq, pinfo, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ, -1);
+    return data.get_port_count(SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ);
   }
 
   std::string get_port_name(unsigned int portNumber) override
   {
-    snd_seq_port_info_t* pinfo;
-    snd_seq_port_info_alloca(&pinfo);
-
-    if (portInfo(
-            data.seq, pinfo, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ, (int)portNumber))
-    {
-      return portName(data.seq, pinfo);
-    }
-
-    // If we get here, we didn't find a match.
-    warning("midi_in_alsa::get_port_name: error looking for port name!");
-    return {};
+    return data.get_port_name(portNumber, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ);
   }
 
 private:
@@ -350,8 +326,7 @@ private:
       return nullptr;
     }
 
-    auto& buffer = apidata.buffer;
-    buffer.clear();
+    std::vector<unsigned char> buffer;
     buffer.resize(apidata.bufferSize);
 
     snd_midi_event_init(apidata.coder);
@@ -514,9 +489,14 @@ private:
             apidata.lastTime = ev->time.time;
 
             if (data.firstMessage == true)
+            {
               data.firstMessage = false;
+              message.timestamp = 0;
+            }
             else
+            {
               message.timestamp = time;
+            }
           }
           else
           {
