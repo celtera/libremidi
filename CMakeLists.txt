@@ -16,7 +16,7 @@ option(LIBREMIDI_NO_EXPORTS "Disable dynamic symbol exporting" OFF)
 option(LIBREMIDI_NO_BOOST "Do not use Boost if available" OFF)
 option(LIBREMIDI_FIND_BOOST "Actively look for Boost" OFF)
 option(LIBREMIDI_EXAMPLES "Enable examples" OFF)
-option(LIBREMIDI_TESTS "Enable tests" ON)
+option(LIBREMIDI_TESTS "Enable tests" OFF)
 
 include(CheckSymbolExists)
 include(CheckCXXSourceCompiles)
@@ -323,6 +323,17 @@ endif()
 
 if(LIBREMIDI_TESTS)
   find_package(Catch2 QUIET)
+  if(NOT Catch2_FOUND OR NOT TARGET Catch2::Catch2WithMain)
+    include(FetchContent)
+
+    FetchContent_Declare(
+      Catch2
+      GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+      GIT_TAG        v3.4.0
+    )
+
+    FetchContent_MakeAvailable(Catch2)
+  endif()
   if(TARGET Catch2::Catch2WithMain AND Catch2_FOUND)
     message(STATUS "libremidi: compiling tests")
     target_compile_features(libremidi ${_public} cxx_std_20)
