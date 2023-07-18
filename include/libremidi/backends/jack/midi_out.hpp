@@ -2,14 +2,17 @@
 #include <libremidi/backends/jack/config.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
+#include <semaphore>
 namespace libremidi
 {
 
 class midi_out_jack final
-    : public midi_out_api
+    : public midi_out_default<midi_out_jack>
     , private jack_helpers
 {
 public:
+  static const constexpr auto backend = "JACK";
+
   midi_out_jack(std::string_view cname)
   {
     this->port = nullptr;
@@ -81,20 +84,13 @@ public:
     if (this->port == nullptr)
       return;
 
-    this->sem_needpost.notify();
-    this->sem_cleanup.wait_for(1s);
+    this->sem_needpost.release();
+    this->sem_cleanup.try_acquire_for(1s);
 
     jack_port_unregister(this->client, this->port);
     this->port = nullptr;
 
     connected_ = false;
-  }
-
-  void set_client_name(std::string_view clientName) override
-  {
-    warning(
-        "midi_out_jack::setClientName: this function is not implemented for the "
-        "UNIX_JACK API!");
   }
 
   void set_port_name(std::string_view portName) override
@@ -188,8 +184,8 @@ private:
       jack_ringbuffer_read(self.buffMessage, (char*)midiData, space);
     }
 
-    if (!self.sem_needpost.try_wait())
-      self.sem_cleanup.notify();
+    if (!self.sem_needpost.try_acquire())
+      self.sem_cleanup.release();
 
     return 0;
   }
@@ -203,8 +199,8 @@ private:
   jack_ringbuffer_t* buffSize{};
   jack_ringbuffer_t* buffMessage{};
 
-  libremidi::semaphore sem_cleanup{};
-  libremidi::semaphore sem_needpost{};
+  std::counting_semaphore<> sem_cleanup{0};
+  std::counting_semaphore<> sem_needpost{0};
 };
 
 }
