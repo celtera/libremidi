@@ -6,10 +6,11 @@
 //
 //*****************************************//
 
+#include <libremidi/libremidi.hpp>
+
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
-#include <libremidi/libremidi.hpp>
 #include <thread>
 
 // This function should be embedded in a try/catch block in case of
@@ -65,7 +66,6 @@ try
 {
   using namespace std::literals;
   libremidi::midi_out midiout;
-  std::vector<unsigned char> message;
 
   // Call function to select port.
   if (chooseMidiPort(midiout) == false)
@@ -74,54 +74,32 @@ try
   // Send out a series of MIDI messages.
 
   // Program change: 192, 5
-  message.push_back(192);
-  message.push_back(5);
-  midiout.send_message(message);
+  midiout.send_message(192, 5);
 
   std::this_thread::sleep_for(500ms);
 
-  message[0] = 0xF1;
-  message[1] = 60;
-  midiout.send_message(message);
+  midiout.send_message(0xF1, 60);
 
   // Control Change: 176, 7, 100 (volume)
-  message[0] = 176;
-  message[1] = 7;
-  message.push_back(100);
-  midiout.send_message(message);
+  midiout.send_message(176, 7, 100);
 
   // Note On: 144, 64, 90
-  message[0] = 144;
-  message[1] = 64;
-  message[2] = 90;
-  midiout.send_message(message);
+  midiout.send_message(144, 64, 90);
 
   std::this_thread::sleep_for(500ms);
 
   // Note Off: 128, 64, 40
-  message[0] = 128;
-  message[1] = 64;
-  message[2] = 40;
-  midiout.send_message(message);
+  midiout.send_message(128, 64, 40);
 
   std::this_thread::sleep_for(500ms);
 
   // Control Change: 176, 7, 40
-  message[0] = 176;
-  message[1] = 7;
-  message[2] = 40;
-  midiout.send_message(message);
+  midiout.send_message(176, 7, 40);
 
   std::this_thread::sleep_for(500ms);
 
   // Sysex: 240, 67, 4, 3, 2, 247
-  message[0] = 240;
-  message[1] = 67;
-  message[2] = 4;
-  message.push_back(3);
-  message.push_back(2);
-  message.push_back(247);
-  midiout.send_message(message);
+  midiout.send_message(std::to_array<unsigned char>({240, 67, 4, 3, 2, 247}));
 
   return 0;
 }

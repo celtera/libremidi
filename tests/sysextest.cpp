@@ -6,10 +6,11 @@
 //
 //*****************************************//
 
+#include <libremidi/libremidi.hpp>
+
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
-#include <libremidi/libremidi.hpp>
 #include <thread>
 #include <typeinfo>
 
@@ -142,12 +143,11 @@ try
       std::cout << "stamp = " << message.timestamp << std::endl;
   });
 
-  std::vector<unsigned char> message;
-  message.push_back(0xF6);
-  midiout.send_message(message);
+  midiout.send_message(0xF6);
   std::this_thread::sleep_for(500ms); // pause a little
 
   // Create a long sysex message of numbered bytes and send it out ... twice.
+  std::vector<unsigned char> message;
   for (int n = 0; n < 2; n++)
   {
     message.clear();

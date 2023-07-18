@@ -1,6 +1,8 @@
 #include <cmath>
 
+#include <array>
 #include <thread>
+#include <tuple>
 
 #if !defined(LIBREMIDI_HEADER_ONLY)
   #include <libremidi/libremidi.hpp>
@@ -347,6 +349,24 @@ LIBREMIDI_INLINE
 void midi_out::send_message(std::span<const unsigned char> message)
 {
   send_message(message.data(), message.size());
+}
+
+LIBREMIDI_INLINE
+void midi_out::send_message(unsigned char b0)
+{
+  send_message(&b0, 1);
+}
+
+LIBREMIDI_INLINE
+void midi_out::send_message(unsigned char b0, unsigned char b1)
+{
+  send_message(std::to_array({b0, b1}));
+}
+
+LIBREMIDI_INLINE
+void midi_out::send_message(unsigned char b0, unsigned char b1, unsigned char b2)
+{
+  send_message(std::to_array({b0, b1, b2}));
 }
 
 LIBREMIDI_INLINE

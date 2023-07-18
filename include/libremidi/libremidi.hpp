@@ -451,6 +451,10 @@ public:
 
   void send_message(std::span<const unsigned char>);
 
+  void send_message(unsigned char b0);
+  void send_message(unsigned char b0, unsigned char b1);
+  void send_message(unsigned char b0, unsigned char b1, unsigned char b2);
+
   //! Set an error callback function to be invoked when an error has occured.
   /*!
     The callback function will be called whenever an error has occured. It is

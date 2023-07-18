@@ -9,10 +9,11 @@
 //
 //*****************************************//
 
+#include <libremidi/libremidi.hpp>
+
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
-#include <libremidi/libremidi.hpp>
 #include <thread>
 
 // These functions should be embedded in a try/catch block in case of
@@ -73,9 +74,7 @@ try
 
   // Send out a series of MIDI clock messages.
   // MIDI start
-  std::vector<unsigned char> message;
-  message.push_back(0xFA);
-  midiout.send_message(message);
+  midiout.send_message(0xFA);
   std::cout << "MIDI start" << std::endl;
 
   for (int j = 0; j < 8; j++)
@@ -83,35 +82,27 @@ try
     if (j > 0)
     {
       // MIDI continue
-      message.clear();
-      message.push_back(0xFB);
-      midiout.send_message(message);
+      midiout.send_message(0xFB);
       std::cout << "MIDI continue" << std::endl;
     }
 
     for (int k = 0; k < 96; k++)
     {
       // MIDI clock
-      message.clear();
-      message.push_back(0xF8);
-      midiout.send_message(message);
+      midiout.send_message(0xF8);
       if (k % 24 == 0)
         std::cout << "MIDI clock (one beat)" << std::endl;
       std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
     }
 
     // MIDI stop
-    message.clear();
-    message.push_back(0xFC);
-    midiout.send_message(message);
+    midiout.send_message(0xFC);
     std::cout << "MIDI stop" << std::endl;
     std::this_thread::sleep_for(500ms);
   }
 
   // MIDI stop
-  message.clear();
-  message.push_back(0xFC);
-  midiout.send_message(message);
+  midiout.send_message(0xFC);
   std::cout << "MIDI stop" << std::endl;
 
   std::this_thread::sleep_for(500ms);

@@ -2,6 +2,7 @@
 #include <libremidi/libremidi.hpp>
 #include <emscripten.h>
 #include <memory>
+#include <array>
 
 /**
  * Note: due to Javascript being mostly async,
@@ -37,8 +38,8 @@ int main(int argc, char**)
 
       libremidi::midi_out output{};
       output.open_port(idx);
-      output.send_message(std::vector<unsigned char>{0x90, 64, 100});
-      output.send_message(std::vector<unsigned char>{0x80, 64, 100});
+      output.send_message(std::array<unsigned char, 3>{0x90, 64, 100});
+      output.send_message(std::array<unsigned char, 3>{0x80, 64, 100});
     },
 
     .output_removed = [&] (int idx, const std::string& id) {
