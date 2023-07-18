@@ -248,7 +248,7 @@ public:
   ~midi_in();
 
   //! Returns the MIDI API specifier for the current instance of midi_in.
-  libremidi::API get_current_api() const noexcept;
+  [[nodiscard]] libremidi::API get_current_api() const noexcept;
 
   //! Open a MIDI input connection given by enumeration number.
   /*!
@@ -300,13 +300,13 @@ public:
       Note that this only applies to connections made with the openPort()
       function, not to virtual ports.
   */
-  bool is_port_open() const noexcept;
+  [[nodiscard]] bool is_port_open() const noexcept;
 
   //! Return the number of available MIDI input ports.
   /*!
     \return This function returns the number of MIDI ports of the selected API.
   */
-  unsigned int get_port_count();
+  [[nodiscard]] unsigned int get_port_count();
 
   //! Return a string identifier for the specified MIDI input port number.
   /*!
@@ -314,7 +314,7 @@ public:
             An empty string is returned if an invalid port specifier
             is provided. User code should assume a UTF-8 encoding.
   */
-  std::string get_port_name(unsigned int portNumber = 0);
+  [[nodiscard]] std::string get_port_name(unsigned int portNumber = 0);
 
   //! Specify whether certain MIDI message types should be queued or ignored
   //! during input.
@@ -385,7 +385,7 @@ public:
   ~midi_out();
 
   //! Returns the MIDI API specifier for the current instance of midi_out.
-  libremidi::API get_current_api() noexcept;
+  [[nodiscard]] libremidi::API get_current_api() noexcept;
 
   //! Open a MIDI output connection.
   /*!
@@ -406,7 +406,7 @@ public:
       Note that this only applies to connections made with the openPort()
       function, not to virtual ports.
   */
-  bool is_port_open() const noexcept;
+  [[nodiscard]] bool is_port_open() const noexcept;
 
   //! Create a virtual output port, with optional name, to allow software
   //! connections (OS X, JACK and ALSA only).
@@ -422,7 +422,7 @@ public:
   void open_virtual_port() { open_virtual_port("libremidi virtual port"); }
 
   //! Return the number of available MIDI output ports.
-  unsigned int get_port_count();
+  [[nodiscard]] unsigned int get_port_count();
 
   //! Return a string identifier for the specified MIDI port type and number.
   /*!
@@ -430,7 +430,7 @@ public:
             An empty string is returned if an invalid port specifier
             is provided. User code should assume a UTF-8 encoding.
   */
-  std::string get_port_name(unsigned int portNumber = 0);
+  [[nodiscard]] std::string get_port_name(unsigned int portNumber = 0);
 
   //! Immediately send a single message out an open MIDI output port.
   /*!

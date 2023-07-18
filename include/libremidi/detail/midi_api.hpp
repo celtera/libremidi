@@ -16,15 +16,16 @@ public:
   midi_api& operator=(const midi_api&) = delete;
   midi_api& operator=(midi_api&&) = delete;
 
-  virtual libremidi::API get_current_api() const noexcept = 0;
+  [[nodiscard]] virtual libremidi::API get_current_api() const noexcept = 0;
   virtual void open_port(unsigned int portNumber, std::string_view portName) = 0;
   virtual void open_virtual_port(std::string_view) = 0;
   virtual void close_port() = 0;
   virtual void set_client_name(std::string_view) = 0;
   virtual void set_port_name(std::string_view) = 0;
 
-  virtual unsigned int get_port_count() const = 0;
-  virtual std::string get_port_name(unsigned int portNumber) const = 0;
+  [[nodiscard]] virtual unsigned int get_port_count() const = 0;
+
+  [[nodiscard]] virtual std::string get_port_name(unsigned int portNumber) const = 0;
 
   bool is_port_open() const noexcept { return bool(connected_); }
 
