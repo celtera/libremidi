@@ -15,11 +15,6 @@
 
 namespace libremidi
 {
-struct jack_data
-{
-  jack_client_t* client{};
-  jack_port_t* port{};
-};
 
 struct jack_helpers
 {

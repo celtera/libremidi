@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libremidi/detail/midi_api.hpp>
+#include <libremidi/detail/midi_in.hpp>
 
 namespace libremidi
 {
@@ -8,11 +8,11 @@ namespace libremidi
 struct midi_stream_decoder
 {
   uint8_t runningStatusType_{};
-  midi_in_api::in_data& data;
+  midi_in_api& data;
   midi_bytes bytes;
   message msg;
 
-  explicit midi_stream_decoder(midi_in_api::in_data& data)
+  explicit midi_stream_decoder(midi_in_api& data)
       : data{data}
   {
     bytes.reserve(16);

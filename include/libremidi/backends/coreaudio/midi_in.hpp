@@ -188,7 +188,7 @@ private:
   static void midiInputCallback(const MIDIPacketList* list, void* procRef, void* /*srcRef*/)
   {
     auto& self = *(midi_in_core*)procRef;
-    auto& data = self.inputData_;
+    auto& data = self;
 
     unsigned char status{};
     unsigned short nBytes{}, iByte{}, size{};

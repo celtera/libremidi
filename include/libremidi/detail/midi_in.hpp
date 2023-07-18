@@ -16,20 +16,20 @@ public:
   midi_in_api& operator=(const midi_in_api&) = delete;
   midi_in_api& operator=(midi_in_api&&) = delete;
 
-  virtual void ignore_types(bool midiSysex, bool midiTime, bool midiSense)
+  void ignore_types(bool midiSysex, bool midiTime, bool midiSense)
   {
-    inputData_.ignoreFlags = 0;
+    this->ignoreFlags = 0;
     if (midiSysex)
     {
-      inputData_.ignoreFlags = 0x01;
+      this->ignoreFlags = 0x01;
     }
     if (midiTime)
     {
-      inputData_.ignoreFlags |= 0x02;
+      this->ignoreFlags |= 0x02;
     }
     if (midiSense)
     {
-      inputData_.ignoreFlags |= 0x04;
+      this->ignoreFlags |= 0x04;
     }
   }
 
@@ -39,33 +39,26 @@ public:
     if (!callback)
       cancel_callback();
     else
-      inputData_.userCallback = std::move(callback);
+      this->userCallback = std::move(callback);
   }
 
   void cancel_callback()
   {
-    inputData_.userCallback = [](libremidi::message&& m) {};
+    this->userCallback = [](libremidi::message&& m) {};
   }
 
-  // The in_data structure is used to pass private class data to
-  // the MIDI input handling function or thread.
-  struct in_data
-  {
-    midi_in::message_callback userCallback{};
-    libremidi::message message{};
-    bool continueSysex{false};
-    unsigned char ignoreFlags{7};
-    bool firstMessage{true};
-
-    void on_message_received(libremidi::message&& message)
-    {
-      userCallback(std::move(message));
-      message.bytes.clear();
-    }
-  };
-
 protected:
-  in_data inputData_{};
+  midi_in::message_callback userCallback{};
+  libremidi::message message{};
+  bool continueSysex{false};
+  unsigned char ignoreFlags{7};
+  bool firstMessage{true};
+
+  void on_message_received(libremidi::message&& message)
+  {
+    userCallback(std::move(message));
+    message.bytes.clear();
+  }
 };
 
 template <typename T>

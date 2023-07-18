@@ -7,7 +7,6 @@ namespace libremidi
 class midi_in_jack final
     : public midi_in_api
     , private jack_helpers
-    , private jack_data
 {
 public:
   explicit midi_in_jack(std::string_view cname)
@@ -160,15 +159,15 @@ private:
     uint32_t evCount = jack_midi_get_event_count(buff);
     for (uint32_t j = 0; j < evCount; j++)
     {
-      message& m = self.inputData_.message;
+      auto& m = self.message;
 
       jack_midi_event_get(&event, buff, j);
 
       // Compute the delta time.
       time = jack_get_time();
-      if (self.inputData_.firstMessage == true)
+      if (self.firstMessage == true)
       {
-        self.inputData_.firstMessage = false;
+        self.firstMessage = false;
         m.timestamp = 0;
       }
       else
@@ -177,11 +176,10 @@ private:
       }
 
       self.lastTime = time;
-      if (!self.inputData_.continueSysex)
+      if (!self.continueSysex)
         m.clear();
 
-      if (!((self.inputData_.continueSysex || event.buffer[0] == 0xF0)
-            && (self.inputData_.ignoreFlags & 0x01)))
+      if (!((self.continueSysex || event.buffer[0] == 0xF0) && (self.ignoreFlags & 0x01)))
       {
         // Unless this is a (possibly continued) SysEx message and we're ignoring SysEx,
         // copy the event buffer into the MIDI message struct.
@@ -192,43 +190,45 @@ private:
       {
         case 0xF0:
           // Start of a SysEx message
-          self.inputData_.continueSysex = event.buffer[event.size - 1] != 0xF7;
-          if (self.inputData_.ignoreFlags & 0x01)
+          self.continueSysex = event.buffer[event.size - 1] != 0xF7;
+          if (self.ignoreFlags & 0x01)
             continue;
           break;
         case 0xF1:
         case 0xF8:
           // MIDI Time Code or Timing Clock message
-          if (self.inputData_.ignoreFlags & 0x02)
+          if (self.ignoreFlags & 0x02)
             continue;
           break;
         case 0xFE:
           // Active Sensing message
-          if (self.inputData_.ignoreFlags & 0x04)
+          if (self.ignoreFlags & 0x04)
             continue;
           break;
         default:
-          if (self.inputData_.continueSysex)
+          if (self.continueSysex)
           {
             // Continuation of a SysEx message
-            self.inputData_.continueSysex = event.buffer[event.size - 1] != 0xF7;
-            if (self.inputData_.ignoreFlags & 0x01)
+            self.continueSysex = event.buffer[event.size - 1] != 0xF7;
+            if (self.ignoreFlags & 0x01)
               continue;
           }
           // All other MIDI messages
       }
 
-      if (!self.inputData_.continueSysex)
+      if (!self.continueSysex)
       {
         // If not a continuation of a SysEx message,
         // invoke the user callback function or queue the message.
-        self.inputData_.on_message_received(std::move(m));
+        self.on_message_received(std::move(m));
       }
     }
 
     return 0;
   }
 
+  jack_client_t* client{};
+  jack_port_t* port{};
   jack_time_t lastTime{};
   std::string clientName;
 };

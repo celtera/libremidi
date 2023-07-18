@@ -177,7 +177,7 @@ private:
       return;
 
     auto& self = *(midi_in_winmm*)instancePtr;
-    auto& data = self.inputData_;
+    auto& data = self;
 
     auto& message = data.message;
 

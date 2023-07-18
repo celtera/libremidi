@@ -284,7 +284,7 @@ private:
     double time{};
     bool continueSysex = false;
     bool doDecode = false;
-    message& message = self.inputData_.message;
+    auto& message = self.message;
     int poll_fd_count{};
     pollfd* poll_fds{};
 
@@ -372,27 +372,27 @@ private:
           break;
 
         case SND_SEQ_EVENT_QFRAME: // MIDI time code
-          if (!(self.inputData_.ignoreFlags & 0x02))
+          if (!(self.ignoreFlags & 0x02))
             doDecode = true;
           break;
 
         case SND_SEQ_EVENT_TICK: // 0xF9 ... MIDI timing tick
-          if (!(self.inputData_.ignoreFlags & 0x02))
+          if (!(self.ignoreFlags & 0x02))
             doDecode = true;
           break;
 
         case SND_SEQ_EVENT_CLOCK: // 0xF8 ... MIDI timing (clock) tick
-          if (!(self.inputData_.ignoreFlags & 0x02))
+          if (!(self.ignoreFlags & 0x02))
             doDecode = true;
           break;
 
         case SND_SEQ_EVENT_SENSING: // Active sensing
-          if (!(self.inputData_.ignoreFlags & 0x04))
+          if (!(self.ignoreFlags & 0x04))
             doDecode = true;
           break;
 
         case SND_SEQ_EVENT_SYSEX: {
-          if ((self.inputData_.ignoreFlags & 0x01))
+          if ((self.ignoreFlags & 0x01))
             break;
           if (ev->data.ext.len > buffer.size())
           {
@@ -460,9 +460,9 @@ private:
 
             self.lastTime = ev->time.time;
 
-            if (self.inputData_.firstMessage == true)
+            if (self.firstMessage == true)
             {
-              self.inputData_.firstMessage = false;
+              self.firstMessage = false;
               message.timestamp = 0;
             }
             else
@@ -484,7 +484,7 @@ private:
       if (message.bytes.size() == 0 || continueSysex)
         continue;
 
-      self.inputData_.on_message_received(std::move(message));
+      self.on_message_received(std::move(message));
     }
 
     snd_midi_event_free(self.coder);

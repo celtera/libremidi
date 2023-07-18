@@ -8,7 +8,6 @@ namespace libremidi
 class midi_out_jack final
     : public midi_out_api
     , private jack_helpers
-    , private jack_data
 {
 public:
   midi_out_jack(std::string_view cname)
@@ -197,6 +196,10 @@ private:
 
 private:
   static const constexpr auto ringbuffer_size = 16384;
+
+  jack_client_t* client{};
+  jack_port_t* port{};
+
   jack_ringbuffer_t* buffSize{};
   jack_ringbuffer_t* buffMessage{};
 

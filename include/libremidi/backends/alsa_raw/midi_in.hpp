@@ -188,7 +188,7 @@ public:
   std::thread thread_;
   std::atomic_bool running_{};
   std::vector<pollfd> fds_;
-  midi_stream_decoder decoder_{this->inputData_};
+  midi_stream_decoder decoder_{*this};
 
   bool filter_active_sensing_ = false;
 };

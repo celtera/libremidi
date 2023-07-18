@@ -2,6 +2,8 @@
 #include <alsa/asoundlib.h>
 
 #include <functional>
+#include <string>
+#include <string_view>
 #include <vector>
 
 // Credits: greatly inspired from

@@ -45,7 +45,7 @@ public:
           reader.ReadBytes(bs);
 
           double t = static_cast<double>(msg.Timestamp().count());
-          inputData_.on_message_received(libremidi::message{{bs.begin(), bs.end()}, t});
+          this->on_message_received(libremidi::message{{bs.begin(), bs.end()}, t});
         });
       }
     }

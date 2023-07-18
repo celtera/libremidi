@@ -407,7 +407,7 @@ inline std::string midi_in_emscripten::get_port_name(unsigned int portNumber)
 
 inline void midi_in_emscripten::on_input(message msg)
 {
-  this->inputData_.on_message_received(std::move(msg));
+  this->on_message_received(std::move(msg));
 }
 
 /// midi_out ///
