@@ -156,7 +156,9 @@ try
       message.push_back(i % 128);
 
     message.push_back(247);
-    midiout.send_message(message);
+    // Note: midiout.send_message(message) should work...
+    // but it fails on the CI with libc++-14 (works fine with later versions)
+    midiout.send_message(message.data(), message.size());
 
     std::this_thread::sleep_for(500ms); // pause a little
   }
