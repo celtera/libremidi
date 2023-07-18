@@ -20,9 +20,9 @@ jobs:
         header_only: [0, 1]
         config:
         - {
-            name: "Windows",
+            name: "Windows (MSVC)",
             os: windows-latest,
-            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0"
+            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_82_0"
           }
         - {
             name: "Ubuntu (gcc)",
@@ -83,7 +83,6 @@ jobs:
           -DLIBREMIDI_HEADER_ONLY=${{ matrix.header_only }} \
           -DLIBREMIDI_EXAMPLES=1 \
           -DLIBREMIDI_TESTS=1 \
-          -DCMAKE_PREFIX_PATH=$PWD/boost_* \
           -DCMAKE_INSTALL_PREFIX=install
 
     - name: Build
