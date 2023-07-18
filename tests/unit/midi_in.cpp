@@ -2,14 +2,24 @@
 
 #include <libremidi/libremidi.hpp>
 
+#include <chrono>
+#include <thread>
+
 #if defined(LIBREMIDI_JACK)
-#  include <jack/jack.h>
+  #include <jack/jack.h>
 TEST_CASE("poly aftertouch", "[midi_in]")
 {
   libremidi::midi_out midi_out{libremidi::API::UNIX_JACK, "libremidi-test-out"};
   midi_out.open_port();
 
   libremidi::midi_in midi{libremidi::API::UNIX_JACK, "libremidi-test"};
+
+  std::vector<libremidi::message> queue;
+  std::mutex qmtx;
+  midi.set_callback([&](libremidi::message&& msg) {
+    std::lock_guard _{qmtx};
+    queue.push_back(std::move(msg));
+  });
   midi.open_port();
 
   jack_options_t opt = JackNullOption;
@@ -20,12 +30,23 @@ TEST_CASE("poly aftertouch", "[midi_in]")
   jack_connect(
       jack_client, "libremidi-test-out:libremidi Output", "libremidi-test:libremidi Input");
 
-  while (!midi.get_message().bytes.empty())
-    ;
+  // Flush potentially initial messages
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  {
+    std::lock_guard _{qmtx};
+    queue.clear();
+  }
 
+  // Send a message
   midi_out.send_message(libremidi::message::poly_pressure(0, 60, 100));
-  sleep(1);
-  libremidi::message mess = midi.get_message();
-  REQUIRE(mess.bytes == libremidi::message::poly_pressure(0, 60, 100).bytes);
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  // Check that we receive it correctly
+  {
+    std::lock_guard _{qmtx};
+    REQUIRE(queue.size() == 1);
+    libremidi::message mess = queue.back();
+    REQUIRE(mess.bytes == libremidi::message::poly_pressure(0, 60, 100).bytes);
+  }
 }
 #endif
