@@ -40,12 +40,15 @@ public:
   // FIXME not thread safe
   void set_callback(midi_in::message_callback callback)
   {
-    inputData_.userCallback = std::move(callback);
+    if (!callback)
+      cancel_callback();
+    else
+      inputData_.userCallback = std::move(callback);
   }
 
   void cancel_callback()
   {
-    inputData_.userCallback = [](libremidi::message m) {};
+    inputData_.userCallback = [](libremidi::message&& m) {};
   }
 
   // The in_data structure is used to pass private class data to
