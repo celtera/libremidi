@@ -1,9 +1,9 @@
 #include "../include_catch.hpp"
 
-#include <filesystem>
 #include <libremidi/reader.hpp>
 #include <libremidi/writer.hpp>
 
+#include <filesystem>
 TEST_CASE("write multiple tracks to file", "[midi_writer]")
 {
   const uint8_t key1 = 60;

@@ -322,18 +322,15 @@ if(LIBREMIDI_EXAMPLES)
 endif()
 
 if(LIBREMIDI_TESTS)
-  find_package(Catch2 QUIET)
-  if(NOT Catch2_FOUND OR NOT TARGET Catch2::Catch2WithMain)
-    include(FetchContent)
+  include(FetchContent)
 
-    FetchContent_Declare(
-      Catch2
-      GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-      GIT_TAG        v3.4.0
-    )
+  FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG        v3.4.0
+  )
 
-    FetchContent_MakeAvailable(Catch2)
-  endif()
+  FetchContent_MakeAvailable(Catch2)
 
   message(STATUS "libremidi: compiling tests")
   target_compile_features(libremidi ${_public} cxx_std_20)

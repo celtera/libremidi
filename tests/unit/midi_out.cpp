@@ -2,6 +2,8 @@
 
 #include <libremidi/libremidi.hpp>
 
+#include <set>
+
 TEST_CASE("sending messages with span", "[midi_out]")
 {
   libremidi::midi_out midi{libremidi::API::DUMMY, "dummy"};
@@ -21,8 +23,7 @@ TEST_CASE("sending chunked messages", "[midi_out]")
   midi.set_chunking_parameters(libremidi::chunking_parameters{
       .interval = std::chrono::milliseconds(100),
       .size = 4096, // 4kb
-      .wait = [&](const std::chrono::microseconds&, int sz)
-      {
+      .wait = [&](const std::chrono::microseconds&, int sz) {
         written_bytes.insert(sz);
         return true;
       }});

@@ -1,7 +1,8 @@
 #include "../include_catch.hpp"
 
-#include <filesystem>
 #include <libremidi/writer.hpp>
+
+#include <filesystem>
 
 TEST_CASE("write an empty file", "[midi_writer]")
 {
