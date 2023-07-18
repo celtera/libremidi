@@ -52,14 +52,14 @@ struct alsa_data
     snd_seq_set_port_info(seq, vport, pinfo);
   }
 
-  unsigned int get_port_count(int caps)
+  unsigned int get_port_count(int caps) const
   {
     snd_seq_port_info_t* pinfo;
     snd_seq_port_info_alloca(&pinfo);
 
     return alsa_seq::port_info(seq, pinfo, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ, -1);
   }
-  std::string get_port_name(unsigned int portNumber, int caps)
+  std::string get_port_name(unsigned int portNumber, int caps) const
   {
     snd_seq_port_info_t* pinfo;
     snd_seq_port_info_alloca(&pinfo);

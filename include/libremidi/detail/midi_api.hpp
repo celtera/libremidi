@@ -23,8 +23,8 @@ public:
   virtual void set_client_name(std::string_view) = 0;
   virtual void set_port_name(std::string_view) = 0;
 
-  virtual unsigned int get_port_count() = 0;
-  virtual std::string get_port_name(unsigned int portNumber) = 0;
+  virtual unsigned int get_port_count() const = 0;
+  virtual std::string get_port_name(unsigned int portNumber) const = 0;
 
   bool is_port_open() const noexcept { return bool(connected_); }
 

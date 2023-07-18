@@ -69,7 +69,7 @@ public:
       return;
     }
 
-    snd_seq_port_info_t* pinfo;
+    snd_seq_port_info_t* pinfo{};
     snd_seq_port_info_alloca(&pinfo);
     if (alsa_seq::port_info(
             data.seq, pinfo, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE, (int)portNumber)
@@ -151,12 +151,12 @@ public:
 
   void set_port_name(std::string_view portName) override { data.set_port_name(portName); }
 
-  unsigned int get_port_count() override
+  unsigned int get_port_count() const override
   {
     return data.get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
   }
 
-  std::string get_port_name(unsigned int portNumber) override
+  std::string get_port_name(unsigned int portNumber) const override
   {
     return data.get_port_name(portNumber, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
   }

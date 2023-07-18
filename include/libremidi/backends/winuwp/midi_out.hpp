@@ -41,13 +41,13 @@ public:
     }
   }
 
-  unsigned int get_port_count() override
+  unsigned int get_port_count() const override
   {
     auto& out_ports_observer = observer_winuwp::get_internal_out_port_observer();
     return static_cast<unsigned int>(out_ports_observer.get_ports().size());
   }
 
-  std::string get_port_name(unsigned int portNumber) override
+  std::string get_port_name(unsigned int portNumber) const override
   {
     auto& observer = observer_winuwp::get_internal_out_port_observer();
     return observer.get_port_name(portNumber);

@@ -289,12 +289,12 @@ public:
 
   void set_port_name(std::string_view portName) override { data.set_port_name(portName); }
 
-  unsigned int get_port_count() override
+  unsigned int get_port_count() const override
   {
     return data.get_port_count(SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ);
   }
 
-  std::string get_port_name(unsigned int portNumber) override
+  std::string get_port_name(unsigned int portNumber) const override
   {
     return data.get_port_name(portNumber, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ);
   }
@@ -520,6 +520,7 @@ private:
     apidata.thread = apidata.dummy_thread_id;
     return nullptr;
   }
+
   alsa_in_data data;
 };
 

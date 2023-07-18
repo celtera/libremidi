@@ -155,7 +155,7 @@ public:
     }
   }
 
-  unsigned int get_port_count() override
+  unsigned int get_port_count() const override
   {
     auto device_list = get_device_enumerator();
     device_list.enumerate_cards();
@@ -163,7 +163,7 @@ public:
     return device_list.inputs.size();
   }
 
-  std::string get_port_name(unsigned int portNumber) override
+  std::string get_port_name(unsigned int portNumber) const override
   {
     auto device_list = get_device_enumerator();
     device_list.enumerate_cards();

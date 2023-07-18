@@ -76,9 +76,9 @@ public:
     }
   }
 
-  unsigned int get_port_count() override { return midiOutGetNumDevs(); }
+  unsigned int get_port_count() const override { return midiOutGetNumDevs(); }
 
-  std::string get_port_name(unsigned int portNumber) override
+  std::string get_port_name(unsigned int portNumber) const override
   {
     unsigned int nDevices = midiOutGetNumDevs();
     if (portNumber >= nDevices)

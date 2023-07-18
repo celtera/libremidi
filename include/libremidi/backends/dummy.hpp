@@ -39,9 +39,9 @@ public:
 
   void set_port_name(std::string_view /*portName*/) override { }
 
-  unsigned int get_port_count() override { return 0; }
+  unsigned int get_port_count() const override { return 0; }
 
-  std::string get_port_name(unsigned int /*portNumber*/) override
+  std::string get_port_name(unsigned int /*portNumber*/) const override
   {
     using namespace std::literals;
     return ""s;
@@ -63,8 +63,8 @@ public:
   void close_port() override { }
   void set_client_name(std::string_view /*clientName*/) override { }
   void set_port_name(std::string_view /*portName*/) override { }
-  unsigned int get_port_count() override { return 0; }
-  std::string get_port_name(unsigned int /*portNumber*/) override
+  unsigned int get_port_count() const override { return 0; }
+  std::string get_port_name(unsigned int /*portNumber*/) const override
   {
     using namespace std::literals;
     return ""s;

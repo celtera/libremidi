@@ -153,12 +153,12 @@ public:
         "midi_in_core::setPortName: this function is not implemented for the "
         "MACOSX_CORE API!");
   }
-  unsigned int get_port_count() override
+  unsigned int get_port_count() const override
   {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
     return MIDIGetNumberOfSources();
   }
-  std::string get_port_name(unsigned int portNumber) override
+  std::string get_port_name(unsigned int portNumber) const override
   {
     CFStringRef nameRef;
     MIDIEndpointRef portRef;

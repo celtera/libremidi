@@ -55,12 +55,12 @@ public:
   // the MIDI input handling function or thread.
   struct in_data
   {
-    libremidi::message message{};
-    unsigned char ignoreFlags{7};
-    bool firstMessage{true};
     void* apiData{};
     midi_in::message_callback userCallback{};
+    libremidi::message message{};
     bool continueSysex{false};
+    unsigned char ignoreFlags{7};
+    bool firstMessage{true};
 
     void on_message_received(libremidi::message&& message)
     {

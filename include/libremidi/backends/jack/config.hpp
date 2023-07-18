@@ -24,8 +24,6 @@ struct jack_data
 struct jack_in_data : jack_data
 {
   jack_time_t lastTime{};
-
-  midi_in_api::in_data* rtMidiIn{};
 };
 
 struct jack_out_data : jack_data
@@ -41,7 +39,7 @@ struct jack_out_data : jack_data
 struct jack_helpers
 {
   static bool check_port_name_length(
-      midi_api& self, std::string_view clientName, std::string_view portName) noexcept
+      const midi_api& self, std::string_view clientName, std::string_view portName)
   {
     // full name: "client_name:port_name\0"
     if (clientName.size() + portName.size() + 1 + 1 >= jack_port_name_size())
@@ -52,7 +50,8 @@ struct jack_helpers
     return true;
   }
 
-  static std::string get_port_name(midi_api& self, const char** ports, unsigned int portNumber)
+  static std::string
+  get_port_name(const midi_api& self, const char** ports, unsigned int portNumber)
   {
     // Check port validity
     if (ports == nullptr)

@@ -13,7 +13,6 @@ public:
       : midi_in_api{&data}
   {
     // TODO do like the others
-    data.rtMidiIn = &inputData_;
     data.port = nullptr;
     data.client = nullptr;
     this->clientName = cname;
@@ -98,10 +97,9 @@ public:
 #endif
   }
 
-  unsigned int get_port_count() override
+  unsigned int get_port_count() const override
   {
     int count = 0;
-    connect();
     if (!data.client)
       return 0;
 
@@ -119,9 +117,8 @@ public:
     return count;
   }
 
-  std::string get_port_name(unsigned int portNumber) override
+  std::string get_port_name(unsigned int portNumber) const override
   {
-    connect();
 
     unique_handle<const char*, jack_free> ports{
         jack_get_ports(data.client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput)};
@@ -143,14 +140,14 @@ private:
       return;
     }
 
-    jack_set_process_callback(data.client, jackProcessIn, &data);
+    jack_set_process_callback(data.client, jackProcessIn, &this->inputData_);
     jack_activate(data.client);
   }
 
   static int jackProcessIn(jack_nframes_t nframes, void* arg)
   {
-    auto& jData = *(jack_in_data*)arg;
-    midi_in_api::in_data& rtData = *jData.rtMidiIn;
+    midi_in_api::in_data& rtData = *(midi_in_api::in_data*)arg;
+    auto& jData = *(jack_in_data*)rtData.apiData;
     jack_midi_event_t event;
     jack_time_t time;
 
@@ -163,7 +160,7 @@ private:
     uint32_t evCount = jack_midi_get_event_count(buff);
     for (uint32_t j = 0; j < evCount; j++)
     {
-      message& m = jData.rtMidiIn->message;
+      message& m = rtData.message;
 
       jack_midi_event_get(&event, buff, j);
 
