@@ -235,15 +235,14 @@ private:
       if (continueSysex)
       {
         // We have a continuing, segmented sysex message.
-        if (!(self.ignoreFlags & 0x01))
+        if (!self.configuration.ignore_sysex)
         {
           // If we're not ignoring sysex messages, copy the entire packet.
-          for (unsigned int j = 0; j < nBytes; ++j)
-            msg.bytes.push_back(packet->data[j]);
+          msg.bytes.insert(msg.bytes.end(), packet->data, packet->data + nBytes);
         }
         continueSysex = packet->data[nBytes - 1] != 0xF7;
 
-        if (!(self.ignoreFlags & 0x01) && !continueSysex)
+        if (!self.configuration.ignore_sysex && !continueSysex)
         {
           // If not a continuing sysex message, invoke the user callback
           // function or queue the message.
@@ -270,7 +269,7 @@ private:
           else if (status == 0xF0)
           {
             // A MIDI sysex
-            if (self.ignoreFlags & 0x01)
+            if (self.configuration.ignore_sysex)
             {
               size = 0;
               iByte = nBytes;
@@ -282,7 +281,7 @@ private:
           else if (status == 0xF1)
           {
             // A MIDI time code message
-            if (self.ignoreFlags & 0x02)
+            if (self.configuration.ignore_timing)
             {
               size = 0;
               iByte += 2;
@@ -294,13 +293,13 @@ private:
             size = 3;
           else if (status == 0xF3)
             size = 2;
-          else if (status == 0xF8 && (self.ignoreFlags & 0x02))
+          else if (status == 0xF8 && (self.configuration.ignore_timing))
           {
             // A MIDI timing tick message and we're ignoring it.
             size = 0;
             iByte += 1;
           }
-          else if (status == 0xFE && (self.ignoreFlags & 0x04))
+          else if (status == 0xFE && (self.configuration.ignore_sensing))
           {
             // A MIDI active sensing message and we're ignoring it.
             size = 0;

@@ -372,27 +372,27 @@ private:
           break;
 
         case SND_SEQ_EVENT_QFRAME: // MIDI time code
-          if (!(self.ignoreFlags & 0x02))
+          if (!self.configuration.ignore_timing)
             doDecode = true;
           break;
 
         case SND_SEQ_EVENT_TICK: // 0xF9 ... MIDI timing tick
-          if (!(self.ignoreFlags & 0x02))
+          if (!self.configuration.ignore_timing)
             doDecode = true;
           break;
 
         case SND_SEQ_EVENT_CLOCK: // 0xF8 ... MIDI timing (clock) tick
-          if (!(self.ignoreFlags & 0x02))
+          if (!self.configuration.ignore_timing)
             doDecode = true;
           break;
 
         case SND_SEQ_EVENT_SENSING: // Active sensing
-          if (!(self.ignoreFlags & 0x04))
+          if (!self.configuration.ignore_sensing)
             doDecode = true;
           break;
 
         case SND_SEQ_EVENT_SYSEX: {
-          if ((self.ignoreFlags & 0x01))
+          if (self.configuration.ignore_sysex)
             break;
           if (ev->data.ext.len > buffer.size())
           {

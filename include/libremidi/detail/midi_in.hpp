@@ -3,6 +3,24 @@
 
 namespace libremidi
 {
+struct input_configuration
+{
+  midi_in::message_callback on_message;
+
+  midi_error_callback on_error{};
+  midi_error_callback on_warning{};
+
+  enum timestamp_mode
+  {
+    NoTimestamp,
+    Relative, // Revert to old behaviour
+    Absolute  // In nanoseconds, as per std::high_resolution_clock::now()
+  };
+  uint32_t ignore_sysex : 1 = false;
+  uint32_t ignore_timing : 1 = false;
+  uint32_t ignore_sensing : 1 = false;
+  uint32_t timestamps : 2 = timestamp_mode::Relative;
+};
 
 class midi_in_api : public midi_api
 {
@@ -20,45 +38,36 @@ public:
 
   void ignore_types(bool midiSysex, bool midiTime, bool midiSense)
   {
-    this->ignoreFlags = 0;
-    if (midiSysex)
-    {
-      this->ignoreFlags = 0x01;
-    }
-    if (midiTime)
-    {
-      this->ignoreFlags |= 0x02;
-    }
-    if (midiSense)
-    {
-      this->ignoreFlags |= 0x04;
-    }
+    // FIXME not thread safe
+    configuration.ignore_sysex = midiSysex;
+    configuration.ignore_timing = midiTime;
+    configuration.ignore_sensing = midiSense;
   }
 
-  // FIXME not thread safe
   void set_callback(midi_in::message_callback callback)
   {
+    // FIXME not thread safe
     if (!callback)
       cancel_callback();
     else
-      this->userCallback = std::move(callback);
+      configuration.on_message = std::move(callback);
   }
 
   void cancel_callback()
   {
-    this->userCallback = [](libremidi::message&& m) {};
+    configuration.on_message = [](libremidi::message&& m) {};
   }
 
 protected:
-  midi_in::message_callback userCallback{};
+  input_configuration configuration;
+
   libremidi::message message{};
   bool continueSysex{false};
-  unsigned char ignoreFlags{7};
   bool firstMessage{true};
 
   void on_message_received(libremidi::message&& message)
   {
-    userCallback(std::move(message));
+    configuration.on_message(std::move(message));
     message.bytes.clear();
   }
 };

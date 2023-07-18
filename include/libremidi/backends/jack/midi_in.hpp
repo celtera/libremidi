@@ -179,7 +179,7 @@ private:
       if (!self.continueSysex)
         m.clear();
 
-      if (!((self.continueSysex || event.buffer[0] == 0xF0) && (self.ignoreFlags & 0x01)))
+      if (!((self.continueSysex || event.buffer[0] == 0xF0) && (self.configuration.ignore_sysex)))
       {
         // Unless this is a (possibly continued) SysEx message and we're ignoring SysEx,
         // copy the event buffer into the MIDI message struct.
@@ -191,18 +191,18 @@ private:
         case 0xF0:
           // Start of a SysEx message
           self.continueSysex = event.buffer[event.size - 1] != 0xF7;
-          if (self.ignoreFlags & 0x01)
+          if (self.configuration.ignore_sysex)
             continue;
           break;
         case 0xF1:
         case 0xF8:
           // MIDI Time Code or Timing Clock message
-          if (self.ignoreFlags & 0x02)
+          if (self.configuration.ignore_timing)
             continue;
           break;
         case 0xFE:
           // Active Sensing message
-          if (self.ignoreFlags & 0x04)
+          if (self.configuration.ignore_sensing)
             continue;
           break;
         default:
@@ -210,7 +210,7 @@ private:
           {
             // Continuation of a SysEx message
             self.continueSysex = event.buffer[event.size - 1] != 0xF7;
-            if (self.ignoreFlags & 0x01)
+            if (self.configuration.ignore_sysex)
               continue;
           }
           // All other MIDI messages

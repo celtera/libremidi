@@ -141,8 +141,6 @@ public:
   }
 
 private:
-  std::string clientName;
-
   void connect()
   {
     if (this->client)
@@ -201,6 +199,8 @@ private:
 
   std::counting_semaphore<> sem_cleanup{0};
   std::counting_semaphore<> sem_needpost{0};
+
+  std::string clientName;
 };
 
 }

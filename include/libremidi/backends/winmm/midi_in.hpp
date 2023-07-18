@@ -207,7 +207,7 @@ private:
         nBytes = 3;
       else if (status == 0xF1)
       {
-        if (self.ignoreFlags & 0x02)
+        if (self.configuration.ignore_timing)
           return;
         else
           nBytes = 2;
@@ -216,12 +216,12 @@ private:
         nBytes = 3;
       else if (status == 0xF3)
         nBytes = 2;
-      else if (status == 0xF8 && (self.ignoreFlags & 0x02))
+      else if (status == 0xF8 && (self.configuration.ignore_timing))
       {
         // A MIDI timing tick message and we're ignoring it.
         return;
       }
-      else if (status == 0xFE && (self.ignoreFlags & 0x04))
+      else if (status == 0xFE && (self.configuration.ignore_sensing))
       {
         // A MIDI active sensing message and we're ignoring it.
         return;
@@ -234,7 +234,7 @@ private:
     else
     { // Sysex message ( MIM_LONGDATA or MIM_LONGERROR )
       MIDIHDR* sysex = (MIDIHDR*)midiMessage;
-      if (!(self.ignoreFlags & 0x01) && inputStatus != MIM_LONGERROR)
+      if (!self.configuration.ignore_sysex && inputStatus != MIM_LONGERROR)
       {
         // Sysex message and we're not ignoring it
         message.bytes.insert(
@@ -262,7 +262,7 @@ private:
           std::cerr << "\nmidi_in::midiInputCallback: error sending sysex to "
                        "Midi device!!\n\n";
 #endif
-        if (self.ignoreFlags & 0x01)
+        if (self.configuration.ignore_sysex)
           return;
       }
       else
