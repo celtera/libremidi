@@ -23,9 +23,7 @@ public:
   {
     // Set up our client.
     MIDIClientRef client{};
-    CFStringRef name = CFStringCreateWithCString(
-        nullptr, configuration.client_name.c_str(), kCFStringEncodingASCII);
-    OSStatus result = MIDIClientCreate(name, nullptr, nullptr, &client);
+    OSStatus result = MIDIClientCreate(toCFString(configuration.client_name).get(), nullptr, nullptr, &client);
     if (result != noErr)
     {
       error<driver_error>(
@@ -37,7 +35,6 @@ public:
     // Save our api-specific connection information.
     this->client = client;
     this->endpoint = 0;
-    CFRelease(name);
   }
 
   ~midi_in_core() override
@@ -77,11 +74,8 @@ public:
     }
 
     MIDIPortRef port;
-    CFStringRef portNameRef
-        = CFStringCreateWithCString(nullptr, portName.data(), kCFStringEncodingASCII);
     OSStatus result
-        = MIDIInputPortCreate(this->client, portNameRef, midiInputCallback, (void*)this, &port);
-    CFRelease(portNameRef);
+        = MIDIInputPortCreate(this->client, toCFString(portName).get(), midiInputCallback, (void*)this, &port);
 
     if (result != noErr)
     {
@@ -115,15 +109,13 @@ public:
 
     connected_ = true;
   }
+
   void open_virtual_port(std::string_view portName) override
   {
     // Create a virtual MIDI input destination.
     MIDIEndpointRef endpoint;
-    CFStringRef portNameRef
-        = CFStringCreateWithCString(nullptr, portName.data(), kCFStringEncodingASCII);
     OSStatus result = MIDIDestinationCreate(
-        this->client, portNameRef, midiInputCallback, (void*)this, &endpoint);
-    CFRelease(portNameRef);
+        this->client, toCFString(portName).get(), midiInputCallback, (void*)this, &endpoint);
 
     if (result != noErr)
     {
@@ -136,6 +128,7 @@ public:
     // Save our api-specific connection information.
     this->endpoint = endpoint;
   }
+
   void close_port() override
   {
     if (this->endpoint)
@@ -161,11 +154,6 @@ public:
 
   std::string get_port_name(unsigned int portNumber) const override
   {
-    CFStringRef nameRef;
-    MIDIEndpointRef portRef;
-    char name[128];
-
-    std::string stringName;
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
     if (portNumber >= MIDIGetNumberOfSources())
     {
@@ -175,12 +163,14 @@ public:
       return {};
     }
 
-    portRef = MIDIGetSource(portNumber);
-    nameRef = ConnectedEndpointName(portRef);
+    auto portRef = MIDIGetSource(portNumber);
+    auto nameRef = ConnectedEndpointName(portRef);
+
+    char name[128];
     CFStringGetCString(nameRef, name, sizeof(name), kCFStringEncodingUTF8);
     CFRelease(nameRef);
 
-    return stringName = name;
+    return name;
   }
 
 private:

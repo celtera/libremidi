@@ -23,9 +23,7 @@ public:
   {
     // Set up our client.
     MIDIClientRef client;
-    CFStringRef name = CFStringCreateWithCString(
-        nullptr, configuration.client_name.c_str(), kCFStringEncodingASCII);
-    OSStatus result = MIDIClientCreate(name, nullptr, nullptr, &client);
+    OSStatus result = MIDIClientCreate(toCFString(configuration.client_name).get(), nullptr, nullptr, &client);
     if (result != noErr)
     {
       error<driver_error>(
@@ -37,7 +35,6 @@ public:
     // Save our api-specific connection information.
     this->client = client;
     this->endpoint = 0;
-    CFRelease(name);
   }
   ~midi_out_core()
   {
@@ -78,10 +75,7 @@ public:
     }
 
     MIDIPortRef port;
-    CFStringRef portNameRef
-        = CFStringCreateWithCString(nullptr, portName.data(), kCFStringEncodingASCII);
-    OSStatus result = MIDIOutputPortCreate(this->client, portNameRef, &port);
-    CFRelease(portNameRef);
+    OSStatus result = MIDIOutputPortCreate(this->client, toCFString(portName).get(), &port);
     if (result != noErr)
     {
       MIDIClientDispose(this->client);
@@ -119,10 +113,7 @@ public:
 
     // Create a virtual MIDI output source.
     MIDIEndpointRef endpoint;
-    CFStringRef portNameRef
-        = CFStringCreateWithCString(nullptr, portName.data(), kCFStringEncodingASCII);
-    OSStatus result = MIDISourceCreate(this->client, portNameRef, &endpoint);
-    CFRelease(portNameRef);
+    OSStatus result = MIDISourceCreate(this->client, toCFString(portName).get(), &endpoint);
 
     if (result != noErr)
     {
@@ -159,11 +150,6 @@ public:
 
   std::string get_port_name(unsigned int portNumber) const override
   {
-    CFStringRef nameRef;
-    MIDIEndpointRef portRef;
-    char name[128];
-
-    std::string stringName;
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
     if (portNumber >= MIDIGetNumberOfDestinations())
     {
@@ -173,12 +159,14 @@ public:
       return {};
     }
 
-    portRef = MIDIGetDestination(portNumber);
-    nameRef = ConnectedEndpointName(portRef);
+    auto portRef = MIDIGetDestination(portNumber);
+    auto nameRef = ConnectedEndpointName(portRef);
+
+    char name[128];
     CFStringGetCString(nameRef, name, sizeof(name), kCFStringEncodingUTF8);
     CFRelease(nameRef);
 
-    return stringName = name;
+    return name;
   }
 
   void send_message(const unsigned char* message, size_t size) override

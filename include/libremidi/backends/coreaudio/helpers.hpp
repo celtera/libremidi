@@ -195,6 +195,12 @@ struct coremidi_data
   MIDIClientRef client{};
   MIDIPortRef port{};
   MIDIEndpointRef endpoint{};
+
+  using CFString_handle = unique_handle<const __CFString, CFRelease>;
+  static inline CFString_handle toCFString(std::string_view str) noexcept
+  {
+    return CFString_handle{CFStringCreateWithCString(nullptr, str.data(), kCFStringEncodingASCII) };
+  }
 };
 
 }
