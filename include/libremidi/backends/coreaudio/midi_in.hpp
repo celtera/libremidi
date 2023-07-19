@@ -174,13 +174,60 @@ public:
   }
 
 private:
+  void set_timestamp(const MIDIPacket& packet, libremidi::message& msg) noexcept
+  {
+    // packet.timeStamp is in mach_absolute_time units
+    // We want a timestamp in nanoseconds
+
+    auto time_in_nanos = [] (MIDITimeStamp tp) {
+      if (tp == 0)
+      { // this happens when receiving asynchronous sysex messages
+        return clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+      }
+      else
+      {
+        return AudioConvertHostTimeToNanos(tp);
+      }
+    };
+
+    switch(configuration.timestamps) {
+      case input_configuration::NoTimestamp:
+        msg.timestamp = 0;
+        return;
+      case input_configuration::Relative:
+      {
+        if (firstMessage)
+        {
+          firstMessage = false;
+          msg.timestamp = 0;
+          return;
+        }
+        else
+        {
+          if (continueSysex)
+            return;
+
+          auto time = time_in_nanos(packet.timeStamp);
+          time -= this->lastTime;
+          msg.timestamp = time;
+        }
+        break;
+      }
+      case input_configuration::Absolute:
+        if (continueSysex)
+          return;
+        msg.timestamp = time_in_nanos(packet.timeStamp);
+
+        break;
+    }
+  }
+
   static void midiInputCallback(const MIDIPacketList* list, void* procRef, void* /*srcRef*/)
   {
     auto& self = *(midi_in_core*)procRef;
 
     unsigned char status{};
     unsigned short nBytes{}, iByte{}, size{};
-    unsigned long long time{};
 
     bool& continueSysex = self.continueSysex;
     auto& msg = self.message;
@@ -188,7 +235,6 @@ private:
     const MIDIPacket* packet = &list->packet[0];
     for (unsigned int i = 0; i < list->numPackets; ++i)
     {
-
       // My interpretation of the CoreMIDI documentation: all message
       // types, except sysex, are complete within a packet and there may
       // be several of them in a single packet.  Sysex messages can be
@@ -206,23 +252,7 @@ private:
       }
 
       // Calculate time stamp.
-      if (self.firstMessage)
-      {
-        self.firstMessage = false;
-        msg.timestamp = 0;
-      }
-      else
-      {
-        time = packet->timeStamp;
-        if (time == 0)
-        { // this happens when receiving asynchronous sysex messages
-          time = AudioGetCurrentHostTime();
-        }
-        time -= self.lastTime;
-        time = AudioConvertHostTimeToNanos(time);
-        if (!continueSysex)
-          msg.timestamp = time * 0.000000001;
-      }
+      self.set_timestamp(*packet, msg);
 
       // Track whether any non-filtered messages were found in this
       // packet for timestamp calculation
