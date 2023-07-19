@@ -25,7 +25,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include <libremidi/libremidi.hpp>
+#include <libremidi/message.hpp>
 
 namespace libremidi
 {

@@ -10,7 +10,17 @@ class midi_out_winuwp final : public midi_out_default<midi_out_winuwp>
 {
 public:
   static const constexpr auto backend = "UWP";
-  midi_out_winuwp(std::string_view) { winrt_init(); }
+  struct
+      : output_configuration
+      , winuwp_output_configuration
+  {
+  } configuration;
+
+  midi_out_winuwp(output_configuration&& conf, winuwp_output_configuration&& apiconf)
+      : configuration{std::move(conf), std::move(apiconf)} {}
+  {
+    winrt_init();
+  }
 
   ~midi_out_winuwp() override { close_port(); }
 

@@ -4,6 +4,7 @@
 #include <chrono>
 #include <functional>
 #include <optional>
+#include <thread>
 
 namespace libremidi
 {
@@ -25,7 +26,11 @@ struct LIBREMIDI_EXPORT chunking_parameters
    */
   std::function<bool(std::chrono::microseconds, int)> wait = chunking_parameters::default_wait;
 
-  static bool default_wait(std::chrono::microseconds time_to_wait, int written_bytes);
+  static bool default_wait(std::chrono::microseconds time_to_wait, int written_bytes)
+  {
+    std::this_thread::sleep_for(time_to_wait);
+    return true;
+  }
 };
 
 struct alsa_raw_input_configuration

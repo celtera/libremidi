@@ -159,9 +159,12 @@ public:
     }
   }
 
-  void set_client_name(std::string_view clientName) override { this->set_client_name(clientName); }
+  void set_client_name(std::string_view clientName) override
+  {
+    alsa_data::set_client_name(clientName);
+  }
 
-  void set_port_name(std::string_view portName) override { this->set_port_name(portName); }
+  void set_port_name(std::string_view portName) override { alsa_data::set_port_name(portName); }
 
   unsigned int get_port_count() const override
   {

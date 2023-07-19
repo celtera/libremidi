@@ -181,13 +181,6 @@ LIBREMIDI_INLINE midi_out& midi_out::operator=(midi_out&& other) noexcept
   return *this;
 }
 
-LIBREMIDI_INLINE
-bool chunking_parameters::default_wait(std::chrono::microseconds time_to_wait, int written_bytes)
-{
-  std::this_thread::sleep_for(time_to_wait);
-  return true;
-}
-
 [[nodiscard]] LIBREMIDI_INLINE std::unique_ptr<observer_api>
 open_midi_observer(libremidi::API api, observer::callbacks&& cb)
 {
@@ -205,8 +198,15 @@ open_midi_in(libremidi::API api, std::string_view clientName)
 {
   std::unique_ptr<midi_in_api> ptr;
 
-  //  for_backend(
-  //      api, [&](auto b) { ptr = std::make_unique<typename decltype(b)::midi_in>(clientName); });
+  for_backend(api, [&]<typename T>(T) {
+    using conf_type = typename T::midi_in_configuration;
+    conf_type c;
+    if constexpr (requires(conf_type c) { c.client_name; })
+    {
+      c.client_name = std::string(clientName);
+    }
+    ptr = std::make_unique<typename T::midi_in>(libremidi::input_configuration{}, std::move(c));
+  });
 
   return ptr;
 }
@@ -216,8 +216,15 @@ open_midi_out(libremidi::API api, std::string_view clientName)
 {
   std::unique_ptr<midi_out_api> ptr;
 
-  //  for_backend(
-  //      api, [&](auto b) { ptr = std::make_unique<typename decltype(b)::midi_out>(clientName); });
+  for_backend(api, [&]<typename T>(T) {
+    using conf_type = typename T::midi_out_configuration;
+    conf_type c;
+    if constexpr (requires(conf_type c) { c.client_name; })
+    {
+      c.client_name = std::string(clientName);
+    }
+    ptr = std::make_unique<typename T::midi_out>(libremidi::output_configuration{}, std::move(c));
+  });
 
   return ptr;
 }
@@ -353,15 +360,44 @@ void midi_out::send_message(const unsigned char* message, size_t size)
 LIBREMIDI_INLINE
 midi_in::midi_in(input_configuration base_conf, std::any api_conf)
 {
-  auto from_api = [&]<typename T>(T& backend) mutable {
-    if (auto conf = std::any_cast<typename T::midi_in_configuration>(&api_conf))
-    {
-      this->impl_ = std::make_unique<typename T::midi_in>(std::move(base_conf), std::move(*conf));
-      return true;
-    }
-    return false;
-  };
-  std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
+  if (!api_conf.has_value())
+  {
+    auto from_api = [&]<typename T>(T& backend) mutable {
+      try
+      {
+        this->impl_ = std::make_unique<typename T::midi_in>(
+            std::move(base_conf), typename T::midi_in_configuration{});
+        return true;
+      }
+      catch (...)
+      {
+      }
+      return false;
+    };
+    std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
+  }
+  else
+  {
+    auto from_api = [&]<typename T>(T& backend) mutable {
+      if (auto conf = std::any_cast<typename T::midi_in_configuration>(&api_conf))
+      {
+        this->impl_
+            = std::make_unique<typename T::midi_in>(std::move(base_conf), std::move(*conf));
+        return true;
+      }
+      return false;
+    };
+    std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
+  }
+
+  if (!impl_)
+  {
+    // It should not be possible to get here because the preprocessor
+    // definition LIBREMIDI_DUMMY is automatically defined if no
+    // API-specific definitions are passed to the compiler. But just in
+    // case something weird happens, we'll thrown an error.
+    throw midi_exception{"midi_in: no compiled API support found ... critical error!!"};
+  }
 }
 
 LIBREMIDI_INLINE
@@ -413,15 +449,47 @@ void midi_in::set_port_name(std::string_view portName)
 LIBREMIDI_INLINE
 midi_out::midi_out(output_configuration base_conf, std::any api_conf)
 {
-  auto from_api = [&]<typename T>(T& backend) mutable {
-    if (auto conf = std::any_cast<typename T::midi_out_configuration>(&api_conf))
-    {
-      this->impl_ = std::make_unique<typename T::midi_out>(std::move(base_conf), std::move(*conf));
-      return true;
-    }
-    return false;
-  };
-  std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
+  if (!api_conf.has_value())
+  {
+    auto from_api = [&]<typename T>(T& backend) mutable {
+      try
+      {
+        this->impl_ = std::make_unique<typename T::midi_out>(
+            std::move(base_conf), typename T::midi_out_configuration{});
+        if (this->impl_->get_port_count() != 0)
+          return true;
+        else
+          this->impl_.reset();
+      }
+      catch (...)
+      {
+      }
+      return false;
+    };
+    std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
+  }
+  else
+  {
+    auto from_api = [&]<typename T>(T& backend) mutable {
+      if (auto conf = std::any_cast<typename T::midi_out_configuration>(&api_conf))
+      {
+        this->impl_
+            = std::make_unique<typename T::midi_out>(std::move(base_conf), std::move(*conf));
+        return true;
+      }
+      return false;
+    };
+    std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
+  }
+
+  if (!impl_)
+  {
+    // It should not be possible to get here because the preprocessor
+    // definition LIBREMIDI_DUMMY is automatically defined if no
+    // API-specific definitions are passed to the compiler. But just in
+    // case something weird happens, we'll thrown an error.
+    throw midi_exception{"midi_in: no compiled API support found ... critical error!!"};
+  }
 }
 
 LIBREMIDI_INLINE

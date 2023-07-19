@@ -10,8 +10,15 @@ class midi_in_winmm final : public midi_in_default<midi_in_winmm>
 {
 public:
   static const constexpr auto backend = "WinMM";
-  explicit midi_in_winmm(std::string_view)
+  struct
+      : input_configuration
+      , winmm_input_configuration
+  {
+  } configuration;
+
+  explicit midi_in_winmm(input_configuration&& conf, winmm_input_configuration&& apiconf)
       : midi_in_default{}
+      , configuration{std::move(conf), std::move(apiconf)}
   {
     // We'll issue a warning here if no devices are available but not
     // throw an error since the user can plugin something later.
@@ -273,7 +280,7 @@ private:
     // Save the time of the last non-filtered message
     self.lastTime = timestamp;
 
-    self.on_message_received(std::move(message));
+    self.configuration.on_message(std::move(message));
   }
 
   HMIDIIN inHandle; // Handle to Midi Input Device

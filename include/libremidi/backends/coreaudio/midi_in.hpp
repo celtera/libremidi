@@ -12,13 +12,19 @@ class midi_in_core final
 public:
   static const constexpr auto backend = "CoreMIDI";
 
-  explicit midi_in_core(std::string_view clientName)
-      : midi_in_default<midi_in_core>{}
+  struct
+      : output_configuration
+      , coremidi_input_configuration
+  {
+  } configuration;
+
+  midi_in_core(input_configuration&& conf, coremidi_input_configuration&& apiconf)
+      : configuration{std::move(conf), std::move(apiconf)}
   {
     // Set up our client.
     MIDIClientRef client{};
-    CFStringRef name
-        = CFStringCreateWithCString(nullptr, clientName.data(), kCFStringEncodingASCII);
+    CFStringRef name = CFStringCreateWithCString(
+        nullptr, configuration.client_name.c_str(), kCFStringEncodingASCII);
     OSStatus result = MIDIClientCreate(name, nullptr, nullptr, &client);
     if (result != noErr)
     {

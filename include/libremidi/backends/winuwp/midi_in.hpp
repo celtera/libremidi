@@ -10,8 +10,16 @@ class midi_in_winuwp final : public midi_in_default<midi_in_winuwp>
 {
 public:
   static const constexpr auto backend = "UWP";
-  explicit midi_in_winuwp(std::string_view)
+  struct
+      : input_configuration
+      , winuwp_input_configuration
+  {
+  } configuration;
+
+  explicit midi_in_winuwp(input_configuration&& conf, winuwp_input_configuration&& apiconf)
       : midi_in_default{}
+      , configuration{std::move(conf), std::move(apiconf)}
+
   {
     winrt_init();
   }
@@ -85,5 +93,4 @@ private:
 private:
   winrt::Windows::Devices::Midi::MidiInPort port_{nullptr};
 };
-
 }
