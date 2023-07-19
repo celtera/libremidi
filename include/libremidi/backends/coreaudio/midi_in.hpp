@@ -13,7 +13,7 @@ public:
   static const constexpr auto backend = "CoreMIDI";
 
   struct
-      : output_configuration
+      : input_configuration
       , coremidi_input_configuration
   {
   } configuration;
@@ -253,7 +253,8 @@ private:
         {
           // If not a continuing sysex message, invoke the user callback
           // function or queue the message.
-          self.on_message_received(std::move(msg));
+          self.configuration.on_message(std::move(msg));
+          msg.clear();
         }
       }
       else
@@ -324,7 +325,8 @@ private:
             {
               // If not a continuing sysex message, invoke the user callback
               // function or queue the message.
-              self.on_message_received(std::move(msg));
+              self.configuration.on_message(std::move(msg));
+              msg.clear();
             }
             iByte += size;
           }
