@@ -346,6 +346,8 @@ private:
       packet = MIDIPacketNext(packet);
     }
   }
+
+  unsigned long long lastTime{};
 };
 
 }

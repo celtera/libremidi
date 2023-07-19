@@ -249,5 +249,7 @@ public:
       }
     }
   }
+
+  MIDIEndpointRef destinationId{};
 };
 }

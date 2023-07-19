@@ -195,9 +195,6 @@ struct coremidi_data
   MIDIClientRef client{};
   MIDIPortRef port{};
   MIDIEndpointRef endpoint{};
-  MIDIEndpointRef destinationId{};
-  unsigned long long lastTime{};
-  MIDISysexSendRequest sysexreq{};
 };
 
 }
