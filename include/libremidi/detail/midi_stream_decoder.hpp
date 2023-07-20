@@ -18,8 +18,10 @@ struct midi_stream_decoder
     bytes.reserve(16);
   }
 
-  void add_bytes(unsigned char* data, std::size_t sz)
+  void add_bytes(unsigned char* data, std::size_t sz, int64_t nanos = 0)
   {
+    msg.timestamp = nanos;
+
     for (std::size_t i = 0; i < sz; i++)
       bytes.push_back(data[i]);
 

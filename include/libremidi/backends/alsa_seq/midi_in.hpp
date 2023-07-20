@@ -289,6 +289,46 @@ public:
   }
 
 private:
+  void set_timestamp(snd_seq_event_t& ev, libremidi::message& msg) noexcept
+  {
+    static constexpr int64_t nanos = 1e9;
+    switch (configuration.timestamps)
+    {
+      case input_configuration::NoTimestamp:
+        msg.timestamp = 0;
+        return;
+      case input_configuration::Relative: {
+        const auto t0 = int64_t(ev.time.time.tv_sec) * nanos + int64_t(ev.time.time.tv_nsec);
+        const auto t1 = int64_t(last_time.tv_sec) * nanos + int64_t(last_time.tv_nsec);
+        const auto time = t1 - t0;
+
+        last_time = ev.time.time;
+
+        if (firstMessage == true)
+        {
+          firstMessage = false;
+          message.timestamp = 0;
+        }
+        else
+        {
+          message.timestamp = time;
+        }
+        return;
+      }
+      case input_configuration::Absolute: {
+        msg.timestamp = ev.time.time.tv_sec * nanos + ev.time.time.tv_nsec;
+        break;
+      }
+      case input_configuration::SystemMonotonic: {
+        namespace clk = std::chrono;
+        msg.timestamp
+            = clk::duration_cast<clk::nanoseconds>(clk::steady_clock::now().time_since_epoch())
+                  .count();
+        break;
+      }
+    }
+  }
+
   static void* alsaMidiHandler(void* ptr)
   {
     auto& self = *static_cast<midi_in_alsa*>(ptr);
@@ -437,50 +477,7 @@ private:
           continueSysex = ((ev->type == SND_SEQ_EVENT_SYSEX) && (message.bytes.back() != 0xF7));
           if (!continueSysex)
           {
-
-            // Calculate the time stamp:
-            message.timestamp = 0;
-
-            // Method 1: Use the system time.
-            // gettimeofday(&tv, (struct timezone *)nullptr);
-            // time = (tv.tv_sec * 1000000) + tv.tv_usec;
-
-            // Method 2: Use the ALSA sequencer event time this->
-            // (thanks to Pedro Lopez-Cabanillas!).
-
-            // Using method from:
-            // https://www.gnu.org/software/libc/manual/html_node/Elapsed-Time.html
-
-            // Perform the carry for the later subtraction by updating y.
-            snd_seq_real_time_t& x(ev->time.time);
-            snd_seq_real_time_t& y(self.lastTime);
-            if (x.tv_nsec < y.tv_nsec)
-            {
-              int nsec = (y.tv_nsec - x.tv_nsec) / 1000000000 + 1;
-              y.tv_nsec -= 1000000000 * nsec;
-              y.tv_sec += nsec;
-            }
-            if (x.tv_nsec - y.tv_nsec > 1000000000)
-            {
-              int nsec = (x.tv_nsec - y.tv_nsec) / 1000000000;
-              y.tv_nsec += 1000000000 * nsec;
-              y.tv_sec -= nsec;
-            }
-
-            // Compute the time difference.
-            time = x.tv_sec - y.tv_sec + (x.tv_nsec - y.tv_nsec) * 1e-9;
-
-            self.lastTime = ev->time.time;
-
-            if (self.firstMessage == true)
-            {
-              self.firstMessage = false;
-              message.timestamp = 0;
-            }
-            else
-            {
-              message.timestamp = time;
-            }
+            self.set_timestamp(*ev, message);
           }
           else
           {
@@ -510,7 +507,7 @@ private:
   pthread_t dummy_thread_id{};
   int queue_id{}; // an input queue is needed to get timestamped events
   int trigger_fds[2]{};
-  snd_seq_real_time_t lastTime{};
+  snd_seq_real_time_t last_time{};
 
   bool doInput{false};
 };

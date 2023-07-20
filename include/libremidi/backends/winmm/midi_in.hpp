@@ -195,7 +195,7 @@ private:
       message.timestamp = 0;
     }
     else
-      message.timestamp = (double)(timestamp - self.lastTime) * 0.001;
+      message.timestamp = (double)(timestamp - self.last_time) * 0.001;
 
     if (inputStatus == MIM_DATA)
     { // Channel or system message
@@ -278,14 +278,14 @@ private:
     }
 
     // Save the time of the last non-filtered message
-    self.lastTime = timestamp;
+    self.last_time = timestamp;
 
     self.configuration.on_message(std::move(message));
   }
 
   HMIDIIN inHandle; // Handle to Midi Input Device
 
-  DWORD lastTime;
+  DWORD last_time;
   LPMIDIHDR sysexBuffer[RT_SYSEX_BUFFER_COUNT];
   // [Patrice] see
   // https://groups.google.com/forum/#!topic/mididev/6OUjHutMpEo

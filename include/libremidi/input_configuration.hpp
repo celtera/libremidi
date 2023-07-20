@@ -42,12 +42,27 @@ struct input_configuration
   //! Specify how timestamps are handled in the system
   enum timestamp_mode
   {
+    //! No timestamping at all, all timestamps are zero
     NoTimestamp,
-    Relative, // Revert to old behaviour
-    Absolute  // In nanoseconds, as per std::high_resolution_clock::now()
+
+    //! In nanoseconds, timestamp is the time since the previous event (or zero)
+    Relative,
+
+    //! In nanoseconds, as per an arbitrary reference which may be provided by the host API,
+    //! e.g. since the JACK cycle start, ALSA sequencer queue creation, through AudioHostTime on macOS.
+    //! It offers the most precise ordering between events as it's the closest to the real timestamp of
+    //! the event as provided by the host API.
+    //! If the API does not provide any timing, it will be mapped to SystemMonotonic instead.
+    Absolute,
+
+    //! In nanoseconds, as per std::steady_clock::now() or equivalent (raw if possible).
+    //! May be less precise than Absolute as timestamping is done within the library,
+    //! but is more useful for system-wide synchronization.
+    //! Note: depending on the backend, Absolute and SystemMonotonic may be the same.
+    SystemMonotonic,
   };
 
-  uint32_t timestamps : 2 = timestamp_mode::Relative;
+  uint32_t timestamps : 2 = timestamp_mode::Absolute;
 };
 
 }

@@ -23,7 +23,8 @@ public:
   {
     // Set up our client.
     MIDIClientRef client{};
-    OSStatus result = MIDIClientCreate(toCFString(configuration.client_name).get(), nullptr, nullptr, &client);
+    OSStatus result
+        = MIDIClientCreate(toCFString(configuration.client_name).get(), nullptr, nullptr, &client);
     if (result != noErr)
     {
       error<driver_error>(
@@ -74,8 +75,8 @@ public:
     }
 
     MIDIPortRef port;
-    OSStatus result
-        = MIDIInputPortCreate(this->client, toCFString(portName).get(), midiInputCallback, (void*)this, &port);
+    OSStatus result = MIDIInputPortCreate(
+        this->client, toCFString(portName).get(), midiInputCallback, (void*)this, &port);
 
     if (result != noErr)
     {
@@ -174,28 +175,29 @@ public:
   }
 
 private:
+  static uint64_t time_in_nanos(MIDITimeStamp tp) noexcept
+  {
+    if (tp == 0)
+    { // this happens when receiving asynchronous sysex messages
+      return clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+    }
+    else
+    {
+      return AudioConvertHostTimeToNanos(tp);
+    }
+  }
+
   void set_timestamp(const MIDIPacket& packet, libremidi::message& msg) noexcept
   {
     // packet.timeStamp is in mach_absolute_time units
     // We want a timestamp in nanoseconds
 
-    auto time_in_nanos = [] (MIDITimeStamp tp) {
-      if (tp == 0)
-      { // this happens when receiving asynchronous sysex messages
-        return clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
-      }
-      else
-      {
-        return AudioConvertHostTimeToNanos(tp);
-      }
-    };
-
-    switch(configuration.timestamps) {
+    switch (configuration.timestamps)
+    {
       case input_configuration::NoTimestamp:
         msg.timestamp = 0;
         return;
-      case input_configuration::Relative:
-      {
+      case input_configuration::Relative: {
         if (firstMessage)
         {
           firstMessage = false;
@@ -208,16 +210,16 @@ private:
             return;
 
           auto time = time_in_nanos(packet.timeStamp);
-          time -= this->lastTime;
+          time -= this->last_time;
           msg.timestamp = time;
         }
         break;
       }
       case input_configuration::Absolute:
+      case input_configuration::SystemMonotonic:
         if (continueSysex)
           return;
         msg.timestamp = time_in_nanos(packet.timeStamp);
-
         break;
     }
   }
@@ -356,18 +358,14 @@ private:
       // Save the time of the last non-filtered message
       if (foundNonFiltered)
       {
-        self.lastTime = packet->timeStamp;
-        if (self.lastTime == 0)
-        { // this happens when receiving asynchronous sysex messages
-          self.lastTime = AudioGetCurrentHostTime();
-        }
+        self.last_time = time_in_nanos(packet->timeStamp);
       }
 
       packet = MIDIPacketNext(packet);
     }
   }
 
-  unsigned long long lastTime{};
+  unsigned long long last_time{};
 };
 
 }

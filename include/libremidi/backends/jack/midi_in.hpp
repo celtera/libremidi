@@ -3,6 +3,8 @@
 #include <libremidi/backends/jack/helpers.hpp>
 #include <libremidi/detail/midi_in.hpp>
 
+#include <chrono>
+
 namespace libremidi
 {
 class midi_in_jack final
@@ -153,6 +155,46 @@ private:
     jack_activate(this->client);
   }
 
+  void set_timestamp(
+      jack_nframes_t frame, jack_nframes_t start_frames, jack_time_t abs_usec,
+      libremidi::message& msg) noexcept
+  {
+    switch (configuration.timestamps)
+    {
+      case input_configuration::NoTimestamp:
+        msg.timestamp = 0;
+        return;
+      case input_configuration::Relative: {
+        // FIXME continueSysex logic like in core_midi?
+        // time_ns is roughly in CLOCK_MONOTONIC time frame (at least on linux)
+        const auto time_ns = 1000 * jack_frames_to_time(client, frame + start_frames);
+        if (firstMessage == true)
+        {
+          firstMessage = false;
+          msg.timestamp = 0;
+        }
+        else
+        {
+          msg.timestamp = time_ns - last_time;
+        }
+
+        last_time = time_ns;
+        return;
+      }
+      case input_configuration::Absolute: {
+        msg.timestamp = 1000 * jack_frames_to_time(client, frame + start_frames);
+        break;
+      }
+      case input_configuration::SystemMonotonic: {
+        namespace clk = std::chrono;
+        msg.timestamp
+            = clk::duration_cast<clk::nanoseconds>(clk::steady_clock::now().time_since_epoch())
+                  .count();
+        break;
+      }
+    }
+  }
+
   static int jackProcessIn(jack_nframes_t nframes, void* arg)
   {
     auto& self = *(midi_in_jack*)arg;
@@ -164,6 +206,13 @@ private:
       return 0;
     void* buff = jack_port_get_buffer(self.port, nframes);
 
+    // Timing
+    jack_nframes_t current_frames;
+    jack_time_t current_usecs; // roughly CLOCK_MONOTONIC
+    jack_time_t next_usecs;
+    float period_usecs;
+    jack_get_cycle_times(self.client, &current_frames, &current_usecs, &next_usecs, &period_usecs);
+
     // We have midi events in buffer
     uint32_t evCount = jack_midi_get_event_count(buff);
     for (uint32_t j = 0; j < evCount; j++)
@@ -171,20 +220,8 @@ private:
       auto& m = self.message;
 
       jack_midi_event_get(&event, buff, j);
+      self.set_timestamp(event.time, current_frames, current_usecs, m);
 
-      // Compute the delta time.
-      time = jack_get_time();
-      if (self.firstMessage == true)
-      {
-        self.firstMessage = false;
-        m.timestamp = 0;
-      }
-      else
-      {
-        m.timestamp = (time - self.lastTime) * 0.000001;
-      }
-
-      self.lastTime = time;
       if (!self.continueSysex)
         m.clear();
 
@@ -239,6 +276,6 @@ private:
 
   jack_client_t* client{};
   jack_port_t* port{};
-  jack_time_t lastTime{};
+  jack_time_t last_time{};
 };
 }

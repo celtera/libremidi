@@ -65,12 +65,46 @@ public:
       return;
     }
 
-    this->thread_ = std::thread{[this] {
-      running_ = true;
-      run_thread();
-    }};
+    snd_rawmidi_params_t* params{};
+    snd_rawmidi_params_alloca(&params);
+    int err = snd_rawmidi_params_current(midiport_, params);
+    err = snd_rawmidi_params_set_no_active_sensing(midiport_, params, 1);
+
+    if (configuration.timestamps == input_configuration::NoTimestamp)
+    {
+      err = snd_rawmidi_params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_STANDARD);
+      err = snd_rawmidi_params_set_clock_type(midiport_, params, SND_RAWMIDI_CLOCK_NONE);
+    }
+    else
+    {
+      err = snd_rawmidi_params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_TSTAMP);
+      err = snd_rawmidi_params_set_clock_type(midiport_, params, SND_RAWMIDI_CLOCK_MONOTONIC);
+    }
+
+    err = snd_rawmidi_params(midiport_, params);
+
+    if (configuration.timestamps == input_configuration::NoTimestamp)
+    {
+      this->thread_ = std::thread{[this] {
+        running_ = true;
+        run_thread(&midi_in_raw_alsa::read_input_buffer);
+      }};
+    }
+    else
+    {
+      this->thread_ = std::thread{[this] {
+        running_ = true;
+        run_thread(&midi_in_raw_alsa::read_input_buffer_with_timestamps);
+      }};
+    }
 
     connected_ = true;
+  }
+
+  void init_timestamping()
+  {
+    if (configuration.timestamps == input_configuration::NoTimestamp)
+      return;
   }
 
   void init_pollfd()
@@ -83,7 +117,7 @@ public:
     snd_rawmidi_poll_descriptors(this->midiport_, fds_.data(), num_fds);
   }
 
-  void run_thread()
+  void run_thread(auto parse_func)
   {
     static const constexpr int poll_timeout = 50; // in ms
 
@@ -112,7 +146,7 @@ public:
       // Is there data to read
       if (res & POLLIN)
       {
-        if (!read_input_buffer())
+        if (!(this->*parse_func)())
           return;
       }
     }
@@ -127,7 +161,7 @@ public:
     if (err > 0)
     {
       // err is the amount of bytes read in that case
-      const int length = filter_input_buffer(bytes, err);
+      const int length = err;
       if (length == 0)
         return true;
 
@@ -143,12 +177,51 @@ public:
     return true;
   }
 
-  int filter_input_buffer(unsigned char* data, int size)
+  void set_timestamp(const struct timespec& ts, int64_t& res)
   {
-    if (!filter_active_sensing_)
-      return size;
+    static constexpr int64_t nanos = 1e9;
+    switch (configuration.timestamps)
+    {
+      // Unneeded here
+      case input_configuration::NoTimestamp:
+        break;
+      case input_configuration::Relative:
+        res = ts.tv_sec * nanos + ts.tv_nsec - last_time;
+        last_time = nanos;
+        break;
+      case input_configuration::Absolute:
+      case input_configuration::SystemMonotonic:
+        res = ts.tv_sec * nanos + ts.tv_nsec;
+        break;
+    }
+  }
 
-    return std::remove(data, data + size, 0xFE) - data;
+  bool read_input_buffer_with_timestamps()
+  {
+    static const constexpr int nbytes = 1024;
+
+    unsigned char bytes[nbytes];
+    struct timespec ts;
+    const int err = snd_rawmidi_tread(this->midiport_, &ts, bytes, nbytes);
+    if (err > 0)
+    {
+      // err is the amount of bytes read in that case
+      const int length = err;
+      if (length == 0)
+        return true;
+
+      // we have "length" midi bytes ready to be processed.
+      int64_t ns{};
+      set_timestamp(ts, ns);
+      decoder_.add_bytes(bytes, length, ns);
+      return true;
+    }
+    else if (err < 0 && err != -EAGAIN)
+    {
+      return false;
+    }
+
+    return true;
   }
 
   void close_port() override
@@ -198,7 +271,6 @@ public:
   std::atomic_bool running_{};
   std::vector<pollfd> fds_;
   midi_stream_decoder decoder_{this->configuration.on_message};
-
-  bool filter_active_sensing_ = false;
+  int64_t last_time{};
 };
 }
