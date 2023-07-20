@@ -27,7 +27,7 @@ class midi_in_dummy final
     , public error_handler
 {
 public:
-  explicit midi_in_dummy(std::string_view /*clientName*/)
+  explicit midi_in_dummy(auto&&...)
       : midi_in_api{}
   {
     warning("midi_in_dummy: This class provides no functionality.");
@@ -59,7 +59,7 @@ class midi_out_dummy final
     , public error_handler
 {
 public:
-  explicit midi_out_dummy(std::string_view /*clientName*/)
+  explicit midi_out_dummy(auto&&...)
   {
     warning("midi_out_dummy: This class provides no functionality.");
   }

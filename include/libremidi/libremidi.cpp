@@ -83,11 +83,8 @@ static constexpr auto available_backends = make_tl(
     ,
     emscripten_backend{}
 #endif
-#if defined(LIBREMIDI_DUMMY)
     ,
-    dummy_backend{}
-#endif
-);
+    dummy_backend{});
 
 // There should always be at least one back-end.
 static_assert(std::tuple_size_v<decltype(available_backends)> >= 1);
@@ -410,13 +407,10 @@ midi_in::midi_in(libremidi::API api, std::string_view clientName)
     {
       return;
     }
-
-#if defined(__LIBREMIDI_DEBUG__)
-    // No compiled support for specified API value.  Issue a warning
-    // and continue as if no API was specified.
-
-    std::cerr << "\nmidi_in: no compiled support for specified API argument!\n\n" << std::endl;
-#endif
+    else
+    {
+      throw midi_exception{"midi_out: requested API not found"};
+    }
   }
 
   // Iterate through the compiled APIs and return as soon as we find
@@ -503,13 +497,10 @@ midi_out::midi_out(libremidi::API api, std::string_view clientName)
     {
       return;
     }
-
-#if defined(__LIBREMIDI_DEBUG__)
-    // No compiled support for specified API value.  Issue a warning
-    // and continue as if no API was specified.
-
-    std::cerr << "\nmidi_out: no compiled support for specified API argument!\n\n" << std::endl;
-#endif
+    else
+    {
+      throw midi_exception{"midi_out: requested API not found"};
+    }
   }
 
   // Iterate through the compiled APIs and return as soon as we find

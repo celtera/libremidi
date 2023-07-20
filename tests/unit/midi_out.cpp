@@ -14,8 +14,8 @@ TEST_CASE("sending messages with span", "[midi_out]")
 }
 
 #if !defined(LIBREMIDI_CI)
-#if defined(__linux__)
-  #include <libremidi/backends/alsa_raw/config.hpp>
+  #if defined(__linux__)
+    #include <libremidi/backends/alsa_raw/config.hpp>
 TEST_CASE("sending chunked messages", "[midi_out]")
 {
   std::set<int> written_bytes;
@@ -31,12 +31,19 @@ TEST_CASE("sending chunked messages", "[midi_out]")
                 return true;
               }}}};
 
-  midi.open_port();
+  if (midi.get_port_count() > 0)
+  {
+    midi.open_port();
 
-  unsigned char data[16384]{};
-  midi.send_message(std::span<unsigned char>(data, 16384));
+    unsigned char data[16384]{};
+    midi.send_message(std::span<unsigned char>(data, 16384));
 
-  REQUIRE(written_bytes == std::set<int>{4096, 8192, 12288});
+    REQUIRE(written_bytes == std::set<int>{4096, 8192, 12288});
+  }
+  else
+  {
+    WARN("No MIDI output found, skipping test");
+  }
 }
-#endif
+  #endif
 #endif
