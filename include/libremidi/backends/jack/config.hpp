@@ -12,6 +12,8 @@ struct jack_input_configuration
 struct jack_output_configuration
 {
   std::string client_name;
+
+  int32_t ringbuffer_size = 16384;
 };
 
 }

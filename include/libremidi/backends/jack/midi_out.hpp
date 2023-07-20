@@ -215,7 +215,7 @@ private:
       return;
 
     // Initialize output ringbuffers
-    this->queue = jack_queue{midi_out_jack::ringbuffer_size};
+    this->queue = jack_queue{configuration.ringbuffer_size};
 
     // Initialize JACK client
     this->client = jack_client_open(configuration.client_name.c_str(), JackNoStartServer, nullptr);
@@ -249,8 +249,6 @@ private:
   }
 
 private:
-  static const constexpr auto ringbuffer_size = 16384;
-
   jack_client_t* client{};
   jack_port_t* port{};
 
