@@ -44,6 +44,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // [] Event too short
 // ==============================
 
+#if defined(__LIBREMIDI_DEBUG__)
+std::ostream& operator<<(std::ostream& s, const libremidi::message& m)
+{
+  s << "[ MIDI: ";
+  for (auto b : m)
+    s << (unsigned int)b << ' ';
+  s << "]\n";
+  return s;
+}
+#endif
+
 namespace libremidi
 {
 namespace util
@@ -65,10 +76,24 @@ struct validator
       return false;
     }
 
-    auto& last_event = track.back();
-    if (last_event.m.bytes != midi_bytes{0xFF, (unsigned char)meta_event_type::END_OF_TRACK, 0})
+    // Ensure that there is a unique EOT at the end of the track
+    auto it = std::find_if(track.begin(), track.end(), [](const libremidi::track_event& msg) {
+      static const auto eot = meta_events::end_of_track();
+      return msg.m.bytes == eot.bytes;
+    });
+
+    if (it == track.end())
     {
 #if defined(__LIBREMIDI_DEBUG__)
+      std::cerr << "libremidi::reader: track has no END OF TRACK" << std::endl;
+#endif
+      return false;
+    }
+
+    if (&it->m != &track.back().m)
+    {
+#if defined(__LIBREMIDI_DEBUG__)
+      std::cerr << std::distance(it, track.end());
       std::cerr << "libremidi::reader: track does not end with END OF TRACK" << std::endl;
 #endif
       return false;
@@ -292,6 +317,33 @@ track_event parse_event(
           if (length != 5)
             throw std::invalid_argument("Expected length for SMPTE_OFFSET event is 5");
           byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
+          auto& b = event.m.bytes;
+
+          uint8_t format = (b[3] & 0b01100000) >> 5;
+          uint8_t h = (b[3] & 0b00011111);
+
+          if (format > 3)
+            throw std::invalid_argument("SMPTE_OFFSET has unknown format");
+
+          int max = 0;
+          switch (format)
+          {
+            case 0: // 24
+              max = 24;
+              break;
+            case 1: // 25
+              max = 25;
+              break;
+            case 2: // 29
+              max = 29;
+              break;
+            case 3: // 30
+              max = 30;
+              break;
+          }
+
+          if (h >= 24 || b[4] >= 60 || b[5] >= 60 || b[6] >= max || b[7] >= 100)
+            throw std::invalid_argument("SMPTE_OFFSET is out-of-23:59:59:xx:99 bounds");
           return event;
         }
         case meta_event_type::TIME_SIGNATURE: {
@@ -304,6 +356,11 @@ track_event parse_event(
           if (length != 2)
             throw std::invalid_argument("Expected length for KEY_SIGNATURE event is 2");
           byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
+          int8_t k = event.m[3];
+          if (k < -7 || k > 7)
+            throw std::invalid_argument("Invalid KEY_SIGNATURE");
+          if (event.m[4] > 1)
+            throw std::invalid_argument("Invalid KEY_SIGNATURE");
           return event;
         }
         case meta_event_type::PROPRIETARY: {
@@ -374,31 +431,46 @@ track_event parse_event(
       lastEventTypeByte = type;
     }
 
+    static constexpr auto validate = [](midi_bytes& b) {
+      if (b[1] < 128 && b[2] < 128)
+        return true;
+      throw std::invalid_argument("MIDI message has arguments > 127");
+    };
+
     switch (message_type((uint8_t)type & 0xF0))
     {
       case message_type::NOTE_OFF:
         byte_reader::ensure_size(dataStart, dataEnd, 1);
         event.m.bytes.push_back(*dataStart++);
+        validate(event.m.bytes);
         return event;
       case message_type::NOTE_ON:
         byte_reader::ensure_size(dataStart, dataEnd, 1);
         event.m.bytes.push_back(*dataStart++);
+        validate(event.m.bytes);
         return event;
       case message_type::POLY_PRESSURE:
         byte_reader::ensure_size(dataStart, dataEnd, 1);
         event.m.bytes.push_back(*dataStart++);
+        validate(event.m.bytes);
         return event;
       case message_type::CONTROL_CHANGE:
         byte_reader::ensure_size(dataStart, dataEnd, 1);
         event.m.bytes.push_back(*dataStart++);
+        validate(event.m.bytes);
         return event;
       case message_type::PROGRAM_CHANGE:
+        if (event.m.bytes[1] >= 128)
+          throw std::invalid_argument("MIDI PC has arguments > 127");
         return event;
       case message_type::AFTERTOUCH:
+        if (event.m.bytes[1] >= 128)
+          throw std::invalid_argument("MIDI Atertouch has arguments > 127");
         return event;
       case message_type::PITCH_BEND:
         byte_reader::ensure_size(dataStart, dataEnd, 1);
         event.m.bytes.push_back(*dataStart++);
+        validate(event.m.bytes);
         return event;
 
       case message_type::TIME_CODE:
@@ -489,9 +561,15 @@ try
 
   format = read_checked::read_uint16_be(
       dataPtr, dataEnd); //@tofix format type -> save for later eventually
-
+  if (format > 2)
+  {
+#if defined(__LIBREMIDI_DEBUG__)
+    std::cerr << "libremidi::reader: unknown format" << std::endl;
+#endif
+    return parse_result::invalid;
+  }
   int trackCount = read_checked::read_uint16_be(dataPtr, dataEnd);
-  int timeDivision = read_checked::read_uint16_be(dataPtr, dataEnd);
+  uint16_t timeDivision = read_checked::read_uint16_be(dataPtr, dataEnd);
 
   // CBB: deal with the SMPTE style time coding
   // timeDivision is described here http://www.sonicspot.com/guide/midifiles.html
@@ -499,9 +577,11 @@ try
   {
 #if defined(__LIBREMIDI_DEBUG__)
     std::cerr << "libremidi::reader: found SMPTE time frames (unsupported)" << std::endl;
+    int fps = (timeDivision >> 16) & 0x7f;
+    if (fps != -30 && fps != -29 && fps != -25 && fps != -24)
+      return parse_result::invalid;
+    int ticksPerFrame = timeDivision & 0xff;
 #endif
-    // int fps = (timeDivision >> 16) & 0x7f;
-    // int ticksPerFrame = timeDivision & 0xff;
     // given beats per second, timeDivision should be derivable.
     return parse_result::invalid;
   }
@@ -558,7 +638,6 @@ try
       try
       {
         track_event ev = parse_event(tickCount, i, dataPtr, trackEnd, runningEvent);
-
         if (!ev.m.bytes.empty())
         {
           if (!ev.m.is_meta_event())
@@ -597,6 +676,17 @@ try
       }
     }
     tracks.push_back(std::move(track));
+  }
+
+  if (result == parse_result::validated)
+  {
+    if (dataPtr != dataEnd)
+    {
+#if defined(__LIBREMIDI_DEBUG__)
+      std::cerr << "midifile has junk at end: " << std::intptr_t(dataEnd - dataPtr) << std::endl;
+#endif
+      result = parse_result::complete;
+    }
   }
   return result;
 }
