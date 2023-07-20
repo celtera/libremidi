@@ -4,8 +4,71 @@
 #include <libremidi/detail/midi_out.hpp>
 
 #include <semaphore>
+
 namespace libremidi
 {
+struct jack_queue
+{
+public:
+  static constexpr auto size_sz = sizeof(int32_t);
+
+  jack_queue() = default;
+  jack_queue(const jack_queue&) = delete;
+  jack_queue(jack_queue&&) = delete;
+  jack_queue& operator=(const jack_queue&) = delete;
+
+  jack_queue& operator=(jack_queue&& other) noexcept
+  {
+    ringbuffer = other.ringbuffer;
+    ringbuffer_space = other.ringbuffer_space;
+    other.ringbuffer = nullptr;
+    return *this;
+  }
+
+  explicit jack_queue(int sz) noexcept
+  {
+    ringbuffer = jack_ringbuffer_create(sz);
+    ringbuffer_space = (int)jack_ringbuffer_write_space(ringbuffer);
+  }
+
+  ~jack_queue() noexcept
+  {
+    if (ringbuffer)
+      jack_ringbuffer_free(ringbuffer);
+  }
+
+  void write(const unsigned char* data, int32_t sz) noexcept
+  {
+    if (sz + size_sz > ringbuffer_space)
+      return;
+
+    while (jack_ringbuffer_write_space(ringbuffer) < size_sz + sz)
+      sched_yield();
+
+    jack_ringbuffer_write(ringbuffer, (char*)&sz, size_sz);
+    jack_ringbuffer_write(ringbuffer, (const char*)data, sz);
+  }
+
+  void read(void* jack_events) noexcept
+  {
+    jack_midi_clear_buffer(jack_events);
+
+    int32_t sz;
+    while (jack_ringbuffer_peek(ringbuffer, (char*)&sz, size_sz) == size_sz
+           && jack_ringbuffer_read_space(ringbuffer) >= size_sz + sz)
+    {
+      jack_ringbuffer_read_advance(ringbuffer, size_sz);
+
+      if (auto midi = jack_midi_event_reserve(jack_events, 0, sz))
+        jack_ringbuffer_read(ringbuffer, (char*)midi, sz);
+      else
+        jack_ringbuffer_read_advance(ringbuffer, sz);
+    }
+  }
+
+  jack_ringbuffer_t* ringbuffer{};
+  int32_t ringbuffer_space{}; // actual writable size, usually 1 less than ringbuffer
+};
 
 class midi_out_jack final
     : public midi_out_api
@@ -32,9 +95,6 @@ public:
   {
     midi_out_jack::close_port();
 
-    // Cleanup
-    jack_ringbuffer_free(this->buffSize);
-    jack_ringbuffer_free(this->buffMessage);
     if (this->client)
     {
       jack_client_close(this->client);
@@ -145,11 +205,7 @@ public:
 
   void send_message(const unsigned char* message, size_t size) override
   {
-    int nBytes = static_cast<int>(size);
-
-    // Write full message to buffer
-    jack_ringbuffer_write(this->buffMessage, (const char*)message, nBytes);
-    jack_ringbuffer_write(this->buffSize, (char*)&nBytes, sizeof(nBytes));
+    queue.write(message, size);
   }
 
 private:
@@ -159,8 +215,7 @@ private:
       return;
 
     // Initialize output ringbuffers
-    this->buffSize = jack_ringbuffer_create(midi_out_jack::ringbuffer_size);
-    this->buffMessage = jack_ringbuffer_create(midi_out_jack::ringbuffer_size);
+    this->queue = jack_queue{midi_out_jack::ringbuffer_size};
 
     // Initialize JACK client
     this->client = jack_client_open(configuration.client_name.c_str(), JackNoStartServer, nullptr);
@@ -185,14 +240,7 @@ private:
     void* buff = jack_port_get_buffer(self.port, nframes);
     jack_midi_clear_buffer(buff);
 
-    while (jack_ringbuffer_read_space(self.buffSize) > 0)
-    {
-      int space{};
-      jack_ringbuffer_read(self.buffSize, (char*)&space, sizeof(int));
-      auto midiData = jack_midi_event_reserve(buff, 0, space);
-
-      jack_ringbuffer_read(self.buffMessage, (char*)midiData, space);
-    }
+    self.queue.read(buff);
 
     if (!self.sem_needpost.try_acquire())
       self.sem_cleanup.release();
@@ -206,8 +254,7 @@ private:
   jack_client_t* client{};
   jack_port_t* port{};
 
-  jack_ringbuffer_t* buffSize{};
-  jack_ringbuffer_t* buffMessage{};
+  jack_queue queue;
 
   std::counting_semaphore<> sem_cleanup{0};
   std::counting_semaphore<> sem_needpost{0};
