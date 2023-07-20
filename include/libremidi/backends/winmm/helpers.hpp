@@ -5,10 +5,6 @@
 #include <libremidi/libremidi.hpp>
 
 #include <algorithm>
-#include <chrono>
-#include <condition_variable>
-#include <mutex>
-#include <thread>
 
 // clang-format off
 #include <windows.h>

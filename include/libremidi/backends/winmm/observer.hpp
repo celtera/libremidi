@@ -1,6 +1,11 @@
 #pragma once
 #include <libremidi/backends/winmm/config.hpp>
+#include <libremidi/backends/winmm/helpers.hpp>
 #include <libremidi/detail/observer.hpp>
+
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 
 namespace libremidi
 {
@@ -13,10 +18,10 @@ private:
   std::thread watchThread;
   std::condition_variable watchThreadCV;
   std::mutex watchThreadMutex;
-  bool watchThreadShutdown;
+  bool watchThreadShutdown{};
 
-  inline static const bool INPUT = true;
-  inline static const bool OUTPUT = false;
+  static constexpr bool INPUT = true;
+  static constexpr bool OUTPUT = false;
 
 public:
   using PortList = std::vector<std::string>;
