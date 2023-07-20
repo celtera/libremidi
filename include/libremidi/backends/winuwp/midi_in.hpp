@@ -7,7 +7,9 @@
 namespace libremidi
 {
 
-class midi_in_winuwp final : public midi_in_api
+class midi_in_winuwp final
+    : public midi_in_api
+    , public error_handler
 {
 public:
   struct
