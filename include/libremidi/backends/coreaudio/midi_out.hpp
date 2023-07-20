@@ -49,10 +49,6 @@ public:
       MIDIEndpointDispose(this->endpoint);
   }
 
-  void open_virtual_port(std::string_view) override
-  {
-    warning(configuration, "midi_out_core: open_virtual_port unsupported");
-  }
   void set_client_name(std::string_view) override
   {
     warning(configuration, "midi_out_core: set_client_name unsupported");
@@ -123,6 +119,7 @@ public:
     if (this->endpoint)
     {
       warning(
+          configuration,
           "midi_out_core::open_virtual_port: a virtual output port already "
           "exists!");
       return;
@@ -205,6 +202,7 @@ public:
     if (message[0] != 0xF0 && nBytes > 3)
     {
       warning(
+          configuration,
           "midi_out_core::send_message: message format problem ... not sysex but "
           "> 3 bytes?");
       return;
