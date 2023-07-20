@@ -128,7 +128,7 @@ struct alsa_data
     }
 
     // If we get here, we didn't find a match.
-    // warning("midi_in_alsa::get_port_name: error looking for port name!");
+    // warning(configuration, "midi_in_alsa::get_port_name: error looking for port name!");
     return {};
   }
 };

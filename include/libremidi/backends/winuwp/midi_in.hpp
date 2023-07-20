@@ -7,10 +7,9 @@
 namespace libremidi
 {
 
-class midi_in_winuwp final : public midi_in_default<midi_in_winuwp>
+class midi_in_winuwp final : public midi_in_api
 {
 public:
-  static const constexpr auto backend = "UWP";
   struct
       : input_configuration
       , winuwp_input_configuration
@@ -18,8 +17,7 @@ public:
   } configuration;
 
   explicit midi_in_winuwp(input_configuration&& conf, winuwp_input_configuration&& apiconf)
-      : midi_in_default{}
-      , configuration{std::move(conf), std::move(apiconf)}
+      : configuration{std::move(conf), std::move(apiconf)}
 
   {
     winrt_init();
@@ -31,13 +29,26 @@ public:
       port_.Close();
   }
 
+  void open_virtual_port(std::string_view) override
+  {
+    warning(configuration, "midi_in_winuwp: open_virtual_port unsupported");
+  }
+  void set_client_name(std::string_view) override
+  {
+    warning(configuration, "midi_in_winuwp: set_client_name unsupported");
+  }
+  void set_port_name(std::string_view) override
+  {
+    warning(configuration, "midi_in_winuwp: set_port_name unsupported");
+  }
+
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 
   void open_port(unsigned int portNumber, std::string_view) override
   {
     if (connected_)
     {
-      warning("midi_in_winuwp::open_port: a valid connection already exists!");
+      warning(configuration, "midi_in_winuwp::open_port: a valid connection already exists!");
       return;
     }
 
@@ -47,9 +58,9 @@ public:
       port_ = get(MidiInPort::FromIdAsync(id));
       if (port_)
       {
-        port_.MessageReceived([=](
-            const winrt::Windows::Devices::Midi::IMidiInPort& inputPort
-          , const winrt::Windows::Devices::Midi::MidiMessageReceivedEventArgs& args) {
+        port_.MessageReceived(
+            [=](const winrt::Windows::Devices::Midi::IMidiInPort& inputPort,
+                const winrt::Windows::Devices::Midi::MidiMessageReceivedEventArgs& args) {
           const auto& msg = args.Message();
 
           auto reader = DataReader::FromBuffer(msg.RawData());

@@ -8,7 +8,7 @@ namespace libremidi
 class midi_in_alsa final
     : public midi_in_api
     , private alsa_data
-    , private error_handler
+    , public error_handler
 {
 public:
   struct
@@ -27,6 +27,7 @@ public:
     if (result < 0)
     {
       error<driver_error>(
+          this->configuration,
           "midi_in_alsa::initialize: error creating ALSA sequencer client "
           "object.");
       return;
@@ -46,7 +47,8 @@ public:
 
     if (pipe(this->trigger_fds) == -1)
     {
-      error<driver_error>("midi_in_alsa::initialize: error creating pipe objects.");
+      error<driver_error>(
+          this->configuration, "midi_in_alsa::initialize: error creating pipe objects.");
       return;
     }
 
@@ -118,7 +120,8 @@ public:
 
       if (this->vport < 0)
       {
-        error<driver_error>("midi_in_alsa::open_port: ALSA error creating input port.");
+        error<driver_error>(
+            this->configuration, "midi_in_alsa::open_port: ALSA error creating input port.");
         return false;
       }
       this->vport = snd_seq_port_info_get_port(pinfo);
@@ -151,7 +154,8 @@ public:
         this->subscription = nullptr;
       }
       this->doInput = false;
-      error<thread_error>("midi_in_alsa::start_thread: error starting MIDI input thread!");
+      error<thread_error>(
+          this->configuration, "midi_in_alsa::start_thread: error starting MIDI input thread!");
       return false;
     }
     return true;
@@ -161,7 +165,7 @@ public:
   {
     if (connected_)
     {
-      warning("midi_in_alsa::open_port: a valid connection already exists!");
+      warning(this->configuration, "midi_in_alsa::open_port: a valid connection already exists!");
       return;
     }
 
@@ -169,7 +173,8 @@ public:
     unsigned int nSrc = this->get_port_count();
     if (nSrc < 1)
     {
-      error<no_devices_found_error>("midi_in_alsa::open_port: no MIDI input sources found!");
+      error<no_devices_found_error>(
+          this->configuration, "midi_in_alsa::open_port: no MIDI input sources found!");
       return;
     }
 
@@ -181,6 +186,7 @@ public:
         == 0)
     {
       error<invalid_parameter_error>(
+          this->configuration,
           "midi_in_alsa::open_port: invalid 'portNumber' argument: " + std::to_string(portNumber));
       return;
     }
@@ -201,7 +207,9 @@ public:
       // Make subscription
       if (snd_seq_port_subscribe_malloc(&this->subscription) < 0)
       {
-        error<driver_error>("midi_in_alsa::open_port: ALSA error allocation port subscription.");
+        error<driver_error>(
+            this->configuration,
+            "midi_in_alsa::open_port: ALSA error allocation port subscription.");
         return;
       }
       snd_seq_port_subscribe_set_sender(this->subscription, &sender);
@@ -210,7 +218,8 @@ public:
       {
         snd_seq_port_subscribe_free(this->subscription);
         this->subscription = nullptr;
-        error<driver_error>("midi_in_alsa::open_port: ALSA error making port connection.");
+        error<driver_error>(
+            this->configuration, "midi_in_alsa::open_port: ALSA error making port connection.");
         return;
       }
     }

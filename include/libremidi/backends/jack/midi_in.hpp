@@ -10,7 +10,7 @@ namespace libremidi
 class midi_in_jack final
     : public midi_in_api
     , private jack_helpers
-    , private error_handler
+    , public error_handler
 {
 public:
   struct
@@ -38,6 +38,11 @@ public:
       jack_client_close(this->client);
   }
 
+  void set_client_name(std::string_view) override
+  {
+    warning(configuration, "midi_out_jack: set_client_name unsupported");
+  }
+
   libremidi::API get_current_api() const noexcept override { return libremidi::API::UNIX_JACK; }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
@@ -54,7 +59,7 @@ public:
 
     if (this->port == nullptr)
     {
-      error<driver_error>("midi_in_jack::open_port: JACK error creating port");
+      error<driver_error>(configuration, "midi_in_jack::open_port: JACK error creating port");
       return;
     }
 
@@ -77,7 +82,8 @@ public:
 
     if (!this->port)
     {
-      error<driver_error>("midi_in_jack::open_virtual_port: JACK error creating virtual port");
+      error<driver_error>(
+          configuration, "midi_in_jack::open_virtual_port: JACK error creating virtual port");
     }
   }
 
@@ -89,13 +95,6 @@ public:
     this->port = nullptr;
 
     connected_ = false;
-  }
-
-  void set_client_name(std::string_view clientName) override
-  {
-    warning(
-        "midi_in_jack::setClientName: this function is not implemented for the "
-        "UNIX_JACK API!");
   }
 
   void set_port_name(std::string_view portName) override
@@ -147,7 +146,7 @@ private:
         = jack_client_open(this->configuration.client_name.c_str(), JackNoStartServer, nullptr);
     if (this->client == nullptr)
     {
-      warning("midi_in_jack::initialize: JACK server not running?");
+      warning(configuration, "midi_in_jack::initialize: JACK server not running?");
       return;
     }
 

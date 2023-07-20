@@ -19,24 +19,24 @@ namespace libremidi
 struct jack_helpers
 {
   static bool check_port_name_length(
-      const error_handler& self, std::string_view clientName, std::string_view portName)
+      const auto& self, std::string_view clientName, std::string_view portName)
   {
     // full name: "client_name:port_name\0"
     if (clientName.size() + portName.size() + 1 + 1 >= jack_port_name_size())
     {
-      self.error<invalid_use_error>("JACK: port name length limit exceeded");
+      self.template error<invalid_use_error>(self.configuration, "JACK: port name length limit exceeded");
       return false;
     }
     return true;
   }
 
   static std::string
-  get_port_name(const error_handler& self, const char** ports, unsigned int portNumber)
+  get_port_name(const auto& self, const char** ports, unsigned int portNumber)
   {
     // Check port validity
     if (ports == nullptr)
     {
-      self.warning("midi_jack::get_port_name: no ports available!");
+      self.warning(self.configuration, "midi_jack::get_port_name: no ports available!");
       return {};
     }
 
@@ -44,7 +44,7 @@ struct jack_helpers
     {
       if (ports[i] == nullptr)
       {
-        self.error<invalid_parameter_error>(
+        self.template error<invalid_parameter_error>(self.configuration,
             "midi_jack::get_port_name: invalid 'portNumber' argument: "
             + std::to_string(portNumber));
         return {};

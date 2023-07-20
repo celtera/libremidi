@@ -6,12 +6,11 @@
 namespace libremidi
 {
 class midi_in_core final
-    : public midi_in_default<midi_in_core>
+    : public midi_in_api
     , private coremidi_data
+    , public error_handler
 {
 public:
-  static const constexpr auto backend = "CoreMIDI";
-
   struct
       : input_configuration
       , coremidi_input_configuration
@@ -28,8 +27,8 @@ public:
     if (result != noErr)
     {
       error<driver_error>(
-          "midi_in_core::initialize: error creating OS-X MIDI client object: "
-          + std::to_string(result));
+          this->configuration, "midi_in_core::initialize: error creating OS-X MIDI client object: "
+                                   + std::to_string(result));
       return;
     }
 
@@ -49,13 +48,22 @@ public:
       MIDIEndpointDispose(this->endpoint);
   }
 
+  void set_client_name(std::string_view) override
+  {
+    warning(configuration, "midi_in_core: set_client_name unsupported");
+  }
+  void set_port_name(std::string_view) override
+  {
+    warning(configuration, "midi_in_core: set_port_name unsupported");
+  }
+
   libremidi::API get_current_api() const noexcept override { return libremidi::API::MACOSX_CORE; }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
     if (connected_)
     {
-      warning("midi_in_core::open_port: a valid connection already exists!");
+      warning(this->configuration, "midi_in_core::open_port: a valid connection already exists!");
       return;
     }
 
@@ -63,13 +71,15 @@ public:
     unsigned int nSrc = MIDIGetNumberOfSources();
     if (nSrc < 1)
     {
-      error<no_devices_found_error>("midi_in_core::open_port: no MIDI input sources found!");
+      error<no_devices_found_error>(
+          this->configuration, "midi_in_core::open_port: no MIDI input sources found!");
       return;
     }
 
     if (portNumber >= nSrc)
     {
       error<invalid_parameter_error>(
+          this->configuration,
           "midi_in_core::open_port: invalid 'portNumber' argument: " + std::to_string(portNumber));
       return;
     }
@@ -81,7 +91,8 @@ public:
     if (result != noErr)
     {
       MIDIClientDispose(this->client);
-      error<driver_error>("midi_in_core::open_port: error creating OS-X MIDI input port.");
+      error<driver_error>(
+          this->configuration, "midi_in_core::open_port: error creating OS-X MIDI input port.");
       return;
     }
 
@@ -91,7 +102,9 @@ public:
     {
       MIDIPortDispose(port);
       MIDIClientDispose(this->client);
-      error<driver_error>("midi_in_core::open_port: error getting MIDI input source reference.");
+      error<driver_error>(
+          this->configuration,
+          "midi_in_core::open_port: error getting MIDI input source reference.");
       return;
     }
 
@@ -101,7 +114,8 @@ public:
     {
       MIDIPortDispose(port);
       MIDIClientDispose(this->client);
-      error<driver_error>("midi_in_core::open_port: error connecting OS-X MIDI input port.");
+      error<driver_error>(
+          this->configuration, "midi_in_core::open_port: error connecting OS-X MIDI input port.");
       return;
     }
 
@@ -121,6 +135,7 @@ public:
     if (result != noErr)
     {
       error<driver_error>(
+          this->configuration,
           "midi_in_core::open_virtual_port: error creating virtual OS-X MIDI "
           "destination.");
       return;
@@ -159,8 +174,8 @@ public:
     if (portNumber >= MIDIGetNumberOfSources())
     {
       error<invalid_parameter_error>(
-          "midi_in_core::get_port_name: invalid 'portNumber' argument: "
-          + std::to_string(portNumber));
+          this->configuration, "midi_in_core::get_port_name: invalid 'portNumber' argument: "
+                                   + std::to_string(portNumber));
       return {};
     }
 

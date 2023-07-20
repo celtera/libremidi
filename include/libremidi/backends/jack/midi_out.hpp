@@ -8,12 +8,11 @@ namespace libremidi
 {
 
 class midi_out_jack final
-    : public midi_out_default<midi_out_jack>
+    : public midi_out_api
     , private jack_helpers
+    , public error_handler
 {
 public:
-  static const constexpr auto backend = "JACK";
-
   struct
       : output_configuration
       , jack_output_configuration
@@ -42,6 +41,11 @@ public:
     }
   }
 
+  void set_client_name(std::string_view) override
+  {
+    warning(configuration, "midi_out_jack: set_client_name unsupported");
+  }
+
   libremidi::API get_current_api() const noexcept override { return libremidi::API::UNIX_JACK; }
 
   void open_port(unsigned int portNumber, std::string_view portName) override
@@ -58,7 +62,7 @@ public:
 
     if (!this->port)
     {
-      error<driver_error>("midi_out_jack::open_port: JACK error creating port");
+      error<driver_error>(configuration, "midi_out_jack::open_port: JACK error creating port");
       return;
     }
 
@@ -81,7 +85,8 @@ public:
 
     if (this->port == nullptr)
     {
-      error<driver_error>("midi_out_jack::open_virtual_port: JACK error creating virtual port");
+      error<driver_error>(
+          configuration, "midi_out_jack::open_virtual_port: JACK error creating virtual port");
     }
   }
 
@@ -161,7 +166,7 @@ private:
     this->client = jack_client_open(configuration.client_name.c_str(), JackNoStartServer, nullptr);
     if (this->client == nullptr)
     {
-      warning("midi_out_jack::initialize: JACK server not running?");
+      warning(configuration, "midi_out_jack::initialize: JACK server not running?");
       return;
     }
 

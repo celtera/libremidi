@@ -6,10 +6,11 @@
 namespace libremidi
 {
 
-class midi_in_winmm final : public midi_in_default<midi_in_winmm>
+class midi_in_winmm final
+    : public midi_in_api
+    , public error_handler
 {
 public:
-  static const constexpr auto backend = "WinMM";
   struct
       : input_configuration
       , winmm_input_configuration
@@ -17,20 +18,22 @@ public:
   } configuration;
 
   explicit midi_in_winmm(input_configuration&& conf, winmm_input_configuration&& apiconf)
-      : midi_in_default{}
-      , configuration{std::move(conf), std::move(apiconf)}
+      : configuration{std::move(conf), std::move(apiconf)}
   {
     // We'll issue a warning here if no devices are available but not
     // throw an error since the user can plugin something later.
     unsigned int nDevices = get_port_count();
     if (nDevices == 0)
     {
-      warning("midi_in_winmm::initialize: no MIDI input devices currently available.");
+      warning(
+          configuration, "midi_in_winmm::initialize: no MIDI input devices currently available.");
     }
 
     if (!InitializeCriticalSectionAndSpinCount(&(this->_mutex), 0x00000400))
     {
-      warning("midi_in_winmm::initialize: InitializeCriticalSectionAndSpinCount failed.");
+      warning(
+          configuration,
+          "midi_in_winmm::initialize: InitializeCriticalSectionAndSpinCount failed.");
     }
   }
 
@@ -42,28 +45,42 @@ public:
     DeleteCriticalSection(&(this->_mutex));
   }
 
+  void open_virtual_port(std::string_view) override
+  {
+    warning(configuration, "midi_in_winmm: open_virtual_port unsupported");
+  }
+  void set_client_name(std::string_view) override
+  {
+    warning(configuration, "midi_in_winmm: set_client_name unsupported");
+  }
+  void set_port_name(std::string_view) override
+  {
+    warning(configuration, "midi_in_winmm: set_port_name unsupported");
+  }
+
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
   void open_port(unsigned int portNumber, std::string_view) override
   {
     if (connected_)
     {
-      warning("midi_in_winmm::open_port: a valid connection already exists!");
+      warning(configuration, "midi_in_winmm::open_port: a valid connection already exists!");
       return;
     }
 
     unsigned int nDevices = midiInGetNumDevs();
     if (nDevices == 0)
     {
-      error<no_devices_found_error>("midi_in_winmm::open_port: no MIDI input sources found!");
+      error<no_devices_found_error>(
+          configuration, "midi_in_winmm::open_port: no MIDI input sources found!");
       return;
     }
 
     if (portNumber >= nDevices)
     {
       error<invalid_parameter_error>(
-          "midi_in_winmm::open_port: invalid 'portNumber' argument: "
-          + std::to_string(portNumber));
+          configuration, "midi_in_winmm::open_port: invalid 'portNumber' argument: "
+                             + std::to_string(portNumber));
       return;
     }
 
@@ -72,7 +89,8 @@ public:
         CALLBACK_FUNCTION);
     if (result != MMSYSERR_NOERROR)
     {
-      error<driver_error>("midi_in_winmm::open_port: error creating Windows MM MIDI input port.");
+      error<driver_error>(
+          configuration, "midi_in_winmm::open_port: error creating Windows MM MIDI input port.");
       return;
     }
 
@@ -91,6 +109,7 @@ public:
         midiInClose(this->inHandle);
         this->inHandle = nullptr;
         error<driver_error>(
+            configuration,
             "midi_in_winmm::open_port: error starting Windows MM MIDI input port "
             "(PrepareHeader).");
         return;
@@ -103,6 +122,7 @@ public:
         midiInClose(this->inHandle);
         this->inHandle = nullptr;
         error<driver_error>(
+            configuration,
             "midi_in_winmm::open_port: error starting Windows MM MIDI input port "
             "(AddBuffer).");
         return;
@@ -114,7 +134,8 @@ public:
     {
       midiInClose(this->inHandle);
       this->inHandle = nullptr;
-      error<driver_error>("midi_in_winmm::open_port: error starting Windows MM MIDI input port.");
+      error<driver_error>(
+          configuration, "midi_in_winmm::open_port: error starting Windows MM MIDI input port.");
       return;
     }
 
@@ -139,6 +160,7 @@ public:
           midiInClose(this->inHandle);
           this->inHandle = nullptr;
           error<driver_error>(
+              configuration,
               "midi_in_winmm::open_port: error closing Windows MM MIDI input "
               "port (midiInUnprepareHeader).");
           return;
@@ -160,8 +182,8 @@ public:
     if (portNumber >= nDevices)
     {
       error<invalid_parameter_error>(
-          "midi_in_winmm::get_port_name: invalid 'portNumber' argument: "
-          + std::to_string(portNumber));
+          configuration, "midi_in_winmm::get_port_name: invalid 'portNumber' argument: "
+                             + std::to_string(portNumber));
       return {};
     }
 

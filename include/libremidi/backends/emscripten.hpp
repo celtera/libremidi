@@ -365,7 +365,8 @@ inline void midi_in_emscripten::open_port(unsigned int portNumber, std::string_v
 
   if (portNumber >= midi.input_count())
   {
-    error<no_devices_found_error>("midi_in_emscripten::open_port: no MIDI output sources found.");
+    error<no_devices_found_error>(
+        this->configuration, "midi_in_emscripten::open_port: no MIDI output sources found.");
     return;
   }
 
@@ -436,7 +437,8 @@ inline void midi_out_emscripten::open_port(unsigned int portNumber, std::string_
 
   if (portNumber >= midi.output_count())
   {
-    error<no_devices_found_error>("midi_out_emscripten::open_port: no MIDI output sources found.");
+    error<no_devices_found_error>(
+        this->configuration, "midi_out_emscripten::open_port: no MIDI output sources found.");
     return;
   }
 
@@ -478,6 +480,7 @@ inline void midi_out_emscripten::send_message(const unsigned char* message, size
 {
   if (!connected_)
     error<invalid_use_error>(
+        this->configuration,
         "midi_out_emscripten::send_message: trying to send a message without an open "
         "port.");
 

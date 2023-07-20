@@ -11,10 +11,11 @@
 
 namespace libremidi
 {
-class midi_in_raw_alsa final : public midi_in_default<midi_in_raw_alsa>
+class midi_in_raw_alsa final
+    : public midi_in_api
+    , public error_handler
 {
 public:
-  static const constexpr auto backend = "Raw ALSA";
   struct
       : input_configuration
       , alsa_raw_input_configuration
@@ -22,8 +23,7 @@ public:
   } configuration;
 
   explicit midi_in_raw_alsa(input_configuration&& conf, alsa_raw_input_configuration&& apiconf)
-      : midi_in_default<midi_in_raw_alsa>{}
-      , configuration{std::move(conf), std::move(apiconf)}
+      : configuration{std::move(conf), std::move(apiconf)}
   {
   }
 
@@ -31,6 +31,19 @@ public:
   {
     // Close a connection if it exists.
     midi_in_raw_alsa::close_port();
+  }
+
+  void open_virtual_port(std::string_view) override
+  {
+    warning(configuration, "midi_in_raw_alsa: open_virtual_port unsupported");
+  }
+  void set_client_name(std::string_view) override
+  {
+    warning(configuration, "midi_in_raw_alsa: set_client_name unsupported");
+  }
+  void set_port_name(std::string_view) override
+  {
+    warning(configuration, "midi_in_raw_alsa: set_port_name unsupported");
   }
 
   libremidi::API get_current_api() const noexcept override
@@ -42,7 +55,8 @@ public:
   {
     if (connected_)
     {
-      warning("midi_in_raw_alsa::open_port: a valid connection already exists.");
+      warning(
+          this->configuration, "midi_in_raw_alsa::open_port: a valid connection already exists.");
       return;
     }
 
@@ -52,7 +66,8 @@ public:
     unsigned int num = device_list.inputs.size();
     if (portNumber >= num)
     {
-      error<no_devices_found_error>("midi_in_raw_alsa::open_port: no MIDI output sources found.");
+      error<no_devices_found_error>(
+          this->configuration, "midi_in_raw_alsa::open_port: no MIDI output sources found.");
       return;
     }
 
@@ -61,7 +76,7 @@ public:
     int status = snd_rawmidi_open(&midiport_, nullptr, portname, mode);
     if (status < 0)
     {
-      error<driver_error>("midi_in_raw_alsa::open_port: cannot open device.");
+      error<driver_error>(this->configuration, "midi_in_raw_alsa::open_port: cannot open device.");
       return;
     }
 
@@ -99,12 +114,6 @@ public:
     }
 
     connected_ = true;
-  }
-
-  void init_timestamping()
-  {
-    if (configuration.timestamps == input_configuration::NoTimestamp)
-      return;
   }
 
   void init_pollfd()
@@ -185,7 +194,8 @@ public:
       // Unneeded here
       case input_configuration::NoTimestamp:
         break;
-      case input_configuration::Relative:
+      case input_configuration::Relative: {
+        auto t = int64_t(ts.tv_sec) * nanos + int64_t(ts.tv_nsec);
         if (firstMessage == true)
         {
           firstMessage = false;
@@ -193,13 +203,14 @@ public:
         }
         else
         {
-          res = ts.tv_sec * nanos + ts.tv_nsec - last_time;
+          res = t - last_time;
         }
-        last_time = nanos;
+        last_time = t;
         break;
+      }
       case input_configuration::Absolute:
       case input_configuration::SystemMonotonic:
-        res = ts.tv_sec * nanos + ts.tv_nsec;
+        res = int64_t(ts.tv_sec) * nanos + int64_t(ts.tv_nsec);
         break;
     }
   }
@@ -270,7 +281,7 @@ public:
   {
     raw_alsa_helpers::enumerator device_list;
     device_list.error_callback
-        = [this](std::string_view text) { this->error<driver_error>(text); };
+        = [this](std::string_view text) { this->error<driver_error>(this->configuration, text); };
     return device_list;
   }
 

@@ -41,8 +41,6 @@ private:
 class midi_in_emscripten final : public midi_in_default<midi_in_emscripten>
 {
 public:
-  static const constexpr auto backend = "Emscripten";
-
   midi_in_emscripten(std::string_view clientName, unsigned int queueSizeLimit);
   ~midi_in_emscripten() override;
 
@@ -66,8 +64,6 @@ private:
 class midi_out_emscripten final : public midi_out_default<midi_out_emscripten>
 {
 public:
-  static const constexpr auto backend = "Raw ALSA";
-
   midi_out_emscripten(std::string_view);
   ~midi_out_emscripten() override;
 

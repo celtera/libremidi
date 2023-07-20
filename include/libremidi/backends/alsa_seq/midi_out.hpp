@@ -9,7 +9,7 @@ namespace libremidi
 class midi_out_alsa final
     : public midi_out_api
     , private alsa_data
-    , private error_handler
+    , public error_handler
 {
 public:
   struct
@@ -26,6 +26,7 @@ public:
     if (snd_seq_open(&seq, "default", SND_SEQ_OPEN_OUTPUT, SND_SEQ_NONBLOCK) < 0)
     {
       error<driver_error>(
+          this->configuration,
           "midi_out_alsa::initialize: error creating ALSA sequencer client "
           "object.");
       return;
@@ -43,6 +44,7 @@ public:
     if (result < 0)
     {
       error<driver_error>(
+          this->configuration,
           "midi_out_alsa::initialize: error initializing MIDI event "
           "parser!\n\n");
       return;
@@ -69,14 +71,15 @@ public:
   {
     if (connected_)
     {
-      warning("midi_out_alsa::open_port: a valid connection already exists!");
+      warning(this->configuration, "midi_out_alsa::open_port: a valid connection already exists!");
       return;
     }
 
     unsigned int nSrc = this->get_port_count();
     if (nSrc < 1)
     {
-      error<no_devices_found_error>("midi_out_alsa::open_port: no MIDI output sources found!");
+      error<no_devices_found_error>(
+          this->configuration, "midi_out_alsa::open_port: no MIDI output sources found!");
       return;
     }
 
@@ -88,8 +91,8 @@ public:
         == 0)
     {
       error<invalid_parameter_error>(
-          "midi_out_alsa::open_port: invalid 'portNumber' argument: "
-          + std::to_string(portNumber));
+          this->configuration, "midi_out_alsa::open_port: invalid 'portNumber' argument: "
+                                   + std::to_string(portNumber));
       return;
     }
 
@@ -105,7 +108,8 @@ public:
           SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
       if (this->vport < 0)
       {
-        error<driver_error>("midi_out_alsa::open_port: ALSA error creating output port.");
+        error<driver_error>(
+            this->configuration, "midi_out_alsa::open_port: ALSA error creating output port.");
         return;
       }
     }
@@ -116,7 +120,8 @@ public:
     if (snd_seq_port_subscribe_malloc(&this->subscription) < 0)
     {
       snd_seq_port_subscribe_free(this->subscription);
-      error<driver_error>("midi_out_alsa::open_port: error allocating port subscription.");
+      error<driver_error>(
+          this->configuration, "midi_out_alsa::open_port: error allocating port subscription.");
       return;
     }
     snd_seq_port_subscribe_set_sender(this->subscription, &sender);
@@ -126,7 +131,8 @@ public:
     if (snd_seq_subscribe_port(this->seq, this->subscription))
     {
       snd_seq_port_subscribe_free(this->subscription);
-      error<driver_error>("midi_out_alsa::open_port: ALSA error making port connection.");
+      error<driver_error>(
+          this->configuration, "midi_out_alsa::open_port: ALSA error making port connection.");
       return;
     }
 
@@ -143,7 +149,9 @@ public:
 
       if (this->vport < 0)
       {
-        error<driver_error>("midi_out_alsa::open_virtual_port: ALSA error creating virtual port.");
+        error<driver_error>(
+            this->configuration,
+            "midi_out_alsa::open_virtual_port: ALSA error creating virtual port.");
       }
     }
   }
@@ -187,6 +195,7 @@ public:
       if (result != 0)
       {
         error<driver_error>(
+            this->configuration,
             "midi_out_alsa::send_message: ALSA error resizing MIDI event "
             "buffer.");
         return;
@@ -207,13 +216,13 @@ public:
       result = snd_midi_event_encode(this->coder, message + offset, (long)(nBytes - offset), &ev);
       if (result < 0)
       {
-        warning("midi_out_alsa::send_message: event parsing error!");
+        warning(this->configuration, "midi_out_alsa::send_message: event parsing error!");
         return;
       }
 
       if (ev.type == SND_SEQ_EVENT_NONE)
       {
-        warning("midi_out_alsa::send_message: incomplete message!");
+        warning(this->configuration, "midi_out_alsa::send_message: incomplete message!");
         return;
       }
 
@@ -222,7 +231,9 @@ public:
       result = snd_seq_event_output(this->seq, &ev);
       if (result < 0)
       {
-        warning("midi_out_alsa::send_message: error sending MIDI message to port.");
+        warning(
+            this->configuration,
+            "midi_out_alsa::send_message: error sending MIDI message to port.");
         return;
       }
     }

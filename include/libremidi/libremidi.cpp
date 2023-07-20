@@ -155,12 +155,14 @@ LIBREMIDI_INLINE midi_in::~midi_in() = default;
 LIBREMIDI_INLINE midi_in::midi_in(midi_in&& other) noexcept
     : impl_{std::move(other.impl_)}
 {
-  other.impl_ = std::make_unique<libremidi::midi_in_dummy>("");
+  other.impl_
+      = std::make_unique<libremidi::midi_in_dummy>(input_configuration{}, dummy_configuration{});
 }
 LIBREMIDI_INLINE midi_in& midi_in::operator=(midi_in&& other) noexcept
 {
   this->impl_ = std::move(other.impl_);
-  other.impl_ = std::make_unique<libremidi::midi_in_dummy>("");
+  other.impl_
+      = std::make_unique<libremidi::midi_in_dummy>(input_configuration{}, dummy_configuration{});
   return *this;
 }
 
@@ -169,12 +171,14 @@ LIBREMIDI_INLINE midi_out::~midi_out() = default;
 LIBREMIDI_INLINE midi_out::midi_out(midi_out&& other) noexcept
     : impl_{std::move(other.impl_)}
 {
-  other.impl_ = std::make_unique<libremidi::midi_out_dummy>("");
+  other.impl_
+      = std::make_unique<libremidi::midi_out_dummy>(output_configuration{}, dummy_configuration{});
 }
 LIBREMIDI_INLINE midi_out& midi_out::operator=(midi_out&& other) noexcept
 {
   this->impl_ = std::move(other.impl_);
-  other.impl_ = std::make_unique<libremidi::midi_out_dummy>("");
+  other.impl_
+      = std::make_unique<libremidi::midi_out_dummy>(output_configuration{}, dummy_configuration{});
   return *this;
 }
 

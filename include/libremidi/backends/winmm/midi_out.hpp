@@ -6,10 +6,11 @@
 namespace libremidi
 {
 
-class midi_out_winmm final : public midi_out_default<midi_out_winmm>
+class midi_out_winmm final
+    : public midi_out_api
+    , public error_handler
 {
 public:
-  static const constexpr auto backend = "WinMM";
   struct
       : output_configuration
       , winmm_output_configuration
@@ -36,13 +37,26 @@ public:
     midi_out_winmm::close_port();
   }
 
+  void open_virtual_port(std::string_view) override
+  {
+    warning(configuration, "midi_out_winmm: open_virtual_port unsupported");
+  }
+  void set_client_name(std::string_view) override
+  {
+    warning(configuration, "midi_out_winmm: set_client_name unsupported");
+  }
+  void set_port_name(std::string_view) override
+  {
+    warning(configuration, "midi_out_winmm: set_port_name unsupported");
+  }
+
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
   void open_port(unsigned int portNumber, std::string_view) override
   {
     if (connected_)
     {
-      warning("midi_out_winmm::open_port: a valid connection already exists!");
+      warning(configuration, "midi_out_winmm::open_port: a valid connection already exists!");
       return;
     }
 
@@ -50,15 +64,15 @@ public:
     if (nDevices < 1)
     {
       error<no_devices_found_error>(
-          "midi_out_winmm::open_port: no MIDI output destinations found!");
+          configuration, "midi_out_winmm::open_port: no MIDI output destinations found!");
       return;
     }
 
     if (portNumber >= nDevices)
     {
       error<invalid_parameter_error>(
-          "midi_out_winmm::open_port: invalid 'portNumber' argument: "
-          + std::to_string(portNumber));
+          configuration, "midi_out_winmm::open_port: invalid 'portNumber' argument: "
+                             + std::to_string(portNumber));
       return;
     }
 
@@ -66,6 +80,7 @@ public:
     if (result != MMSYSERR_NOERROR)
     {
       error<driver_error>(
+          configuration,
           "midi_out_winmm::open_port: error creating Windows MM MIDI output "
           "port.");
       return;
@@ -92,8 +107,8 @@ public:
     if (portNumber >= nDevices)
     {
       error<invalid_parameter_error>(
-          "midi_out_winmm::get_port_name: invalid 'portNumber' argument: "
-          + std::to_string(portNumber));
+          configuration, "midi_out_winmm::get_port_name: invalid 'portNumber' argument: "
+                             + std::to_string(portNumber));
       return {};
     }
 
@@ -116,7 +131,7 @@ public:
 
     if (size == 0)
     {
-      warning("midi_out_winmm::send_message: message argument is empty!");
+      warning(configuration, "midi_out_winmm::send_message: message argument is empty!");
       return;
     }
 
@@ -137,7 +152,8 @@ public:
       result = midiOutPrepareHeader(this->outHandle, &sysex, sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
       {
-        error<driver_error>("midi_out_winmm::send_message: error preparing sysex header.");
+        error<driver_error>(
+            configuration, "midi_out_winmm::send_message: error preparing sysex header.");
         return;
       }
 
@@ -145,7 +161,8 @@ public:
       result = midiOutLongMsg(this->outHandle, &sysex, sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
       {
-        error<driver_error>("midi_out_winmm::send_message: error sending sysex message.");
+        error<driver_error>(
+            configuration, "midi_out_winmm::send_message: error sending sysex message.");
         return;
       }
 
@@ -162,6 +179,7 @@ public:
       if (size > 3)
       {
         warning(
+            configuration,
             "midi_out_winmm::send_message: message size is greater than 3 bytes "
             "(and not sysex)!");
         return;
@@ -175,7 +193,8 @@ public:
       result = midiOutShortMsg(this->outHandle, packet);
       if (result != MMSYSERR_NOERROR)
       {
-        error<driver_error>("midi_out_winmm::send_message: error sending MIDI message.");
+        error<driver_error>(
+            configuration, "midi_out_winmm::send_message: error sending MIDI message.");
       }
     }
   }

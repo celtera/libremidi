@@ -10,11 +10,11 @@
 
 namespace libremidi
 {
-class midi_out_raw_alsa final : public midi_out_default<midi_out_raw_alsa>
+class midi_out_raw_alsa final
+    : public midi_out_api
+    , public error_handler
 {
 public:
-  static const constexpr auto backend = "Raw ALSA";
-
   struct
       : output_configuration
       , alsa_raw_output_configuration
@@ -37,11 +37,25 @@ public:
     return libremidi::API::LINUX_ALSA_RAW;
   }
 
+  void open_virtual_port(std::string_view) override
+  {
+    warning(configuration, "midi_out_raw_alsa: open_virtual_port unsupported");
+  }
+  void set_client_name(std::string_view) override
+  {
+    warning(configuration, "midi_out_raw_alsa: set_client_name unsupported");
+  }
+  void set_port_name(std::string_view) override
+  {
+    warning(configuration, "midi_out_raw_alsa: set_port_name unsupported");
+  }
+
   void open_port(unsigned int portNumber, std::string_view) override
   {
     if (connected_)
     {
-      warning("midi_out_raw_alsa::open_port: a valid connection already exists.");
+      warning(
+          this->configuration, "midi_out_raw_alsa::open_port: a valid connection already exists.");
       return;
     }
 
@@ -51,7 +65,8 @@ public:
     unsigned int num = device_list.outputs.size();
     if (portNumber >= num)
     {
-      error<no_devices_found_error>("midi_out_raw_alsa::open_port: no MIDI output sources found.");
+      error<no_devices_found_error>(
+          this->configuration, "midi_out_raw_alsa::open_port: no MIDI output sources found.");
       return;
     }
 
@@ -60,7 +75,8 @@ public:
     int status = snd_rawmidi_open(NULL, &midiport_, portname, mode);
     if (status < 0)
     {
-      error<driver_error>("midi_out_raw_alsa::open_port: cannot open device.");
+      error<driver_error>(
+          this->configuration, "midi_out_raw_alsa::open_port: cannot open device.");
       return;
     }
 
@@ -102,6 +118,7 @@ public:
   {
     if (!midiport_)
       error<invalid_use_error>(
+          this->configuration,
           "midi_out_raw_alsa::send_message: trying to send a message without an open "
           "port.");
 
@@ -119,7 +136,8 @@ public:
   {
     if (snd_rawmidi_write(midiport_, message, size) < 0)
     {
-      error<driver_error>("midi_out_raw_alsa::send_message: cannot write message.");
+      error<driver_error>(
+          this->configuration, "midi_out_raw_alsa::send_message: cannot write message.");
       return false;
     }
 
@@ -197,7 +215,7 @@ public:
   {
     raw_alsa_helpers::enumerator device_list;
     device_list.error_callback
-        = [this](std::string_view text) { this->error<driver_error>(text); };
+        = [this](std::string_view text) { this->error<driver_error>(this->configuration, text); };
     return device_list;
   }
 

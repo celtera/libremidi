@@ -7,10 +7,11 @@
 namespace libremidi
 {
 
-class midi_out_winuwp final : public midi_out_default<midi_out_winuwp>
+class midi_out_winuwp final
+    : public midi_out_api
+    , public error_handler
 {
 public:
-  static const constexpr auto backend = "UWP";
   struct
       : output_configuration
       , winuwp_output_configuration
@@ -25,13 +26,26 @@ public:
 
   ~midi_out_winuwp() override { close_port(); }
 
+  void open_virtual_port(std::string_view) override
+  {
+    warning(configuration, "midi_out_winuwp: open_virtual_port unsupported");
+  }
+  void set_client_name(std::string_view) override
+  {
+    warning(configuration, "midi_out_winuwp: set_client_name unsupported");
+  }
+  void set_port_name(std::string_view) override
+  {
+    warning(configuration, "midi_out_winuwp: set_port_name unsupported");
+  }
+
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 
   void open_port(unsigned int portNumber, std::string_view) override
   {
     if (connected_)
     {
-      warning("midi_out_winuwp::open_port: a valid connection already exists!");
+      warning(configuration, "midi_out_winuwp::open_port: a valid connection already exists!");
       return;
     }
 

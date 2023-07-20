@@ -10,18 +10,16 @@ struct error_handler
 {
   //! Error reporting function for libremidi classes. Throws.
   template <typename Error_T>
-  void error(std::string_view errorString) const
+  void error(auto& configuration, std::string_view errorString) const
   {
-    if (errorCallback_)
+    if (configuration.on_error)
     {
-      if (firstErrorOccurred_)
-      {
+      if (first_error)
         return;
-      }
 
-      firstErrorOccurred_ = true;
-      errorCallback_(Error_T::code, errorString);
-      firstErrorOccurred_ = false;
+      first_error = true;
+      configuration.on_error(Error_T::code, errorString);
+      first_error = false;
     }
     else
     {
@@ -33,18 +31,16 @@ struct error_handler
   }
 
   //! Warning reporting function for libremidi classes.
-  void warning(std::string_view errorString) const
+  void warning(auto& configuration, std::string_view errorString) const
   {
-    if (errorCallback_)
+    if (configuration.on_warning)
     {
-      if (firstErrorOccurred_)
-      {
+      if (first_warning)
         return;
-      }
 
-      firstErrorOccurred_ = true;
-      errorCallback_(midi_error::WARNING, errorString);
-      firstErrorOccurred_ = false;
+      first_warning = true;
+      configuration.on_warning(midi_error::WARNING, errorString);
+      first_warning = false;
       return;
     }
 
@@ -53,8 +49,9 @@ struct error_handler
 #endif
   }
 
-  midi_error_callback errorCallback_;
-  mutable bool firstErrorOccurred_{};
+  // To prevent infinite error loops
+  mutable bool first_error{};
+  mutable bool first_warning{};
 };
 
 class midi_api
