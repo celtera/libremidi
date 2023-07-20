@@ -13,6 +13,7 @@ TEST_CASE("sending messages with span", "[midi_out]")
   midi.send_message(std::span<unsigned char>(data, 3));
 }
 
+#if !defined(LIBREMIDI_CI)
 #if defined(__linux__)
   #include <libremidi/backends/alsa_raw/config.hpp>
 TEST_CASE("sending chunked messages", "[midi_out]")
@@ -37,4 +38,5 @@ TEST_CASE("sending chunked messages", "[midi_out]")
 
   REQUIRE(written_bytes == std::set<int>{4096, 8192, 12288});
 }
+#endif
 #endif

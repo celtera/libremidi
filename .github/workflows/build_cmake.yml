@@ -83,6 +83,7 @@ jobs:
           -DLIBREMIDI_HEADER_ONLY=${{ matrix.header_only }} \
           -DLIBREMIDI_EXAMPLES=1 \
           -DLIBREMIDI_TESTS=1 \
+          -DLIBREMIDI_CI=1 \
           -DCMAKE_INSTALL_PREFIX=install
 
     - name: Build

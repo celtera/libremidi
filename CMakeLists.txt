@@ -17,6 +17,7 @@ option(LIBREMIDI_NO_BOOST "Do not use Boost if available" OFF)
 option(LIBREMIDI_FIND_BOOST "Actively look for Boost" OFF)
 option(LIBREMIDI_EXAMPLES "Enable examples" OFF)
 option(LIBREMIDI_TESTS "Enable tests" OFF)
+option(LIBREMIDI_CI "To be enabled only in CI, some tests cannot run there" OFF)
 
 include(CheckSymbolExists)
 include(CheckCXXSourceCompiles)
@@ -334,6 +335,9 @@ if(LIBREMIDI_TESTS)
 
   message(STATUS "libremidi: compiling tests")
   target_compile_features(libremidi ${_public} cxx_std_20)
+  if(LIBREMIDI_CI)
+    target_compile_definitions(libremidi ${_public} LIBREMIDI_CI)
+  endif()
 
   add_executable(midiin_test tests/unit/midi_in.cpp)
   target_link_libraries(midiin_test PRIVATE libremidi Catch2::Catch2WithMain)

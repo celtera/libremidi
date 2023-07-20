@@ -11,6 +11,7 @@
 #include <libremidi/backends/jack/config.hpp>
 TEST_CASE("poly aftertouch", "[midi_in]")
 {
+#if !defined(LIBREMIDI_CI)
   std::vector<libremidi::message> queue;
   std::mutex qmtx;
 
@@ -54,5 +55,6 @@ TEST_CASE("poly aftertouch", "[midi_in]")
     libremidi::message mess = queue.back();
     REQUIRE(mess.bytes == libremidi::message::poly_pressure(0, 60, 100).bytes);
   }
+#endif
 }
 #endif
