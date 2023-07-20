@@ -94,9 +94,10 @@ jobs:
     - name: Test
       if: matrix.config.name != 'Tarball'
       run: |
-        if [ "$RUNNER_OS" == "Linux" ]; then
-          sudo modprobe snd-virmidi midi_devs=1
-        fi
+        # Not available on GH actions...
+        # if [ "$RUNNER_OS" == "Linux" ]; then
+        #   sudo modprobe snd-virmidi midi_devs=1
+        # fi
 
         cd build && ctest -V
 
