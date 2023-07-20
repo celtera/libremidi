@@ -46,7 +46,7 @@ jobs:
           }
         - {
             name: "macOS",
-            os: macos-latest,
+            os: macos-13,
             cmakeflags: ""
           }
     steps:
