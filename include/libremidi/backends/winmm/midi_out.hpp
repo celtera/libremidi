@@ -26,6 +26,7 @@ public:
     if (nDevices == 0)
     {
       warning(
+          configuration,
           "midi_out_winmm::initialize: no MIDI output devices currently "
           "available.");
     }

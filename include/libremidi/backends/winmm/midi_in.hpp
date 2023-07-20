@@ -95,11 +95,12 @@ public:
     }
 
     // Allocate and init the sysex buffers.
-    for (int i = 0; i < RT_SYSEX_BUFFER_COUNT; ++i)
+    this->sysexBuffer.resize(configuration.sysex_buffer_count);
+    for (int i = 0; i < configuration.sysex_buffer_count; ++i)
     {
       this->sysexBuffer[i] = (MIDIHDR*)new char[sizeof(MIDIHDR)];
-      this->sysexBuffer[i]->lpData = new char[RT_SYSEX_BUFFER_SIZE];
-      this->sysexBuffer[i]->dwBufferLength = RT_SYSEX_BUFFER_SIZE;
+      this->sysexBuffer[i]->lpData = new char[configuration.sysex_buffer_size];
+      this->sysexBuffer[i]->dwBufferLength = configuration.sysex_buffer_size;
       this->sysexBuffer[i]->dwUser = i; // We use the dwUser parameter as buffer indicator
       this->sysexBuffer[i]->dwFlags = 0;
 
@@ -150,7 +151,7 @@ public:
       midiInReset(this->inHandle);
       midiInStop(this->inHandle);
 
-      for (int i = 0; i < RT_SYSEX_BUFFER_COUNT; ++i)
+      for (int i = 0; i < configuration.sysex_buffer_count; ++i)
       {
         int result = midiInUnprepareHeader(this->inHandle, this->sysexBuffer[i], sizeof(MIDIHDR));
         delete[] this->sysexBuffer[i]->lpData;
@@ -308,7 +309,7 @@ private:
   HMIDIIN inHandle; // Handle to Midi Input Device
 
   DWORD last_time;
-  LPMIDIHDR sysexBuffer[RT_SYSEX_BUFFER_COUNT];
+  std::vector<LPMIDIHDR> sysexBuffer;
   // [Patrice] see
   // https://groups.google.com/forum/#!topic/mididev/6OUjHutMpEo
   CRITICAL_SECTION _mutex;
