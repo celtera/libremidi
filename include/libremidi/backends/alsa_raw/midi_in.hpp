@@ -186,7 +186,15 @@ public:
       case input_configuration::NoTimestamp:
         break;
       case input_configuration::Relative:
-        res = ts.tv_sec * nanos + ts.tv_nsec - last_time;
+        if (firstMessage == true)
+        {
+          firstMessage = false;
+          res = 0;
+        }
+        else
+        {
+          res = ts.tv_sec * nanos + ts.tv_nsec - last_time;
+        }
         last_time = nanos;
         break;
       case input_configuration::Absolute:
