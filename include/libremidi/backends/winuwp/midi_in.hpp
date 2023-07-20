@@ -1,6 +1,7 @@
 #pragma once
 #include <libremidi/backends/winuwp/config.hpp>
 #include <libremidi/backends/winuwp/helpers.hpp>
+#include <libremidi/backends/winuwp/observer.hpp>
 #include <libremidi/detail/midi_in.hpp>
 
 namespace libremidi
@@ -46,15 +47,17 @@ public:
       port_ = get(MidiInPort::FromIdAsync(id));
       if (port_)
       {
-        port_.MessageReceived([=](auto&, auto args) {
+        port_.MessageReceived([=](
+            const winrt::Windows::Devices::Midi::IMidiInPort& inputPort
+          , const winrt::Windows::Devices::Midi::MidiMessageReceivedEventArgs& args) {
           const auto& msg = args.Message();
 
           auto reader = DataReader::FromBuffer(msg.RawData());
           array_view<uint8_t> bs;
           reader.ReadBytes(bs);
 
-          double t = static_cast<double>(msg.Timestamp().count());
-          this->on_message_received(libremidi::message{{bs.begin(), bs.end()}, t});
+          auto t = msg.Timestamp().count();
+          this->configuration.on_message(libremidi::message{{bs.begin(), bs.end()}, t});
         });
       }
     }

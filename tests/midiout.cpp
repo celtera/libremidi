@@ -8,6 +8,7 @@
 
 #include <libremidi/libremidi.hpp>
 
+#include <array>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>

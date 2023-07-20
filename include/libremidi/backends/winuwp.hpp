@@ -1,7 +1,7 @@
 #pragma once
 #include <libremidi/backends/winuwp/midi_in.hpp>
-#include <libremidi/backends/winuwp/midi_observer.hpp>
 #include <libremidi/backends/winuwp/midi_out.hpp>
+#include <libremidi/backends/winuwp/observer.hpp>
 
 namespace libremidi
 {

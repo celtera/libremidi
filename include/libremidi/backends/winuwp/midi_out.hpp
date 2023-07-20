@@ -1,6 +1,7 @@
 #pragma once
 #include <libremidi/backends/winuwp/config.hpp>
 #include <libremidi/backends/winuwp/helpers.hpp>
+#include <libremidi/backends/winuwp/observer.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
 namespace libremidi
@@ -17,7 +18,7 @@ public:
   } configuration;
 
   midi_out_winuwp(output_configuration&& conf, winuwp_output_configuration&& apiconf)
-      : configuration{std::move(conf), std::move(apiconf)} {}
+      : configuration{std::move(conf), std::move(apiconf)}
   {
     winrt_init();
   }
