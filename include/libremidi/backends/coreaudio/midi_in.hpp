@@ -68,7 +68,7 @@ public:
     }
 
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-    unsigned int nSrc = MIDIGetNumberOfSources();
+    auto nSrc = MIDIGetNumberOfSources();
     if (nSrc < 1)
     {
       error<no_devices_found_error>(
@@ -165,7 +165,7 @@ public:
   unsigned int get_port_count() const override
   {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-    return MIDIGetNumberOfSources();
+    return (unsigned int)MIDIGetNumberOfSources();
   }
 
   std::string get_port_name(unsigned int portNumber) const override
