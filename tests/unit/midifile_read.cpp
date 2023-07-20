@@ -16,7 +16,8 @@ TEST_CASE("read valid files from corpus", "[midi_reader]")
   const auto valid_midi_files = recursive_directory_iterator(folder, recursive);
   for (const auto& dirEntry : valid_midi_files)
   {
-    std::cout << dirEntry << std::endl;
+    INFO(dirEntry);
+
     if (dirEntry.is_regular_file())
     {
       if (dirEntry.path().extension() == ".mid")
@@ -48,7 +49,8 @@ TEST_CASE("read invalid files from corpus", "[midi_reader]")
   const auto valid_midi_files = recursive_directory_iterator(folder, recursive);
   for (const auto& dirEntry : valid_midi_files)
   {
-    std::cout << dirEntry << std::endl;
+    INFO(dirEntry);
+
     if (dirEntry.is_regular_file())
     {
       if (dirEntry.path().extension() == ".mid")
