@@ -187,17 +187,12 @@ public:
 
   void send_message(const unsigned char* message, size_t size) override
   {
-    // We use the MIDISendSysex() function to asynchronously send sysex
-    // messages.  Otherwise, we use a single CoreMidi MIDIPacket.
     unsigned int nBytes = static_cast<unsigned int>(size);
     if (nBytes == 0)
     {
       warning(configuration, "midi_out_core::send_message: no data in message argument!");
       return;
     }
-
-    MIDITimeStamp timestamp = AudioGetCurrentHostTime();
-    OSStatus result;
 
     if (message[0] != 0xF0 && nBytes > 3)
     {
@@ -208,53 +203,54 @@ public:
       return;
     }
 
-    ByteCount listSize = nBytes + (sizeof(MIDIPacketList));
-    Byte* buffer = (Byte*)alloca(listSize);
-    MIDIPacketList* packetList = (MIDIPacketList*)buffer;
-    MIDIPacket* packet = MIDIPacketListInit(packetList);
+    const MIDITimeStamp timestamp = AudioGetCurrentHostTime();
+
+    const ByteCount bufsize = nBytes > 65535 ? 65535 : nBytes;
+    Byte buffer[bufsize+16]; // pad for other struct members
+    ByteCount listSize = sizeof( buffer );
+    MIDIPacketList *packetList = (MIDIPacketList*)buffer;
 
     ByteCount remainingBytes = nBytes;
-    while (remainingBytes && packet)
-    {
-      ByteCount bytesForPacket = remainingBytes > 65535
-                                     ? 65535
-                                     : remainingBytes; // 65535 = maximum size of a MIDIPacket
-      const Byte* dataStartPtr = (const Byte*)&message[nBytes - remainingBytes];
-
-      packet = MIDIPacketListAdd(
-          packetList, listSize, packet, timestamp, bytesForPacket, dataStartPtr);
+    while (remainingBytes) {
+      MIDIPacket *packet = MIDIPacketListInit( packetList );
+      // A MIDIPacketList can only contain a maximum of 64K of data, so if our message is longer,
+      // break it up into chunks of 64K or less and send out as a MIDIPacketList with only one
+      // MIDIPacket. Here, we reuse the memory allocated above on the stack for all.
+      ByteCount bytesForPacket = remainingBytes > 65535 ? 65535 : remainingBytes;
+      const Byte* dataStartPtr = (const Byte *) &message[nBytes - remainingBytes];
+      packet = MIDIPacketListAdd( packetList, listSize, packet, timestamp, bytesForPacket, dataStartPtr );
       remainingBytes -= bytesForPacket;
-    }
 
-    if (!packet)
-    {
-      error<driver_error>(
-          this->configuration, "midi_out_core::send_message: could not allocate packet list");
-      return;
-    }
-
-    // Send to any destinations that may have connected to us.
-    if (this->endpoint)
-    {
-      result = MIDIReceived(this->endpoint, packetList);
-      if (result != noErr)
+      if (!packet)
       {
-        warning(
-            this->configuration,
-            "midi_out_core::send_message: error sending MIDI to virtual "
-            "destinations.");
+        error<driver_error>(
+            this->configuration, "midi_out_core::send_message: could not allocate packet list");
+        return;
       }
-    }
 
-    // And send to an explicit destination port if we're connected.
-    if (connected_)
-    {
-      result = MIDISend(this->port, this->destinationId, packetList);
-      if (result != noErr)
+      // Send to any destinations that may have connected to us.
+      if (this->endpoint)
       {
-        warning(
-            this->configuration,
-            "midi_out_core::send_message: error sending MIDI message to port.");
+        auto result = MIDIReceived(this->endpoint, packetList);
+        if (result != noErr)
+        {
+          warning(
+              this->configuration,
+              "midi_out_core::send_message: error sending MIDI to virtual "
+              "destinations.");
+        }
+      }
+
+      // And send to an explicit destination port if we're connected.
+      if (connected_)
+      {
+        auto result = MIDISend(this->port, this->destinationId, packetList);
+        if (result != noErr)
+        {
+          warning(
+              this->configuration,
+              "midi_out_core::send_message: error sending MIDI message to port.");
+        }
       }
     }
   }
