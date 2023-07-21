@@ -17,6 +17,18 @@ public:
   {
   } configuration;
 
+  bool require_timestamps() const noexcept {
+    switch(configuration.timestamps) {
+      case input_configuration::timestamp_mode::NoTimestamp:
+      case input_configuration::timestamp_mode::SystemMonotonic:
+        return false;
+      case input_configuration::timestamp_mode::Absolute:
+      case input_configuration::timestamp_mode::Relative:
+        return true;
+    }
+    return true;
+  }
+
   explicit midi_in_alsa(input_configuration&& conf, alsa_sequencer_input_configuration&& apiconf)
       : midi_in_api{}
       , configuration{std::move(conf), std::move(apiconf)}
@@ -52,17 +64,18 @@ public:
       return;
     }
 
-// Create the input queue
-#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
-    this->queue_id = snd_seq_alloc_named_queue(seq, "libremidi queue");
-    // Set arbitrary tempo (mm=100) and resolution (240)
-    snd_seq_queue_tempo_t* qtempo;
-    snd_seq_queue_tempo_alloca(&qtempo);
-    snd_seq_queue_tempo_set_tempo(qtempo, 600000);
-    snd_seq_queue_tempo_set_ppq(qtempo, 240);
-    snd_seq_set_queue_tempo(this->seq, this->queue_id, qtempo);
-    snd_seq_drain_output(this->seq);
-#endif
+    // Create the input queue
+    if(require_timestamps())
+    {
+      this->queue_id = snd_seq_alloc_named_queue(seq, "libremidi queue");
+      // Set arbitrary tempo (mm=100) and resolution (240)
+      snd_seq_queue_tempo_t* qtempo;
+      snd_seq_queue_tempo_alloca(&qtempo);
+      snd_seq_queue_tempo_set_tempo(qtempo, 600000);
+      snd_seq_queue_tempo_set_ppq(qtempo, 240);
+      snd_seq_set_queue_tempo(this->seq, this->queue_id, qtempo);
+      snd_seq_drain_output(this->seq);
+    }
   }
 
   ~midi_in_alsa() override
@@ -85,9 +98,10 @@ public:
     close(this->trigger_fds[1]);
     if (this->vport >= 0)
       snd_seq_delete_port(this->seq, this->vport);
-#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
-    snd_seq_free_queue(this->seq, this->queue_id);
-#endif
+
+    if(require_timestamps())
+      snd_seq_free_queue(this->seq, this->queue_id);
+
     snd_seq_close(this->seq);
   }
 
@@ -110,11 +124,13 @@ public:
       snd_seq_port_info_set_type(
           pinfo, SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
       snd_seq_port_info_set_midi_channels(pinfo, 16);
-#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
-      snd_seq_port_info_set_timestamping(pinfo, 1);
-      snd_seq_port_info_set_timestamp_real(pinfo, 1);
-      snd_seq_port_info_set_timestamp_queue(pinfo, this->queue_id);
-#endif
+
+      if(require_timestamps())
+      {
+        snd_seq_port_info_set_timestamping(pinfo, 1);
+        snd_seq_port_info_set_timestamp_real(pinfo, 1);
+        snd_seq_port_info_set_timestamp_queue(pinfo, this->queue_id);
+      }
       snd_seq_port_info_set_name(pinfo, portName.data());
       this->vport = snd_seq_create_port(this->seq, pinfo);
 
@@ -131,11 +147,12 @@ public:
 
   [[nodiscard]] bool start_thread()
   {
-// Start the input queue
-#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
-    snd_seq_start_queue(this->seq, this->queue_id, nullptr);
-    snd_seq_drain_output(this->seq);
-#endif
+    if(require_timestamps())
+    {
+      snd_seq_start_queue(this->seq, this->queue_id, nullptr);
+      snd_seq_drain_output(this->seq);
+    }
+
     // Start our MIDI input thread.
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -259,11 +276,14 @@ public:
         snd_seq_port_subscribe_free(this->subscription);
         this->subscription = nullptr;
       }
+
       // Stop the input queue
-#ifndef LIBREMIDI_ALSA_AVOID_TIMESTAMPING
-      snd_seq_stop_queue(this->seq, this->queue_id, nullptr);
-      snd_seq_drain_output(this->seq);
-#endif
+      if(require_timestamps())
+      {
+        snd_seq_stop_queue(this->seq, this->queue_id, nullptr);
+        snd_seq_drain_output(this->seq);
+      }
+
       connected_ = false;
     }
 
@@ -307,8 +327,8 @@ private:
         msg.timestamp = 0;
         return;
       case input_configuration::Relative: {
-        const auto t0 = int64_t(ev.time.time.tv_sec) * nanos + int64_t(ev.time.time.tv_nsec);
-        const auto t1 = int64_t(last_time.tv_sec) * nanos + int64_t(last_time.tv_nsec);
+        const auto t1 = int64_t(ev.time.time.tv_sec) * nanos + int64_t(ev.time.time.tv_nsec);
+        const auto t0 = int64_t(last_time.tv_sec) * nanos + int64_t(last_time.tv_nsec);
         const auto time = t1 - t0;
 
         last_time = ev.time.time;

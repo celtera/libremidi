@@ -136,7 +136,6 @@ public:
       return;
     }
 
-    MMRESULT result;
     if (message[0] == 0xF0)
     { // Sysex message
 
@@ -150,7 +149,7 @@ public:
       sysex.lpData = (LPSTR)buffer.data();
       sysex.dwBufferLength = size;
       sysex.dwFlags = 0;
-      result = midiOutPrepareHeader(this->outHandle, &sysex, sizeof(MIDIHDR));
+      auto result = midiOutPrepareHeader(this->outHandle, &sysex, sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
       {
         error<driver_error>(
@@ -191,7 +190,7 @@ public:
       std::copy_n(message, size, (unsigned char*)&packet);
 
       // Send the message immediately.
-      result = midiOutShortMsg(this->outHandle, packet);
+      auto result = midiOutShortMsg(this->outHandle, packet);
       if (result != MMSYSERR_NOERROR)
       {
         error<driver_error>(

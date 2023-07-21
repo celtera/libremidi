@@ -200,9 +200,45 @@ public:
   }
 
 private:
+  void set_timestamp(DWORD_PTR ts, libremidi::message& msg) noexcept
+  {
+    switch (configuration.timestamps)
+    {
+      case input_configuration::NoTimestamp:
+        msg.timestamp = 0;
+        return;
+      case input_configuration::Relative: {
+        const auto time = ts * 1'000'000 - last_time;
+
+        last_time = ts * 1'000'000 ;
+
+        if (firstMessage == true)
+        {
+          firstMessage = false;
+          message.timestamp = 0;
+        }
+        else
+        {
+          message.timestamp = time;
+        }
+        return;
+      }
+      case input_configuration::Absolute: {
+        msg.timestamp = ts * 1'000'000;
+        break;
+      }
+      case input_configuration::SystemMonotonic: {
+        namespace clk = std::chrono;
+        msg.timestamp
+            = clk::duration_cast<clk::nanoseconds>(clk::steady_clock::now().time_since_epoch())
+                  .count();
+        break;
+      }
+    }
+  }
   static void CALLBACK midiInputCallback(
       HMIDIIN /*hmin*/, UINT inputStatus, DWORD_PTR instancePtr, DWORD_PTR midiMessage,
-      DWORD timestamp)
+      DWORD_PTR timestamp)
   {
     if (inputStatus != MIM_DATA && inputStatus != MIM_LONGDATA && inputStatus != MIM_LONGERROR)
       return;
@@ -211,14 +247,7 @@ private:
 
     auto& message = self.message;
 
-    // Calculate time stamp.
-    if (self.firstMessage == true)
-    {
-      self.firstMessage = false;
-      message.timestamp = 0;
-    }
-    else
-      message.timestamp = (double)(timestamp - self.last_time) * 0.001;
+    self.set_timestamp(timestamp, message);
 
     if (inputStatus == MIM_DATA)
     { // Channel or system message

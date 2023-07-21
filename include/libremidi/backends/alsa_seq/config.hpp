@@ -13,7 +13,6 @@ namespace libremidi
 struct alsa_sequencer_input_configuration
 {
   std::string client_name;
-  bool timestamping : 1 = true;
 };
 
 struct alsa_sequencer_output_configuration
