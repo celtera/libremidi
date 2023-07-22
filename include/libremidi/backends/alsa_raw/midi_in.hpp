@@ -71,7 +71,7 @@ public:
       return;
     }
 
-    const int mode = SND_RAWMIDI_NONBLOCK;
+    constexpr int mode = SND_RAWMIDI_NONBLOCK;
     const char* portname = device_list.inputs[portNumber].device.c_str();
     int status = snd_rawmidi_open(&midiport_, nullptr, portname, mode);
     if (status < 0)
@@ -98,19 +98,40 @@ public:
 
     err = snd_rawmidi_params(midiport_, params);
 
+    init_pollfd();
     if (configuration.timestamps == input_configuration::NoTimestamp)
     {
-      this->thread_ = std::thread{[this] {
-        running_ = true;
-        run_thread(&midi_in_raw_alsa::read_input_buffer);
-      }};
+      if (configuration.manual_poll)
+      {
+        running_ = configuration.manual_poll(manual_poll_parameters{
+            this->fds_, [this](std::span<pollfd> fds) {
+              return do_read_events(&midi_in_raw_alsa::read_input_buffer, fds);
+            }});
+      }
+      else
+      {
+        this->thread_ = std::thread{[this] {
+          running_ = true;
+          run_thread(&midi_in_raw_alsa::read_input_buffer);
+        }};
+      }
     }
     else
     {
-      this->thread_ = std::thread{[this] {
-        running_ = true;
-        run_thread(&midi_in_raw_alsa::read_input_buffer_with_timestamps);
-      }};
+      if (configuration.manual_poll)
+      {
+        running_ = configuration.manual_poll(manual_poll_parameters{
+            this->fds_, [this](std::span<pollfd> fds) {
+              return do_read_events(&midi_in_raw_alsa::read_input_buffer_with_timestamps, fds);
+            }});
+      }
+      else
+      {
+        this->thread_ = std::thread{[this] {
+          running_ = true;
+          run_thread(&midi_in_raw_alsa::read_input_buffer_with_timestamps);
+        }};
+      }
     }
 
     connected_ = true;
@@ -130,60 +151,67 @@ public:
   {
     static const constexpr int poll_timeout = 50; // in ms
 
-    init_pollfd();
-
     while (this->running_)
     {
       // Poll
       int err = poll(fds_.data(), fds_.size(), poll_timeout);
-      if (err < 0)
+      if (err == -EAGAIN)
+        continue;
+      else if (err < 0)
         return;
 
       if (!this->running_)
         return;
 
-      // Read events
-      unsigned short res{};
-      err = snd_rawmidi_poll_descriptors_revents(this->midiport_, fds_.data(), fds_.size(), &res);
-      if (err < 0)
+      err = do_read_events(parse_func, fds_);
+      if (err == -EAGAIN)
+        continue;
+      else if (err < 0)
         return;
-
-      // Did we encounter an error during polling
-      if (res & (POLLERR | POLLHUP))
-        return;
-
-      // Is there data to read
-      if (res & POLLIN)
-      {
-        if (!(this->*parse_func)())
-          return;
-      }
     }
   }
 
-  bool read_input_buffer()
+  int do_read_events(auto parse_func, std::span<pollfd> fds)
+  {
+    // Read events
+    if (fds.empty())
+    {
+      return (this->*parse_func)();
+    }
+    else
+    {
+      unsigned short res{};
+      int err
+          = snd_rawmidi_poll_descriptors_revents(this->midiport_, fds.data(), fds.size(), &res);
+      if (err < 0)
+        return err;
+
+      // Did we encounter an error during polling
+      if (res & (POLLERR | POLLHUP))
+        return -EIO;
+
+      // Is there data to read
+      if (res & POLLIN)
+        return (this->*parse_func)();
+    }
+
+    return 0;
+  }
+
+  int read_input_buffer()
   {
     static const constexpr int nbytes = 1024;
 
     unsigned char bytes[nbytes];
-    const int err = snd_rawmidi_read(this->midiport_, bytes, nbytes);
-    if (err > 0)
-    {
-      // err is the amount of bytes read in that case
-      const int length = err;
-      if (length == 0)
-        return true;
 
-      // we have "length" midi bytes ready to be processed.
-      decoder_.add_bytes(bytes, length);
-      return true;
-    }
-    else if (err < 0 && err != -EAGAIN)
+    int z = 0;
+    int err = 0;
+    while ((err = snd_rawmidi_read(this->midiport_, bytes, nbytes)) > 0)
     {
-      return false;
+      // err is the amount of bytes read
+      decoder_.add_bytes(bytes, err);
     }
-
-    return true;
+    return err;
   }
 
   void set_timestamp(const struct timespec& ts, int64_t& res)
@@ -215,32 +243,22 @@ public:
     }
   }
 
-  bool read_input_buffer_with_timestamps()
+  int read_input_buffer_with_timestamps()
   {
     static const constexpr int nbytes = 1024;
 
     unsigned char bytes[nbytes];
     struct timespec ts;
-    const int err = snd_rawmidi_tread(this->midiport_, &ts, bytes, nbytes);
-    if (err > 0)
-    {
-      // err is the amount of bytes read in that case
-      const int length = err;
-      if (length == 0)
-        return true;
 
-      // we have "length" midi bytes ready to be processed.
+    int err = 0;
+    while ((err = snd_rawmidi_tread(this->midiport_, &ts, bytes, nbytes)) > 0)
+    {
+      // err is the amount of bytes read
       int64_t ns{};
       set_timestamp(ts, ns);
-      decoder_.add_bytes(bytes, length, ns);
-      return true;
+      decoder_.add_bytes(bytes, err, ns);
     }
-    else if (err < 0 && err != -EAGAIN)
-    {
-      return false;
-    }
-
-    return true;
+    return err;
   }
 
   void close_port() override
@@ -248,7 +266,8 @@ public:
     if (connected_)
     {
       running_ = false;
-      thread_.join();
+      if (thread_.joinable())
+        thread_.join();
 
       snd_rawmidi_close(midiport_);
       midiport_ = nullptr;

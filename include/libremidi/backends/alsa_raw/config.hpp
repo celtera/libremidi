@@ -3,8 +3,19 @@
 
 #include <chrono>
 #include <functional>
-#include <optional>
+#include <span>
 #include <thread>
+
+#if __has_include(<poll.h>)
+  #include <poll.h>
+#else
+struct pollfd
+{
+  int fd;
+  short int events;
+  short int revents;
+};
+#endif
 
 namespace libremidi
 {
@@ -33,8 +44,15 @@ struct LIBREMIDI_EXPORT chunking_parameters
   }
 };
 
+struct manual_poll_parameters
+{
+  std::span<pollfd> fds;
+  std::function<int(std::span<pollfd> fds)> callback;
+};
+
 struct alsa_raw_input_configuration
 {
+  std::function<bool(const manual_poll_parameters&)> manual_poll;
 };
 
 struct alsa_raw_output_configuration

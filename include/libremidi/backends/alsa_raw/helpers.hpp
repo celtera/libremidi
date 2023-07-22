@@ -1,9 +1,13 @@
 #pragma once
 #include <alsa/asoundlib.h>
 
+#include <chrono>
 #include <functional>
+#include <optional>
+#include <span>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 // Credits: greatly inspired from
