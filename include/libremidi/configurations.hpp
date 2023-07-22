@@ -14,5 +14,9 @@
   #include <libremidi/backends/winuwp/config.hpp>
 #endif
 
+#if defined(__EMSCRIPTEN__)
+  #include <libremidi/backends/emscripten/config.hpp>
+#endif
+
 #include <libremidi/backends/jack/config.hpp>
 

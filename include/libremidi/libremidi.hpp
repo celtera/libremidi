@@ -346,4 +346,11 @@ private:
 
 #if defined(LIBREMIDI_HEADER_ONLY)
   #include <libremidi/libremidi.cpp>
+
+  #if defined(__EMSCRIPTEN__)
+    #include <libremidi/backends/emscripten/midi_access.cpp>
+    #include <libremidi/backends/emscripten/midi_in.cpp>
+    #include <libremidi/backends/emscripten/midi_out.cpp>
+    #include <libremidi/backends/emscripten/observer.cpp>
+  #endif
 #endif

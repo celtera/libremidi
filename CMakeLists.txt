@@ -42,58 +42,72 @@ if(LIBREMIDI_HEADER_ONLY)
 else()
   add_library(libremidi
     include/libremidi/backends/alsa_seq/config.hpp
+    include/libremidi/backends/alsa_seq/helpers.hpp
     include/libremidi/backends/alsa_seq/midi_in.hpp
     include/libremidi/backends/alsa_seq/midi_out.hpp
     include/libremidi/backends/alsa_seq/observer.hpp
-    include/libremidi/backends/alsa_raw/helpers.hpp
     include/libremidi/backends/alsa_raw/config.hpp
+    include/libremidi/backends/alsa_raw/helpers.hpp
+    include/libremidi/backends/alsa_raw/midi_in.hpp
     include/libremidi/backends/alsa_raw/midi_out.hpp
     include/libremidi/backends/alsa_raw/observer.hpp
-    include/libremidi/backends/alsa_raw/midi_in.hpp
     include/libremidi/backends/coreaudio/config.hpp
-    include/libremidi/backends/coreaudio/observer.hpp
+    include/libremidi/backends/coreaudio/helpers.hpp
     include/libremidi/backends/coreaudio/midi_in.hpp
     include/libremidi/backends/coreaudio/midi_out.hpp
+    include/libremidi/backends/coreaudio/observer.hpp
     include/libremidi/backends/jack/config.hpp
-    include/libremidi/backends/jack/observer.hpp
+    include/libremidi/backends/jack/helpers.hpp
     include/libremidi/backends/jack/midi_out.hpp
     include/libremidi/backends/jack/midi_in.hpp
+    include/libremidi/backends/jack/observer.hpp
     include/libremidi/backends/emscripten/config.hpp
-    include/libremidi/backends/emscripten/midi_out.hpp
+    include/libremidi/backends/emscripten/helpers.hpp
+    include/libremidi/backends/emscripten/midi_access.hpp
+    include/libremidi/backends/emscripten/midi_access.cpp
     include/libremidi/backends/emscripten/midi_in.hpp
+    include/libremidi/backends/emscripten/midi_in.cpp
+    include/libremidi/backends/emscripten/midi_out.hpp
+    include/libremidi/backends/emscripten/midi_out.cpp
     include/libremidi/backends/emscripten/observer.hpp
+    include/libremidi/backends/emscripten/observer.cpp
     include/libremidi/backends/winmm/config.hpp
-    include/libremidi/backends/winmm/observer.hpp
+    include/libremidi/backends/winmm/helpers.hpp
     include/libremidi/backends/winmm/midi_in.hpp
     include/libremidi/backends/winmm/midi_out.hpp
+    include/libremidi/backends/winmm/observer.hpp
     include/libremidi/backends/winuwp/config.hpp
-    include/libremidi/backends/winuwp/observer.hpp
+    include/libremidi/backends/winuwp/helpers.hpp
     include/libremidi/backends/winuwp/midi_out.hpp
     include/libremidi/backends/winuwp/midi_in.hpp
+    include/libremidi/backends/winuwp/observer.hpp
+
     include/libremidi/backends/alsa.hpp
     include/libremidi/backends/coreaudio.hpp
     include/libremidi/backends/dummy.hpp
-    include/libremidi/backends/emscripten_api.hpp
     include/libremidi/backends/emscripten.hpp
     include/libremidi/backends/jack.hpp
     include/libremidi/backends/raw_alsa.hpp
     include/libremidi/backends/winmm.hpp
     include/libremidi/backends/winuwp.hpp
 
-    include/libremidi/detail/midi_stream_decoder.hpp
-    include/libremidi/detail/midi_out.hpp
-    include/libremidi/detail/midi_in.hpp
-    include/libremidi/detail/observer.hpp
-    include/libremidi/detail/midi_queue.hpp
-    include/libremidi/detail/semaphore.hpp
     include/libremidi/detail/midi_api.hpp
+    include/libremidi/detail/midi_in.hpp
+    include/libremidi/detail/midi_out.hpp
+    include/libremidi/detail/midi_stream_decoder.hpp
+    include/libremidi/detail/observer.hpp
+
+    include/libremidi/api.hpp
+    include/libremidi/config.hpp
+    include/libremidi/configurations.hpp
+    include/libremidi/error.hpp
+    include/libremidi/input_configuration.hpp
+    include/libremidi/libremidi.hpp
+    include/libremidi/message.hpp
+    include/libremidi/output_configuration.hpp
 
     include/libremidi/reader.hpp
     include/libremidi/writer.hpp
-    include/libremidi/config.hpp
-    include/libremidi/message.hpp
-    include/libremidi/libremidi.hpp
-    include/libremidi/api.hpp
 
     include/libremidi/libremidi.cpp
     include/libremidi/reader.cpp
@@ -141,6 +155,7 @@ if(EMSCRIPTEN)
   message(STATUS "libremidi: using Emscripten MIDI")
   set(CMAKE_EXECUTABLE_SUFFIX .html)
   target_compile_definitions(libremidi ${_public} LIBREMIDI_EMSCRIPTEN)
+  target_link_options(libremidi ${_public} "SHELL:-s 'EXPORTED_FUNCTIONS=[\"_main\", \"_free\", \"_libremidi_devices_poll\", \"_libremidi_devices_input\"]'")
 elseif(APPLE)
   ## CoreMIDI support ##
   if(NOT LIBREMIDI_NO_COREMIDI)
@@ -315,6 +330,13 @@ if(LIBREMIDI_EXAMPLES)
 
   add_executable(midi2 tests/midi2.cpp)
   target_link_libraries(midi2 PRIVATE libremidi)
+
+  if(NOT EMSCRIPTEN)
+  if(NOT LIBREMIDI_NO_ALSA)
+    add_executable(poll_share tests/poll_share.cpp)
+    target_link_libraries(poll_share PRIVATE libremidi)
+  endif()
+  endif()
 
   if(EMSCRIPTEN)
     add_executable(emscripten_midiin tests/emscripten_midiin.cpp)
