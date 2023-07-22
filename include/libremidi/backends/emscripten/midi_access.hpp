@@ -200,10 +200,10 @@ public:
     unsigned char* bytes = reinterpret_cast<unsigned char*>(data);
     message msg;
     msg.bytes.assign(bytes, bytes + len);
-    msg.timestamp = timestamp;
 
     for (auto input : m_opened_inputs[port])
     {
+      input->set_timestamp(timestamp, msg);
       input->on_input(msg);
     }
   }

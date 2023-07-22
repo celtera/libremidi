@@ -79,6 +79,33 @@ LIBREMIDI_INLINE std::string midi_in_emscripten::get_port_name(unsigned int port
   return webmidi_helpers::midi_access_emscripten::instance().inputs()[portNumber].name;
 }
 
+LIBREMIDI_INLINE void midi_in_emscripten::set_timestamp(double ts, libremidi::message& m)
+{
+  switch (configuration.timestamps)
+  {
+    case input_configuration::NoTimestamp:
+      m.timestamp = 0;
+      break;
+    case input_configuration::Relative: {
+      if (firstMessage == true)
+      {
+        firstMessage = false;
+        m.timestamp = 0;
+      }
+      else
+      {
+        m.timestamp = (ts - last_time_) * 1e6;
+      }
+      last_time_ = ts;
+      break;
+    }
+    case input_configuration::Absolute:
+    case input_configuration::SystemMonotonic:
+      m.timestamp = ts * 1e6;
+      break;
+  }
+}
+
 LIBREMIDI_INLINE void midi_in_emscripten::on_input(libremidi::message msg)
 {
   this->configuration.on_message(std::move(msg));
