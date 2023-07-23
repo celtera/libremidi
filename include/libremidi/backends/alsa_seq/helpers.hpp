@@ -2,15 +2,11 @@
 #include <libremidi/libremidi.hpp>
 
 #include <alsa/asoundlib.h>
-#include <string>
-
-#include <alsa/asoundlib.h>
 #include <sys/time.h>
-
-#include <pthread.h>
 
 #include <atomic>
 #include <map>
+#include <string>
 #include <thread>
 
 namespace libremidi
