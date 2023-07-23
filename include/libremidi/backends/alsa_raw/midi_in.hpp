@@ -266,7 +266,7 @@ class midi_in_raw_alsa_threaded : public midi_in_raw_alsa
       if (!this->running_)
         return;
 
-      err = do_read_events(parse_func, fds_);
+      err = do_read_events(parse_func, {fds_.data(), fds_.size()});
       if (err == -EAGAIN)
         continue;
       else if (err < 0)
