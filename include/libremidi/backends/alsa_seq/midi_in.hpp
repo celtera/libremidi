@@ -3,6 +3,7 @@
 #include <libremidi/backends/alsa_seq/helpers.hpp>
 #include <libremidi/detail/midi_in.hpp>
 
+#include <sys/eventfd.h>
 namespace libremidi
 {
 class midi_in_alsa
@@ -406,12 +407,9 @@ public:
   midi_in_alsa_threaded(input_configuration&& conf, alsa_sequencer_input_configuration&& apiconf)
       : midi_in_alsa{std::move(conf), std::move(apiconf)}
   {
-    this->dummy_thread_id = pthread_self();
-    this->thread = this->dummy_thread_id;
-    this->trigger_fds[0] = -1;
-    this->trigger_fds[1] = -1;
+    this->event_fd = eventfd(0, EFD_SEMAPHORE | EFD_NONBLOCK);
 
-    if (pipe(this->trigger_fds) == -1)
+    if (this->event_fd < 0)
     {
       error<driver_error>(
           this->configuration, "midi_in_alsa::initialize: error creating pipe objects.");
@@ -422,8 +420,7 @@ public:
   {
     this->close_port();
 
-    close(this->trigger_fds[0]);
-    close(this->trigger_fds[1]);
+    close(this->event_fd);
   }
 
 private:
@@ -460,22 +457,22 @@ private:
 
   [[nodiscard]] int start_thread()
   {
-    // Start our MIDI input thread.
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-    pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
-
-    this->running = true;
-    int err = pthread_create(&this->thread, &attr, alsaMidiHandler, this);
-    pthread_attr_destroy(&attr);
-    if (err)
+    try
     {
+      this->thread = std::thread([this] {
+        this->running = true;
+        alsaMidiHandler();
+      });
+    }
+    catch (const std::system_error& e)
+    {
+      using namespace std::literals;
       unsubscribe();
 
       this->running = false;
       error<thread_error>(
-          this->configuration, "midi_in_alsa::start_thread: error starting MIDI input thread!");
+          this->configuration,
+          "midi_in_alsa::start_thread: error starting MIDI input thread: "s + e.what());
       return false;
     }
     return true;
@@ -483,21 +480,19 @@ private:
 
   void stop_thread()
   {
-    // Stop thread to avoid triggering the callback, while the port is intended
-    // to be closed
     if (this->running)
     {
       this->running = false;
-      write(this->trigger_fds[1], &this->running, sizeof(this->running));
+      eventfd_write(event_fd, 1);
 
-      if (!pthread_equal(this->thread, this->dummy_thread_id))
-        pthread_join(this->thread, nullptr);
+      if (this->thread.joinable())
+        this->thread.join();
     }
   }
 
-  static void* alsaMidiHandler(void* ptr)
+  void alsaMidiHandler()
   {
-    auto& self = *static_cast<midi_in_alsa_threaded*>(ptr);
+    auto& self = *this;
 
     int poll_fd_count{};
     pollfd* poll_fds{};
@@ -505,7 +500,7 @@ private:
     poll_fd_count = snd_seq_poll_descriptors_count(self.seq, POLLIN) + 1;
     poll_fds = (struct pollfd*)alloca(poll_fd_count * sizeof(struct pollfd));
     snd_seq_poll_descriptors(self.seq, poll_fds + 1, poll_fd_count - 1, POLLIN);
-    poll_fds[0].fd = self.trigger_fds[0];
+    poll_fds[0].fd = self.event_fd;
     poll_fds[0].events = POLLIN;
 
     while (self.running)
@@ -515,10 +510,10 @@ private:
         // No data pending
         if (poll(poll_fds, poll_fd_count, -1) >= 0)
         {
+          // We got our stop-thread signal
           if (poll_fds[0].revents & POLLIN)
           {
-            bool dummy;
-            read(poll_fds[0].fd, &dummy, sizeof(dummy));
+            break;
           }
         }
         continue;
@@ -530,15 +525,11 @@ private:
         std::cerr << "midi_in_alsa::alsaMidiHandler: MIDI input error: " << strerror(res) << "\n";
 #endif
     }
-
-    self.thread = self.dummy_thread_id;
-    return nullptr;
   }
 
-  pthread_t thread{};
-  pthread_t dummy_thread_id{};
-  int trigger_fds[2]{};
-  bool running{false};
+  std::thread thread{};
+  int event_fd{};
+  std::atomic_bool running{false};
 };
 
 class midi_in_alsa_manual : public midi_in_alsa
