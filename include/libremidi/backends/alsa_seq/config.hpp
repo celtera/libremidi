@@ -1,6 +1,5 @@
 #pragma once
 #include <libremidi/backends/alsa_raw/config.hpp>
-#include <libremidi/libremidi.hpp>
 
 namespace libremidi
 {

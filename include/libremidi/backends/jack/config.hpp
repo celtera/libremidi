@@ -1,5 +1,9 @@
 #pragma once
-#include <libremidi/libremidi.hpp>
+#include <libremidi/config.hpp>
+
+#include <cinttypes>
+#include <cstdint>
+#include <string>
 
 namespace libremidi
 {

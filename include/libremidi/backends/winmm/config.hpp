@@ -1,5 +1,5 @@
 #pragma once
-#include <libremidi/libremidi.hpp>
+#include <libremidi/config.hpp>
 
 #define RT_WINMM_OBSERVER_POLL_PERIOD_MS 100
 

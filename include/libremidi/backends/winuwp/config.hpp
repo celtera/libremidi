@@ -1,5 +1,5 @@
 #pragma once
-#include <libremidi/libremidi.hpp>
+#include <libremidi/config.hpp>
 
 namespace libremidi
 {
