@@ -323,14 +323,16 @@ class midi_in_raw_alsa_manual : public midi_in_raw_alsa
     if (configuration.timestamps == input_configuration::NoTimestamp)
     {
       configuration.manual_poll(manual_poll_parameters{
-          this->fds_, [this](std::span<pollfd> fds) {
+          .fds = {this->fds_.data(), this->fds_.size()},
+          .callback = [this](std::span<pollfd> fds) {
             return do_read_events(&midi_in_raw_alsa::read_input_buffer, fds);
           }});
     }
     else
     {
       configuration.manual_poll(manual_poll_parameters{
-          this->fds_, [this](std::span<pollfd> fds) {
+          .fds = {this->fds_.data(), this->fds_.size()},
+          .callback = [this](std::span<pollfd> fds) {
             return do_read_events(&midi_in_raw_alsa::read_input_buffer_with_timestamps, fds);
           }});
     }

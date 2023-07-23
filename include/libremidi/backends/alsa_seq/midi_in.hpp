@@ -542,10 +542,9 @@ class midi_in_alsa_manual : public midi_in_alsa
     fds_.resize(poll_fd_count);
     snd_seq_poll_descriptors(seq, fds_.data(), poll_fd_count, POLLIN);
 
-    configuration.manual_poll(
-        manual_poll_parameters{.fds = this->fds_, .callback = [this](std::span<pollfd> fds) {
-                                 return do_read_events();
-                               }});
+    configuration.manual_poll(manual_poll_parameters{
+        .fds = {this->fds_.data(), this->fds_.size()},
+        .callback = [this](std::span<pollfd> fds) { return do_read_events(); }});
   }
 
   int do_read_events()
