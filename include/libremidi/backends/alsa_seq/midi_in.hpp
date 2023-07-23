@@ -5,9 +5,9 @@
 
 namespace libremidi
 {
-class midi_in_alsa final
+class midi_in_alsa
     : public midi_in_api
-    , private alsa_data
+    , protected alsa_data
     , public error_handler
 {
 public:
@@ -17,8 +17,10 @@ public:
   {
   } configuration;
 
-  bool require_timestamps() const noexcept {
-    switch(configuration.timestamps) {
+  bool require_timestamps() const noexcept
+  {
+    switch (configuration.timestamps)
+    {
       case input_configuration::timestamp_mode::NoTimestamp:
       case input_configuration::timestamp_mode::SystemMonotonic:
         return false;
@@ -47,21 +49,8 @@ public:
     // Set client name.
     snd_seq_set_client_name(seq, configuration.client_name.data());
 
-    // Save our api-specific connection information.
-    this->dummy_thread_id = pthread_self();
-    this->thread = this->dummy_thread_id;
-    this->trigger_fds[0] = -1;
-    this->trigger_fds[1] = -1;
-
-    if (pipe(this->trigger_fds) == -1)
-    {
-      error<driver_error>(
-          this->configuration, "midi_in_alsa::initialize: error creating pipe objects.");
-      return;
-    }
-
     // Create the input queue
-    if(require_timestamps())
+    if (require_timestamps())
     {
       this->queue_id = snd_seq_alloc_queue(seq);
       // Set arbitrary tempo (mm=100) and resolution (240)
@@ -89,16 +78,11 @@ public:
 
   ~midi_in_alsa() override
   {
-    // Close a connection if it exists.
-    midi_in_alsa::close_port();
-
     // Cleanup.
-    close(this->trigger_fds[0]);
-    close(this->trigger_fds[1]);
     if (this->vport >= 0)
       snd_seq_delete_port(this->seq, this->vport);
 
-    if(require_timestamps())
+    if (require_timestamps())
       snd_seq_free_queue(this->seq, this->queue_id);
 
     snd_midi_event_free(coder);
@@ -126,7 +110,7 @@ public:
           pinfo, SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
       snd_seq_port_info_set_midi_channels(pinfo, 16);
 
-      if(require_timestamps())
+      if (require_timestamps())
       {
         snd_seq_port_info_set_timestamping(pinfo, 1);
         snd_seq_port_info_set_timestamp_real(pinfo, 1);
@@ -146,158 +130,127 @@ public:
     return true;
   }
 
-  [[nodiscard]] bool start_thread()
+  void start_queue()
   {
-    if(require_timestamps())
+    if (require_timestamps())
     {
       snd_seq_start_queue(this->seq, this->queue_id, nullptr);
       snd_seq_drain_output(this->seq);
     }
-
-    // Start our MIDI input thread.
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-    pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
-
-    this->doInput = true;
-    int err = pthread_create(&this->thread, &attr, alsaMidiHandler, this);
-    pthread_attr_destroy(&attr);
-    if (err)
-    {
-      if (this->subscription)
-      {
-        snd_seq_unsubscribe_port(this->seq, this->subscription);
-        snd_seq_port_subscribe_free(this->subscription);
-        this->subscription = nullptr;
-      }
-      this->doInput = false;
-      error<thread_error>(
-          this->configuration, "midi_in_alsa::start_thread: error starting MIDI input thread!");
-      return false;
-    }
-    return true;
   }
 
-  void open_port(unsigned int portNumber, std::string_view portName) override
+  void stop_queue()
   {
-    if (connected_)
+    if (require_timestamps())
     {
-      warning(this->configuration, "midi_in_alsa::open_port: a valid connection already exists!");
-      return;
+      snd_seq_stop_queue(this->seq, this->queue_id, nullptr);
+      snd_seq_drain_output(this->seq);
     }
+  }
 
-    // Find the port to which we want to connect to
-    unsigned int nSrc = this->get_port_count();
-    if (nSrc < 1)
+  void unsubscribe()
+  {
+    if (this->subscription)
     {
-      error<no_devices_found_error>(
-          this->configuration, "midi_in_alsa::open_port: no MIDI input sources found!");
-      return;
+      snd_seq_unsubscribe_port(this->seq, this->subscription);
+      snd_seq_port_subscribe_free(this->subscription);
+      this->subscription = nullptr;
     }
+  }
 
+  int connect_port(snd_seq_addr_t sender)
+  {
+    snd_seq_addr_t receiver{};
+    receiver.client = snd_seq_client_id(this->seq);
+    receiver.port = this->vport;
+
+    // Create the connection between ports
+    // Make subscription
+    if (int err = snd_seq_port_subscribe_malloc(&this->subscription); err < 0)
+    {
+      error<driver_error>(
+          this->configuration,
+          "midi_in_alsa::open_port: ALSA error allocation port subscription.");
+      return err;
+    }
+    snd_seq_port_subscribe_set_sender(this->subscription, &sender);
+    snd_seq_port_subscribe_set_dest(this->subscription, &receiver);
+    if (int err = snd_seq_subscribe_port(this->seq, this->subscription); err != 0)
+    {
+      snd_seq_port_subscribe_free(this->subscription);
+      this->subscription = nullptr;
+      error<driver_error>(
+          this->configuration, "midi_in_alsa::open_port: ALSA error making port connection.");
+      return err;
+    }
+    return 0;
+  }
+
+  std::optional<snd_seq_addr_t> get_port_info(unsigned int portNumber)
+  {
     snd_seq_port_info_t* src_pinfo{};
     snd_seq_port_info_alloca(&src_pinfo);
+
     if (alsa_seq::port_info(
-            this->seq, src_pinfo, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
-            (int)portNumber)
+            this->seq, src_pinfo, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ, portNumber)
         == 0)
     {
       error<invalid_parameter_error>(
           this->configuration,
           "midi_in_alsa::open_port: invalid 'portNumber' argument: " + std::to_string(portNumber));
-      return;
+      return {};
     }
 
-    snd_seq_addr_t sender{}, receiver{};
-    sender.client = snd_seq_port_info_get_client(src_pinfo);
-    sender.port = snd_seq_port_info_get_port(src_pinfo);
-    receiver.client = snd_seq_client_id(this->seq);
-
-    if (!create_port(portName))
-      return;
-
-    receiver.port = this->vport;
-
-    // Create the connection between ports
-    if (!this->subscription)
-    {
-      // Make subscription
-      if (snd_seq_port_subscribe_malloc(&this->subscription) < 0)
-      {
-        error<driver_error>(
-            this->configuration,
-            "midi_in_alsa::open_port: ALSA error allocation port subscription.");
-        return;
-      }
-      snd_seq_port_subscribe_set_sender(this->subscription, &sender);
-      snd_seq_port_subscribe_set_dest(this->subscription, &receiver);
-      if (snd_seq_subscribe_port(this->seq, this->subscription))
-      {
-        snd_seq_port_subscribe_free(this->subscription);
-        this->subscription = nullptr;
-        error<driver_error>(
-            this->configuration, "midi_in_alsa::open_port: ALSA error making port connection.");
-        return;
-      }
-    }
-
-    // Run
-    if (this->doInput == false)
-    {
-      if (!start_thread())
-        return;
-    }
+    snd_seq_addr_t addr;
+    addr.client = snd_seq_port_info_get_client(src_pinfo);
+    addr.port = snd_seq_port_info_get_port(src_pinfo);
+    return addr;
   }
 
-  void open_virtual_port(std::string_view portName) override
+  int init_port(unsigned int portNumber, std::string_view portName)
   {
-    if (!create_port(portName))
-      return;
-
-    if (this->doInput == false)
+    if (connected_)
     {
-      // Wait for old thread to stop, if still running
-      if (!pthread_equal(this->thread, this->dummy_thread_id))
-        pthread_join(this->thread, nullptr);
-
-      if (!start_thread())
-        return;
+      warning(this->configuration, "midi_in_alsa::open_port: a valid connection already exists!");
+      return -1;
     }
+
+    auto source_addr = get_port_info(portNumber);
+    if (!source_addr)
+      return -1;
+
+    if (!create_port(portName))
+      return -1;
+
+    connect_port(*source_addr);
+    start_queue();
+
     connected_ = true;
+    return 0;
+  }
+
+  int init_virtual_port(std::string_view portName)
+  {
+    if (connected_)
+    {
+      warning(
+          this->configuration,
+          "midi_in_alsa::open_virtual_port: a valid connection already exists!");
+      return -1;
+    }
+
+    if (!create_port(portName))
+      return -1;
+
+    start_queue();
+    return 0;
   }
 
   void close_port() override
   {
-    if (connected_)
-    {
-      if (this->subscription)
-      {
-        snd_seq_unsubscribe_port(this->seq, this->subscription);
-        snd_seq_port_subscribe_free(this->subscription);
-        this->subscription = nullptr;
-      }
-
-      // Stop the input queue
-      if(require_timestamps())
-      {
-        snd_seq_stop_queue(this->seq, this->queue_id, nullptr);
-        snd_seq_drain_output(this->seq);
-      }
-
-      connected_ = false;
-    }
-
-    // Stop thread to avoid triggering the callback, while the port is intended
-    // to be closed
-    if (this->doInput)
-    {
-      this->doInput = false;
-      write(this->trigger_fds[1], &this->doInput, sizeof(this->doInput));
-
-      if (!pthread_equal(this->thread, this->dummy_thread_id))
-        pthread_join(this->thread, nullptr);
-    }
+    unsubscribe();
+    stop_queue();
+    connected_ = false;
   }
 
   void set_client_name(std::string_view clientName) override
@@ -318,7 +271,7 @@ public:
         portNumber, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ);
   }
 
-private:
+protected:
   void set_timestamp(snd_seq_event_t& ev, libremidi::message& msg) noexcept
   {
     static constexpr int64_t nanos = 1e9;
@@ -363,85 +316,188 @@ private:
   {
     snd_seq_event_t* ev{};
     unique_handle<snd_seq_event_t, snd_seq_free_event> handle;
-    int result = snd_seq_event_input(seq, &ev);
-    handle.reset(ev);
-    if (result <= 0)
-      return result;
-
-    if (!continueSysex)
-      message.bytes.clear();
-
-    // Filter the message types before any decoding
-    switch (ev->type)
+    int result = 0;
+    while ((result = snd_seq_event_input(seq, &ev)) > 0)
     {
-      case SND_SEQ_EVENT_PORT_SUBSCRIBED:
-      case SND_SEQ_EVENT_PORT_UNSUBSCRIBED:
-        return 0;
+      handle.reset(ev);
 
-      case SND_SEQ_EVENT_QFRAME: // MIDI time code
-      case SND_SEQ_EVENT_TICK:   // 0xF9 ... MIDI timing tick
-      case SND_SEQ_EVENT_CLOCK:  // 0xF8 ... MIDI timing (clock) tick
-        if (configuration.ignore_timing)
-          return 0;
-        break;
-
-      case SND_SEQ_EVENT_SENSING: // Active sensing
-        if (configuration.ignore_sensing)
-          return 0;
-        break;
-
-      case SND_SEQ_EVENT_SYSEX: {
-        if (configuration.ignore_sysex)
-          return 0;
-        else if (ev->data.ext.len > decoding_buffer.size())
-          decoding_buffer.resize(ev->data.ext.len);
-        break;
-      }
-    }
-
-    // Decode the message
-    auto buf = decoding_buffer.data();
-    auto buf_space = decoding_buffer.size();
-    const uint64_t nBytes = snd_midi_event_decode(coder, buf, buf_space, ev);
-    if (nBytes > 0)
-    {
-      // The ALSA sequencer has a maximum buffer size for MIDI sysex
-      // events of 256 bytes.  If a device sends sysex messages larger
-      // than this, they are segmented into 256 byte chunks.  So,
-      // we'll watch for this and concatenate sysex chunks into a
-      // single sysex message if necessary.
-      assert(nBytes < buf_space);
       if (!continueSysex)
-        message.bytes.assign(buf, buf + nBytes);
-      else
-        message.bytes.insert(message.bytes.end(), buf, buf + nBytes);
+        message.bytes.clear();
 
-      continueSysex = ((ev->type == SND_SEQ_EVENT_SYSEX) && (message.bytes.back() != 0xF7));
-      if (!continueSysex)
+      // Filter the message types before any decoding
+      switch (ev->type)
       {
-        set_timestamp(*ev, message);
+        case SND_SEQ_EVENT_PORT_SUBSCRIBED:
+        case SND_SEQ_EVENT_PORT_UNSUBSCRIBED:
+          return 0;
+
+        case SND_SEQ_EVENT_QFRAME: // MIDI time code
+        case SND_SEQ_EVENT_TICK:   // 0xF9 ... MIDI timing tick
+        case SND_SEQ_EVENT_CLOCK:  // 0xF8 ... MIDI timing (clock) tick
+          if (configuration.ignore_timing)
+            continue;
+          break;
+
+        case SND_SEQ_EVENT_SENSING: // Active sensing
+          if (configuration.ignore_sensing)
+            continue;
+          break;
+
+        case SND_SEQ_EVENT_SYSEX: {
+          if (configuration.ignore_sysex)
+            continue;
+          else if (ev->data.ext.len > decoding_buffer.size())
+            decoding_buffer.resize(ev->data.ext.len);
+          break;
+        }
       }
-      else
+
+      // Decode the message
+      auto buf = decoding_buffer.data();
+      auto buf_space = decoding_buffer.size();
+      const uint64_t avail = snd_midi_event_decode(coder, buf, buf_space, ev);
+      if (avail > 0)
       {
+        // The ALSA sequencer has a maximum buffer size for MIDI sysex
+        // events of 256 bytes.  If a device sends sysex messages larger
+        // than this, they are segmented into 256 byte chunks.  So,
+        // we'll watch for this and concatenate sysex chunks into a
+        // single sysex message if necessary.
+        assert(avail < buf_space);
+        if (!continueSysex)
+          message.bytes.assign(buf, buf + avail);
+        else
+          message.bytes.insert(message.bytes.end(), buf, buf + avail);
+
+        continueSysex = ((ev->type == SND_SEQ_EVENT_SYSEX) && (message.bytes.back() != 0xF7));
+        if (!continueSysex)
+        {
+          set_timestamp(*ev, message);
+        }
+        else
+        {
 #if defined(__LIBREMIDI_DEBUG__)
-        std::cerr << "\nmidi_in_alsa::alsaMidiHandler: event parsing error or "
-                     "not a MIDI event!\n\n";
+          std::cerr << "\nmidi_in_alsa::alsaMidiHandler: event parsing error or "
+                       "not a MIDI event!\n\n";
 #endif
-        return -EINVAL;
+          return -EINVAL;
+        }
       }
+
+      if (message.bytes.size() == 0 || continueSysex)
+        continue;
+
+      // Finally the message is ready
+      configuration.on_message(std::move(message));
+      message.clear();
     }
+    return result;
+  }
 
-    if (message.bytes.size() == 0 || continueSysex)
-      return 0;
+  int queue_id{}; // an input queue is needed to get timestamped events
+  snd_seq_real_time_t last_time{};
 
-    configuration.on_message(std::move(message));
-    message.clear();
-    return 0;
+  std::vector<unsigned char> decoding_buffer = std::vector<unsigned char>(32);
+};
+
+class midi_in_alsa_threaded : public midi_in_alsa
+{
+public:
+  midi_in_alsa_threaded(input_configuration&& conf, alsa_sequencer_input_configuration&& apiconf)
+      : midi_in_alsa{std::move(conf), std::move(apiconf)}
+  {
+    this->dummy_thread_id = pthread_self();
+    this->thread = this->dummy_thread_id;
+    this->trigger_fds[0] = -1;
+    this->trigger_fds[1] = -1;
+
+    if (pipe(this->trigger_fds) == -1)
+    {
+      error<driver_error>(
+          this->configuration, "midi_in_alsa::initialize: error creating pipe objects.");
+    }
+  }
+
+  ~midi_in_alsa_threaded()
+  {
+    this->close_port();
+
+    close(this->trigger_fds[0]);
+    close(this->trigger_fds[1]);
+  }
+
+private:
+  void open_port(unsigned int portNumber, std::string_view portName) override
+  {
+    if (init_port(portNumber, portName) < 0)
+      return;
+
+    if (this->running == false)
+    {
+      if (!start_thread())
+        return;
+    }
+  }
+
+  void open_virtual_port(std::string_view portName) override
+  {
+    if (init_virtual_port(portName) < 0)
+      return;
+
+    if (this->running == false)
+    {
+      if (!start_thread())
+        return;
+    }
+  }
+
+  void close_port() override
+  {
+    midi_in_alsa::close_port();
+
+    stop_thread();
+  }
+
+  [[nodiscard]] int start_thread()
+  {
+    // Start our MIDI input thread.
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
+
+    this->running = true;
+    int err = pthread_create(&this->thread, &attr, alsaMidiHandler, this);
+    pthread_attr_destroy(&attr);
+    if (err)
+    {
+      unsubscribe();
+
+      this->running = false;
+      error<thread_error>(
+          this->configuration, "midi_in_alsa::start_thread: error starting MIDI input thread!");
+      return false;
+    }
+    return true;
+  }
+
+  void stop_thread()
+  {
+    // Stop thread to avoid triggering the callback, while the port is intended
+    // to be closed
+    if (this->running)
+    {
+      this->running = false;
+      write(this->trigger_fds[1], &this->running, sizeof(this->running));
+
+      if (!pthread_equal(this->thread, this->dummy_thread_id))
+        pthread_join(this->thread, nullptr);
+    }
   }
 
   static void* alsaMidiHandler(void* ptr)
   {
-    auto& self = *static_cast<midi_in_alsa*>(ptr);
+    auto& self = *static_cast<midi_in_alsa_threaded*>(ptr);
 
     int poll_fd_count{};
     pollfd* poll_fds{};
@@ -452,7 +508,7 @@ private:
     poll_fds[0].fd = self.trigger_fds[0];
     poll_fds[0].events = POLLIN;
 
-    while (self.doInput)
+    while (self.running)
     {
       if (snd_seq_event_input_pending(self.seq, 1) == 0)
       {
@@ -481,12 +537,62 @@ private:
 
   pthread_t thread{};
   pthread_t dummy_thread_id{};
-  int queue_id{}; // an input queue is needed to get timestamped events
   int trigger_fds[2]{};
-  snd_seq_real_time_t last_time{};
-
-  std::vector<unsigned char> decoding_buffer = std::vector<unsigned char>(32);
-  bool doInput{false};
+  bool running{false};
 };
 
+class midi_in_alsa_manual : public midi_in_alsa
+{
+  using midi_in_alsa::midi_in_alsa;
+
+  void init_fds()
+  {
+    auto poll_fd_count = snd_seq_poll_descriptors_count(seq, POLLIN);
+    fds_.resize(poll_fd_count);
+    snd_seq_poll_descriptors(seq, fds_.data(), poll_fd_count, POLLIN);
+
+    configuration.manual_poll(
+        manual_poll_parameters{.fds = this->fds_, .callback = [this](std::span<pollfd> fds) {
+                                 return do_read_events();
+                               }});
+  }
+
+  int do_read_events()
+  {
+    if (snd_seq_event_input_pending(seq, 1) == 0)
+      return 0;
+
+    return process_events();
+  }
+
+  void open_port(unsigned int portNumber, std::string_view name) override
+  {
+    if (init_port(portNumber, name) < 0)
+      return;
+
+    init_fds();
+
+    connected_ = true;
+  }
+
+  void open_virtual_port(std::string_view name) override
+  {
+    if (init_virtual_port(name) < 0)
+      return;
+
+    init_fds();
+  }
+
+  std::vector<pollfd> fds_;
+};
+
+template <>
+inline std::unique_ptr<midi_in_api> make<midi_in_alsa>(
+    libremidi::input_configuration&& conf, libremidi::alsa_sequencer_input_configuration&& api)
+{
+  if (api.manual_poll)
+    return std::make_unique<midi_in_alsa_manual>(std::move(conf), std::move(api));
+  else
+    return std::make_unique<midi_in_alsa_threaded>(std::move(conf), std::move(api));
+}
 }

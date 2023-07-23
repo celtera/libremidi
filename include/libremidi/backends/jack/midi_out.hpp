@@ -196,7 +196,6 @@ public:
 
   std::string get_port_name(unsigned int portNumber) const override
   {
-    // List of available ports
     unique_handle<const char*, jack_free> ports{
         jack_get_ports(this->client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput)};
 

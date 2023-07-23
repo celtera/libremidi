@@ -1,4 +1,5 @@
 #pragma once
+#include <libremidi/backends/alsa_raw/config.hpp>
 #include <libremidi/libremidi.hpp>
 
 namespace libremidi
@@ -13,6 +14,7 @@ namespace libremidi
 struct alsa_sequencer_input_configuration
 {
   std::string client_name;
+  std::function<bool(const manual_poll_parameters&)> manual_poll;
 };
 
 struct alsa_sequencer_output_configuration
