@@ -34,7 +34,6 @@ public:
       , configuration{std::move(conf), std::move(apiconf)}
   {
     // Set up the ALSA sequencer client.
-    snd_seq_t* seq{};
     int result = snd_seq_open(&seq, "default", SND_SEQ_OPEN_DUPLEX, SND_SEQ_NONBLOCK);
     if (result < 0)
     {
@@ -49,9 +48,6 @@ public:
     snd_seq_set_client_name(seq, configuration.client_name.data());
 
     // Save our api-specific connection information.
-    this->seq = seq;
-    this->vport = -1;
-    this->subscription = nullptr;
     this->dummy_thread_id = pthread_self();
     this->thread = this->dummy_thread_id;
     this->trigger_fds[0] = -1;
@@ -67,14 +63,27 @@ public:
     // Create the input queue
     if(require_timestamps())
     {
-      this->queue_id = snd_seq_alloc_named_queue(seq, "libremidi queue");
+      this->queue_id = snd_seq_alloc_queue(seq);
       // Set arbitrary tempo (mm=100) and resolution (240)
-      snd_seq_queue_tempo_t* qtempo;
+      snd_seq_queue_tempo_t* qtempo{};
       snd_seq_queue_tempo_alloca(&qtempo);
       snd_seq_queue_tempo_set_tempo(qtempo, 600000);
       snd_seq_queue_tempo_set_ppq(qtempo, 240);
       snd_seq_set_queue_tempo(this->seq, this->queue_id, qtempo);
       snd_seq_drain_output(this->seq);
+    }
+
+    // Create the event -> midi encoder
+    {
+      int result = snd_midi_event_new(0, &coder);
+      if (result < 0)
+      {
+        error<driver_error>(
+            this->configuration, "midi_in_alsa::initialize: error during snd_midi_event_new.");
+        return;
+      }
+      snd_midi_event_init(coder);
+      snd_midi_event_no_status(coder, 1);
     }
   }
 
@@ -82,16 +91,6 @@ public:
   {
     // Close a connection if it exists.
     midi_in_alsa::close_port();
-
-    // Shutdown the input thread.
-    if (this->doInput)
-    {
-      this->doInput = false;
-      write(this->trigger_fds[1], &this->doInput, sizeof(this->doInput));
-
-      if (!pthread_equal(this->thread, this->dummy_thread_id))
-        pthread_join(this->thread, nullptr);
-    }
 
     // Cleanup.
     close(this->trigger_fds[0]);
@@ -101,6 +100,8 @@ public:
 
     if(require_timestamps())
       snd_seq_free_queue(this->seq, this->queue_id);
+
+    snd_midi_event_free(coder);
 
     snd_seq_close(this->seq);
   }
@@ -358,35 +359,89 @@ private:
     }
   }
 
+  int process_events()
+  {
+    snd_seq_event_t* ev{};
+    if (int result = snd_seq_event_input(seq, &ev) <= 0)
+      return result;
+
+    if (!continueSysex)
+      message.bytes.clear();
+
+    // Filter the message types before any decoding
+    switch (ev->type)
+    {
+      case SND_SEQ_EVENT_PORT_SUBSCRIBED:
+      case SND_SEQ_EVENT_PORT_UNSUBSCRIBED:
+        return 0;
+
+      case SND_SEQ_EVENT_QFRAME: // MIDI time code
+      case SND_SEQ_EVENT_TICK:   // 0xF9 ... MIDI timing tick
+      case SND_SEQ_EVENT_CLOCK:  // 0xF8 ... MIDI timing (clock) tick
+        if (configuration.ignore_timing)
+          return 0;
+        break;
+
+      case SND_SEQ_EVENT_SENSING: // Active sensing
+        if (configuration.ignore_sensing)
+          return 0;
+        break;
+
+      case SND_SEQ_EVENT_SYSEX: {
+        if (configuration.ignore_sysex)
+          return 0;
+        else if (ev->data.ext.len > decoding_buffer.size())
+          decoding_buffer.resize(ev->data.ext.len);
+        break;
+      }
+    }
+
+    // Decode the message
+    auto buf = decoding_buffer.data();
+    auto buf_space = decoding_buffer.size();
+    const uint64_t nBytes = snd_midi_event_decode(coder, buf, buf_space, ev);
+    if (nBytes > 0)
+    {
+      // The ALSA sequencer has a maximum buffer size for MIDI sysex
+      // events of 256 bytes.  If a device sends sysex messages larger
+      // than this, they are segmented into 256 byte chunks.  So,
+      // we'll watch for this and concatenate sysex chunks into a
+      // single sysex message if necessary.
+      assert(nBytes < buf_space);
+      if (!continueSysex)
+        message.bytes.assign(buf, buf + nBytes);
+      else
+        message.bytes.insert(message.bytes.end(), buf, buf + nBytes);
+
+      continueSysex = ((ev->type == SND_SEQ_EVENT_SYSEX) && (message.bytes.back() != 0xF7));
+      if (!continueSysex)
+      {
+        set_timestamp(*ev, message);
+      }
+      else
+      {
+#if defined(__LIBREMIDI_DEBUG__)
+        std::cerr << "\nmidi_in_alsa::alsaMidiHandler: event parsing error or "
+                     "not a MIDI event!\n\n";
+#endif
+      }
+    }
+
+    snd_seq_free_event(ev);
+    if (message.bytes.size() == 0 || continueSysex)
+      return 0;
+
+    configuration.on_message(std::move(message));
+    message.clear();
+    return 0;
+  }
+
   static void* alsaMidiHandler(void* ptr)
   {
     auto& self = *static_cast<midi_in_alsa*>(ptr);
 
-    double time{};
-    bool continueSysex = false;
-    bool doDecode = false;
-    auto& message = self.message;
     int poll_fd_count{};
     pollfd* poll_fds{};
-
-    snd_seq_event_t* ev{};
-
-    int result = snd_midi_event_new(0, &self.coder);
-    if (result < 0)
-    {
-      self.doInput = false;
-#if defined(__LIBREMIDI_DEBUG__)
-      std::cerr << "\nmidi_in_alsa::alsaMidiHandler: error initializing MIDI "
-                   "event parser!\n\n";
-#endif
-      return nullptr;
-    }
-
-    std::vector<unsigned char> buffer;
-    buffer.resize(32); // Initial buffer size
-
-    snd_midi_event_init(self.coder);
-    snd_midi_event_no_status(self.coder, 1); // suppress running status messages
 
     poll_fd_count = snd_seq_poll_descriptors_count(self.seq, POLLIN) + 1;
     poll_fds = (struct pollfd*)alloca(poll_fd_count * sizeof(struct pollfd));
@@ -410,124 +465,13 @@ private:
         continue;
       }
 
-      // If here, there should be this->
-      result = snd_seq_event_input(self.seq, &ev);
-      if (result == -ENOSPC)
-      {
+      int res = self.process_events();
 #if defined(__LIBREMIDI_DEBUG__)
-        std::cerr << "\nmidi_in_alsa::alsaMidiHandler: MIDI input buffer overrun!\n\n";
+      if (res < 0)
+        std::cerr << "midi_in_alsa::alsaMidiHandler: MIDI input error: " << strerror(res) << "\n";
 #endif
-        continue;
-      }
-      else if (result <= 0)
-      {
-#if defined(__LIBREMIDI_DEBUG__)
-        std::cerr << "\nmidi_in_alsa::alsaMidiHandler: unknown MIDI input error!\n";
-        perror("System reports");
-#endif
-        continue;
-      }
-
-      // This is a bit weird, but we now have to decode an ALSA MIDI
-      // event (back) into MIDI bytes.  We'll ignore non-MIDI types.
-      if (!continueSysex)
-        message.bytes.clear();
-
-      doDecode = false;
-      switch (ev->type)
-      {
-        case SND_SEQ_EVENT_PORT_SUBSCRIBED:
-#if defined(__LIBREMIDI_DEBUG__)
-          std::cerr << "midi_in_alsa::alsaMidiHandler: port connection made!\n";
-#endif
-          break;
-
-        case SND_SEQ_EVENT_PORT_UNSUBSCRIBED:
-#if defined(__LIBREMIDI_DEBUG__)
-          std::cerr << "midi_in_alsa::alsaMidiHandler: port connection has closed!\n";
-          std::cerr << "sender = " << (int)ev->data.connect.sender.client << ":"
-                    << (int)ev->data.connect.sender.port
-                    << ", dest = " << (int)ev->data.connect.dest.client << ":"
-                    << (int)ev->data.connect.dest.port << std::endl;
-#endif
-          break;
-
-        case SND_SEQ_EVENT_QFRAME: // MIDI time code
-          if (!self.configuration.ignore_timing)
-            doDecode = true;
-          break;
-
-        case SND_SEQ_EVENT_TICK: // 0xF9 ... MIDI timing tick
-          if (!self.configuration.ignore_timing)
-            doDecode = true;
-          break;
-
-        case SND_SEQ_EVENT_CLOCK: // 0xF8 ... MIDI timing (clock) tick
-          if (!self.configuration.ignore_timing)
-            doDecode = true;
-          break;
-
-        case SND_SEQ_EVENT_SENSING: // Active sensing
-          if (!self.configuration.ignore_sensing)
-            doDecode = true;
-          break;
-
-        case SND_SEQ_EVENT_SYSEX: {
-          if (self.configuration.ignore_sysex)
-            break;
-          if (ev->data.ext.len > buffer.size())
-          {
-            buffer.resize(ev->data.ext.len);
-          }
-          doDecode = true;
-          break;
-        }
-
-        default:
-          doDecode = true;
-      }
-
-      if (doDecode)
-      {
-        uint64_t nBytes = snd_midi_event_decode(self.coder, buffer.data(), buffer.size(), ev);
-        if (nBytes > 0)
-        {
-          // The ALSA sequencer has a maximum buffer size for MIDI sysex
-          // events of 256 bytes.  If a device sends sysex messages larger
-          // than this, they are segmented into 256 byte chunks.  So,
-          // we'll watch for this and concatenate sysex chunks into a
-          // single sysex message if necessary.
-          assert(nBytes < buffer.size());
-          if (!continueSysex)
-            message.bytes.assign(buffer.data(), buffer.data() + nBytes);
-          else
-            message.bytes.insert(message.bytes.end(), buffer.data(), buffer.data() + nBytes);
-
-          continueSysex = ((ev->type == SND_SEQ_EVENT_SYSEX) && (message.bytes.back() != 0xF7));
-          if (!continueSysex)
-          {
-            self.set_timestamp(*ev, message);
-          }
-          else
-          {
-#if defined(__LIBREMIDI_DEBUG__)
-            std::cerr << "\nmidi_in_alsa::alsaMidiHandler: event parsing error or "
-                         "not a MIDI event!\n\n";
-#endif
-          }
-        }
-      }
-
-      snd_seq_free_event(ev);
-      if (message.bytes.size() == 0 || continueSysex)
-        continue;
-
-      self.configuration.on_message(std::move(message));
-      message.clear();
     }
 
-    snd_midi_event_free(self.coder);
-    self.coder = nullptr;
     self.thread = self.dummy_thread_id;
     return nullptr;
   }
@@ -538,6 +482,7 @@ private:
   int trigger_fds[2]{};
   snd_seq_real_time_t last_time{};
 
+  std::vector<unsigned char> decoding_buffer = std::vector<unsigned char>(32);
   bool doInput{false};
 };
 

@@ -89,7 +89,7 @@ inline std::string port_name(snd_seq_t* seq, snd_seq_port_info_t* pinfo)
 struct alsa_data
 {
   snd_seq_t* seq{};
-  int vport{};
+  int vport{-1};
 
   snd_seq_port_subscribe_t* subscription{};
   snd_midi_event_t* coder{};
