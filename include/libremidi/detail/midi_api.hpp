@@ -1,5 +1,7 @@
 #pragma once
-#include <libremidi/libremidi.hpp>
+#include <libremidi/api.hpp>
+#include <libremidi/config.hpp>
+#include <libremidi/error.hpp>
 
 #include <iostream>
 #include <string_view>
