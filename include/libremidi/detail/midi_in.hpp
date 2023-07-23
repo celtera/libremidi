@@ -25,4 +25,9 @@ protected:
   bool firstMessage{true};
 };
 
+template <typename T, typename Arg>
+std::unique_ptr<midi_in_api> make(libremidi::input_configuration&& conf, Arg&& arg)
+{
+  return std::make_unique<T>(std::move(conf), std::move(arg));
+}
 }

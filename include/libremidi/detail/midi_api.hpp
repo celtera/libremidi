@@ -83,5 +83,4 @@ protected:
 
 template <typename T, auto func>
 using unique_handle = std::unique_ptr<T, decltype([](T* x) { func(x); })>;
-
 }

@@ -11,7 +11,7 @@
 
 namespace libremidi
 {
-class midi_in_raw_alsa final
+class midi_in_raw_alsa
     : public midi_in_api
     , public error_handler
 {
@@ -51,7 +51,7 @@ public:
     return libremidi::API::LINUX_ALSA_RAW;
   }
 
-  void open_port(unsigned int portNumber, std::string_view) override
+  void init_port(unsigned int portNumber)
   {
     if (connected_)
     {
@@ -99,42 +99,6 @@ public:
     err = snd_rawmidi_params(midiport_, params);
 
     init_pollfd();
-    if (configuration.timestamps == input_configuration::NoTimestamp)
-    {
-      if (configuration.manual_poll)
-      {
-        running_ = configuration.manual_poll(manual_poll_parameters{
-            this->fds_, [this](std::span<pollfd> fds) {
-              return do_read_events(&midi_in_raw_alsa::read_input_buffer, fds);
-            }});
-      }
-      else
-      {
-        this->thread_ = std::thread{[this] {
-          running_ = true;
-          run_thread(&midi_in_raw_alsa::read_input_buffer);
-        }};
-      }
-    }
-    else
-    {
-      if (configuration.manual_poll)
-      {
-        running_ = configuration.manual_poll(manual_poll_parameters{
-            this->fds_, [this](std::span<pollfd> fds) {
-              return do_read_events(&midi_in_raw_alsa::read_input_buffer_with_timestamps, fds);
-            }});
-      }
-      else
-      {
-        this->thread_ = std::thread{[this] {
-          running_ = true;
-          run_thread(&midi_in_raw_alsa::read_input_buffer_with_timestamps);
-        }};
-      }
-    }
-
-    connected_ = true;
   }
 
   void init_pollfd()
@@ -145,30 +109,6 @@ public:
     this->fds_.resize(num_fds);
 
     snd_rawmidi_poll_descriptors(this->midiport_, fds_.data(), num_fds);
-  }
-
-  void run_thread(auto parse_func)
-  {
-    static const constexpr int poll_timeout = 50; // in ms
-
-    while (this->running_)
-    {
-      // Poll
-      int err = poll(fds_.data(), fds_.size(), poll_timeout);
-      if (err == -EAGAIN)
-        continue;
-      else if (err < 0)
-        return;
-
-      if (!this->running_)
-        return;
-
-      err = do_read_events(parse_func, fds_);
-      if (err == -EAGAIN)
-        continue;
-      else if (err < 0)
-        return;
-    }
   }
 
   int do_read_events(auto parse_func, std::span<pollfd> fds)
@@ -265,10 +205,6 @@ public:
   {
     if (connected_)
     {
-      running_ = false;
-      if (thread_.joinable())
-        thread_.join();
-
       snd_rawmidi_close(midiport_);
       midiport_ = nullptr;
       connected_ = false;
@@ -305,10 +241,111 @@ public:
   }
 
   snd_rawmidi_t* midiport_{};
-  std::thread thread_;
-  std::atomic_bool running_{};
   std::vector<pollfd> fds_;
   midi_stream_decoder decoder_{this->configuration.on_message};
   int64_t last_time{};
 };
+
+class midi_in_raw_alsa_threaded : public midi_in_raw_alsa
+{
+  using midi_in_raw_alsa::midi_in_raw_alsa;
+
+  void run_thread(auto parse_func)
+  {
+    static const constexpr int poll_timeout = 50; // in ms
+
+    while (this->running_)
+    {
+      // Poll
+      int err = poll(fds_.data(), fds_.size(), poll_timeout);
+      if (err == -EAGAIN)
+        continue;
+      else if (err < 0)
+        return;
+
+      if (!this->running_)
+        return;
+
+      err = do_read_events(parse_func, fds_);
+      if (err == -EAGAIN)
+        continue;
+      else if (err < 0)
+        return;
+    }
+  }
+
+  void open_port(unsigned int portNumber, std::string_view name) override
+  {
+    midi_in_raw_alsa::init_port(portNumber);
+
+    if (configuration.timestamps == input_configuration::NoTimestamp)
+    {
+      this->thread_ = std::thread{[this] {
+        running_ = true;
+        run_thread(&midi_in_raw_alsa::read_input_buffer);
+      }};
+    }
+    else
+    {
+      this->thread_ = std::thread{[this] {
+        running_ = true;
+        run_thread(&midi_in_raw_alsa::read_input_buffer_with_timestamps);
+      }};
+    }
+
+    connected_ = true;
+  }
+
+  void close_port() override
+  {
+    if (running_)
+    {
+      running_ = false;
+      if (thread_.joinable())
+        thread_.join();
+    }
+
+    midi_in_raw_alsa::close_port();
+  }
+
+  std::thread thread_;
+  std::atomic_bool running_{};
+};
+
+class midi_in_raw_alsa_manual : public midi_in_raw_alsa
+{
+  using midi_in_raw_alsa::midi_in_raw_alsa;
+
+  void open_port(unsigned int portNumber, std::string_view name) override
+  {
+    midi_in_raw_alsa::init_port(portNumber);
+
+    if (configuration.timestamps == input_configuration::NoTimestamp)
+    {
+      configuration.manual_poll(manual_poll_parameters{
+          this->fds_, [this](std::span<pollfd> fds) {
+            return do_read_events(&midi_in_raw_alsa::read_input_buffer, fds);
+          }});
+    }
+    else
+    {
+      configuration.manual_poll(manual_poll_parameters{
+          this->fds_, [this](std::span<pollfd> fds) {
+            return do_read_events(&midi_in_raw_alsa::read_input_buffer_with_timestamps, fds);
+          }});
+    }
+
+    connected_ = true;
+  }
+};
+
+template <>
+inline std::unique_ptr<midi_in_api> make<midi_in_raw_alsa>(
+    libremidi::input_configuration&& conf, libremidi::alsa_raw_input_configuration&& api)
+{
+  if (api.manual_poll)
+    return std::make_unique<midi_in_raw_alsa_manual>(std::move(conf), std::move(api));
+  else
+    return std::make_unique<midi_in_raw_alsa_threaded>(std::move(conf), std::move(api));
+}
 }

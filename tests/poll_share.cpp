@@ -1,8 +1,7 @@
-#if defined(__linux__)
-  #include <libremidi/configurations.hpp>
-  #include <libremidi/libremidi.hpp>
+#include <libremidi/configurations.hpp>
+#include <libremidi/libremidi.hpp>
 
-  #include <poll.h>
+#include <poll.h>
 
 int main()
 {
@@ -49,7 +48,7 @@ int main()
     // Option 1:
     // Combine all the fds in your own fd array,
     // and run poll manually
-  #if 1
+#if 1
     // Poll
     int err = poll(fds_.data(), fds_.size(), -1);
     if (err < 0)
@@ -68,7 +67,7 @@ int main()
         return -err;
       i++;
     }
-  #else
+#else
     // Option 2:
     // It's also possible to simply pass an empty set of FDs and
     // just process at some custom time interval,
@@ -80,9 +79,6 @@ int main()
         return -err;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(16));
-  #endif
+#endif
   }
 }
-#else
-int main() { }
-#endif

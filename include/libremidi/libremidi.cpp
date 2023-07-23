@@ -206,7 +206,7 @@ open_midi_in(libremidi::API api, std::string_view clientName)
     {
       c.client_name = std::string(clientName);
     }
-    ptr = std::make_unique<typename T::midi_in>(libremidi::input_configuration{}, std::move(c));
+    ptr = libremidi::make<typename T::midi_in>(libremidi::input_configuration{}, std::move(c));
   });
 
   return ptr;
@@ -224,7 +224,7 @@ open_midi_out(libremidi::API api, std::string_view clientName)
     {
       c.client_name = std::string(clientName);
     }
-    ptr = std::make_unique<typename T::midi_out>(libremidi::output_configuration{}, std::move(c));
+    ptr = libremidi::make<typename T::midi_out>(libremidi::output_configuration{}, std::move(c));
   });
 
   return ptr;
@@ -366,7 +366,7 @@ midi_in::midi_in(input_configuration base_conf, std::any api_conf)
     auto from_api = [&]<typename T>(T& backend) mutable {
       try
       {
-        this->impl_ = std::make_unique<typename T::midi_in>(
+        this->impl_ = libremidi::make<typename T::midi_in>(
             std::move(base_conf), typename T::midi_in_configuration{});
         return true;
       }
@@ -382,8 +382,7 @@ midi_in::midi_in(input_configuration base_conf, std::any api_conf)
     auto from_api = [&]<typename T>(T& backend) mutable {
       if (auto conf = std::any_cast<typename T::midi_in_configuration>(&api_conf))
       {
-        this->impl_
-            = std::make_unique<typename T::midi_in>(std::move(base_conf), std::move(*conf));
+        this->impl_ = libremidi::make<typename T::midi_in>(std::move(base_conf), std::move(*conf));
         return true;
       }
       return false;
