@@ -362,7 +362,10 @@ private:
   int process_events()
   {
     snd_seq_event_t* ev{};
-    if (int result = snd_seq_event_input(seq, &ev) <= 0)
+    unique_handle<snd_seq_event_t, snd_seq_free_event> handle;
+    int result = snd_seq_event_input(seq, &ev);
+    handle.reset(ev);
+    if (result <= 0)
       return result;
 
     if (!continueSysex)
@@ -424,10 +427,10 @@ private:
         std::cerr << "\nmidi_in_alsa::alsaMidiHandler: event parsing error or "
                      "not a MIDI event!\n\n";
 #endif
+        return -EINVAL;
       }
     }
 
-    snd_seq_free_event(ev);
     if (message.bytes.size() == 0 || continueSysex)
       return 0;
 
