@@ -6,12 +6,19 @@ project(libremidi
   HOMEPAGE_URL "https://github.com/jcelerier/libremidi"
 )
 
+include(CMakeDependentOption)
+include(CheckSymbolExists)
+include(CheckCXXSourceCompiles)
+
 option(LIBREMIDI_HEADER_ONLY "Header-only mode" OFF)
-option(LIBREMIDI_NO_COREMIDI "Disable CoreMidi back-end" OFF)
-option(LIBREMIDI_NO_WINMM "Disable WinMM back-end" OFF)
-option(LIBREMIDI_NO_WINUWP "Disable UWP back-end" ON)
+
+cmake_dependent_option(LIBREMIDI_NO_COREMIDI "Disable CoreMidi back-end" OFF "APPLE" OFF)
+cmake_dependent_option(LIBREMIDI_NO_WINMM "Disable WinMM back-end" OFF "WIN32" OFF)
+cmake_dependent_option(LIBREMIDI_NO_WINUWP "Disable UWP back-end" ON "WIN32" OFF)
+# if(LINUX) in CMake 3.25
+cmake_dependent_option(LIBREMIDI_NO_ALSA "Disable ALSA back-end" OFF "UNIX; NOT APPLE" OFF)
 option(LIBREMIDI_NO_JACK "Disable JACK back-end" OFF)
-option(LIBREMIDI_NO_ALSA "Disable ALSA back-end" OFF)
+
 option(LIBREMIDI_NO_EXPORTS "Disable dynamic symbol exporting" OFF)
 option(LIBREMIDI_NO_BOOST "Do not use Boost if available" OFF)
 option(LIBREMIDI_FIND_BOOST "Actively look for Boost" OFF)
@@ -19,8 +26,6 @@ option(LIBREMIDI_EXAMPLES "Enable examples" OFF)
 option(LIBREMIDI_TESTS "Enable tests" OFF)
 option(LIBREMIDI_CI "To be enabled only in CI, some tests cannot run there" OFF)
 
-include(CheckSymbolExists)
-include(CheckCXXSourceCompiles)
 
 ### Main library ###
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -208,7 +213,7 @@ elseif(WIN32)
     endif()
   endif()
 
-elseif(UNIX)
+elseif(UNIX AND NOT APPLE)
   ## ALSA support ##
   if(NOT LIBREMIDI_NO_ALSA)
     find_package(ALSA)
@@ -291,6 +296,7 @@ install(FILES
 
 ### Examples ###
 if(LIBREMIDI_EXAMPLES)
+    message(STATUS "libremidi: compiling examples")
   add_executable(midiobserve tests/midiobserve.cpp)
   target_link_libraries(midiobserve PRIVATE libremidi)
 
@@ -306,16 +312,10 @@ if(LIBREMIDI_EXAMPLES)
   add_executable(midiout tests/midiout.cpp)
   target_link_libraries(midiout PRIVATE libremidi)
 
-  if(MSVC)
-    set(CMAKE_REQUIRED_FLAGS /std:c++20)
-  else()
-    set(CMAKE_REQUIRED_FLAGS -std=c++2a)
-  endif()
   check_cxx_source_compiles("#include <thread>\nint main() { std::jthread t; }" HAS_STD_JTHREAD)
 
   if(HAS_STD_JTHREAD)
     add_executable(multithread_midiout tests/multithread_midiout.cpp)
-    target_compile_features(multithread_midiout PRIVATE cxx_std_20)
     target_link_libraries(multithread_midiout PRIVATE libremidi)
   endif()
 
@@ -331,11 +331,9 @@ if(LIBREMIDI_EXAMPLES)
   add_executable(midi2 tests/midi2.cpp)
   target_link_libraries(midi2 PRIVATE libremidi)
 
-  if(NOT EMSCRIPTEN)
-  if(NOT LIBREMIDI_NO_ALSA)
+  if(ALSA_FOUND)
     add_executable(poll_share tests/poll_share.cpp)
     target_link_libraries(poll_share PRIVATE libremidi)
-  endif()
   endif()
 
   if(EMSCRIPTEN)
@@ -356,7 +354,6 @@ if(LIBREMIDI_TESTS)
   FetchContent_MakeAvailable(Catch2)
 
   message(STATUS "libremidi: compiling tests")
-  target_compile_features(libremidi ${_public} cxx_std_20)
   if(LIBREMIDI_CI)
     target_compile_definitions(libremidi ${_public} LIBREMIDI_CI)
   endif()
