@@ -36,9 +36,7 @@ public:
       : midi_in_api{}
       , configuration{std::move(conf), std::move(apiconf)}
   {
-    // Set up the ALSA sequencer client.
-    int result = snd_seq_open(&seq, "default", SND_SEQ_OPEN_DUPLEX, SND_SEQ_NONBLOCK);
-    if (result < 0)
+    if (init_client(configuration) < 0)
     {
       error<driver_error>(
           this->configuration,
@@ -46,9 +44,6 @@ public:
           "object.");
       return;
     }
-
-    // Set client name.
-    snd_seq_set_client_name(seq, configuration.client_name.data());
 
     // Create the input queue
     if (require_timestamps())
@@ -88,7 +83,9 @@ public:
 
     snd_midi_event_free(coder);
 
-    snd_seq_close(this->seq);
+    // Close if we do not have an user-provided client object
+    if (!configuration.context)
+      snd_seq_close(this->seq);
   }
 
   libremidi::API get_current_api() const noexcept override
@@ -210,11 +207,7 @@ public:
 
   int init_port(unsigned int portNumber, std::string_view portName)
   {
-    if (connected_)
-    {
-      warning(this->configuration, "midi_in_alsa::open_port: a valid connection already exists!");
-      return -1;
-    }
+    this->close_port();
 
     auto source_addr = get_port_info(portNumber);
     if (!source_addr)
@@ -232,13 +225,7 @@ public:
 
   int init_virtual_port(std::string_view portName)
   {
-    if (connected_)
-    {
-      warning(
-          this->configuration,
-          "midi_in_alsa::open_virtual_port: a valid connection already exists!");
-      return -1;
-    }
+    this->close_port();
 
     if (!create_port(portName))
       return -1;
@@ -412,7 +399,7 @@ public:
     if (this->event_fd < 0)
     {
       error<driver_error>(
-          this->configuration, "midi_in_alsa::initialize: error creating pipe objects.");
+          this->configuration, "midi_in_alsa::initialize: error creating eventfd.");
     }
   }
 
@@ -424,16 +411,14 @@ public:
   }
 
 private:
+  // FIXME precondition: close_port()
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
     if (init_port(portNumber, portName) < 0)
       return;
 
-    if (this->running == false)
-    {
-      if (!start_thread())
-        return;
-    }
+    if (!start_thread())
+      return;
   }
 
   void open_virtual_port(std::string_view portName) override
@@ -441,11 +426,8 @@ private:
     if (init_virtual_port(portName) < 0)
       return;
 
-    if (this->running == false)
-    {
-      if (!start_thread())
-        return;
-    }
+    if (!start_thread())
+      return;
   }
 
   void close_port() override
@@ -459,17 +441,13 @@ private:
   {
     try
     {
-      this->thread = std::thread([this] {
-        this->running = true;
-        alsaMidiHandler();
-      });
+      this->thread = std::thread([this] { alsaMidiHandler(); });
     }
     catch (const std::system_error& e)
     {
       using namespace std::literals;
       unsubscribe();
 
-      this->running = false;
       error<thread_error>(
           this->configuration,
           "midi_in_alsa::start_thread: error starting MIDI input thread: "s + e.what());
@@ -480,14 +458,10 @@ private:
 
   void stop_thread()
   {
-    if (this->running)
-    {
-      this->running = false;
-      eventfd_write(event_fd, 1);
+    eventfd_write(event_fd, 1);
 
-      if (this->thread.joinable())
-        this->thread.join();
-    }
+    if (this->thread.joinable())
+      this->thread.join();
   }
 
   void alsaMidiHandler()
@@ -503,7 +477,7 @@ private:
     poll_fds[0].fd = self.event_fd;
     poll_fds[0].events = POLLIN;
 
-    while (self.running)
+    for (;;)
     {
       if (snd_seq_event_input_pending(self.seq, 1) == 0)
       {
@@ -529,7 +503,6 @@ private:
 
   std::thread thread{};
   int event_fd{};
-  std::atomic_bool running{false};
 };
 
 class midi_in_alsa_manual : public midi_in_alsa

@@ -2,8 +2,9 @@
 #include <thread>
 #include <vector>
 #include <mutex>
-#include <stop_token>
-#include <deque>
+#if __has_include(<stop_token>)
+  #include <stop_token>
+  #include <deque>
 
 /**
  * @file multithread_midiout.cpp
@@ -109,3 +110,6 @@ int main()
             << " milliseconds\n"
   ;
 }
+#else
+int main() { }
+#endif

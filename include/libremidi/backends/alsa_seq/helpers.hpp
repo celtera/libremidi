@@ -90,6 +90,29 @@ struct alsa_data
   snd_seq_port_subscribe_t* subscription{};
   snd_midi_event_t* coder{};
 
+  [[nodiscard]] int init_client(auto& configuration)
+  {
+    // Initialize or use the snd_seq client
+    if (configuration.context)
+    {
+      seq = configuration.context;
+      return 0;
+    }
+    else
+    {
+      // Set up the ALSA sequencer client.
+      int ret = snd_seq_open(&seq, "default", SND_SEQ_OPEN_DUPLEX, SND_SEQ_NONBLOCK);
+      if (ret < 0)
+        return ret;
+
+      // Set client name.
+      if (!configuration.client_name.empty())
+        snd_seq_set_client_name(seq, configuration.client_name.data());
+
+      return 0;
+    }
+  }
+
   void set_client_name(std::string_view clientName)
   {
     snd_seq_set_client_name(seq, clientName.data());

@@ -82,17 +82,4 @@ public:
 protected:
   bool connected_{};
 };
-
-template <auto func>
-struct deleter
-{
-  template <typename U>
-  void operator()(U* x)
-  {
-    func(x);
-  }
-};
-
-template <typename T, auto func>
-using unique_handle = std::unique_ptr<T, deleter<func>>;
 }

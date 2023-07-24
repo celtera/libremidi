@@ -21,32 +21,21 @@ public:
   midi_out_alsa(output_configuration&& conf, alsa_sequencer_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    // Set up the ALSA sequencer client.
-    snd_seq_t* seq{};
-    if (snd_seq_open(&seq, "default", SND_SEQ_OPEN_OUTPUT, SND_SEQ_NONBLOCK) < 0)
+    if (init_client(configuration) < 0)
     {
       error<driver_error>(
           this->configuration,
-          "midi_out_alsa::initialize: error creating ALSA sequencer client "
+          "midi_in_alsa::initialize: error creating ALSA sequencer client "
           "object.");
       return;
     }
 
-    // Set client name.
-    snd_seq_set_client_name(seq, configuration.client_name.c_str());
-
-    // Save our api-specific connection information.
-    this->seq = seq;
-    this->vport = -1;
-    this->bufferSize = 32;
-    this->coder = nullptr;
-    int result = snd_midi_event_new(this->bufferSize, &this->coder);
-    if (result < 0)
+    if (snd_midi_event_new(this->bufferSize, &this->coder) < 0)
     {
       error<driver_error>(
           this->configuration,
           "midi_out_alsa::initialize: error initializing MIDI event "
-          "parser!\n\n");
+          "parser.");
       return;
     }
     snd_midi_event_init(this->coder);
@@ -62,7 +51,9 @@ public:
       snd_seq_delete_port(this->seq, this->vport);
     if (this->coder)
       snd_midi_event_free(this->coder);
-    snd_seq_close(this->seq);
+
+    if (!configuration.context)
+      snd_seq_close(this->seq);
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::LINUX_ALSA; }
@@ -241,6 +232,6 @@ public:
   }
 
 private:
-  unsigned int bufferSize{};
+  unsigned int bufferSize{32};
 };
 }
