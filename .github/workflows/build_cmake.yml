@@ -124,7 +124,7 @@ jobs:
       with:
         usesh: true
         prepare: |
-          pkg install -y boost cmake jack
+          pkg install -y jackit boost-libs cmake
 
         run: |
           pwd
