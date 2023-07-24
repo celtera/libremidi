@@ -5,6 +5,7 @@
 #include <libremidi/detail/midi_stream_decoder.hpp>
 
 #include <alsa/asoundlib.h>
+#include <sys/eventfd.h>
 
 #include <atomic>
 #include <thread>
@@ -25,13 +26,10 @@ public:
   explicit midi_in_raw_alsa(input_configuration&& conf, alsa_raw_input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
+    fds_.reserve(4);
   }
 
-  ~midi_in_raw_alsa() override
-  {
-    // Close a connection if it exists.
-    midi_in_raw_alsa::close_port();
-  }
+  ~midi_in_raw_alsa() override { }
 
   void open_virtual_port(std::string_view) override
   {
@@ -248,25 +246,42 @@ public:
 
 class midi_in_raw_alsa_threaded : public midi_in_raw_alsa
 {
-  using midi_in_raw_alsa::midi_in_raw_alsa;
+public:
+  midi_in_raw_alsa_threaded(input_configuration&& conf, alsa_raw_input_configuration&& apiconf)
+      : midi_in_raw_alsa{std::move(conf), std::move(apiconf)}
+  {
+    this->event_fd = eventfd(0, EFD_SEMAPHORE | EFD_NONBLOCK);
 
+    if (this->event_fd < 0)
+    {
+      error<driver_error>(
+          this->configuration, "midi_in_alsa::initialize: error creating eventfd.");
+    }
+  }
+
+  ~midi_in_raw_alsa_threaded()
+  {
+    // Close a connection if it exists.
+    this->close_port();
+  }
+
+private:
   void run_thread(auto parse_func)
   {
-    static const constexpr int poll_timeout = 50; // in ms
+    fds_.push_back(pollfd{.fd = this->event_fd, .events = POLLIN});
 
-    while (this->running_)
+    for (;;)
     {
       // Poll
-      int err = poll(fds_.data(), fds_.size(), poll_timeout);
+      int err = poll(fds_.data(), fds_.size(), -1);
       if (err == -EAGAIN)
         continue;
       else if (err < 0)
         return;
+      else if (fds_.back().revents & POLLIN)
+        break;
 
-      if (!this->running_)
-        return;
-
-      err = do_read_events(parse_func, {fds_.data(), fds_.size()});
+      err = do_read_events(parse_func, {fds_.data(), fds_.size() - 1});
       if (err == -EAGAIN)
         continue;
       else if (err < 0)
@@ -280,17 +295,12 @@ class midi_in_raw_alsa_threaded : public midi_in_raw_alsa
 
     if (configuration.timestamps == input_configuration::NoTimestamp)
     {
-      this->thread_ = std::thread{[this] {
-        running_ = true;
-        run_thread(&midi_in_raw_alsa::read_input_buffer);
-      }};
+      this->thread_ = std::thread{[this] { run_thread(&midi_in_raw_alsa::read_input_buffer); }};
     }
     else
     {
-      this->thread_ = std::thread{[this] {
-        running_ = true;
-        run_thread(&midi_in_raw_alsa::read_input_buffer_with_timestamps);
-      }};
+      this->thread_ = std::thread{
+          [this] { run_thread(&midi_in_raw_alsa::read_input_buffer_with_timestamps); }};
     }
 
     connected_ = true;
@@ -298,24 +308,29 @@ class midi_in_raw_alsa_threaded : public midi_in_raw_alsa
 
   void close_port() override
   {
-    if (running_)
-    {
-      running_ = false;
-      if (thread_.joinable())
-        thread_.join();
-    }
+    eventfd_write(event_fd, 1);
+    if (thread_.joinable())
+      thread_.join();
 
     midi_in_raw_alsa::close_port();
   }
 
   std::thread thread_;
-  std::atomic_bool running_{};
+  int event_fd{};
 };
 
 class midi_in_raw_alsa_manual : public midi_in_raw_alsa
 {
+public:
   using midi_in_raw_alsa::midi_in_raw_alsa;
 
+  ~midi_in_raw_alsa_manual()
+  {
+    // Close a connection if it exists.
+    this->close_port();
+  }
+
+private:
   void open_port(unsigned int portNumber, std::string_view name) override
   {
     midi_in_raw_alsa::init_port(portNumber);
