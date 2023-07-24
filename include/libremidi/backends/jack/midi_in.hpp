@@ -20,27 +20,24 @@ public:
   } configuration;
 
   explicit midi_in_jack(input_configuration&& conf, jack_input_configuration&& apiconf)
-      : midi_in_api{}
-      , configuration{std::move(conf), std::move(apiconf)}
+      : configuration{std::move(conf), std::move(apiconf)}
   {
-    // TODO do like the others
-    this->port = nullptr;
-    this->client = nullptr;
-
-    connect();
+    auto status = connect<&midi_in_jack::jackProcessIn>(*this);
+    if (status != jack_status_t{})
+      warning(configuration, "midi_in_jack: " + std::to_string((int)jack_status_t{}));
   }
 
   ~midi_in_jack() override
   {
     midi_in_jack::close_port();
 
-    if (this->client)
+    if (this->client && !configuration.context)
       jack_client_close(this->client);
   }
 
   void set_client_name(std::string_view) override
   {
-    warning(configuration, "midi_out_jack: set_client_name unsupported");
+    warning(configuration, "midi_in_jack: set_client_name unsupported");
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::UNIX_JACK; }
@@ -50,14 +47,12 @@ public:
     if (!check_port_name_length(*this, configuration.client_name, portName))
       return;
 
-    connect();
-
     // Creating new port
-    if (this->port == nullptr)
+    if (!this->port)
       this->port = jack_port_register(
           this->client, portName.data(), JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
 
-    if (this->port == nullptr)
+    if (!this->port)
     {
       error<driver_error>(configuration, "midi_in_jack::open_port: JACK error creating port");
       return;
@@ -75,7 +70,6 @@ public:
     if (!check_port_name_length(*this, configuration.client_name, portName))
       return;
 
-    connect();
     if (!this->port)
       this->port = jack_port_register(
           this->client, portName.data(), JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
@@ -135,24 +129,6 @@ public:
   }
 
 private:
-  void connect()
-  {
-    if (this->client)
-      return;
-
-    // Initialize JACK client
-    this->client
-        = jack_client_open(this->configuration.client_name.c_str(), JackNoStartServer, nullptr);
-    if (this->client == nullptr)
-    {
-      warning(configuration, "midi_in_jack::initialize: JACK server not running?");
-      return;
-    }
-
-    jack_set_process_callback(this->client, jackProcessIn, this);
-    jack_activate(this->client);
-  }
-
   void set_timestamp(
       jack_nframes_t frame, jack_nframes_t start_frames, jack_time_t abs_usec,
       libremidi::message& msg) noexcept
@@ -193,37 +169,38 @@ private:
     }
   }
 
-  static int jackProcessIn(jack_nframes_t nframes, void* arg)
+  int jackProcessIn(jack_nframes_t nframes)
   {
-    auto& self = *(midi_in_jack*)arg;
     jack_midi_event_t event{};
     jack_time_t time{};
 
     // Is port created?
-    if (self.port == nullptr)
+    if (this->port == nullptr)
       return 0;
-    void* buff = jack_port_get_buffer(self.port, nframes);
+    void* buff = jack_port_get_buffer(this->port, nframes);
 
     // Timing
     jack_nframes_t current_frames;
     jack_time_t current_usecs; // roughly CLOCK_MONOTONIC
     jack_time_t next_usecs;
     float period_usecs;
-    jack_get_cycle_times(self.client, &current_frames, &current_usecs, &next_usecs, &period_usecs);
+    jack_get_cycle_times(
+        this->client, &current_frames, &current_usecs, &next_usecs, &period_usecs);
 
     // We have midi events in buffer
     uint32_t evCount = jack_midi_get_event_count(buff);
     for (uint32_t j = 0; j < evCount; j++)
     {
-      auto& m = self.message;
+      auto& m = this->message;
 
       jack_midi_event_get(&event, buff, j);
-      self.set_timestamp(event.time, current_frames, current_usecs, m);
+      this->set_timestamp(event.time, current_frames, current_usecs, m);
 
-      if (!self.continueSysex)
+      if (!this->continueSysex)
         m.clear();
 
-      if (!((self.continueSysex || event.buffer[0] == 0xF0) && (self.configuration.ignore_sysex)))
+      if (!((this->continueSysex || event.buffer[0] == 0xF0)
+            && (this->configuration.ignore_sysex)))
       {
         // Unless this is a (possibly continued) SysEx message and we're ignoring SysEx,
         // copy the event buffer into the MIDI message struct.
@@ -234,37 +211,37 @@ private:
       {
         case 0xF0:
           // Start of a SysEx message
-          self.continueSysex = event.buffer[event.size - 1] != 0xF7;
-          if (self.configuration.ignore_sysex)
+          this->continueSysex = event.buffer[event.size - 1] != 0xF7;
+          if (this->configuration.ignore_sysex)
             continue;
           break;
         case 0xF1:
         case 0xF8:
           // MIDI Time Code or Timing Clock message
-          if (self.configuration.ignore_timing)
+          if (this->configuration.ignore_timing)
             continue;
           break;
         case 0xFE:
           // Active Sensing message
-          if (self.configuration.ignore_sensing)
+          if (this->configuration.ignore_sensing)
             continue;
           break;
         default:
-          if (self.continueSysex)
+          if (this->continueSysex)
           {
             // Continuation of a SysEx message
-            self.continueSysex = event.buffer[event.size - 1] != 0xF7;
-            if (self.configuration.ignore_sysex)
+            this->continueSysex = event.buffer[event.size - 1] != 0xF7;
+            if (this->configuration.ignore_sysex)
               continue;
           }
           // All other MIDI messages
       }
 
-      if (!self.continueSysex)
+      if (!this->continueSysex)
       {
         // If not a continuation of a SysEx message,
         // invoke the user callback function or queue the message.
-        self.configuration.on_message(std::move(m));
+        this->configuration.on_message(std::move(m));
         m.clear();
       }
     }
@@ -272,8 +249,6 @@ private:
     return 0;
   }
 
-  jack_client_t* client{};
-  jack_port_t* port{};
   jack_time_t last_time{};
 };
 }

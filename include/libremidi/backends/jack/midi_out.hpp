@@ -51,8 +51,6 @@ public:
 
   void read(void* jack_events) noexcept
   {
-    jack_midi_clear_buffer(jack_events);
-
     int32_t sz;
     while (jack_ringbuffer_peek(ringbuffer, (char*)&sz, size_sz) == size_sz
            && jack_ringbuffer_read_space(ringbuffer) >= size_sz + sz)
@@ -84,21 +82,19 @@ public:
 
   midi_out_jack(output_configuration&& conf, jack_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
+      , queue{configuration.ringbuffer_size}
   {
-    this->port = nullptr;
-    this->client = nullptr;
-
-    connect();
+    auto status = connect<&midi_out_jack::jackProcessOut>(*this);
+    if (status != jack_status_t{})
+      warning(configuration, "midi_in_jack: " + std::to_string((int)jack_status_t{}));
   }
 
   ~midi_out_jack() override
   {
     midi_out_jack::close_port();
 
-    if (this->client)
-    {
+    if (this->client && !configuration.context)
       jack_client_close(this->client);
-    }
   }
 
   void set_client_name(std::string_view) override
@@ -112,8 +108,6 @@ public:
   {
     if (!check_port_name_length(*this, configuration.client_name, portName))
       return;
-
-    connect();
 
     // Creating new port
     if (!this->port)
@@ -138,7 +132,6 @@ public:
     if (!check_port_name_length(*this, configuration.client_name, portName))
       return;
 
-    connect();
     if (this->port == nullptr)
       this->port = jack_port_register(
           this->client, portName.data(), JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
@@ -208,49 +201,24 @@ public:
   }
 
 private:
-  void connect()
+  int jackProcessOut(jack_nframes_t nframes)
   {
-    if (this->client)
-      return;
-
-    // Initialize output ringbuffers
-    this->queue = jack_queue{configuration.ringbuffer_size};
-
-    // Initialize JACK client
-    this->client = jack_client_open(configuration.client_name.c_str(), JackNoStartServer, nullptr);
-    if (this->client == nullptr)
-    {
-      warning(configuration, "midi_out_jack::initialize: JACK server not running?");
-      return;
-    }
-
-    jack_set_process_callback(this->client, jackProcessOut, this);
-    jack_activate(this->client);
-  }
-
-  static int jackProcessOut(jack_nframes_t nframes, void* arg)
-  {
-    auto& self = *(midi_out_jack*)arg;
-
     // Is port created?
-    if (self.port == nullptr)
+    if (this->port == nullptr)
       return 0;
 
-    void* buff = jack_port_get_buffer(self.port, nframes);
+    void* buff = jack_port_get_buffer(this->port, nframes);
     jack_midi_clear_buffer(buff);
 
-    self.queue.read(buff);
+    this->queue.read(buff);
 
-    if (!self.sem_needpost.try_acquire())
-      self.sem_cleanup.release();
+    if (!this->sem_needpost.try_acquire())
+      this->sem_cleanup.release();
 
     return 0;
   }
 
 private:
-  jack_client_t* client{};
-  jack_port_t* port{};
-
   jack_queue queue;
 
   std::counting_semaphore<> sem_cleanup{0};

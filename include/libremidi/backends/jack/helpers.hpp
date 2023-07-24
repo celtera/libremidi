@@ -17,8 +17,49 @@ namespace libremidi
 
 struct jack_helpers
 {
-  static bool check_port_name_length(
-      const auto& self, std::string_view clientName, std::string_view portName)
+  jack_client_t* client{};
+  jack_port_t* port{};
+
+  template <auto callback, typename Self>
+  jack_status_t connect(Self& self)
+  {
+    auto& configuration = self.configuration;
+
+    if (this->client)
+      return jack_status_t{};
+
+    // Initialize JACK client
+    if (configuration.context)
+    {
+      if (!configuration.set_process_func)
+        return JackFailure;
+      configuration.set_process_func(
+          [&self](jack_nframes_t nf) -> int { return (self.*callback)(nf); });
+
+      this->client = configuration.context;
+      return jack_status_t{};
+    }
+    else
+    {
+      jack_status_t status{};
+      this->client
+          = jack_client_open(configuration.client_name.c_str(), JackNoStartServer, &status);
+      if (this->client != nullptr)
+      {
+        jack_set_process_callback(
+            this->client,
+            +[](jack_nframes_t nf, void* ctx) -> int {
+              return (static_cast<Self*>(ctx)->*callback)(nf);
+            },
+            &self);
+        jack_activate(this->client);
+      }
+      return status;
+    }
+  }
+
+  static bool
+  check_port_name_length(const auto& self, std::string_view clientName, std::string_view portName)
   {
     // full name: "client_name:port_name\0"
     if (clientName.size() + portName.size() + 1 + 1 >= jack_port_name_size())
