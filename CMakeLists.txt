@@ -334,6 +334,8 @@ if(LIBREMIDI_EXAMPLES)
   if(ALSA_FOUND)
     add_executable(poll_share tests/poll_share.cpp)
     target_link_libraries(poll_share PRIVATE libremidi)
+    add_executable(context_share tests/context_share.cpp)
+    target_link_libraries(context_share PRIVATE libremidi)
   endif()
 
   if(EMSCRIPTEN)
