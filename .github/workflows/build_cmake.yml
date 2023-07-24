@@ -22,32 +22,38 @@ jobs:
         - {
             name: "Windows (MSVC)",
             os: windows-latest,
-            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_82_0"
+            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_82_0",
+            test_target: "RUN_TESTS"
           }
         - {
             name: "Ubuntu (gcc)",
             os: ubuntu-latest,
-            cmakeflags: ""
+            cmakeflags: "",
+            test_target: "test"
           }
         - {
             name: "Ubuntu (clang, libstdc++)",
             os: ubuntu-latest,
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++"
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++",
+            test_target: "test"
           }
         - {
             name: "Ubuntu (clang, libc++)",
             os: ubuntu-latest,
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++"
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++",
+            test_target: "test"
           }
         - {
             name: 'Tarball',
             os: ubuntu-latest,
-            cmakeflags: ""
+            cmakeflags: "",
+            test_target: "test"
           }
         - {
             name: "macOS",
             os: macos-13,
-            cmakeflags: ""
+            cmakeflags: "",
+            test_target: "test"
           }
     steps:
     - uses: actions/checkout@v3
@@ -105,7 +111,7 @@ jobs:
         #   sudo modprobe snd-virmidi midi_devs=1
         # fi
 
-        cmake --build build --config Debug --target test
+        cmake --build build --config Debug --target ${{ matrix.config.test_target }}
 
       shell: bash
 
@@ -143,5 +149,5 @@ jobs:
 
           cmake --build build
           cmake --build build --target install
+          cmake --build build --target test
 
-          cd build && ctest -V
