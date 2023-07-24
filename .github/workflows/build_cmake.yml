@@ -94,8 +94,8 @@ jobs:
     - name: Build
       if: matrix.config.name != 'Tarball'
       run: |
-        cmake --build build
-        cmake --build build --target install
+        cmake --build build --config Debug
+        cmake --build build --config Debug --target install
 
     - name: Test
       if: matrix.config.name != 'Tarball'
@@ -105,7 +105,7 @@ jobs:
         #   sudo modprobe snd-virmidi midi_devs=1
         # fi
 
-        cd build && ctest -V
+        cmake --build build --config Debug --target test
 
       shell: bash
 
@@ -124,7 +124,7 @@ jobs:
       with:
         usesh: true
         prepare: |
-          pkg install -y jackit boost-libs cmake
+          pkg install -y jackit boost-libs cmake git
 
         run: |
           pwd
