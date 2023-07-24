@@ -3,6 +3,9 @@
 
 #include <jack/jack.h>
 
+#include <chrono>
+#include <thread>
+
 struct my_app
 {
   libremidi::unique_handle<jack_client_t, jack_client_close> handle;
