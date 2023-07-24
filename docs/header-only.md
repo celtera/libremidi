@@ -18,7 +18,7 @@ The library can be used header-only, with minimal modifications to your build sy
 For instance, to build the `midiprobe` example on Linux with only ALSA support, one would run:
 
     $ g++ ~/libremidi/tests/midiprobe.cpp \
-          -std=c++17 \
+          -std=c++20 \
           -DLIBREMIDI_ALSA=1 \
           -DLIBREMIDI_HEADER_ONLY=1 \
           -I ~/libremidi/include \
@@ -27,7 +27,7 @@ For instance, to build the `midiprobe` example on Linux with only ALSA support, 
 To build it on macOS, one would run:
 
     $ clang++ ~/libremidi/tests/midiprobe.cpp \
-          -std=c++17 \
+          -std=c++20 \
           -DLIBREMIDI_COREAUDIO=1 \
           -DLIBREMIDI_HEADER_ONLY=1 \
           -I ~/libremidi/include \

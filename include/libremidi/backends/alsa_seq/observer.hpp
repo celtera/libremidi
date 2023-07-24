@@ -2,6 +2,8 @@
 #include <libremidi/backends/alsa_seq/config.hpp>
 #include <libremidi/detail/observer.hpp>
 
+#include <alsa/asoundlib.h>
+
 namespace libremidi
 {
 class observer_alsa final : public observer_api
@@ -59,7 +61,6 @@ public:
             handle_event(ev);
           }
         }
-        std::this_thread::sleep_for(1s);
       }
     }};
   }

@@ -1,9 +1,9 @@
 #pragma once
 #include <libremidi/backends/alsa_seq/config.hpp>
 #include <libremidi/backends/alsa_seq/helpers.hpp>
+#include <libremidi/backends/linux/helpers.hpp>
 #include <libremidi/detail/midi_in.hpp>
 
-#include <sys/eventfd.h>
 namespace libremidi
 {
 class midi_in_alsa
@@ -394,8 +394,6 @@ public:
   midi_in_alsa_threaded(input_configuration&& conf, alsa_sequencer_input_configuration&& apiconf)
       : midi_in_alsa{std::move(conf), std::move(apiconf)}
   {
-    this->event_fd = eventfd(0, EFD_SEMAPHORE | EFD_NONBLOCK);
-
     if (this->event_fd < 0)
     {
       error<driver_error>(
@@ -406,8 +404,6 @@ public:
   ~midi_in_alsa_threaded()
   {
     this->close_port();
-
-    close(this->event_fd);
   }
 
 private:
@@ -441,7 +437,7 @@ private:
   {
     try
     {
-      this->thread = std::thread([this] { alsaMidiHandler(); });
+      this->thread = std::thread([this] { thread_handler(); });
     }
     catch (const std::system_error& e)
     {
@@ -458,28 +454,22 @@ private:
 
   void stop_thread()
   {
-    eventfd_write(event_fd, 1);
+    event_fd.notify();
 
     if (this->thread.joinable())
       this->thread.join();
   }
 
-  void alsaMidiHandler()
+  void thread_handler()
   {
-    auto& self = *this;
-
-    int poll_fd_count{};
-    pollfd* poll_fds{};
-
-    poll_fd_count = snd_seq_poll_descriptors_count(self.seq, POLLIN) + 1;
-    poll_fds = (struct pollfd*)alloca(poll_fd_count * sizeof(struct pollfd));
-    snd_seq_poll_descriptors(self.seq, poll_fds + 1, poll_fd_count - 1, POLLIN);
-    poll_fds[0].fd = self.event_fd;
-    poll_fds[0].events = POLLIN;
+    int poll_fd_count = snd_seq_poll_descriptors_count(this->seq, POLLIN) + 1;
+    auto poll_fds = (struct pollfd*)alloca(poll_fd_count * sizeof(struct pollfd));
+    poll_fds[0] = this->event_fd;
+    snd_seq_poll_descriptors(this->seq, poll_fds + 1, poll_fd_count - 1, POLLIN);
 
     for (;;)
     {
-      if (snd_seq_event_input_pending(self.seq, 1) == 0)
+      if (snd_seq_event_input_pending(this->seq, 1) == 0)
       {
         // No data pending
         if (poll(poll_fds, poll_fd_count, -1) >= 0)
@@ -493,16 +483,16 @@ private:
         continue;
       }
 
-      int res = self.process_events();
+      int res = this->process_events();
 #if defined(__LIBREMIDI_DEBUG__)
       if (res < 0)
-        std::cerr << "midi_in_alsa::alsaMidiHandler: MIDI input error: " << strerror(res) << "\n";
+        std::cerr << "midi_in_alsa::thread_handler: MIDI input error: " << strerror(res) << "\n";
 #endif
     }
   }
 
   std::thread thread{};
-  int event_fd{};
+  eventfd_notifier event_fd;
 };
 
 class midi_in_alsa_manual : public midi_in_alsa

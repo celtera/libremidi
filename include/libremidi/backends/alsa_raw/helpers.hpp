@@ -32,6 +32,8 @@ struct raw_alsa_helpers
     {
       return device + ": " + card_name + " : " + device_name + " : " + subdevice_name;
     }
+
+    bool operator==(const device_information& other) const noexcept = default;
   };
 
   struct enumerator;

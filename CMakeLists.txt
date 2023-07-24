@@ -17,6 +17,7 @@ cmake_dependent_option(LIBREMIDI_NO_WINMM "Disable WinMM back-end" OFF "WIN32" O
 cmake_dependent_option(LIBREMIDI_NO_WINUWP "Disable UWP back-end" ON "WIN32" OFF)
 # if(LINUX) in CMake 3.25
 cmake_dependent_option(LIBREMIDI_NO_ALSA "Disable ALSA back-end" OFF "UNIX; NOT APPLE" OFF)
+cmake_dependent_option(LIBREMIDI_NO_UDEV "Disable udev support for ALSA" OFF "UNIX; NOT APPLE" OFF)
 option(LIBREMIDI_NO_JACK "Disable JACK back-end" OFF)
 
 option(LIBREMIDI_NO_EXPORTS "Disable dynamic symbol exporting" OFF)
@@ -66,6 +67,7 @@ else()
     include/libremidi/backends/jack/midi_out.hpp
     include/libremidi/backends/jack/midi_in.hpp
     include/libremidi/backends/jack/observer.hpp
+    include/libremidi/backends/linux/helpers.hpp
     include/libremidi/backends/emscripten/config.hpp
     include/libremidi/backends/emscripten/helpers.hpp
     include/libremidi/backends/emscripten/midi_access.hpp
@@ -221,6 +223,16 @@ elseif(UNIX AND NOT APPLE)
       message(STATUS "libremidi: using ALSA")
       target_compile_definitions(libremidi ${_public} LIBREMIDI_ALSA)
       target_link_libraries(libremidi ${_public} ${ALSA_LIBRARIES})
+
+      if(NOT LIBREMIDI_NO_UDEV)
+        find_path(UDEV_INCLUDE_DIR libudev.h)
+        find_library(UDEV_LIBRARY udev)
+        if(UDEV_INCLUDE_DIR AND UDEV_LIBRARY)
+          target_compile_definitions(libremidi ${_public} LIBREMIDI_HAS_UDEV)
+          target_include_directories(libremidi ${_public} ${UDEV_INCLUDE_DIR})
+          target_link_libraries(libremidi ${_public} ${UDEV_LIBRARY})
+        endif()
+      endif()
     endif()
   endif()
 endif()

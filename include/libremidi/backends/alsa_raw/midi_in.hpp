@@ -1,11 +1,11 @@
 #pragma once
 #include <libremidi/backends/alsa_raw/config.hpp>
 #include <libremidi/backends/alsa_raw/helpers.hpp>
+#include <libremidi/backends/linux/helpers.hpp>
 #include <libremidi/detail/midi_in.hpp>
 #include <libremidi/detail/midi_stream_decoder.hpp>
 
 #include <alsa/asoundlib.h>
-#include <sys/eventfd.h>
 
 #include <atomic>
 #include <thread>
@@ -250,8 +250,6 @@ public:
   midi_in_raw_alsa_threaded(input_configuration&& conf, alsa_raw_input_configuration&& apiconf)
       : midi_in_raw_alsa{std::move(conf), std::move(apiconf)}
   {
-    this->event_fd = eventfd(0, EFD_SEMAPHORE | EFD_NONBLOCK);
-
     if (this->event_fd < 0)
     {
       error<driver_error>(
@@ -268,7 +266,7 @@ public:
 private:
   void run_thread(auto parse_func)
   {
-    fds_.push_back(pollfd{.fd = this->event_fd, .events = POLLIN});
+    fds_.push_back(this->event_fd);
 
     for (;;)
     {
@@ -308,7 +306,7 @@ private:
 
   void close_port() override
   {
-    eventfd_write(event_fd, 1);
+    event_fd.notify();
     if (thread_.joinable())
       thread_.join();
 
@@ -316,7 +314,7 @@ private:
   }
 
   std::thread thread_;
-  int event_fd{};
+  eventfd_notifier event_fd{};
 };
 
 class midi_in_raw_alsa_manual : public midi_in_raw_alsa

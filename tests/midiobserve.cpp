@@ -14,9 +14,13 @@ try
 {
   // Create an api map.
   static std::map<libremidi::API, std::string> apiMap{
-      {libremidi::API::MACOSX_CORE, "OS-X CoreMidi"}, {libremidi::API::WINDOWS_MM, "Windows MultiMedia"},
-      {libremidi::API::WINDOWS_UWP, "Windows UWP"},   {libremidi::API::UNIX_JACK, "Jack Client"},
-      {libremidi::API::LINUX_ALSA, "Linux ALSA"},     {libremidi::API::DUMMY, "Dummy (no driver)"},
+      {libremidi::API::MACOSX_CORE, "OS-X CoreMidi"},
+      {libremidi::API::WINDOWS_MM, "Windows MultiMedia"},
+      {libremidi::API::WINDOWS_UWP, "Windows UWP"},
+      {libremidi::API::UNIX_JACK, "Jack Client"},
+      {libremidi::API::LINUX_ALSA_SEQ, "Linux ALSA (Seq)"},
+      {libremidi::API::LINUX_ALSA_RAW, "Linux ALSA (Raw)"},
+      {libremidi::API::DUMMY, "Dummy (no driver)"},
   };
 
   std::vector<std::unique_ptr<libremidi::observer>> observers;

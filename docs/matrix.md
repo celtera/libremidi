@@ -5,8 +5,8 @@ This table shows which feature is supported by which backend so far, for advance
 It may be because the backend does not provide the ability at all, or because it has not been implemented yet.
 
 
-|               | ALSA | JACK | WinMM | UWP | CoreAudio |
-|---------------|------|------|-------|-----|-----------|
-| Virtual ports | Yes  | Yes  | No    | No  | Yes       |
-| Observer      | WIP  | No   | No    | Yes | No        |
-| Chunking      | No   | No   | No    | No  | No        |
+|               | ALSA Raw | ALSA Seq | JACK | WinMM | UWP | CoreAudio | Emscripten |
+|---------------|----------|----------|------|-------|-----|-----------|------------|
+| Virtual ports | N/A      | Yes      | Yes  | N/A   | No  | Yes       | N/A        |
+| Observer      | Yes      | Yes      | No   | Yes   | Yes | No        | Yes        |
+| Chunking      | No       | No       | No   | No    | No  | No        | No         |

@@ -50,32 +50,6 @@ midi.set_callback([](const libremidi::message& message) {
 });
 ```
 
-## Reading messages from a device through the synchronous API
-
-```C++
-// Create the midi object
-libremidi::midi_in midi;
-
-// Open a given midi port. Passing no arguments will open a default port.
-midi.open_port(0);
-
-// Option A
-while(1) {
-    auto next_message = midi.get_message();
-    if(!next_message.bytes.empty()) {
-        // This is a valid message.
-    }
-}
-
-// Option B, with less copies
-while(1) {
-    libremidi::message next_message;
-    if(midi.get_message(next_message)) {
-        // next_message holds a valid message.
-    }
-}
-```
-
 ## Sending messages to a device
 
 ```C++
