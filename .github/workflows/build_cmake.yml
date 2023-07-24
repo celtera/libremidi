@@ -108,3 +108,40 @@ jobs:
         cd build && ctest -V
 
       shell: bash
+
+  build_bsd:
+    name: FreeBSD
+    runs-on: macos-12
+    strategy:
+      fail-fast: false
+      matrix:
+        boost: [0, 1]
+        header_only: [0, 1]
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: vmactions/freebsd-vm@v0
+      with:
+        usesh: true
+        prepare: |
+          pkg install -y boost cmake jack
+
+        run: |
+          pwd
+          ls -lah
+          whoami
+          env
+          freebsd-version
+
+          cmake -S . -B build \
+            -DLIBREMIDI_FIND_BOOST=${{ matrix.boost }} \
+            -DLIBREMIDI_HEADER_ONLY=${{ matrix.header_only }} \
+            -DLIBREMIDI_EXAMPLES=1 \
+            -DLIBREMIDI_TESTS=1 \
+            -DLIBREMIDI_CI=1 \
+            -DCMAKE_INSTALL_PREFIX=install
+
+          cmake --build build
+          cmake --build build --target install
+
+          cd build && ctest -V
