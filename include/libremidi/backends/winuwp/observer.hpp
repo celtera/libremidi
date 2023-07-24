@@ -148,8 +148,14 @@ private:
 class observer_winuwp final : public observer_api
 {
 public:
-  observer_winuwp(observer::callbacks&& c)
-      : observer_api{std::move(c)}
+  struct
+      : observer_configuration
+      , winuwp_observer_configuration
+  {
+  } configuration;
+
+  explicit observer_winuwp(observer_configuration&& conf, winuwp_observer_configuration&& apiconf)
+      : configuration{std::move(conf), std::move(apiconf)}
   {
     evTokenOnInputAdded_
         = internalInPortObserver_.PortAdded({this, &observer_winuwp::on_input_added});
@@ -181,26 +187,26 @@ public:
 
   void on_input_added(int portNumber, hstring name)
   {
-    if (callbacks_.input_added)
-      callbacks_.input_added(portNumber, to_string(name));
+    if (configuration.input_added)
+      configuration.input_added(portNumber, to_string(name));
   }
 
   void on_input_removed(int portNumber, hstring name)
   {
-    if (callbacks_.input_removed)
-      callbacks_.input_removed(portNumber, to_string(name));
+    if (configuration.input_removed)
+      configuration.input_removed(portNumber, to_string(name));
   }
 
   void on_output_added(int portNumber, hstring name)
   {
-    if (callbacks_.output_added)
-      callbacks_.output_added(portNumber, to_string(name));
+    if (configuration.output_added)
+      configuration.output_added(portNumber, to_string(name));
   }
 
   void on_output_removed(int portNumber, hstring name)
   {
-    if (callbacks_.output_removed)
-      callbacks_.output_removed(portNumber, to_string(name));
+    if (configuration.output_removed)
+      configuration.output_removed(portNumber, to_string(name));
   }
 
 private:

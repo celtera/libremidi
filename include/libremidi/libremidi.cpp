@@ -183,12 +183,14 @@ LIBREMIDI_INLINE midi_out& midi_out::operator=(midi_out&& other) noexcept
 }
 
 [[nodiscard]] LIBREMIDI_INLINE std::unique_ptr<observer_api>
-open_midi_observer(libremidi::API api, observer::callbacks&& cb)
+open_midi_observer(libremidi::API api, observer_configuration&& cb)
 {
   std::unique_ptr<observer_api> ptr;
 
-  for_backend(api, [&](auto b) {
-    ptr = std::make_unique<typename decltype(b)::midi_observer>(std::move(cb));
+  for_backend(api, [&]<typename T>(T) {
+    using conf_type = typename T::midi_observer_configuration;
+    conf_type c;
+    ptr = libremidi::make<typename T::midi_observer>(std::move(cb), std::move(c));
   });
 
   return ptr;
@@ -230,7 +232,7 @@ open_midi_out(libremidi::API api, std::string_view clientName)
   return ptr;
 }
 
-LIBREMIDI_INLINE observer::observer(libremidi::API api, observer::callbacks cbs)
+LIBREMIDI_INLINE observer::observer(libremidi::API api, observer_configuration cbs)
     : impl_{open_midi_observer(api, std::move(cbs))}
 {
 }

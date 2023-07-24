@@ -11,5 +11,4 @@ struct output_configuration
   midi_error_callback on_error{};
   midi_error_callback on_warning{};
 };
-
 }

@@ -4,8 +4,8 @@
 
 namespace libremidi
 {
-LIBREMIDI_INLINE observer_emscripten::observer_emscripten(observer::callbacks&& c)
-    : observer_api{std::move(c)}
+LIBREMIDI_INLINE observer_emscripten::observer_emscripten(observer_configuration&& conf, emscripten_observer_configuration&& apiconf)
+    : configuration{std::move(conf), std::move(apiconf)}
 {
   webmidi_helpers::midi_access_emscripten::instance().register_observer(*this);
 }
@@ -27,13 +27,13 @@ LIBREMIDI_INLINE void observer_emscripten::update(
   for (std::size_t i = m_known_inputs.size(); i < current_inputs.size(); i++)
   {
     m_known_inputs.push_back(current_inputs[i]);
-    callbacks_.input_added(i, m_known_inputs[i].name);
+    configuration.input_added(i, m_known_inputs[i].name);
   }
 
   for (std::size_t i = m_known_outputs.size(); i < current_outputs.size(); i++)
   {
     m_known_outputs.push_back(current_outputs[i]);
-    callbacks_.output_added(i, m_known_outputs[i].name);
+    configuration.output_added(i, m_known_outputs[i].name);
   }
 }
 }

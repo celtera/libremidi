@@ -1,8 +1,6 @@
 #pragma once
 #include <libremidi/config.hpp>
 
-#define RT_WINMM_OBSERVER_POLL_PERIOD_MS 100
-
 namespace libremidi
 {
 
@@ -14,6 +12,11 @@ struct winmm_input_configuration
 
 struct winmm_output_configuration
 {
+};
+
+struct winmm_observer_configuration
+{
+  int poll_period = 100; // ms
 };
 
 }

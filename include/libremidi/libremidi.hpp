@@ -61,6 +61,7 @@
 #include <libremidi/error.hpp>
 #include <libremidi/input_configuration.hpp>
 #include <libremidi/message.hpp>
+#include <libremidi/observer_configuration.hpp>
 #include <libremidi/output_configuration.hpp>
 
 #include <algorithm>
@@ -84,15 +85,7 @@ namespace libremidi
 class LIBREMIDI_EXPORT observer
 {
 public:
-  struct callbacks
-  {
-    std::function<void(int, std::string)> input_added;
-    std::function<void(int, std::string)> input_removed;
-    std::function<void(int, std::string)> output_added;
-    std::function<void(int, std::string)> output_removed;
-  };
-
-  observer(libremidi::API, callbacks);
+  explicit observer(libremidi::API, observer_configuration);
   ~observer();
 
 private:

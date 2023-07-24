@@ -6,15 +6,12 @@ namespace libremidi
 class observer_api
 {
 public:
-  explicit observer_api(observer::callbacks c)
-      : callbacks_{std::move(c)}
-  {
-  }
-
   virtual ~observer_api() = default;
-
-protected:
-  observer::callbacks callbacks_;
 };
 
+template <typename T, typename Arg>
+std::unique_ptr<observer_api> make(libremidi::observer_configuration&& conf, Arg&& arg)
+{
+  return std::make_unique<T>(std::move(conf), std::move(arg));
+}
 }

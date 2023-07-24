@@ -2,18 +2,38 @@
 #include <libremidi/config.hpp>
 
 #include <string>
-
+#include <optional>
+#include <cstdint>
+#if defined(__APPLE__)
+  #if __LP64__
+typedef unsigned int UInt32;
+  #else
+typedef unsigned long UInt32;
+  #endif
+typedef UInt32 MIDIObjectRef;
+typedef MIDIObjectRef MIDIClientRef;
+#else
+using MIDIClientRef = uint32_t;
+#endif
 namespace libremidi
 {
 
 struct coremidi_input_configuration
 {
   std::string client_name;
+  std::optional<MIDIClientRef> context{};
 };
 
 struct coremidi_output_configuration
 {
   std::string client_name;
+  std::optional<MIDIClientRef> context{};
+};
+
+struct coremidi_observer_configuration
+{
+  std::string client_name;
+  std::function<void(MIDIClientRef)> on_create_context{};
 };
 
 }

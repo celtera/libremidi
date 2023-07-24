@@ -65,4 +65,8 @@ struct alsa_raw_output_configuration
   std::optional<chunking_parameters> chunking;
 };
 
+struct alsa_raw_observer_configuration
+{
+};
+
 }

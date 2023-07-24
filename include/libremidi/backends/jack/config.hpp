@@ -26,10 +26,16 @@ struct jack_output_configuration
 {
   std::string client_name;
 
-  int32_t ringbuffer_size = 16384;
-
   jack_client_t* context{};
   std::function<void(jack_callback_function)> set_process_func;
+
+  int32_t ringbuffer_size = 16384;
+};
+
+struct jack_observer_configuration
+{
+  std::string client_name;
+  jack_client_t* context{};
 };
 
 }

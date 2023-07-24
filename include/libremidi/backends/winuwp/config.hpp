@@ -12,4 +12,8 @@ struct winuwp_output_configuration
 {
 };
 
+struct winuwp_observer_configuration
+{
+};
+
 }

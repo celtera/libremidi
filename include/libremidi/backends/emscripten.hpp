@@ -14,9 +14,10 @@ struct emscripten_backend
 {
   using midi_in = midi_in_emscripten;
   using midi_out = midi_out_emscripten;
+  using midi_observer = observer_emscripten;
   using midi_in_configuration = emscripten_input_configuration;
   using midi_out_configuration = emscripten_output_configuration;
-  using midi_observer = observer_emscripten;
+  using midi_observer_configuration = emscripten_observer_configuration;
   static const constexpr auto API = libremidi::API::EMSCRIPTEN_WEBMIDI;
   static const constexpr auto name = "webmidi";
   static const constexpr auto display_name = "WebMIDI";

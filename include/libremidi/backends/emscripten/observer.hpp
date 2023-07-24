@@ -12,7 +12,13 @@ class observer_emscripten final : public observer_api
   using device = webmidi_helpers::device_information;
 
 public:
-  observer_emscripten(observer::callbacks&& c);
+  struct
+      : observer_configuration
+      , emscripten_observer_configuration
+  {
+  } configuration;
+
+  explicit observer_emscripten(observer_configuration&& conf, emscripten_observer_configuration&& apiconf);
   ~observer_emscripten();
 
   void

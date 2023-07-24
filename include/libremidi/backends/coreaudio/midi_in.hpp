@@ -20,21 +20,13 @@ public:
   midi_in_core(input_configuration&& conf, coremidi_input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    // Set up our client.
-    MIDIClientRef client{};
-    OSStatus result
-        = MIDIClientCreate(toCFString(configuration.client_name).get(), nullptr, nullptr, &client);
-    if (result != noErr)
+    if(auto result = init_client(configuration); result != noErr)
     {
       error<driver_error>(
-          this->configuration, "midi_in_core::initialize: error creating OS-X MIDI client object: "
+          this->configuration, "midi_in_core: error creating MIDI client object: "
                                    + std::to_string(result));
       return;
     }
-
-    // Save our api-specific connection information.
-    this->client = client;
-    this->endpoint = 0;
   }
 
   ~midi_in_core() override
@@ -42,10 +34,16 @@ public:
     // Close a connection if it exists.
     midi_in_core::close_port();
 
-    // Cleanup.
-    MIDIClientDispose(this->client);
-    if (this->endpoint)
+    if(this->endpoint)
       MIDIEndpointDispose(this->endpoint);
+
+    close_client();
+  }
+
+  void close_client()
+  {
+    if(!configuration.context)
+      MIDIClientDispose(this->client);
   }
 
   void set_client_name(std::string_view) override
@@ -90,9 +88,9 @@ public:
 
     if (result != noErr)
     {
-      MIDIClientDispose(this->client);
+      close_client();
       error<driver_error>(
-          this->configuration, "midi_in_core::open_port: error creating OS-X MIDI input port.");
+          this->configuration, "midi_in_core::open_port: error creating OS-X MIDI input port: " + std::to_string(result));
       return;
     }
 
@@ -101,7 +99,7 @@ public:
     if (endpoint == 0)
     {
       MIDIPortDispose(port);
-      MIDIClientDispose(this->client);
+      close_client();
       error<driver_error>(
           this->configuration,
           "midi_in_core::open_port: error getting MIDI input source reference.");
@@ -109,11 +107,10 @@ public:
     }
 
     // Make the connection.
-    result = MIDIPortConnectSource(port, endpoint, nullptr);
-    if (result != noErr)
+    if (result = MIDIPortConnectSource(port, endpoint, nullptr); result != noErr)
     {
       MIDIPortDispose(port);
-      MIDIClientDispose(this->client);
+      close_client();
       error<driver_error>(
           this->configuration, "midi_in_core::open_port: error connecting OS-X MIDI input port.");
       return;

@@ -14,8 +14,7 @@ struct dummy_configuration
 class observer_dummy final : public observer_api
 {
 public:
-  observer_dummy(observer::callbacks&& c)
-      : observer_api{std::move(c)}
+  explicit observer_dummy(const observer_configuration& configuration, dummy_configuration)
   {
   }
 
@@ -28,7 +27,6 @@ class midi_in_dummy final
 {
 public:
   explicit midi_in_dummy(const input_configuration& configuration, dummy_configuration)
-      : midi_in_api{}
   {
     warning(configuration, "midi_in_dummy: This class provides no functionality.");
   }
@@ -84,9 +82,10 @@ struct dummy_backend
 {
   using midi_in = midi_in_dummy;
   using midi_out = midi_out_dummy;
+  using midi_observer = observer_dummy;
   using midi_in_configuration = dummy_configuration;
   using midi_out_configuration = dummy_configuration;
-  using midi_observer = observer_dummy;
+  using midi_observer_configuration = dummy_configuration;
   static const constexpr auto API = libremidi::API::DUMMY;
   static const constexpr auto name = "dummy";
   static const constexpr auto display_name = "Dummy";

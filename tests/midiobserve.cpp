@@ -9,6 +9,10 @@
 #include <map>
 #include <libremidi/libremidi.hpp>
 
+#if defined(__APPLE__)
+  #include <CoreFoundation/CoreFoundation.h>
+#endif
+
 int main()
 try
 {
@@ -27,7 +31,7 @@ try
   std::cout << "\nCompiled APIs:\n";
   for (auto api : libremidi::available_apis())
   {
-    libremidi::observer::callbacks cbs;
+    libremidi::observer_configuration cbs;
     cbs.input_added = [=](int i, std::string n) {
       std::cerr << apiMap[api] << " : input added " << i << " => " << n << "\n";
     };
@@ -44,7 +48,13 @@ try
     observers.push_back(std::make_unique<libremidi::observer>(api, cbs));
   }
 
+#if defined(__APPLE__)
+  // On macOS, observation can *only* be done in the main thread
+  // with an active CFRunLoop.
+  CFRunLoopRun();
+#else
   getchar();
+#endif
   return 0;
 }
 catch (const libremidi::midi_exception& error)

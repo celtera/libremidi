@@ -8,5 +8,5 @@ It may be because the backend does not provide the ability at all, or because it
 |               | ALSA Raw | ALSA Seq | JACK | WinMM | UWP | CoreAudio | Emscripten |
 |---------------|----------|----------|------|-------|-----|-----------|------------|
 | Virtual ports | N/A      | Yes      | Yes  | N/A   | No  | Yes       | N/A        |
-| Observer      | Yes      | Yes      | No   | Yes   | Yes | No        | Yes        |
+| Observer      | Yes      | Yes      | No   | Yes   | Yes | Yes       | Yes        |
 | Chunking      | No       | No       | No   | No    | No  | No        | No         |

@@ -21,6 +21,29 @@ using CFString_handle = unique_handle<const __CFString, CFRelease>;
 using CFStringMutable_handle = unique_handle<__CFString, CFRelease>;
 namespace
 {
+static inline std::string get_string_property(MIDIObjectRef object, CFStringRef property) noexcept
+{
+  CFStringRef res;
+  MIDIObjectGetStringProperty(object, property, &res);
+
+  char name[256];
+  CFStringGetCString(res, name, sizeof(name), kCFStringEncodingUTF8);
+  CFRelease(res);
+  return name;
+}
+
+static inline int32_t get_int_property(MIDIObjectRef object, CFStringRef property) noexcept
+{
+  SInt32 res;
+  MIDIObjectGetIntegerProperty(object, property, &res);
+  return res;
+}
+
+static inline CFString_handle toCFString(std::string_view str) noexcept
+{
+  return CFString_handle{CFStringCreateWithCString(nullptr, str.data(), kCFStringEncodingASCII) };
+}
+
 #if TARGET_OS_IPHONE
 inline uint64_t AudioConvertHostTimeToNanos(uint64_t hostTime)
 {
@@ -185,11 +208,21 @@ struct coremidi_data
 {
   MIDIClientRef client{};
   MIDIPortRef port{};
-  MIDIEndpointRef endpoint{};
+  MIDIEndpointRef endpoint = 0;
 
-  static inline CFString_handle toCFString(std::string_view str) noexcept
+  [[nodiscard]]
+  OSStatus init_client(auto& configuration)
   {
-    return CFString_handle{CFStringCreateWithCString(nullptr, str.data(), kCFStringEncodingASCII) };
+    if(configuration.context)
+    {
+      client = *configuration.context;
+      return noErr;
+    }
+    else
+    {
+      // Set up our client.
+      return MIDIClientCreate(toCFString(configuration.client_name).get(), nullptr, nullptr, &client);
+    }
   }
 };
 

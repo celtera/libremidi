@@ -9,8 +9,14 @@ namespace libremidi
 class observer_alsa final : public observer_api
 {
 public:
-  explicit observer_alsa(observer::callbacks&& c)
-      : observer_api{std::move(c)}
+  struct
+      : observer_configuration
+      , alsa_sequencer_observer_configuration
+  {
+  } configuration;
+
+  explicit observer_alsa(observer_configuration&& conf, alsa_sequencer_observer_configuration&& apiconf)
+      : configuration{std::move(conf), std::move(apiconf)}
   {
     using namespace std::literals;
     int err = snd_seq_open(&seq_, "default", SND_SEQ_OPEN_DUPLEX, SND_SEQ_NONBLOCK);
@@ -113,14 +119,14 @@ public:
           return;
 
         knownClients_[{p.client, p.port}] = p;
-        if (p.isInput && callbacks_.input_added)
+        if (p.isInput && configuration.input_added)
         {
-          callbacks_.input_added(p.port, p.name);
+          configuration.input_added(p.port, p.name);
         }
 
-        if (p.isOutput && callbacks_.output_added)
+        if (p.isOutput && configuration.output_added)
         {
-          callbacks_.output_added(p.port, p.name);
+          configuration.output_added(p.port, p.name);
         }
         break;
       }
@@ -136,14 +142,14 @@ public:
           knownClients_.erase(it);
         }
 
-        if (p.isInput && callbacks_.input_removed)
+        if (p.isInput && configuration.input_removed)
         {
-          callbacks_.input_removed(p.port, p.name);
+          configuration.input_removed(p.port, p.name);
         }
 
-        if (p.isOutput && callbacks_.output_added)
+        if (p.isOutput && configuration.output_added)
         {
-          callbacks_.output_removed(p.port, p.name);
+          configuration.output_removed(p.port, p.name);
         }
         break;
       }

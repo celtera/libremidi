@@ -48,8 +48,14 @@ struct udev_helper
 class observer_alsa_raw final : public observer_api
 {
 public:
-  explicit observer_alsa_raw(observer::callbacks&& c)
-      : observer_api{std::move(c)}
+  struct
+      : observer_configuration
+      , alsa_raw_observer_configuration
+  {
+  } configuration;
+
+  explicit observer_alsa_raw(observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
+      : configuration{std::move(conf), std::move(apiconf)}
   {
     fds[0] = udev;
     fds[1] = event_fd;
@@ -130,7 +136,7 @@ private:
       if (auto it = std::find(new_devs.inputs.begin(), new_devs.inputs.end(), in_prev);
           it == new_devs.inputs.end())
       {
-        if (auto& cb = this->callbacks_.input_removed)
+        if (auto& cb = this->configuration.input_removed)
         {
           cb(k, in_prev.subdevice_name);
         }
@@ -145,7 +151,7 @@ private:
           = std::find(current_devices.inputs.begin(), current_devices.inputs.end(), in_next);
           it == current_devices.inputs.end())
       {
-        if (auto& cb = this->callbacks_.input_added)
+        if (auto& cb = this->configuration.input_added)
         {
           cb(k, in_next.subdevice_name);
         }
@@ -159,7 +165,7 @@ private:
       if (auto it = std::find(new_devs.outputs.begin(), new_devs.outputs.end(), out_prev);
           it == new_devs.outputs.end())
       {
-        if (auto& cb = this->callbacks_.output_removed)
+        if (auto& cb = this->configuration.output_removed)
         {
           cb(k, out_prev.subdevice_name);
         }
@@ -174,7 +180,7 @@ private:
           = std::find(current_devices.outputs.begin(), current_devices.outputs.end(), out_next);
           it == current_devices.outputs.end())
       {
-        if (auto& cb = this->callbacks_.output_added)
+        if (auto& cb = this->configuration.output_added)
         {
           cb(k, out_next.subdevice_name);
         }

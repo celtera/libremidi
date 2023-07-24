@@ -16,7 +16,7 @@ int main(int argc, char**)
   std::vector<std::shared_ptr<libremidi::midi_in>> inputs;
   std::vector<std::shared_ptr<libremidi::midi_out>> outputs;
 
-  libremidi::observer::callbacks callbacks{
+  libremidi::observer_configuration callbacks{
       .input_added =
           [&](int idx, const std::string& id) {
     std::cout << "MIDI Input connected: " << idx << " - " << id << std::endl;

@@ -20,33 +20,29 @@ public:
   midi_out_core(output_configuration&& conf, coremidi_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    // Set up our client.
-    MIDIClientRef client;
-    OSStatus result
-        = MIDIClientCreate(toCFString(configuration.client_name).get(), nullptr, nullptr, &client);
-    if (result != noErr)
+    if(auto result = init_client(configuration); result != noErr)
     {
       error<driver_error>(
-          this->configuration,
-          "midi_out_core::initialize: error creating OS-X MIDI client object: "
-              + std::to_string(result));
+          this->configuration, "midi_out_core: error creating MIDI client object: "
+                                   + std::to_string(result));
       return;
     }
-
-    // Save our api-specific connection information.
-    this->client = client;
-    this->endpoint = 0;
   }
 
   ~midi_out_core()
   {
-    // Close a connection if it exists.
     midi_out_core::close_port();
 
-    // Cleanup.
-    MIDIClientDispose(this->client);
     if (this->endpoint)
       MIDIEndpointDispose(this->endpoint);
+
+    close_client();
+  }
+
+  void close_client()
+  {
+    if(!configuration.context)
+      MIDIClientDispose(this->client);
   }
 
   void set_client_name(std::string_view) override
@@ -89,7 +85,7 @@ public:
     OSStatus result = MIDIOutputPortCreate(this->client, toCFString(portName).get(), &port);
     if (result != noErr)
     {
-      MIDIClientDispose(this->client);
+      close_client();
       error<driver_error>(
           this->configuration, "midi_out_core::open_port: error creating OS-X MIDI output port.");
       return;
@@ -100,7 +96,7 @@ public:
     if (destination == 0)
     {
       MIDIPortDispose(port);
-      MIDIClientDispose(this->client);
+      close_client();
       error<driver_error>(
           this->configuration,
           "midi_out_core::open_port: error getting MIDI output destination "

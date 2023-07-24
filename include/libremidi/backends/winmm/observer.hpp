@@ -28,8 +28,15 @@ public:
 
   PortList inputPortList;
   PortList outputPortList;
-  explicit observer_winmm(observer::callbacks&& c)
-      : observer_api{std::move(c)}
+
+  struct
+      : observer_configuration
+      , winmm_observer_configuration
+  {
+  } configuration;
+
+  explicit observer_winmm(observer_configuration&& conf, winmm_observer_configuration&& apiconf)
+      : configuration{std::move(conf), std::move(apiconf)}
   {
     inputPortList = get_port_list(INPUT);
     outputPortList = get_port_list(OUTPUT);
@@ -49,16 +56,16 @@ public:
 private:
   void watch_thread()
   {
-    while (!wait_for_watch_thread_shutdown_signal(RT_WINMM_OBSERVER_POLL_PERIOD_MS))
+    while (!wait_for_watch_thread_shutdown_signal(this->configuration.poll_period))
     {
       auto currInputPortList = get_port_list(INPUT);
       compare_port_lists_and_notify_clients(
-          inputPortList, currInputPortList, callbacks_.input_added, callbacks_.input_removed);
+          inputPortList, currInputPortList, configuration.input_added, configuration.input_removed);
       inputPortList = currInputPortList;
 
       auto currOutputPortList = get_port_list(OUTPUT);
       compare_port_lists_and_notify_clients(
-          outputPortList, currOutputPortList, callbacks_.output_added, callbacks_.output_removed);
+          outputPortList, currOutputPortList, configuration.output_added, configuration.output_removed);
       outputPortList = currOutputPortList;
     }
   }

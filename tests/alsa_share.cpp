@@ -38,7 +38,7 @@ int main()
     return true;
   };
   auto api_input_config
-      = libremidi::alsa_sequencer_input_configuration{.manual_poll = register_fds, .context = clt};
+      = libremidi::alsa_sequencer_input_configuration{.context = clt, .manual_poll = register_fds};
   auto api_output_config = libremidi::alsa_sequencer_output_configuration{.context = clt};
 
   // Create 16 inputs and 16 outputs
