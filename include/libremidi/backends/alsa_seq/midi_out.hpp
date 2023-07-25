@@ -58,6 +58,13 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::LINUX_ALSA; }
 
+  [[nodiscard]] bool create_port(std::string_view portName)
+  {
+    return alsa_data::create_port(
+               *this, portName, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ, std::nullopt)
+           >= 0;
+  }
+
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
     if (connected_)
@@ -74,89 +81,56 @@ public:
       return;
     }
 
-    snd_seq_port_info_t* pinfo{};
-    snd_seq_port_info_alloca(&pinfo);
-    if (alsa_seq::port_info(
-            this->seq, pinfo, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
-            (int)portNumber)
-        == 0)
-    {
-      error<invalid_parameter_error>(
-          this->configuration, "midi_out_alsa::open_port: invalid 'portNumber' argument: "
-                                   + std::to_string(portNumber));
+    auto receiver
+        = get_port_info(*this, portNumber, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
+    if (!receiver)
       return;
-    }
 
-    snd_seq_addr_t sender{}, receiver{};
-    receiver.client = snd_seq_port_info_get_client(pinfo);
-    receiver.port = snd_seq_port_info_get_port(pinfo);
-    sender.client = snd_seq_client_id(this->seq);
-
-    if (this->vport < 0)
-    {
-      this->vport = snd_seq_create_simple_port(
-          this->seq, portName.data(), SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
-          SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
-      if (this->vport < 0)
-      {
-        error<driver_error>(
-            this->configuration, "midi_out_alsa::open_port: ALSA error creating output port.");
-        return;
-      }
-    }
-
-    sender.port = this->vport;
-
-    // Make subscription
-    if (snd_seq_port_subscribe_malloc(&this->subscription) < 0)
-    {
-      snd_seq_port_subscribe_free(this->subscription);
-      error<driver_error>(
-          this->configuration, "midi_out_alsa::open_port: error allocating port subscription.");
+    if (!create_port(portName))
       return;
-    }
-    snd_seq_port_subscribe_set_sender(this->subscription, &sender);
-    snd_seq_port_subscribe_set_dest(this->subscription, &receiver);
-    snd_seq_port_subscribe_set_time_update(this->subscription, 1);
-    snd_seq_port_subscribe_set_time_real(this->subscription, 1);
-    if (snd_seq_subscribe_port(this->seq, this->subscription))
-    {
-      snd_seq_port_subscribe_free(this->subscription);
-      error<driver_error>(
-          this->configuration, "midi_out_alsa::open_port: ALSA error making port connection.");
+
+    snd_seq_addr_t sender{
+        .client = (unsigned char)snd_seq_client_id(this->seq), .port = (unsigned char)this->vport};
+    if (create_connection(*this, sender, *receiver, true) < 0)
       return;
-    }
 
     connected_ = true;
   }
 
-  void open_virtual_port(std::string_view portName) override
-  {
-    if (this->vport < 0)
-    {
-      this->vport = snd_seq_create_simple_port(
-          this->seq, portName.data(), SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
-          SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
-
-      if (this->vport < 0)
-      {
-        error<driver_error>(
-            this->configuration,
-            "midi_out_alsa::open_virtual_port: ALSA error creating virtual port.");
-      }
-    }
-  }
-
-  void close_port() override
+  void open_port(const port_information& p, std::string_view portName) override
   {
     if (connected_)
     {
-      snd_seq_unsubscribe_port(this->seq, this->subscription);
-      snd_seq_port_subscribe_free(this->subscription);
-      this->subscription = nullptr;
-      connected_ = false;
+      warning(this->configuration, "midi_out_alsa::open_port: a valid connection already exists!");
+      return;
     }
+
+    unsigned int nSrc = this->get_port_count();
+    if (nSrc < 1)
+    {
+      error<no_devices_found_error>(
+          this->configuration, "midi_out_alsa::open_port: no MIDI output sources found!");
+      return;
+    }
+
+    auto sink = get_port_info(p);
+    if (!sink)
+      return;
+
+    if (!create_port(portName))
+      return;
+
+    snd_seq_addr_t source{
+        .client = (unsigned char)snd_seq_client_id(this->seq), .port = (unsigned char)this->vport};
+    if (create_connection(*this, source, *sink, true) < 0)
+      return;
+
+    connected_ = true;
   }
+
+  void open_virtual_port(std::string_view portName) override { create_port(portName); }
+
+  void close_port() override { unsubscribe(); }
 
   void set_client_name(std::string_view clientName) override
   {

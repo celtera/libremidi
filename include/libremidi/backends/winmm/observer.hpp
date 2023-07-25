@@ -5,6 +5,7 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <stop_token>
 #include <thread>
 
 namespace libremidi
@@ -12,23 +13,7 @@ namespace libremidi
 
 class observer_winmm final : public observer_api
 {
-private:
-  using CallbackFunc = std::function<void(int, std::string)>;
-
-  std::thread watchThread;
-  std::condition_variable watchThreadCV;
-  std::mutex watchThreadMutex;
-  bool watchThreadShutdown{};
-
-  static constexpr bool INPUT = true;
-  static constexpr bool OUTPUT = false;
-
 public:
-  using PortList = std::vector<std::string>;
-
-  PortList inputPortList;
-  PortList outputPortList;
-
   struct
       : observer_configuration
       , winmm_observer_configuration
@@ -38,41 +23,37 @@ public:
   explicit observer_winmm(observer_configuration&& conf, winmm_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    inputPortList = get_port_list(INPUT);
-    outputPortList = get_port_list(OUTPUT);
-
-    watchThreadShutdown = false;
-    watchThread = std::thread([this]() { watch_thread(); });
+    check_new_ports();
+    thread = std::jthread([this](std::stop_token tk) {
+      while (!tk.stop_requested())
+      {
+        check_new_ports();
+        std::this_thread::sleep_for(this->configuration.poll_period);
+      }
+    });
   }
 
-  ~observer_winmm()
-  {
-    signal_watch_thread_shutdown();
-    watchThreadCV.notify_all();
-    if (watchThread.joinable())
-      watchThread.join();
-  }
+  ~observer_winmm() { thread.get_stop_source().request_stop(); }
 
 private:
-  void watch_thread()
+  void check_new_ports()
   {
-    while (!wait_for_watch_thread_shutdown_signal(this->configuration.poll_period))
-    {
-      auto currInputPortList = get_port_list(INPUT);
-      compare_port_lists_and_notify_clients(
-          inputPortList, currInputPortList, configuration.input_added, configuration.input_removed);
-      inputPortList = currInputPortList;
+    auto currInputPortList = get_port_list(INPUT);
+    compare_port_lists_and_notify_clients(
+        inputPortList, currInputPortList, configuration.input_added, configuration.input_removed);
+    inputPortList = std::move(currInputPortList);
 
-      auto currOutputPortList = get_port_list(OUTPUT);
-      compare_port_lists_and_notify_clients(
-          outputPortList, currOutputPortList, configuration.output_added, configuration.output_removed);
-      outputPortList = currOutputPortList;
-    }
+    auto currOutputPortList = get_port_list(OUTPUT);
+    compare_port_lists_and_notify_clients(
+        outputPortList, currOutputPortList, configuration.output_added,
+        configuration.output_removed);
+    outputPortList = std::move(currOutputPortList);
   }
 
   void compare_port_lists_and_notify_clients(
-      const PortList& prevList, const PortList& currList, const CallbackFunc& portAddedFunc,
-      const CallbackFunc& portRemovedFunc)
+      const std::vector<std::string>& prevList, const std::vector<std::string>& currList,
+      const libremidi::port_callback& portAddedFunc,
+      const libremidi::port_callback& portRemovedFunc)
   {
     if (portAddedFunc)
     {
@@ -80,39 +61,43 @@ private:
       {
         auto iter = std::find(prevList.begin(), prevList.end(), portName);
         if (iter == prevList.end())
-          portAddedFunc(0, portName);
+        {
+          portAddedFunc(port_information{
+              .client = 0,
+              .port = 0,
+              .manufacturer = "",
+              .device_name = "",
+              .port_name = portName,
+              .display_name = ""});
+        }
       }
     }
+
     if (portRemovedFunc)
     {
       for (const auto portName : prevList)
       {
         auto iter = std::find(currList.begin(), currList.end(), portName);
         if (iter == currList.end())
-          portRemovedFunc(0, portName);
+        {
+          portRemovedFunc(port_information{
+              .client = 0,
+              .port = 0,
+              .manufacturer = "",
+              .device_name = "",
+              .port_name = portName,
+              .display_name = ""});
+        }
       }
     }
   }
 
-  bool wait_for_watch_thread_shutdown_signal(unsigned int timeoutMs)
-  {
-    using namespace std::chrono_literals;
-    std::unique_lock<std::mutex> lock(watchThreadMutex);
-    return watchThreadCV.wait_for(lock, timeoutMs * 1ms, [this]() { return watchThreadShutdown; });
-  }
-
-  void signal_watch_thread_shutdown()
-  {
-    std::lock_guard lock(watchThreadMutex);
-    watchThreadShutdown = true;
-  }
-
-public:
-  PortList get_port_list(bool input) const
+  std::vector<std::string> get_port_list(bool input) const
   {
     // true Get input, false get output
-    PortList portList;
+    std::vector<std::string> portList;
     unsigned int nDevices = input ? midiInGetNumDevs() : midiOutGetNumDevs();
+
     for (unsigned int ix = 0; ix < nDevices; ++ix)
     {
       std::string portName;
@@ -140,6 +125,13 @@ public:
     }
     return portList;
   }
-};
 
+  static constexpr bool INPUT = true;
+  static constexpr bool OUTPUT = false;
+
+  std::jthread thread;
+
+  std::vector<std::string> inputPortList;
+  std::vector<std::string> outputPortList;
+};
 }

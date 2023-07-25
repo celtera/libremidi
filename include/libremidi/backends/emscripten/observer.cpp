@@ -24,16 +24,27 @@ LIBREMIDI_INLINE void observer_emscripten::update(
   assert(current_inputs.size() >= m_known_inputs.size());
   assert(current_outputs.size() >= m_known_outputs.size());
 
+  auto to_port_info
+      = [](int index, const observer_emscripten::device& dev) -> libremidi::port_information {
+    return {
+        .client = 0,
+        .port = (uint64_t)index,
+        .manufacturer = "",
+        .device_name = "",
+        .port_name = dev.name,
+        .display_name = dev.name};
+  };
+
   for (std::size_t i = m_known_inputs.size(); i < current_inputs.size(); i++)
   {
     m_known_inputs.push_back(current_inputs[i]);
-    configuration.input_added(i, m_known_inputs[i].name);
+    configuration.input_added(to_port_info(i, m_known_inputs[i]));
   }
 
   for (std::size_t i = m_known_outputs.size(); i < current_outputs.size(); i++)
   {
     m_known_outputs.push_back(current_outputs[i]);
-    configuration.output_added(i, m_known_outputs[i].name);
+    configuration.output_added(to_port_info(i, m_known_outputs[i]));
   }
 }
 }

@@ -95,37 +95,10 @@ public:
 
   [[nodiscard]] bool create_port(std::string_view portName)
   {
-    if (this->vport < 0)
-    {
-      snd_seq_port_info_t* pinfo{};
-      snd_seq_port_info_alloca(&pinfo);
-
-      snd_seq_port_info_set_client(pinfo, 0);
-      snd_seq_port_info_set_port(pinfo, 0);
-      snd_seq_port_info_set_capability(
-          pinfo, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
-      snd_seq_port_info_set_type(
-          pinfo, SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
-      snd_seq_port_info_set_midi_channels(pinfo, 16);
-
-      if (require_timestamps())
-      {
-        snd_seq_port_info_set_timestamping(pinfo, 1);
-        snd_seq_port_info_set_timestamp_real(pinfo, 1);
-        snd_seq_port_info_set_timestamp_queue(pinfo, this->queue_id);
-      }
-      snd_seq_port_info_set_name(pinfo, portName.data());
-      this->vport = snd_seq_create_port(this->seq, pinfo);
-
-      if (this->vport < 0)
-      {
-        error<driver_error>(
-            this->configuration, "midi_in_alsa::open_port: ALSA error creating input port.");
-        return false;
-      }
-      this->vport = snd_seq_port_info_get_port(pinfo);
-    }
-    return true;
+    return alsa_data::create_port(
+               *this, portName, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
+               require_timestamps() ? std::optional<int>{this->queue_id} : std::nullopt)
+           >= 0;
   }
 
   void start_queue()
@@ -146,77 +119,35 @@ public:
     }
   }
 
-  void unsubscribe()
-  {
-    if (this->subscription)
-    {
-      snd_seq_unsubscribe_port(this->seq, this->subscription);
-      snd_seq_port_subscribe_free(this->subscription);
-      this->subscription = nullptr;
-    }
-  }
-
   int connect_port(snd_seq_addr_t sender)
   {
     snd_seq_addr_t receiver{};
     receiver.client = snd_seq_client_id(this->seq);
     receiver.port = this->vport;
 
-    // Create the connection between ports
-    // Make subscription
-    if (int err = snd_seq_port_subscribe_malloc(&this->subscription); err < 0)
-    {
-      error<driver_error>(
-          this->configuration,
-          "midi_in_alsa::open_port: ALSA error allocation port subscription.");
-      return err;
-    }
-    snd_seq_port_subscribe_set_sender(this->subscription, &sender);
-    snd_seq_port_subscribe_set_dest(this->subscription, &receiver);
-    if (int err = snd_seq_subscribe_port(this->seq, this->subscription); err != 0)
-    {
-      snd_seq_port_subscribe_free(this->subscription);
-      this->subscription = nullptr;
-      error<driver_error>(
-          this->configuration, "midi_in_alsa::open_port: ALSA error making port connection.");
-      return err;
-    }
-    return 0;
+    return create_connection(*this, sender, receiver, false);
   }
 
-  std::optional<snd_seq_addr_t> get_port_info(unsigned int portNumber)
+  std::optional<snd_seq_addr_t> to_address(const port_information& p)
   {
-    snd_seq_port_info_t* src_pinfo{};
-    snd_seq_port_info_alloca(&src_pinfo);
-
-    if (alsa_seq::port_info(
-            this->seq, src_pinfo, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ, portNumber)
-        == 0)
-    {
-      error<invalid_parameter_error>(
-          this->configuration,
-          "midi_in_alsa::open_port: invalid 'portNumber' argument: " + std::to_string(portNumber));
-      return {};
-    }
-
-    snd_seq_addr_t addr;
-    addr.client = snd_seq_port_info_get_client(src_pinfo);
-    addr.port = snd_seq_port_info_get_port(src_pinfo);
-    return addr;
+    return alsa_data::get_port_info(p);
+  }
+  std::optional<snd_seq_addr_t> to_address(unsigned int portNumber)
+  {
+    return get_port_info(*this, portNumber, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ);
   }
 
-  int init_port(unsigned int portNumber, std::string_view portName)
+  int init_port(std::optional<snd_seq_addr_t> source, std::string_view portName)
   {
     this->close_port();
 
-    auto source_addr = get_port_info(portNumber);
-    if (!source_addr)
+    if (!source)
       return -1;
 
     if (!create_port(portName))
       return -1;
 
-    connect_port(*source_addr);
+    connect_port(*source);
     start_queue();
 
     connected_ = true;
@@ -408,9 +339,18 @@ public:
 
 private:
   // FIXME precondition: close_port()
-  void open_port(unsigned int portNumber, std::string_view portName) override
+  void open_port(const port_information& pt, std::string_view local_port_name) override
   {
-    if (init_port(portNumber, portName) < 0)
+    if (init_port(to_address(pt), local_port_name) < 0)
+      return;
+
+    if (!start_thread())
+      return;
+  }
+
+  void open_port(unsigned int pt, std::string_view portName) override
+  {
+    if (init_port(to_address(pt), portName) < 0)
       return;
 
     if (!start_thread())
@@ -518,14 +458,20 @@ class midi_in_alsa_manual : public midi_in_alsa
     return process_events();
   }
 
-  void open_port(unsigned int portNumber, std::string_view name) override
+  void open_port(const port_information& pt, std::string_view local_port_name) override
   {
-    if (init_port(portNumber, name) < 0)
+    if (init_port(to_address(pt), local_port_name) < 0)
       return;
 
     init_fds();
+  }
 
-    connected_ = true;
+  void open_port(unsigned int pt, std::string_view name) override
+  {
+    if (init_port(to_address(pt), name) < 0)
+      return;
+
+    init_fds();
   }
 
   void open_virtual_port(std::string_view name) override

@@ -49,28 +49,10 @@ public:
     return libremidi::API::LINUX_ALSA_RAW;
   }
 
-  void init_port(unsigned int portNumber)
+  // Must be a string such as: "hw:2,4,1"
+  void do_init_port(const char* portname)
   {
-    if (connected_)
-    {
-      warning(
-          this->configuration, "midi_in_raw_alsa::open_port: a valid connection already exists.");
-      return;
-    }
-
-    auto device_list = get_device_enumerator();
-    device_list.enumerate_cards();
-
-    unsigned int num = device_list.inputs.size();
-    if (portNumber >= num)
-    {
-      error<no_devices_found_error>(
-          this->configuration, "midi_in_raw_alsa::open_port: no MIDI output sources found.");
-      return;
-    }
-
     constexpr int mode = SND_RAWMIDI_NONBLOCK;
-    const char* portname = device_list.inputs[portNumber].device.c_str();
     int status = snd_rawmidi_open(&midiport_, nullptr, portname, mode);
     if (status < 0)
     {
@@ -97,6 +79,41 @@ public:
     err = snd_rawmidi_params(midiport_, params);
 
     init_pollfd();
+  }
+
+  void init_port(unsigned int portNumber)
+  {
+    if (connected_)
+    {
+      warning(
+          this->configuration, "midi_in_raw_alsa::open_port: a valid connection already exists.");
+      return;
+    }
+
+    auto device_list = get_device_enumerator();
+    device_list.enumerate_cards();
+
+    unsigned int num = device_list.inputs.size();
+    if (portNumber >= num)
+    {
+      error<no_devices_found_error>(
+          this->configuration, "midi_in_raw_alsa::open_port: no MIDI output sources found.");
+      return;
+    }
+
+    do_init_port(device_list.inputs[portNumber].device.c_str());
+  }
+
+  void init_port(const port_information& p)
+  {
+    if (connected_)
+    {
+      warning(
+          this->configuration, "midi_in_raw_alsa::open_port: a valid connection already exists.");
+      return;
+    }
+
+    return do_init_port(raw_from_port_handle(p.port).to_string().c_str());
   }
 
   void init_pollfd()
@@ -287,10 +304,8 @@ private:
     }
   }
 
-  void open_port(unsigned int portNumber, std::string_view name) override
+  void start_thread()
   {
-    midi_in_raw_alsa::init_port(portNumber);
-
     if (configuration.timestamps == input_configuration::NoTimestamp)
     {
       this->thread_ = std::thread{[this] { run_thread(&midi_in_raw_alsa::read_input_buffer); }};
@@ -300,7 +315,19 @@ private:
       this->thread_ = std::thread{
           [this] { run_thread(&midi_in_raw_alsa::read_input_buffer_with_timestamps); }};
     }
+  }
 
+  void open_port(unsigned int portNumber, std::string_view name) override
+  {
+    midi_in_raw_alsa::init_port(portNumber);
+    start_thread();
+    connected_ = true;
+  }
+
+  void open_port(const port_information& port, std::string_view name) override
+  {
+    midi_in_raw_alsa::init_port(port);
+    start_thread();
     connected_ = true;
   }
 
@@ -329,10 +356,8 @@ public:
   }
 
 private:
-  void open_port(unsigned int portNumber, std::string_view name) override
+  void send_poll_callback()
   {
-    midi_in_raw_alsa::init_port(portNumber);
-
     if (configuration.timestamps == input_configuration::NoTimestamp)
     {
       configuration.manual_poll(manual_poll_parameters{
@@ -349,7 +374,19 @@ private:
             return do_read_events(&midi_in_raw_alsa::read_input_buffer_with_timestamps, fds);
           }});
     }
+  }
 
+  void open_port(unsigned int portNumber, std::string_view name) override
+  {
+    midi_in_raw_alsa::init_port(portNumber);
+    send_poll_callback();
+    connected_ = true;
+  }
+
+  void open_port(const port_information& p, std::string_view name) override
+  {
+    midi_in_raw_alsa::init_port(p);
+    send_poll_callback();
     connected_ = true;
   }
 };

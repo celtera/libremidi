@@ -88,6 +88,8 @@ public:
   explicit observer(libremidi::API, observer_configuration);
   ~observer();
 
+  [[nodiscard]] libremidi::API get_current_api() const noexcept;
+
 private:
   std::unique_ptr<class observer_api> impl_;
 };
@@ -157,9 +159,11 @@ public:
     \param portName A name for the application port that is used to
     connect to portId can be specified.
   */
-  void open_port(unsigned int portNumber, std::string_view portName);
-  void open_port() { open_port(0, "libremidi Input"); }
-  void open_port(unsigned int port) { open_port(port, "libremidi Input"); }
+  [[deprecated]] void open_port(unsigned int portNumber, std::string_view portName);
+  [[deprecated]] void open_port() { open_port(0, "libremidi input"); }
+  [[deprecated]] void open_port(unsigned int port) { open_port(port, "libremidi input"); }
+
+  void open_port(const port_information& pt, std::string_view local_port_name = "libremidi input");
 
   //! Create a virtual input port, with optional name, to allow software
   //! connections (OS X, JACK and ALSA only).
@@ -262,9 +266,11 @@ public:
       exception is thrown if an error occurs while attempting to make
       the port connection.
   */
-  void open_port(unsigned int portNumber, std::string_view portName);
-  void open_port() { open_port(0, "libremidi Output"); }
-  void open_port(unsigned int port) { open_port(port, "libremidi Output"); }
+  [[deprecated]] void open_port(unsigned int portNumber, std::string_view portName);
+  [[deprecated]] void open_port() { open_port(0, "libremidi output"); }
+  [[deprecated]] void open_port(unsigned int port) { open_port(port, "libremidi output"); }
+
+  void open_port(const port_information& pt, std::string_view local_port_name = "libremidi input");
 
   //! Close an open MIDI connection (if one exists).
   void close_port();

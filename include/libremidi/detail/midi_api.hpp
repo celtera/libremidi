@@ -2,6 +2,7 @@
 #include <libremidi/api.hpp>
 #include <libremidi/config.hpp>
 #include <libremidi/error.hpp>
+#include <libremidi/observer_configuration.hpp>
 
 #include <iostream>
 #include <string_view>
@@ -68,6 +69,7 @@ public:
 
   [[nodiscard]] virtual libremidi::API get_current_api() const noexcept = 0;
   virtual void open_port(unsigned int portNumber, std::string_view portName) = 0;
+  virtual void open_port(const port_information& pt, std::string_view local_port_name) = 0;
   virtual void open_virtual_port(std::string_view) = 0;
   virtual void close_port() = 0;
   virtual void set_client_name(std::string_view) = 0;

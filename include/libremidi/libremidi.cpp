@@ -253,6 +253,12 @@ void midi_in::open_port(unsigned int portNumber, std::string_view portName)
 }
 
 LIBREMIDI_INLINE
+void midi_in::open_port(const port_information& port, std::string_view portName)
+{
+  impl_->open_port(port, portName);
+}
+
+LIBREMIDI_INLINE
 void midi_in::open_virtual_port(std::string_view portName)
 {
   impl_->open_virtual_port(portName);
@@ -292,6 +298,12 @@ LIBREMIDI_INLINE
 void midi_out::open_port(unsigned int portNumber, std::string_view portName)
 {
   impl_->open_port(portNumber, portName);
+}
+
+LIBREMIDI_INLINE
+void midi_out::open_port(const port_information& port, std::string_view portName)
+{
+  impl_->open_port(port, portName);
 }
 
 LIBREMIDI_INLINE

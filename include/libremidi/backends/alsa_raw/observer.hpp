@@ -96,7 +96,7 @@ private:
           if (act == "add" || act == "remove")
           {
             // Check every 100 milliseconds for ten seconds
-            this->timer_fd.restart(100'000'000);
+            this->timer_fd.restart(configuration.poll_period.count());
             timer_check_counts = 100;
           }
         }
@@ -124,6 +124,17 @@ private:
     }
   }
 
+  libremidi::port_information to_port_info(raw_alsa_helpers::alsa_raw_port_info p)
+  {
+    return {
+        .client = 0,
+        .port = raw_to_port_handle({p.card, p.dev, p.sub}),
+        .manufacturer = p.card_name,
+        .device_name = p.device_name,
+        .port_name = p.subdevice_name,
+        .display_name = p.subdevice_name};
+  }
+
   void check_devices()
   {
     raw_alsa_helpers::enumerator new_devs;
@@ -138,7 +149,7 @@ private:
       {
         if (auto& cb = this->configuration.input_removed)
         {
-          cb(k, in_prev.subdevice_name);
+          cb(to_port_info(in_prev));
         }
       }
       k++;
@@ -153,7 +164,7 @@ private:
       {
         if (auto& cb = this->configuration.input_added)
         {
-          cb(k, in_next.subdevice_name);
+          cb(to_port_info(in_next));
         }
       }
       k++;
@@ -167,7 +178,7 @@ private:
       {
         if (auto& cb = this->configuration.output_removed)
         {
-          cb(k, out_prev.subdevice_name);
+          cb(to_port_info(out_prev));
         }
       }
       k++;
@@ -182,7 +193,7 @@ private:
       {
         if (auto& cb = this->configuration.output_added)
         {
-          cb(k, out_next.subdevice_name);
+          cb(to_port_info(out_next));
         }
       }
       k++;

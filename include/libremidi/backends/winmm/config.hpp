@@ -1,6 +1,8 @@
 #pragma once
 #include <libremidi/config.hpp>
 
+#include <chrono>
+
 namespace libremidi
 {
 
@@ -16,7 +18,7 @@ struct winmm_output_configuration
 
 struct winmm_observer_configuration
 {
-  int poll_period = 100; // ms
+  std::chrono::milliseconds poll_period{100};
 };
 
 }

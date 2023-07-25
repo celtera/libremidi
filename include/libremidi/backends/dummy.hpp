@@ -32,24 +32,14 @@ public:
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }
-
   void open_port(unsigned int /*portNumber*/, std::string_view /*portName*/) override { }
-
+  void open_port(const port_information& pt, std::string_view local_port_name) override { }
   void open_virtual_port(std::string_view /*portName*/) override { }
-
   void close_port() override { }
-
   void set_client_name(std::string_view /*clientName*/) override { }
-
   void set_port_name(std::string_view /*portName*/) override { }
-
   unsigned int get_port_count() const override { return 0; }
-
-  std::string get_port_name(unsigned int /*portNumber*/) const override
-  {
-    using namespace std::literals;
-    return ""s;
-  }
+  std::string get_port_name(unsigned int /*portNumber*/) const override { return {}; }
 };
 
 class midi_out_dummy final
@@ -63,18 +53,14 @@ public:
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }
-
   void open_port(unsigned int /*portNumber*/, std::string_view /*portName*/) override { }
+  void open_port(const port_information& pt, std::string_view local_port_name) override { }
   void open_virtual_port(std::string_view /*portName*/) override { }
   void close_port() override { }
   void set_client_name(std::string_view /*clientName*/) override { }
   void set_port_name(std::string_view /*portName*/) override { }
   unsigned int get_port_count() const override { return 0; }
-  std::string get_port_name(unsigned int /*portNumber*/) const override
-  {
-    using namespace std::literals;
-    return ""s;
-  }
+  std::string get_port_name(unsigned int /*portNumber*/) const override { return {}; }
   void send_message(const unsigned char* /*message*/, size_t /*size*/) override { }
 };
 

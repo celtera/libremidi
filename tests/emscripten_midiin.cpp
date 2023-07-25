@@ -18,8 +18,8 @@ int main(int argc, char**)
 
   libremidi::observer_configuration callbacks{
       .input_added =
-          [&](int idx, const std::string& id) {
-    std::cout << "MIDI Input connected: " << idx << " - " << id << std::endl;
+          [&](const libremidi::port_information& id) {
+    std::cout << "MIDI Input connected: " << id.port_name << std::endl;
 
     auto conf = libremidi::input_configuration{.on_message = [](const libremidi::message& msg) {
       std::cout << (int)msg.bytes[0] << " " << (int)msg.bytes[1] << " " << (int)msg.bytes[2] << " "
@@ -28,28 +28,28 @@ int main(int argc, char**)
     auto input
         = std::make_shared<libremidi::midi_in>(conf, libremidi::emscripten_input_configuration{});
 
-    input->open_port(idx);
+    input->open_port(id);
 
     inputs.push_back(input);
       },
 
       .input_removed =
-          [&](int idx, const std::string& id) {
-    std::cout << "MIDI Input removed: " << id << std::endl;
+          [&](const libremidi::port_information& id) {
+    std::cout << "MIDI Input removed: " << id.port_name << std::endl;
       },
 
       .output_added
-      = [&](int idx, const std::string& id) {
-    std::cout << "MIDI Output connected: " << idx << " - " << id << std::endl;
+      = [&](const libremidi::port_information& id) {
+    std::cout << "MIDI Output connected: " << id.port_name << std::endl;
 
     libremidi::midi_out output{};
-    output.open_port(idx);
-    output.send_message(std::array<unsigned char, 3>{0x90, 64, 100});
-    output.send_message(std::array<unsigned char, 3>{0x80, 64, 100});
+    output.open_port(id);
+    output.send_message(0x90, 64, 100);
+    output.send_message(0x80, 64, 100);
       },
 
-      .output_removed = [&](int idx, const std::string& id) {
-        std::cout << "MIDI Output removed: " << id << std::endl;
+      .output_removed = [&](const libremidi::port_information& id) {
+        std::cout << "MIDI Output removed: " << id.port_name << std::endl;
       }};
 
   libremidi::observer obs{libremidi::API::EMSCRIPTEN_WEBMIDI, std::move(callbacks)};

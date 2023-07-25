@@ -1,8 +1,12 @@
 #pragma once
+#include <libremidi/config.hpp>
+#include <libremidi/detail/observer.hpp>
+
 #include <alsa/asoundlib.h>
 
 #include <chrono>
 #include <functional>
+#include <iostream>
 #include <optional>
 #include <span>
 #include <string>
@@ -19,21 +23,47 @@ namespace libremidi
 {
 namespace
 {
+
+struct alsa_raw_port_id
+{
+  int card{}, dev{}, port{};
+  std::string to_string() const noexcept
+  {
+    return "hw:" + std::to_string(card) + "," + std::to_string(dev) + "," + std::to_string(port);
+  }
+};
+inline constexpr port_handle raw_to_port_handle(alsa_raw_port_id id) noexcept
+{
+  return (uint64_t(id.card) << 32) + (uint64_t(id.dev) << 16) + id.port;
+}
+inline constexpr alsa_raw_port_id raw_from_port_handle(port_handle p) noexcept
+{
+  alsa_raw_port_id ret;
+  ret.card = (p & 0x00'00'FF'FF'00'00'00'00) >> 32;
+  ret.dev = (p & 0x00'00'00'00'FF'FF'00'00) >> 16;
+  ret.port = (p & 0x00'00'00'00'00'00'FF'FF);
+  return ret;
+}
+static_assert(raw_from_port_handle(raw_to_port_handle({102, 7, 3})).card == 102);
+static_assert(raw_from_port_handle(raw_to_port_handle({12, 7, 3})).dev == 7);
+static_assert(raw_from_port_handle(raw_to_port_handle({12, 7, 3})).port == 3);
+
 struct raw_alsa_helpers
 {
-  struct device_information
+  struct alsa_raw_port_info
   {
     std::string device;
     std::string card_name;
     std::string device_name;
     std::string subdevice_name;
+    int card{}, dev{}, sub{};
 
     std::string pretty_name() const
     {
       return device + ": " + card_name + " : " + device_name + " : " + subdevice_name;
     }
 
-    bool operator==(const device_information& other) const noexcept = default;
+    bool operator==(const alsa_raw_port_info& other) const noexcept = default;
   };
 
   struct enumerator;
@@ -67,17 +97,39 @@ struct raw_alsa_helpers
 
   struct enumerator
   {
-    std::vector<device_information> inputs;
-    std::vector<device_information> outputs;
+    std::vector<alsa_raw_port_info> inputs;
+    std::vector<alsa_raw_port_info> outputs;
 
     std::function<void(std::string_view)> error_callback;
+    std::function<void(std::string_view)> warn_callback;
 
+    template <typename... Args>
+    void warning(Args&&... args)
+    {
+      std::string s;
+      ((s += args), ...);
+      if (warn_callback)
+      {
+        warn_callback(std::move(s));
+      }
+      else
+      {
+        std::cerr << s << std::endl;
+      }
+    }
     template <typename... Args>
     void error(Args&&... args)
     {
       std::string s;
       ((s += args), ...);
-      error_callback(std::move(s));
+      if (error_callback)
+      {
+        error_callback(std::move(s));
+      }
+      else
+      {
+        throw std::runtime_error(s.c_str());
+      }
     }
 
     // 1: is an input / output
@@ -186,6 +238,9 @@ struct raw_alsa_helpers
       do
       {
         const int status = snd_ctl_rawmidi_next_device(ctl, &device);
+        if (device == -1)
+          return;
+
         if (status < 0)
         {
           error(
@@ -225,7 +280,9 @@ struct raw_alsa_helpers
       snd_ctl_rawmidi_info(ctl, info);
       const int subs_out = snd_rawmidi_info_get_subdevices_count(info);
 
-      device_information d;
+      alsa_raw_port_info d;
+      d.card = card;
+      d.dev = device;
       d.card_name = get_card_name(card);
       d.device_name = snd_rawmidi_info_get_name(info);
 
@@ -235,6 +292,7 @@ struct raw_alsa_helpers
 
         d.device = device_identifier(card, device, sub);
         d.subdevice_name = snd_rawmidi_info_get_subdevice_name(info);
+        d.sub = sub;
       };
 
       if (subs_in > 0)

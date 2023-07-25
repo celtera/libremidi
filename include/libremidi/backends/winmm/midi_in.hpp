@@ -60,30 +60,8 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
-  void open_port(unsigned int portNumber, std::string_view) override
+  void do_open(unsigned int portNumber)
   {
-    if (connected_)
-    {
-      warning(configuration, "midi_in_winmm::open_port: a valid connection already exists!");
-      return;
-    }
-
-    unsigned int nDevices = midiInGetNumDevs();
-    if (nDevices == 0)
-    {
-      error<no_devices_found_error>(
-          configuration, "midi_in_winmm::open_port: no MIDI input sources found!");
-      return;
-    }
-
-    if (portNumber >= nDevices)
-    {
-      error<invalid_parameter_error>(
-          configuration, "midi_in_winmm::open_port: invalid 'portNumber' argument: "
-                             + std::to_string(portNumber));
-      return;
-    }
-
     MMRESULT result = midiInOpen(
         &this->inHandle, portNumber, (DWORD_PTR)&midiInputCallback, (DWORD_PTR)this,
         CALLBACK_FUNCTION);
@@ -141,6 +119,60 @@ public:
     }
 
     connected_ = true;
+  }
+
+  void open_port(const port_information& p, std::string_view) override
+  {
+    if (connected_)
+    {
+      warning(configuration, "midi_in_winmm::open_port: a valid connection already exists!");
+      return;
+    }
+
+    unsigned int nDevices = midiInGetNumDevs();
+    MIDIINCAPS deviceCaps{};
+    for (unsigned int i = 0; i < nDevices; i++)
+    {
+      midiInGetDevCaps(i, &deviceCaps, sizeof(MIDIINCAPS));
+      std::string stringName = ConvertToUTF8(deviceCaps.szPname);
+
+#ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+      MakeUniqueInPortName(stringName, i);
+#endif
+
+      if (stringName == p.port_name)
+        return do_open(i);
+    }
+
+    error<invalid_parameter_error>(
+        configuration, "midi_in_winmm::open_port: port not found: " + p.port_name);
+  }
+
+  void open_port(unsigned int portNumber, std::string_view) override
+  {
+    if (connected_)
+    {
+      warning(configuration, "midi_in_winmm::open_port: a valid connection already exists!");
+      return;
+    }
+
+    unsigned int nDevices = midiInGetNumDevs();
+    if (nDevices == 0)
+    {
+      error<no_devices_found_error>(
+          configuration, "midi_in_winmm::open_port: no MIDI input sources found!");
+      return;
+    }
+
+    if (portNumber >= nDevices)
+    {
+      error<invalid_parameter_error>(
+          configuration, "midi_in_winmm::open_port: invalid 'portNumber' argument: "
+                             + std::to_string(portNumber));
+      return;
+    }
+
+    do_open(portNumber);
   }
 
   void close_port() override

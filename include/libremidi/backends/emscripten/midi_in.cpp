@@ -43,6 +43,12 @@ LIBREMIDI_INLINE void midi_in_emscripten::open_port(unsigned int portNumber, std
   connected_ = true;
 }
 
+LIBREMIDI_INLINE void
+midi_in_emscripten::open_port(const libremidi::port_information& p, std::string_view nm)
+{
+  return open_port(p.port, nm);
+}
+
 LIBREMIDI_INLINE void midi_in_emscripten::open_virtual_port(std::string_view)
 {
   warning(configuration, "midi_in_emscripten::open_virtual_port: unsupported.");

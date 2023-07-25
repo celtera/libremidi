@@ -13,6 +13,12 @@
   #include <CoreFoundation/CoreFoundation.h>
 #endif
 
+std::ostream& operator<<(std::ostream& s, const libremidi::port_information& rhs)
+{
+  return s << "[ client: " << rhs.client << ", port: " << rhs.port
+           << ", manufacturer: " << rhs.manufacturer << ", devname: " << rhs.device_name
+           << ", portname: " << rhs.port_name << ", display: " << rhs.display_name << "]\n";
+}
 int main()
 try
 {
@@ -32,21 +38,23 @@ try
   for (auto api : libremidi::available_apis())
   {
     libremidi::observer_configuration cbs;
-    cbs.input_added = [=](int i, std::string n) {
-      std::cerr << apiMap[api] << " : input added " << i << " => " << n << "\n";
+    cbs.input_added = [=](const libremidi::port_information& p) {
+      std::cerr << apiMap[api] << " : input added " << p << "\n";
     };
-    cbs.input_removed = [=](int i, std::string n) {
-      std::cerr << apiMap[api] << " : input removed " << i << " => " << n << "\n";
+    cbs.input_removed = [=](const libremidi::port_information& p) {
+      std::cerr << apiMap[api] << " : input removed " << p << "\n";
     };
-    cbs.output_added = [=](int i, std::string n) {
-      std::cerr << apiMap[api] << " : output added " << i << " => " << n << "\n";
+    cbs.output_added = [=](const libremidi::port_information& p) {
+      std::cerr << apiMap[api] << " : output added " << p << "\n";
     };
-    cbs.output_removed = [=](int i, std::string n) {
-      std::cerr << apiMap[api] << " : output removed " << i << " => " << n << "\n";
+    cbs.output_removed = [=](const libremidi::port_information& p) {
+      std::cerr << apiMap[api] << " : output removed " << p << "\n";
     };
     std::cout << "  " << apiMap[api] << std::endl;
     observers.push_back(std::make_unique<libremidi::observer>(api, cbs));
   }
+
+  std::cerr << "... waiting for hotplug events ...\n";
 
 #if defined(__APPLE__)
   // On macOS, observation can *only* be done in the main thread

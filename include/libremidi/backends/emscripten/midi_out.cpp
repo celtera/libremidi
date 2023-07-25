@@ -42,6 +42,12 @@ LIBREMIDI_INLINE void midi_out_emscripten::open_port(unsigned int portNumber, st
   connected_ = true;
 }
 
+LIBREMIDI_INLINE void
+midi_out_emscripten::open_port(const port_information& p, std::string_view nm)
+{
+  return open_port(p.port, nm);
+}
+
 LIBREMIDI_INLINE void midi_out_emscripten::close_port()
 {
   if (connected_)

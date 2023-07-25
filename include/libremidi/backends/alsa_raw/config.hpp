@@ -67,6 +67,6 @@ struct alsa_raw_output_configuration
 
 struct alsa_raw_observer_configuration
 {
+  std::chrono::milliseconds poll_period{100};
 };
-
 }

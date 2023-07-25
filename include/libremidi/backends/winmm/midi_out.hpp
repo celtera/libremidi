@@ -53,6 +53,48 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
+  void do_open(unsigned int portNumber)
+  {
+    MMRESULT result = midiOutOpen(&this->outHandle, portNumber, 0, 0, CALLBACK_NULL);
+    if (result != MMSYSERR_NOERROR)
+    {
+      error<driver_error>(
+          configuration,
+          "midi_out_winmm::open_port: error creating Windows MM MIDI output "
+          "port.");
+      return;
+    }
+
+    connected_ = true;
+  }
+
+  void open_port(const port_information& p, std::string_view) override
+  {
+    if (connected_)
+    {
+      warning(configuration, "midi_out_winmm::open_port: a valid connection already exists!");
+      return;
+    }
+
+    unsigned int nDevices = midiInGetNumDevs();
+    MIDIOUTCAPS deviceCaps{};
+    for (unsigned int i = 0; i < nDevices; i++)
+    {
+      midiOutGetDevCaps(i, &deviceCaps, sizeof(MIDIOUTCAPS));
+      std::string stringName = ConvertToUTF8(deviceCaps.szPname);
+
+#ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
+      MakeUniqueOutPortName(stringName, i);
+#endif
+
+      if (stringName == p.port_name)
+        return do_open(i);
+    }
+
+    error<invalid_parameter_error>(
+        configuration, "midi_out_winmm::open_port: port not found: " + p.port_name);
+  }
+
   void open_port(unsigned int portNumber, std::string_view) override
   {
     if (connected_)
@@ -77,17 +119,7 @@ public:
       return;
     }
 
-    MMRESULT result = midiOutOpen(&this->outHandle, portNumber, 0, 0, CALLBACK_NULL);
-    if (result != MMSYSERR_NOERROR)
-    {
-      error<driver_error>(
-          configuration,
-          "midi_out_winmm::open_port: error creating Windows MM MIDI output "
-          "port.");
-      return;
-    }
-
-    connected_ = true;
+    do_open(portNumber);
   }
 
   void close_port() override

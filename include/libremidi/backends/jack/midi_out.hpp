@@ -106,19 +106,8 @@ public:
 
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
-    if (!check_port_name_length(*this, configuration.client_name, portName))
+    if (!create_local_port(*this, portName, JackPortIsOutput))
       return;
-
-    // Creating new port
-    if (!this->port)
-      this->port = jack_port_register(
-          this->client, portName.data(), JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
-
-    if (!this->port)
-    {
-      error<driver_error>(configuration, "midi_out_jack::open_port: JACK error creating port");
-      return;
-    }
 
     // Connecting to the output
     std::string name = get_port_name(portNumber);
@@ -127,20 +116,21 @@ public:
     connected_ = true;
   }
 
-  void open_virtual_port(std::string_view portName) override
+  void open_port(const port_information& port, std::string_view portName) override
   {
-    if (!check_port_name_length(*this, configuration.client_name, portName))
+    if (!create_local_port(*this, portName, JackPortIsOutput))
       return;
 
-    if (this->port == nullptr)
-      this->port = jack_port_register(
-          this->client, portName.data(), JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+    // Connecting to the output
+    std::string name = port.port_name;
+    jack_connect(this->client, name.c_str(), jack_port_name(this->port));
 
-    if (this->port == nullptr)
-    {
-      error<driver_error>(
-          configuration, "midi_out_jack::open_virtual_port: JACK error creating virtual port");
-    }
+    connected_ = true;
+  }
+
+  void open_virtual_port(std::string_view portName) override
+  {
+    create_local_port(*this, portName, JackPortIsOutput);
   }
 
   void close_port() override

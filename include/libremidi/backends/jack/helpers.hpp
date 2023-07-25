@@ -58,13 +58,23 @@ struct jack_helpers
     }
   }
 
-  static bool
-  check_port_name_length(const auto& self, std::string_view clientName, std::string_view portName)
+  bool create_local_port(const auto& self, std::string_view portName, JackPortFlags flags)
   {
     // full name: "client_name:port_name\0"
-    if (clientName.size() + portName.size() + 1 + 1 >= jack_port_name_size())
+    if (self.configuration.client_name.size() + portName.size() + 1 + 1 >= jack_port_name_size())
     {
-      self.template error<invalid_use_error>(self.configuration, "JACK: port name length limit exceeded");
+      self.template error<invalid_use_error>(
+          self.configuration, "JACK: port name length limit exceeded");
+      return false;
+    }
+
+    if (!this->port)
+      this->port
+          = jack_port_register(this->client, portName.data(), JACK_DEFAULT_MIDI_TYPE, flags, 0);
+
+    if (!this->port)
+    {
+      self.template error<driver_error>(self.configuration, "JACK: error creating port");
       return false;
     }
     return true;
