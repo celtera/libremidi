@@ -4,6 +4,8 @@
 //
 // by Gary Scavone, 2003-2012.
 
+#include "utils.hpp"
+
 #include <libremidi/libremidi.hpp>
 
 #include <chrono>
@@ -15,19 +17,11 @@
 int main()
 try
 {
-  // Create an api map.
-  std::map<libremidi::API, std::string> apiMap{
-      {libremidi::API::MACOSX_CORE, "OS-X CoreMidi"},  {libremidi::API::WINDOWS_MM, "Windows MultiMedia"}, 
-      {libremidi::API::WINDOWS_UWP, "Windows UWP"},
-      {libremidi::API::UNIX_JACK, "Jack Client"},      {libremidi::API::LINUX_ALSA_SEQ, "Linux ALSA (sequencer)"},
-      {libremidi::API::LINUX_ALSA_RAW, "Linux ALSA (raw)"},
-      {libremidi::API::DUMMY, "Dummy (no driver)"},
-  };
-
   for (auto& api : libremidi::available_apis())
   {
-    std::cout << "\nCurrent API: " << apiMap[api] << std::endl;
-  
+    std::string_view api_name = libremidi::get_api_display_name(api);
+    std::cout << "Displaying ports for: " << api_name << std::endl;
+
     // On Windows 10, apparently the MIDI devices aren't exactly available as soon as the app open...
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   
@@ -35,24 +29,20 @@ try
     {
       // Check inputs.
       auto ports = midi.get_input_ports();
-      std::cout << "\nThere are " << ports.size() << " MIDI input sources available.\n";
-  
-      for (unsigned i = 0; i < ports.size(); i++)
-      {
-        std::cout << "Input: " << ports[i].display_name << '\n';
-      }
+      std::cout << ports.size() << " MIDI input sources:\n";
+      for (auto& port : ports)
+        std::cout << " - " << port << '\n';
     }
   
     {
       // Check outputs.
       auto ports = midi.get_output_ports();
-      std::cout << "\nThere are " << ports.size() << " MIDI output sinks available.\n";
-  
-      for (unsigned i = 0; i < ports.size(); i++)
-      {
-        std::cout << "Output: " << ports[i].display_name << '\n';
-      }
+      std::cout << ports.size() << " MIDI output sinks:\n";
+      for (auto& port : ports)
+        std::cout << " - " << port << '\n';
     }
+
+    std::cout << "\n";
   }
   return 0;
 }

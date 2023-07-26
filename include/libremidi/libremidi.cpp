@@ -151,37 +151,6 @@ LIBREMIDI_INLINE driver_error::~driver_error() = default;
 LIBREMIDI_INLINE system_error::~system_error() = default;
 LIBREMIDI_INLINE thread_error::~thread_error() = default;
 
-LIBREMIDI_INLINE midi_in::~midi_in() = default;
-LIBREMIDI_INLINE midi_in::midi_in(midi_in&& other) noexcept
-    : impl_{std::move(other.impl_)}
-{
-  other.impl_
-      = std::make_unique<libremidi::midi_in_dummy>(input_configuration{}, dummy_configuration{});
-}
-LIBREMIDI_INLINE midi_in& midi_in::operator=(midi_in&& other) noexcept
-{
-  this->impl_ = std::move(other.impl_);
-  other.impl_
-      = std::make_unique<libremidi::midi_in_dummy>(input_configuration{}, dummy_configuration{});
-  return *this;
-}
-
-LIBREMIDI_INLINE midi_out::~midi_out() = default;
-
-LIBREMIDI_INLINE midi_out::midi_out(midi_out&& other) noexcept
-    : impl_{std::move(other.impl_)}
-{
-  other.impl_
-      = std::make_unique<libremidi::midi_out_dummy>(output_configuration{}, dummy_configuration{});
-}
-LIBREMIDI_INLINE midi_out& midi_out::operator=(midi_out&& other) noexcept
-{
-  this->impl_ = std::move(other.impl_);
-  other.impl_
-      = std::make_unique<libremidi::midi_out_dummy>(output_configuration{}, dummy_configuration{});
-  return *this;
-}
-
 [[nodiscard]] LIBREMIDI_INLINE std::unique_ptr<observer_api>
 open_midi_observer(libremidi::API api, observer_configuration&& cb)
 {
@@ -218,6 +187,51 @@ LIBREMIDI_INLINE
 std::vector<libremidi::port_information> observer::get_output_ports() const noexcept
 {
   return impl_->get_input_ports();
+}
+
+LIBREMIDI_INLINE observer::observer(observer&& other) noexcept
+    : impl_{std::move(other.impl_)}
+{
+  other.impl_ = std::make_unique<libremidi::observer_dummy>(
+      observer_configuration{}, dummy_configuration{});
+}
+LIBREMIDI_INLINE observer& observer::operator=(observer&& other) noexcept
+{
+  this->impl_ = std::move(other.impl_);
+  other.impl_ = std::make_unique<libremidi::observer_dummy>(
+      observer_configuration{}, dummy_configuration{});
+  return *this;
+}
+
+LIBREMIDI_INLINE midi_in::~midi_in() = default;
+LIBREMIDI_INLINE midi_in::midi_in(midi_in&& other) noexcept
+    : impl_{std::move(other.impl_)}
+{
+  other.impl_
+      = std::make_unique<libremidi::midi_in_dummy>(input_configuration{}, dummy_configuration{});
+}
+LIBREMIDI_INLINE midi_in& midi_in::operator=(midi_in&& other) noexcept
+{
+  this->impl_ = std::move(other.impl_);
+  other.impl_
+      = std::make_unique<libremidi::midi_in_dummy>(input_configuration{}, dummy_configuration{});
+  return *this;
+}
+
+LIBREMIDI_INLINE midi_out::~midi_out() = default;
+
+LIBREMIDI_INLINE midi_out::midi_out(midi_out&& other) noexcept
+    : impl_{std::move(other.impl_)}
+{
+  other.impl_
+      = std::make_unique<libremidi::midi_out_dummy>(output_configuration{}, dummy_configuration{});
+}
+LIBREMIDI_INLINE midi_out& midi_out::operator=(midi_out&& other) noexcept
+{
+  this->impl_ = std::move(other.impl_);
+  other.impl_
+      = std::make_unique<libremidi::midi_out_dummy>(output_configuration{}, dummy_configuration{});
+  return *this;
 }
 
 LIBREMIDI_INLINE

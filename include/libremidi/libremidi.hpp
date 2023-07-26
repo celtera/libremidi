@@ -86,6 +86,10 @@ class LIBREMIDI_EXPORT observer
 {
 public:
   explicit observer(libremidi::API, observer_configuration);
+  observer(const observer&) = delete;
+  observer(observer&& other) noexcept;
+  observer& operator=(const observer&) = delete;
+  observer& operator=(observer&& other) noexcept;
   ~observer();
 
   [[nodiscard]] libremidi::API get_current_api() const noexcept;

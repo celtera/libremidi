@@ -17,15 +17,53 @@ struct jack_client
 {
   jack_client_t* client{};
 
+  static std::string get_port_display_name(jack_port_t* port)
+  {
+    auto p1 = std::make_unique<char[]>(jack_port_name_size());
+    auto p2 = std::make_unique<char[]>(jack_port_name_size());
+    char* aliases[3] = {p1.get(), p2.get(), nullptr};
+    int n = jack_port_get_aliases(port, aliases);
+    if (n > 1)
+    {
+      return aliases[1];
+    }
+    else if (n > 0)
+    {
+      std::string str = aliases[0];
+      if (str.starts_with("alsa_pcm:"))
+        str.erase(0, strlen("alsa_pcm:"));
+      return str;
+    }
+    else
+    {
+      auto short_name = jack_port_short_name(port);
+      if (short_name && strlen(short_name) > 0)
+        return short_name;
+      return jack_port_name(port);
+    }
+  }
+
+  static libremidi::port_information to_port_info(jack_client_t* client, jack_port_t* port)
+  {
+    return port_information{
+        .client = std::uintptr_t(client),
+        .port = 0,
+        .manufacturer = "",
+        .device_name = "",
+        .port_name = jack_port_name(port),
+        .display_name = get_port_display_name(port),
+    };
+  }
+
   static std::vector<libremidi::port_information>
-  get_ports(jack_client_t* client, JackPortFlags flags) noexcept
+  get_ports(jack_client_t* client, const char* pattern, JackPortFlags flags) noexcept
   {
     std::vector<libremidi::port_information> ret;
 
     if (!client)
       return {};
 
-    const char** ports = jack_get_ports(client, nullptr, JACK_DEFAULT_MIDI_TYPE, flags);
+    const char** ports = jack_get_ports(client, pattern, JACK_DEFAULT_MIDI_TYPE, flags);
 
     if (ports == nullptr)
       return {};
@@ -34,17 +72,7 @@ struct jack_client
     while (ports[i] != nullptr)
     {
       auto port = jack_port_by_name(client, ports[i]);
-      jack_port_short_name(port);
-
-      ret.push_back(port_information{
-          .client = std::uintptr_t(client),
-          .port = 0,
-          .manufacturer = "",
-          .device_name = "",
-          .port_name = ports[i],
-          .display_name = ports[i],
-      });
-
+      ret.push_back(to_port_info(client, port));
       i++;
     }
 

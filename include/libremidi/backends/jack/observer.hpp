@@ -3,6 +3,8 @@
 #include <libremidi/backends/jack/helpers.hpp>
 #include <libremidi/detail/observer.hpp>
 
+#include <unordered_set>
+
 namespace libremidi
 {
 class observer_jack final
@@ -24,43 +26,190 @@ public:
     if (configuration.context)
     {
       this->client = configuration.context;
-
-      if (configuration.has_callbacks())
-        jack_set_port_registration_callback(this->client, JackPortRegistrationCallback{}, this);
+      set_callbacks();
     }
     else
     {
       jack_status_t status{};
       this->client
           = jack_client_open(configuration.client_name.c_str(), JackNoStartServer, &status);
+      if (status != jack_status_t{})
+        warning(configuration, "observer_jack: " + std::to_string((int)jack_status_t{}));
+
       if (this->client != nullptr)
       {
-        if (status != jack_status_t{})
-          warning(configuration, "observer_jack: " + std::to_string((int)jack_status_t{}));
+        set_callbacks();
 
-        if (configuration.has_callbacks())
-        {
-          jack_set_port_registration_callback(this->client, JackPortRegistrationCallback{}, this);
-        }
         jack_activate(this->client);
       }
     }
   }
 
-  int process(jack_nframes_t nframes) { return 0; }
+  void initial_callback()
+  {
+    {
+      const char** ports
+          = jack_get_ports(client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput);
+
+      if (ports != nullptr)
+      {
+        int i = 0;
+        while (ports[i] != nullptr)
+        {
+          auto port = jack_port_by_name(client, ports[i]);
+          auto flags = jack_port_flags(port);
+
+          bool physical = flags & JackPortIsPhysical;
+          bool ok = false;
+          if (configuration.track_hardware)
+            ok |= physical;
+          if (configuration.track_virtual)
+            ok |= !physical;
+
+          if (ok)
+          {
+            seen_input_ports.insert(ports[i]);
+            if (this->configuration.input_added)
+              this->configuration.input_added(to_port_info(client, port));
+          }
+          i++;
+        }
+      }
+
+      jack_free(ports);
+    }
+
+    {
+      const char** ports
+          = jack_get_ports(client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput);
+
+      if (ports != nullptr)
+      {
+        int i = 0;
+        while (ports[i] != nullptr)
+        {
+          auto port = jack_port_by_name(client, ports[i]);
+          auto flags = jack_port_flags(port);
+
+          bool physical = flags & JackPortIsPhysical;
+          bool ok = false;
+          if (configuration.track_hardware)
+            ok |= physical;
+          if (configuration.track_virtual)
+            ok |= !physical;
+
+          if (ok)
+          {
+            seen_output_ports.insert(ports[i]);
+            if (this->configuration.output_added)
+              this->configuration.output_added(to_port_info(client, port));
+          }
+          i++;
+        }
+      }
+
+      jack_free(ports);
+    }
+  }
+
+  void on_port_callback(jack_port_t* port, bool reg)
+  {
+    auto flags = jack_port_flags(port);
+    std::string name = jack_port_name(port);
+    if (reg)
+    {
+      std::string_view type = jack_port_type(port);
+      if (type != JACK_DEFAULT_MIDI_TYPE)
+        return;
+
+      bool physical = flags & JackPortIsPhysical;
+      bool ok = false;
+      if (configuration.track_hardware)
+        ok |= physical;
+      if (configuration.track_virtual)
+        ok |= !physical;
+      if (!ok)
+        return;
+
+      // Note: we keep track of the ports as
+      // when disconnecting, jack_port_type and jack_port_flags aren't correctly
+      // set anymore.
+
+      if (flags & JackPortIsInput)
+      {
+        seen_input_ports.insert(name);
+        if (this->configuration.input_added)
+          this->configuration.input_added(to_port_info(client, port));
+      }
+      else if (flags & JackPortIsOutput)
+      {
+        seen_output_ports.insert(name);
+        if (this->configuration.output_added)
+          this->configuration.output_added(to_port_info(client, port));
+      }
+    }
+    else
+    {
+      if (auto it = seen_input_ports.find(name); it != seen_input_ports.end())
+      {
+        if (this->configuration.input_removed)
+          this->configuration.input_removed(to_port_info(client, port));
+        seen_input_ports.erase(it);
+      }
+      if (auto it = seen_output_ports.find(name); it != seen_output_ports.end())
+      {
+        if (this->configuration.output_removed)
+          this->configuration.output_removed(to_port_info(client, port));
+        seen_output_ports.erase(it);
+      }
+    }
+  }
+
+  void set_callbacks()
+  {
+    initial_callback();
+
+    if (!configuration.has_callbacks())
+      return;
+
+    jack_set_port_registration_callback(
+        this->client,
+        +[](jack_port_id_t p, int r, void* arg) {
+          auto& self = *(observer_jack*)arg;
+          if (auto port = jack_port_by_id(self.client, p))
+          {
+            self.on_port_callback(port, r != 0);
+          }
+        },
+        this);
+
+    jack_set_port_rename_callback(
+        this->client,
+        +[](jack_port_id_t p, const char* old_name, const char* new_name, void* arg) {
+          auto& self = *(observer_jack*)arg;
+
+          auto port = jack_port_by_id(self.client, p);
+          if (!port)
+            return;
+        },
+        this);
+  }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::UNIX_JACK; }
 
   std::vector<libremidi::port_information> get_input_ports() const noexcept override
   {
-    return get_ports(this->client, JackPortIsInput);
+    return get_ports(this->client, nullptr, JackPortIsInput);
   }
 
   std::vector<libremidi::port_information> get_output_ports() const noexcept override
   {
-    return get_ports(this->client, JackPortIsOutput);
+    return get_ports(this->client, nullptr, JackPortIsOutput);
   }
 
   ~observer_jack() { }
+
+  std::unordered_set<std::string> seen_input_ports;
+  std::unordered_set<std::string> seen_output_ports;
 };
 }

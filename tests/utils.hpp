@@ -5,10 +5,24 @@
 #include <cstdlib>
 #include <iostream>
 
+inline std::ostream& operator<<(std::ostream& s, const libremidi::port_information& rhs)
+{
+  s << "[ client: " << rhs.client << ", port: " << rhs.port;
+  if (!rhs.manufacturer.empty())
+    s << ", manufacturer: " << rhs.manufacturer;
+  if (!rhs.device_name.empty())
+    s << ", device: " << rhs.device_name;
+  if (!rhs.port_name.empty())
+    s << ", portname: " << rhs.port_name;
+  if (!rhs.display_name.empty())
+    s << ", display: " << rhs.display_name;
+  return s << "]";
+}
+
 // This function should be embedded in a try/catch block in case of
 // an exception.  It offers the user a choice of MIDI ports to open.
 // It returns false if there are no ports available.
-static bool chooseMidiPort(libremidi::midi_in& libremidi)
+inline bool chooseMidiPort(libremidi::midi_in& libremidi)
 {
   std::cout << "\nWould you like to open a virtual input port? [y/N] ";
 
@@ -54,7 +68,7 @@ static bool chooseMidiPort(libremidi::midi_in& libremidi)
   return true;
 }
 
-static bool chooseMidiPort(libremidi::midi_out& libremidi)
+inline bool chooseMidiPort(libremidi::midi_out& libremidi)
 {
   std::cout << "\nWould you like to open a virtual output port? [y/N] ";
 

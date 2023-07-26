@@ -48,6 +48,12 @@ struct observer_configuration
   port_callback output_added;
   port_callback output_removed;
 
+  // Observe hardware ports
+  bool track_hardware : 1 = true;
+
+  // Observe software (virtual) ports if the API provides it
+  bool track_virtual : 1 = false;
+
   bool has_callbacks() const noexcept
   {
     return input_added || input_removed || output_added || output_removed;
