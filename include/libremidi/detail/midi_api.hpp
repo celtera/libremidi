@@ -68,20 +68,24 @@ public:
   midi_api& operator=(midi_api&&) = delete;
 
   [[nodiscard]] virtual libremidi::API get_current_api() const noexcept = 0;
-  virtual void open_port(unsigned int portNumber, std::string_view portName) = 0;
-  virtual void open_port(const port_information& pt, std::string_view local_port_name) = 0;
-  virtual void open_virtual_port(std::string_view) = 0;
+
+  [[nodiscard]] virtual bool
+  open_port(const port_information& pt, std::string_view local_port_name)
+      = 0;
+
+  [[nodiscard]] virtual bool open_virtual_port(std::string_view) = 0;
+
   virtual void close_port() = 0;
   virtual void set_client_name(std::string_view) = 0;
   virtual void set_port_name(std::string_view) = 0;
 
-  [[nodiscard]] virtual unsigned int get_port_count() const = 0;
-
-  [[nodiscard]] virtual std::string get_port_name(unsigned int portNumber) const = 0;
-
-  bool is_port_open() const noexcept { return bool(connected_); }
+  bool is_port_open() const noexcept { return bool(port_open_); }
+  bool is_port_connected() const noexcept { return bool(connected_); }
 
 protected:
+  friend class midi_in;
+  friend class midi_out;
+  bool port_open_{};
   bool connected_{};
 };
 }

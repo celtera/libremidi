@@ -157,6 +157,9 @@ public:
   explicit observer_winuwp(observer_configuration&& conf, winuwp_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
+    if (!configuration.has_callbacks())
+      return;
+
     evTokenOnInputAdded_
         = internalInPortObserver_.PortAdded({this, &observer_winuwp::on_input_added});
     evTokenOnInputRemoved_

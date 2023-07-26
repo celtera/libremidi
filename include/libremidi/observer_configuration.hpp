@@ -9,7 +9,7 @@ namespace libremidi
 using client_handle = std::uint64_t;
 using port_handle = std::uint64_t;
 
-struct port_information
+struct LIBREMIDI_EXPORT port_information
 {
   // Handle to the client object:
 
@@ -47,5 +47,10 @@ struct observer_configuration
   port_callback input_removed;
   port_callback output_added;
   port_callback output_removed;
+
+  bool has_callbacks() const noexcept
+  {
+    return input_added || input_removed || output_added || output_removed;
+  }
 };
 }

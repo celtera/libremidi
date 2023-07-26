@@ -21,7 +21,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override;
 
-  void open_port(unsigned int portNumber, std::string_view) override;
+  void open_port(unsigned int portNumber, std::string_view);
   void open_port(const port_information& p, std::string_view) override;
   void open_virtual_port(std::string_view) override;
   void close_port() override;
@@ -31,9 +31,6 @@ public:
 
   void set_timestamp(double ts, libremidi::message& m);
   void on_input(libremidi::message msg);
-
-  unsigned int get_port_count() const override;
-  std::string get_port_name(unsigned int portNumber) const override;
 
 private:
   int portNumber_{};

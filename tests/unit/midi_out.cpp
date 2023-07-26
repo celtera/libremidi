@@ -1,13 +1,14 @@
 #include "../include_catch.hpp"
 
+#include <libremidi/configurations.hpp>
 #include <libremidi/libremidi.hpp>
 
 #include <set>
 
 TEST_CASE("sending messages with span", "[midi_out]")
 {
-  libremidi::midi_out midi{libremidi::API::DUMMY, "dummy"};
-  midi.open_port();
+  libremidi::midi_out midi{{}, libremidi::dummy_configuration{}};
+  midi.open_virtual_port();
 
   unsigned char data[3]{};
   midi.send_message(std::span<unsigned char>(data, 3));
@@ -31,9 +32,10 @@ TEST_CASE("sending chunked messages", "[midi_out]")
                 return true;
               }}}};
 
-  if (midi.get_port_count() > 0)
+  if (auto ports = libremidi::observer{libremidi::API::LINUX_ALSA_RAW, {}}.get_output_ports();
+      ports.size() > 0)
   {
-    midi.open_port();
+    midi.open_port(ports.front());
 
     unsigned char data[16384]{};
     midi.send_message(std::span<unsigned char>(data, 16384));

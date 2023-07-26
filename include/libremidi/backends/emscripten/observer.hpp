@@ -24,6 +24,11 @@ public:
   void
   update(const std::vector<device>& current_inputs, const std::vector<device>& current_outputs);
 
+  libremidi::API get_current_api() const noexcept override;
+
+  std::vector<libremidi::port_information> get_input_ports() const noexcept override;
+  std::vector<libremidi::port_information> get_output_ports() const noexcept override;
+
 private:
   std::vector<device> m_known_inputs;
   std::vector<device> m_known_outputs;

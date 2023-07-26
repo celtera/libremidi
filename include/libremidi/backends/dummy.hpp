@@ -1,16 +1,12 @@
 #pragma once
+#include <libremidi/configurations.hpp>
 #include <libremidi/detail/midi_api.hpp>
 #include <libremidi/detail/midi_in.hpp>
 #include <libremidi/detail/midi_out.hpp>
 #include <libremidi/detail/observer.hpp>
-#include <libremidi/libremidi.hpp>
 
 namespace libremidi
 {
-struct dummy_configuration
-{
-};
-
 class observer_dummy final : public observer_api
 {
 public:
@@ -19,6 +15,12 @@ public:
   }
 
   ~observer_dummy() { }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }
+  std::vector<libremidi::port_information> get_input_ports() const noexcept override { return {}; }
+  std::vector<libremidi::port_information> get_output_ports() const noexcept override
+  {
+    return {};
+  }
 };
 
 class midi_in_dummy final
@@ -32,14 +34,14 @@ public:
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }
-  void open_port(unsigned int /*portNumber*/, std::string_view /*portName*/) override { }
-  void open_port(const port_information& pt, std::string_view local_port_name) override { }
-  void open_virtual_port(std::string_view /*portName*/) override { }
+  bool open_port(const port_information& pt, std::string_view local_port_name) override
+  {
+    return true;
+  }
+  bool open_virtual_port(std::string_view /*portName*/) override { return true; }
   void close_port() override { }
   void set_client_name(std::string_view /*clientName*/) override { }
   void set_port_name(std::string_view /*portName*/) override { }
-  unsigned int get_port_count() const override { return 0; }
-  std::string get_port_name(unsigned int /*portNumber*/) const override { return {}; }
 };
 
 class midi_out_dummy final
@@ -53,14 +55,14 @@ public:
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }
-  void open_port(unsigned int /*portNumber*/, std::string_view /*portName*/) override { }
-  void open_port(const port_information& pt, std::string_view local_port_name) override { }
-  void open_virtual_port(std::string_view /*portName*/) override { }
+  bool open_port(const port_information& pt, std::string_view local_port_name) override
+  {
+    return true;
+  }
+  bool open_virtual_port(std::string_view /*portName*/) override { return true; }
   void close_port() override { }
   void set_client_name(std::string_view /*clientName*/) override { }
   void set_port_name(std::string_view /*portName*/) override { }
-  unsigned int get_port_count() const override { return 0; }
-  std::string get_port_name(unsigned int /*portNumber*/) const override { return {}; }
   void send_message(const unsigned char* /*message*/, size_t /*size*/) override { }
 };
 

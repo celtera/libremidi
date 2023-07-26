@@ -22,24 +22,16 @@ int main()
     return true;
   };
 
-  std::vector<libremidi::midi_in> midiin;
-  // Create as many midi_in as there are connected MIDI sources
-  midiin.emplace_back(
-      libremidi::input_configuration{.on_message = callback},
-      libremidi::alsa_raw_input_configuration{.manual_poll = register_fds});
+  libremidi::observer obs{libremidi::default_platform_api(), {}};
 
-  const int N = midiin[0].get_port_count();
-  while (midiin.size() < N)
+  // Create as many midi_in as there are connected MIDI sources
+  std::vector<libremidi::midi_in> midiin;
+  for (auto& port : obs.get_input_ports())
   {
     midiin.emplace_back(
         libremidi::input_configuration{.on_message = callback},
         libremidi::alsa_raw_input_configuration{.manual_poll = register_fds});
-  }
-
-  // Open all the ports
-  for (int i = 0; i < N; i++)
-  {
-    midiin[i].open_port(i);
+    midiin.back().open_port(port);
   }
 
   for (;;)

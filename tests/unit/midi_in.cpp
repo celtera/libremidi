@@ -17,8 +17,9 @@ TEST_CASE("poly aftertouch", "[midi_in]")
   std::vector<libremidi::message> queue;
   std::mutex qmtx;
 
-  libremidi::midi_out midi_out{libremidi::API::UNIX_JACK, "libremidi-test-out"};
-  midi_out.open_port();
+  libremidi::midi_out midi_out{
+      {}, libremidi::jack_output_configuration{.client_name = "libremidi-test-out"}};
+  midi_out.open_virtual_port();
 
   libremidi::midi_in midi{
       libremidi::input_configuration{
@@ -28,8 +29,7 @@ TEST_CASE("poly aftertouch", "[midi_in]")
     queue.push_back(std::move(msg));
           }},
       libremidi::jack_input_configuration{.client_name = "libremidi-test"}};
-
-  midi.open_port();
+  midi.open_virtual_port();
 
   jack_options_t opt = JackNullOption;
   jack_status_t status;

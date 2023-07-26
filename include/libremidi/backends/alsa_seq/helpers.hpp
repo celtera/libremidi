@@ -172,21 +172,6 @@ struct alsa_data
     return alsa_seq::port_info(seq, pinfo, caps, -1);
   }
 
-  std::string get_port_name(unsigned int portNumber, int caps) const
-  {
-    snd_seq_port_info_t* pinfo;
-    snd_seq_port_info_alloca(&pinfo);
-
-    if (alsa_seq::port_info(seq, pinfo, caps, (int)portNumber))
-    {
-      return alsa_seq::port_name(seq, pinfo);
-    }
-
-    // If we get here, we didn't find a match.
-    // warning(configuration, "midi_in_alsa::get_port_name: error looking for port name!");
-    return {};
-  }
-
   std::optional<snd_seq_addr_t> get_port_info(const port_information& portNumber)
   {
     auto [client, port] = alsa_seq::seq_from_port_handle(portNumber.port);
@@ -196,28 +181,15 @@ struct alsa_data
     // snd_seq_port_info_set_client(src_pinfo, client);
     // snd_seq_port_info_set_port(src_pinfo, port);
 
+    // {
+    //   self.template error<invalid_parameter_error>(
+    //       self.configuration,
+    //       "alsa::get_port_info: invalid 'portNumber' argument: " + std::to_string(portNumber));
+    //   return {};
+    // }
     snd_seq_addr_t addr;
     addr.client = client;
     addr.port = port;
-    return addr;
-  }
-
-  std::optional<snd_seq_addr_t> get_port_info(auto& self, unsigned int portNumber, int caps)
-  {
-    snd_seq_port_info_t* pinfo{};
-    snd_seq_port_info_alloca(&pinfo);
-
-    if (alsa_seq::port_info(this->seq, pinfo, caps, (int)portNumber) == 0)
-    {
-      self.template error<invalid_parameter_error>(
-          self.configuration,
-          "alsa::get_port_info: invalid 'portNumber' argument: " + std::to_string(portNumber));
-      return {};
-    }
-
-    snd_seq_addr_t addr;
-    addr.client = snd_seq_port_info_get_client(pinfo);
-    addr.port = snd_seq_port_info_get_port(pinfo);
     return addr;
   }
 

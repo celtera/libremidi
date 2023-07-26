@@ -14,10 +14,49 @@
 
 namespace libremidi
 {
-
-struct jack_helpers
+struct jack_client
 {
   jack_client_t* client{};
+
+  static std::vector<libremidi::port_information>
+  get_ports(jack_client_t* client, JackPortFlags flags) noexcept
+  {
+    std::vector<libremidi::port_information> ret;
+
+    if (!client)
+      return {};
+
+    const char** ports = jack_get_ports(client, nullptr, JACK_DEFAULT_MIDI_TYPE, flags);
+
+    if (ports == nullptr)
+      return {};
+
+    int i = 0;
+    while (ports[i] != nullptr)
+    {
+      auto port = jack_port_by_name(client, ports[i]);
+      jack_port_short_name(port);
+
+      ret.push_back(port_information{
+          .client = std::uintptr_t(client),
+          .port = 0,
+          .manufacturer = "",
+          .device_name = "",
+          .port_name = ports[i],
+          .display_name = ports[i],
+      });
+
+      i++;
+    }
+
+    jack_free(ports);
+
+    return ret;
+  }
+};
+
+struct jack_helpers : jack_client
+{
   jack_port_t* port{};
 
   template <auto callback, typename Self>
@@ -78,35 +117,6 @@ struct jack_helpers
       return false;
     }
     return true;
-  }
-
-  static std::string
-  get_port_name(const auto& self, const char** ports, unsigned int portNumber)
-  {
-    // Check port validity
-    if (ports == nullptr)
-    {
-      self.warning(self.configuration, "midi_jack::get_port_name: no ports available!");
-      return {};
-    }
-
-    for (int i = 0; i <= portNumber; i++)
-    {
-      if (ports[i] == nullptr)
-      {
-        self.template error<invalid_parameter_error>(self.configuration,
-            "midi_jack::get_port_name: invalid 'portNumber' argument: "
-            + std::to_string(portNumber));
-        return {};
-      }
-
-      if (i == portNumber)
-      {
-        return ports[portNumber];
-      }
-    }
-
-    return {};
   }
 };
 }

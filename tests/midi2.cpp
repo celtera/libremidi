@@ -10,6 +10,7 @@
 int main(int argc, char* argv[])
 try
 {
+#if 0
   using namespace std::literals;
   std::cout << std::hex;
 
@@ -79,6 +80,7 @@ try
        0xF7});
   midiout.send_message(message);
   std::this_thread::sleep_for(3000ms); // maximum allowed timeout is 3s
+#endif
 }
 catch (libremidi::midi_exception& error)
 {

@@ -43,12 +43,6 @@ public:
 
   void open_port(unsigned int portNumber, std::string_view) override
   {
-    if (connected_)
-    {
-      warning(configuration, "midi_out_winuwp::open_port: a valid connection already exists!");
-      return;
-    }
-
     const auto id = get_port_id(portNumber);
     if (!id.empty())
     {
@@ -58,13 +52,9 @@ public:
 
   void close_port() override
   {
-    if (connected_)
-    {
-      if (port_)
-      {
-        port_.Close();
-      }
-    }
+    if (port_)
+      port_.Close();
+    connected_ = false;
   }
 
   unsigned int get_port_count() const override

@@ -29,35 +29,30 @@ try
     std::cout << "  " << apiMap[api] << std::endl;
   }
 
+  auto api = libremidi::default_platform_api();
+  std::cout << "\nCurrent API: " << apiMap[api] << std::endl;
+
+  libremidi::observer midi{api, {}};
   {
-    libremidi::midi_in midiin;
-    std::cout << "\nCurrent input API: " << apiMap[midiin.get_current_api()] << std::endl;
-
     // Check inputs.
-    auto nPorts = midiin.get_port_count();
-    std::cout << "\nThere are " << nPorts << " MIDI input sources available.\n";
+    auto ports = midi.get_input_ports();
+    std::cout << "\nThere are " << ports.size() << " MIDI input sources available.\n";
 
-    for (unsigned i = 0; i < nPorts; i++)
+    for (unsigned i = 0; i < ports.size(); i++)
     {
-      std::string portName = midiin.get_port_name(i);
-      std::cout << "  Input Port #" << i + 1 << ": " << portName << '\n';
+      std::cout << "  Input Port #" << i + 1 << ": " << ports[i].display_name << '\n';
     }
   }
 
   {
-    libremidi::midi_out midiout;
-    std::cout << "\nCurrent output API: " << apiMap[midiout.get_current_api()] << std::endl;
-
     // Check outputs.
-    auto nPorts = midiout.get_port_count();
-    std::cout << "\nThere are " << nPorts << " MIDI output ports available.\n";
+    auto ports = midi.get_output_ports();
+    std::cout << "\nThere are " << ports.size() << " MIDI output sinks available.\n";
 
-    for (unsigned i = 0; i < nPorts; i++)
+    for (unsigned i = 0; i < ports.size(); i++)
     {
-      std::string portName = midiout.get_port_name(i);
-      std::cout << "  Output Port #" << i + 1 << ": " << portName << std::endl;
+      std::cout << "  Output Port #" << i + 1 << ": " << ports[i].display_name << '\n';
     }
-    std::cout << std::endl;
   }
   return 0;
 }

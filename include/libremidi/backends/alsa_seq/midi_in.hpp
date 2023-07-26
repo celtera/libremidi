@@ -132,10 +132,6 @@ public:
   {
     return alsa_data::get_port_info(p);
   }
-  std::optional<snd_seq_addr_t> to_address(unsigned int portNumber)
-  {
-    return get_port_info(*this, portNumber, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ);
-  }
 
   int init_port(std::optional<snd_seq_addr_t> source, std::string_view portName)
   {
@@ -147,10 +143,11 @@ public:
     if (!create_port(portName))
       return -1;
 
-    connect_port(*source);
+    if (int ret = connect_port(*source); ret < 0)
+      return ret;
+
     start_queue();
 
-    connected_ = true;
     return 0;
   }
 
@@ -169,7 +166,6 @@ public:
   {
     unsubscribe();
     stop_queue();
-    connected_ = false;
   }
 
   void set_client_name(std::string_view clientName) override
@@ -178,17 +174,6 @@ public:
   }
 
   void set_port_name(std::string_view portName) override { alsa_data::set_port_name(portName); }
-
-  unsigned int get_port_count() const override
-  {
-    return alsa_data::get_port_count(SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ);
-  }
-
-  std::string get_port_name(unsigned int portNumber) const override
-  {
-    return alsa_data::get_port_name(
-        portNumber, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ);
-  }
 
 protected:
   void set_timestamp(snd_seq_event_t& ev, libremidi::message& msg) noexcept
@@ -338,32 +323,25 @@ public:
   }
 
 private:
-  // FIXME precondition: close_port()
-  void open_port(const port_information& pt, std::string_view local_port_name) override
+  bool open_port(const port_information& pt, std::string_view local_port_name) override
   {
-    if (init_port(to_address(pt), local_port_name) < 0)
-      return;
+    if (int err = init_port(to_address(pt), local_port_name); err < 0)
+      return false;
 
     if (!start_thread())
-      return;
+      return false;
+
+    return true;
   }
 
-  void open_port(unsigned int pt, std::string_view portName) override
+  bool open_virtual_port(std::string_view portName) override
   {
-    if (init_port(to_address(pt), portName) < 0)
-      return;
+    if (int err = init_virtual_port(portName); err < 0)
+      return false;
 
     if (!start_thread())
-      return;
-  }
-
-  void open_virtual_port(std::string_view portName) override
-  {
-    if (init_virtual_port(portName) < 0)
-      return;
-
-    if (!start_thread())
-      return;
+      return false;
+    return true;
   }
 
   void close_port() override
@@ -439,15 +417,17 @@ class midi_in_alsa_manual : public midi_in_alsa
 {
   using midi_in_alsa::midi_in_alsa;
 
-  void init_fds()
+  [[nodiscard]] int init_fds()
   {
     auto poll_fd_count = snd_seq_poll_descriptors_count(seq, POLLIN);
     fds_.resize(poll_fd_count);
-    snd_seq_poll_descriptors(seq, fds_.data(), poll_fd_count, POLLIN);
+    if (int err = snd_seq_poll_descriptors(seq, fds_.data(), poll_fd_count, POLLIN); err < 0)
+      return err;
 
     configuration.manual_poll(manual_poll_parameters{
         .fds = {this->fds_.data(), this->fds_.size()},
         .callback = [this](std::span<pollfd> fds) { return do_read_events(); }});
+    return 0;
   }
 
   int do_read_events()
@@ -458,28 +438,24 @@ class midi_in_alsa_manual : public midi_in_alsa
     return process_events();
   }
 
-  void open_port(const port_information& pt, std::string_view local_port_name) override
+  bool open_port(const port_information& pt, std::string_view local_port_name) override
   {
-    if (init_port(to_address(pt), local_port_name) < 0)
-      return;
+    if (int err = init_port(to_address(pt), local_port_name); err < 0)
+      return false;
 
-    init_fds();
+    if (int err = init_fds(); err < 0)
+      return false;
+    return true;
   }
 
-  void open_port(unsigned int pt, std::string_view name) override
+  bool open_virtual_port(std::string_view name) override
   {
-    if (init_port(to_address(pt), name) < 0)
-      return;
+    if (int err = init_virtual_port(name); err < 0)
+      return false;
 
-    init_fds();
-  }
-
-  void open_virtual_port(std::string_view name) override
-  {
-    if (init_virtual_port(name) < 0)
-      return;
-
-    init_fds();
+    if (int err = init_fds(); err < 0)
+      return false;
+    return true;
   }
 
   std::vector<pollfd> fds_;

@@ -20,3 +20,11 @@
 
 #include <libremidi/backends/jack/config.hpp>
 
+namespace libremidi
+{
+
+struct dummy_configuration
+{
+};
+
+}

@@ -58,12 +58,6 @@ public:
 
   void open_port(unsigned int portNumber, std::string_view portName) override
   {
-    if (connected_)
-    {
-      warning(configuration, "midi_out_core::open_port: a valid connection already exists!");
-      return;
-    }
-
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
     auto nDest = MIDIGetNumberOfDestinations();
     if (nDest < 1)

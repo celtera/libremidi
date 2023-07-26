@@ -65,70 +65,37 @@ public:
            >= 0;
   }
 
-  void open_port(unsigned int portNumber, std::string_view portName) override
+  bool open_port(const port_information& p, std::string_view portName) override
   {
-    if (connected_)
-    {
-      warning(this->configuration, "midi_out_alsa::open_port: a valid connection already exists!");
-      return;
-    }
-
-    unsigned int nSrc = this->get_port_count();
+    unsigned int nSrc = this->get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
     if (nSrc < 1)
     {
       error<no_devices_found_error>(
           this->configuration, "midi_out_alsa::open_port: no MIDI output sources found!");
-      return;
-    }
-
-    auto receiver
-        = get_port_info(*this, portNumber, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
-    if (!receiver)
-      return;
-
-    if (!create_port(portName))
-      return;
-
-    snd_seq_addr_t sender{
-        .client = (unsigned char)snd_seq_client_id(this->seq), .port = (unsigned char)this->vport};
-    if (create_connection(*this, sender, *receiver, true) < 0)
-      return;
-
-    connected_ = true;
-  }
-
-  void open_port(const port_information& p, std::string_view portName) override
-  {
-    if (connected_)
-    {
-      warning(this->configuration, "midi_out_alsa::open_port: a valid connection already exists!");
-      return;
-    }
-
-    unsigned int nSrc = this->get_port_count();
-    if (nSrc < 1)
-    {
-      error<no_devices_found_error>(
-          this->configuration, "midi_out_alsa::open_port: no MIDI output sources found!");
-      return;
+      return false;
     }
 
     auto sink = get_port_info(p);
     if (!sink)
-      return;
+      return false;
 
     if (!create_port(portName))
-      return;
+      return false;
 
     snd_seq_addr_t source{
         .client = (unsigned char)snd_seq_client_id(this->seq), .port = (unsigned char)this->vport};
-    if (create_connection(*this, source, *sink, true) < 0)
-      return;
+    if (int err = create_connection(*this, source, *sink, true); err < 0)
+      return false;
 
-    connected_ = true;
+    return true;
   }
 
-  void open_virtual_port(std::string_view portName) override { create_port(portName); }
+  bool open_virtual_port(std::string_view portName) override
+  {
+    if (int err = create_port(portName); err < 0)
+      return false;
+    return true;
+  }
 
   void close_port() override { unsubscribe(); }
 
@@ -138,17 +105,6 @@ public:
   }
 
   void set_port_name(std::string_view portName) override { alsa_data::set_port_name(portName); }
-
-  unsigned int get_port_count() const override
-  {
-    return alsa_data::get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
-  }
-
-  std::string get_port_name(unsigned int portNumber) const override
-  {
-    return alsa_data::get_port_name(
-        portNumber, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
-  }
 
   void send_message(const unsigned char* message, std::size_t size) override
   {

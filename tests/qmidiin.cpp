@@ -7,6 +7,8 @@
 //
 //*****************************************//
 
+#include "utils.hpp"
+
 #include <libremidi/libremidi.hpp>
 
 #include <atomic>
@@ -166,21 +168,21 @@ try
   if (argc == 2)
     port = atoi(argv[1]);
 
-  if (port >= midiin.get_port_count())
+  auto ports = libremidi::observer{midiin.get_current_api(), {}}.get_input_ports();
+  if (port >= ports.size())
   {
     std::cout << "Invalid port specifier!\n";
     usage();
   }
 
-  midiin.open_port(port);
+  midiin.open_port(ports[port]);
 
   // Install an interrupt handler function.
   static std::atomic_bool done{};
   signal(SIGINT, [](int) { done = true; });
 
   // Periodically check input queue.
-  std::cout << "Reading MIDI from port " << midiin.get_port_name(port)
-            << " ... quit with Ctrl-C.\n";
+  std::cout << "Reading MIDI from port " << ports[port].display_name << " ... quit with Ctrl-C.\n";
   while (!done)
   {
     auto msg = midiin.get_message();

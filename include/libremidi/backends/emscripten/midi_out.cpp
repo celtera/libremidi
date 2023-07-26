@@ -23,12 +23,6 @@ LIBREMIDI_INLINE libremidi::API midi_out_emscripten::get_current_api() const noe
 
 LIBREMIDI_INLINE void midi_out_emscripten::open_port(unsigned int portNumber, std::string_view)
 {
-  if (connected_)
-  {
-    warning(configuration, "midi_out_emscripten::open_port: a valid connection already exists.");
-    return;
-  }
-
   auto& midi = webmidi_helpers::midi_access_emscripten::instance();
 
   if (portNumber >= midi.output_count())
@@ -71,16 +65,6 @@ LIBREMIDI_INLINE void midi_out_emscripten::set_port_name(std::string_view portNa
 LIBREMIDI_INLINE void midi_out_emscripten::open_virtual_port(std::string_view)
 {
   warning(configuration, "midi_in_emscripten::open_virtual_port: unsupported.");
-}
-
-LIBREMIDI_INLINE unsigned int midi_out_emscripten::get_port_count() const
-{
-  return webmidi_helpers::midi_access_emscripten::instance().output_count();
-}
-
-LIBREMIDI_INLINE std::string midi_out_emscripten::get_port_name(unsigned int portNumber) const
-{
-  return webmidi_helpers::midi_access_emscripten::instance().outputs()[portNumber].name;
 }
 
 LIBREMIDI_INLINE void midi_out_emscripten::send_message(const unsigned char* message, size_t size)

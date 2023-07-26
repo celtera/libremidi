@@ -22,8 +22,7 @@ public:
   {
     // We'll issue a warning here if no devices are available but not
     // throw an error since the user can plug something in later.
-    unsigned int nDevices = get_port_count();
-    if (nDevices == 0)
+    if (midiOutGetNumDevs() == 0)
     {
       warning(
           configuration,
@@ -38,9 +37,10 @@ public:
     midi_out_winmm::close_port();
   }
 
-  void open_virtual_port(std::string_view) override
+  bool open_virtual_port(std::string_view) override
   {
     warning(configuration, "midi_out_winmm: open_virtual_port unsupported");
+    return false;
   }
   void set_client_name(std::string_view) override
   {
@@ -53,7 +53,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
-  void do_open(unsigned int portNumber)
+  [[nodiscard]] bool do_open(unsigned int portNumber)
   {
     MMRESULT result = midiOutOpen(&this->outHandle, portNumber, 0, 0, CALLBACK_NULL);
     if (result != MMSYSERR_NOERROR)
@@ -62,20 +62,14 @@ public:
           configuration,
           "midi_out_winmm::open_port: error creating Windows MM MIDI output "
           "port.");
-      return;
+      return false;
     }
 
-    connected_ = true;
+    return true;
   }
 
-  void open_port(const port_information& p, std::string_view) override
+  bool open_port(const port_information& p, std::string_view) override
   {
-    if (connected_)
-    {
-      warning(configuration, "midi_out_winmm::open_port: a valid connection already exists!");
-      return;
-    }
-
     unsigned int nDevices = midiInGetNumDevs();
     MIDIOUTCAPS deviceCaps{};
     for (unsigned int i = 0; i < nDevices; i++)
@@ -93,68 +87,16 @@ public:
 
     error<invalid_parameter_error>(
         configuration, "midi_out_winmm::open_port: port not found: " + p.port_name);
-  }
-
-  void open_port(unsigned int portNumber, std::string_view) override
-  {
-    if (connected_)
-    {
-      warning(configuration, "midi_out_winmm::open_port: a valid connection already exists!");
-      return;
-    }
-
-    unsigned int nDevices = midiOutGetNumDevs();
-    if (nDevices < 1)
-    {
-      error<no_devices_found_error>(
-          configuration, "midi_out_winmm::open_port: no MIDI output destinations found!");
-      return;
-    }
-
-    if (portNumber >= nDevices)
-    {
-      error<invalid_parameter_error>(
-          configuration, "midi_out_winmm::open_port: invalid 'portNumber' argument: "
-                             + std::to_string(portNumber));
-      return;
-    }
-
-    do_open(portNumber);
+    return false;
   }
 
   void close_port() override
   {
-    if (connected_)
-    {
+    if (this->outHandle)
       midiOutClose(this->outHandle);
-      this->outHandle = nullptr;
-      connected_ = false;
-    }
-  }
 
-  unsigned int get_port_count() const override { return midiOutGetNumDevs(); }
-
-  std::string get_port_name(unsigned int portNumber) const override
-  {
-    unsigned int nDevices = midiOutGetNumDevs();
-    if (portNumber >= nDevices)
-    {
-      error<invalid_parameter_error>(
-          configuration, "midi_out_winmm::get_port_name: invalid 'portNumber' argument: "
-                             + std::to_string(portNumber));
-      return {};
-    }
-
-    MIDIOUTCAPS deviceCaps{};
-
-    midiOutGetDevCaps(portNumber, &deviceCaps, sizeof(MIDIOUTCAPS));
-    std::string stringName = ConvertToUTF8(deviceCaps.szPname);
-
-#ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
-    MakeUniqueOutPortName(stringName, portNumber);
-#endif
-
-    return stringName;
+    this->outHandle = nullptr;
+    connected_ = false;
   }
 
   void send_message(const unsigned char* message, size_t size) override

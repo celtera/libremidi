@@ -57,11 +57,14 @@ public:
   explicit observer_alsa_raw(observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
+    // Set-up initial state
+    if (!configuration.has_callbacks())
+      return;
+
     fds[0] = udev;
     fds[1] = event_fd;
     fds[2] = timer_fd;
 
-    // Set-up initial state
     check_devices();
 
     // Start thread
@@ -74,6 +77,37 @@ public:
 
     if (thread.joinable())
       thread.join();
+  }
+
+  libremidi::API get_current_api() const noexcept override
+  {
+    return libremidi::API::LINUX_ALSA_RAW;
+  }
+
+  std::vector<libremidi::port_information> get_input_ports() const noexcept override
+  {
+    std::vector<libremidi::port_information> ret;
+    raw_alsa_helpers::enumerator new_devs;
+
+    new_devs.enumerate_cards();
+    for (auto& d : new_devs.inputs)
+    {
+      ret.push_back(to_port_info(d));
+    }
+    return ret;
+  }
+
+  std::vector<libremidi::port_information> get_output_ports() const noexcept override
+  {
+    std::vector<libremidi::port_information> ret;
+    raw_alsa_helpers::enumerator new_devs;
+
+    new_devs.enumerate_cards();
+    for (auto& d : new_devs.outputs)
+    {
+      ret.push_back(to_port_info(d));
+    }
+    return ret;
   }
 
 private:
@@ -124,7 +158,7 @@ private:
     }
   }
 
-  libremidi::port_information to_port_info(raw_alsa_helpers::alsa_raw_port_info p)
+  libremidi::port_information to_port_info(raw_alsa_helpers::alsa_raw_port_info p) const noexcept
   {
     return {
         .client = 0,

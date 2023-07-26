@@ -34,6 +34,9 @@ public:
     // Init with the existing ports
     init_all_ports();
 
+    if (!configuration.has_callbacks())
+      return;
+
     // Create relevant descriptors
     const auto N = snd_seq_poll_descriptors_count(seq_, POLLIN);
     descriptors_.resize(N + 1);
@@ -94,7 +97,7 @@ public:
     bool isOutput{};
   };
 
-  alsa_seq_port_info get_info(int client, int port)
+  alsa_seq_port_info get_info(int client, int port) const noexcept
   {
     alsa_seq_port_info p;
     p.client = client;
@@ -115,13 +118,14 @@ public:
       p.port_name = name;
 
     auto cap = snd_seq_port_info_get_capability(pinfo);
+    // FIXME isn't it missing SND_SEQ_PORT_CAP_SUBS_READ / WRITE??
     p.isInput = (cap & SND_SEQ_PORT_CAP_DUPLEX) | (cap & SND_SEQ_PORT_CAP_READ);
     p.isOutput = (cap & SND_SEQ_PORT_CAP_DUPLEX) | (cap & SND_SEQ_PORT_CAP_WRITE);
 
     return p;
   }
 
-  libremidi::port_information to_port_info(alsa_seq_port_info p)
+  libremidi::port_information to_port_info(alsa_seq_port_info p) const noexcept
   {
     static_assert(sizeof(this->seq_) <= sizeof(libremidi::client_handle));
     static_assert(sizeof(std::uintptr_t) <= sizeof(libremidi::client_handle));
@@ -142,6 +146,39 @@ public:
           int pt = snd_seq_port_info_get_port(&port);
           register_port(clt, pt);
         });
+  }
+
+  libremidi::API get_current_api() const noexcept override
+  {
+    return libremidi::API::LINUX_ALSA_SEQ;
+  }
+
+  std::vector<libremidi::port_information> get_input_ports() const noexcept override
+  {
+    std::vector<libremidi::port_information> ret;
+    alsa_seq::for_all_ports(
+        this->seq_, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
+          int clt = snd_seq_client_info_get_client(&client);
+          int pt = snd_seq_port_info_get_port(&port);
+          auto p = get_info(clt, pt);
+          if (p.isInput)
+            ret.push_back(to_port_info(p));
+        });
+    return ret;
+  }
+
+  std::vector<libremidi::port_information> get_output_ports() const noexcept override
+  {
+    std::vector<libremidi::port_information> ret;
+    alsa_seq::for_all_ports(
+        this->seq_, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
+          int clt = snd_seq_client_info_get_client(&client);
+          int pt = snd_seq_port_info_get_port(&port);
+          auto p = get_info(clt, pt);
+          if (p.isOutput)
+            ret.push_back(to_port_info(p));
+        });
+    return ret;
   }
 
   void register_port(int client, int port)

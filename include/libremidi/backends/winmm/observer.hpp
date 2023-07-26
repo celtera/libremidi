@@ -23,6 +23,9 @@ public:
   explicit observer_winmm(observer_configuration&& conf, winmm_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
+    if (!configuration.has_callbacks())
+      return;
+
     check_new_ports();
     thread = std::jthread([this](std::stop_token tk) {
       while (!tk.stop_requested())
@@ -92,15 +95,48 @@ private:
     }
   }
 
-  std::vector<std::string> get_port_list(bool input) const
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
+  std::vector<port_information> get_input_ports() const noexcept override
+  {
+    std::vector<port_information> ret;
+    for (auto&& portName : get_port_list(INPUT))
+    {
+      ret.push_back(port_information{
+          .client = 0,
+          .port = 0,
+          .manufacturer = "",
+          .device_name = "",
+          .port_name = std::move(portName),
+          .display_name = ""});
+    }
+    return ret;
+  }
+
+  std::vector<port_information> get_output_ports() const noexcept override
+  {
+    std::vector<port_information> ret;
+    for (auto&& portName : get_port_list(OUTPUT))
+    {
+      ret.push_back(port_information{
+          .client = 0,
+          .port = 0,
+          .manufacturer = "",
+          .device_name = "",
+          .port_name = std::move(portName),
+          .display_name = ""});
+    }
+    return ret;
+  }
+
+  std::vector<std::string> get_port_list(bool input) const noexcept
   {
     // true Get input, false get output
     std::vector<std::string> portList;
     unsigned int nDevices = input ? midiInGetNumDevs() : midiOutGetNumDevs();
+    std::string portName;
 
     for (unsigned int ix = 0; ix < nDevices; ++ix)
     {
-      std::string portName;
       if (input)
       {
         MIDIINCAPS deviceCaps;

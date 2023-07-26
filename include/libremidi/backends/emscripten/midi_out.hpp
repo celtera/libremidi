@@ -21,16 +21,13 @@ public:
 
   libremidi::API get_current_api() const noexcept override;
 
-  void open_port(unsigned int portNumber, std::string_view) override;
+  void open_port(unsigned int portNumber, std::string_view);
   void open_port(const port_information& p, std::string_view) override;
   void open_virtual_port(std::string_view) override;
   void close_port() override;
 
   void set_client_name(std::string_view clientName) override;
   void set_port_name(std::string_view portName) override;
-
-  unsigned int get_port_count() const override;
-  std::string get_port_name(unsigned int portNumber) const override;
 
   void send_message(const unsigned char* message, size_t size) override;
 

@@ -104,33 +104,25 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::UNIX_JACK; }
 
-  void open_port(unsigned int portNumber, std::string_view portName) override
+  bool open_port(const port_information& port, std::string_view portName) override
   {
     if (!create_local_port(*this, portName, JackPortIsOutput))
-      return;
+      return false;
 
     // Connecting to the output
-    std::string name = get_port_name(portNumber);
-    jack_connect(this->client, jack_port_name(this->port), name.c_str());
+    if (jack_connect(this->client, port.port_name.c_str(), jack_port_name(this->port)) != 0)
+    {
+      error<invalid_parameter_error>(
+          configuration, "JACK: could not connect to port" + port.port_name);
+      return false;
+    }
 
-    connected_ = true;
+    return true;
   }
 
-  void open_port(const port_information& port, std::string_view portName) override
+  bool open_virtual_port(std::string_view portName) override
   {
-    if (!create_local_port(*this, portName, JackPortIsOutput))
-      return;
-
-    // Connecting to the output
-    std::string name = port.port_name;
-    jack_connect(this->client, name.c_str(), jack_port_name(this->port));
-
-    connected_ = true;
-  }
-
-  void open_virtual_port(std::string_view portName) override
-  {
-    create_local_port(*this, portName, JackPortIsOutput);
+    return create_local_port(*this, portName, JackPortIsOutput);
   }
 
   void close_port() override
@@ -144,8 +136,6 @@ public:
 
     jack_port_unregister(this->client, this->port);
     this->port = nullptr;
-
-    connected_ = false;
   }
 
   void set_port_name(std::string_view portName) override
@@ -155,34 +145,6 @@ public:
 #else
     jack_port_set_name(this->port, portName.data());
 #endif
-  }
-
-  unsigned int get_port_count() const override
-  {
-    int count = 0;
-    if (!this->client)
-      return 0;
-
-    // List of available ports
-    const char** ports
-        = jack_get_ports(this->client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput);
-
-    if (ports == nullptr)
-      return 0;
-    while (ports[count] != nullptr)
-      count++;
-
-    jack_free(ports);
-
-    return count;
-  }
-
-  std::string get_port_name(unsigned int portNumber) const override
-  {
-    unique_handle<const char*, jack_free> ports{
-        jack_get_ports(this->client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput)};
-
-    return jack_helpers::get_port_name(*this, ports.get(), portNumber);
   }
 
   void send_message(const unsigned char* message, size_t size) override

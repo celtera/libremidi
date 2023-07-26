@@ -9,53 +9,14 @@
 //
 //*****************************************//
 
+#include "utils.hpp"
+
 #include <libremidi/libremidi.hpp>
 
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <thread>
-
-// These functions should be embedded in a try/catch block in case of
-// an exception.  It offers the user a choice of MIDI ports to open.
-// It returns false if there are no ports available.
-template <typename RT>
-bool choosePort(RT& libremidi, std::string dir)
-{
-  std::string portName;
-  auto port = 0U;
-  auto nPorts = libremidi.get_port_count();
-
-  if (nPorts == 0)
-  {
-    std::cout << "No " << dir << " ports available!" << std::endl;
-    return false;
-  }
-  else if (nPorts == 1)
-  {
-    std::cout << "\nOpening " << libremidi.get_port_name() << std::endl;
-  }
-  else
-  {
-    for (auto i = 0U; i < nPorts; i++)
-    {
-      portName = libremidi.get_port_name(i);
-      std::cout << "  " << dir << " port #" << i << ": " << portName << '\n';
-    }
-
-    do
-    {
-      std::cout << "\nChoose a port number: ";
-      std::cin >> port;
-    } while (port >= nPorts);
-  }
-
-  std::cout << "\n";
-
-  libremidi.open_port(port);
-
-  return true;
-}
 
 int main(int, const char* argv[])
 try
@@ -64,7 +25,7 @@ try
   libremidi::midi_out midiout;
 
   // Call function to select port.
-  if (choosePort(midiout, "output") == false)
+  if (chooseMidiPort(midiout) == false)
     return 0;
 
   // Period in ms = 100 BPM

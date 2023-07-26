@@ -3,6 +3,7 @@
 
 #include <cinttypes>
 #include <cstdint>
+#include <functional>
 #include <string>
 
 extern "C" {

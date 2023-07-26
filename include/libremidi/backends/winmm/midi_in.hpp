@@ -22,8 +22,7 @@ public:
   {
     // We'll issue a warning here if no devices are available but not
     // throw an error since the user can plugin something later.
-    unsigned int nDevices = get_port_count();
-    if (nDevices == 0)
+    if (midiInGetNumDevs() == 0)
     {
       warning(
           configuration, "midi_in_winmm::initialize: no MIDI input devices currently available.");
@@ -45,9 +44,10 @@ public:
     DeleteCriticalSection(&(this->_mutex));
   }
 
-  void open_virtual_port(std::string_view) override
+  bool open_virtual_port(std::string_view) override
   {
     warning(configuration, "midi_in_winmm: open_virtual_port unsupported");
+    return false;
   }
   void set_client_name(std::string_view) override
   {
@@ -60,7 +60,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
-  void do_open(unsigned int portNumber)
+  bool do_open(unsigned int portNumber)
   {
     MMRESULT result = midiInOpen(
         &this->inHandle, portNumber, (DWORD_PTR)&midiInputCallback, (DWORD_PTR)this,
@@ -69,7 +69,7 @@ public:
     {
       error<driver_error>(
           configuration, "midi_in_winmm::open_port: error creating Windows MM MIDI input port.");
-      return;
+      return false;
     }
 
     // Allocate and init the sysex buffers.
@@ -91,7 +91,7 @@ public:
             configuration,
             "midi_in_winmm::open_port: error starting Windows MM MIDI input port "
             "(PrepareHeader).");
-        return;
+        return false;
       }
 
       // Register the buffer.
@@ -104,7 +104,7 @@ public:
             configuration,
             "midi_in_winmm::open_port: error starting Windows MM MIDI input port "
             "(AddBuffer).");
-        return;
+        return false;
       }
     }
 
@@ -115,20 +115,14 @@ public:
       this->inHandle = nullptr;
       error<driver_error>(
           configuration, "midi_in_winmm::open_port: error starting Windows MM MIDI input port.");
-      return;
+      return false;
     }
 
-    connected_ = true;
+    return true;
   }
 
-  void open_port(const port_information& p, std::string_view) override
+  bool open_port(const port_information& p, std::string_view) override
   {
-    if (connected_)
-    {
-      warning(configuration, "midi_in_winmm::open_port: a valid connection already exists!");
-      return;
-    }
-
     unsigned int nDevices = midiInGetNumDevs();
     MIDIINCAPS deviceCaps{};
     for (unsigned int i = 0; i < nDevices; i++)
@@ -146,33 +140,7 @@ public:
 
     error<invalid_parameter_error>(
         configuration, "midi_in_winmm::open_port: port not found: " + p.port_name);
-  }
-
-  void open_port(unsigned int portNumber, std::string_view) override
-  {
-    if (connected_)
-    {
-      warning(configuration, "midi_in_winmm::open_port: a valid connection already exists!");
-      return;
-    }
-
-    unsigned int nDevices = midiInGetNumDevs();
-    if (nDevices == 0)
-    {
-      error<no_devices_found_error>(
-          configuration, "midi_in_winmm::open_port: no MIDI input sources found!");
-      return;
-    }
-
-    if (portNumber >= nDevices)
-    {
-      error<invalid_parameter_error>(
-          configuration, "midi_in_winmm::open_port: invalid 'portNumber' argument: "
-                             + std::to_string(portNumber));
-      return;
-    }
-
-    do_open(portNumber);
+    return false;
   }
 
   void close_port() override
@@ -185,50 +153,36 @@ public:
 
       for (int i = 0; i < configuration.sysex_buffer_count; ++i)
       {
-        int result = midiInUnprepareHeader(this->inHandle, this->sysexBuffer[i], sizeof(MIDIHDR));
-        delete[] this->sysexBuffer[i]->lpData;
-        delete[] this->sysexBuffer[i];
-        if (result != MMSYSERR_NOERROR)
+        int res{};
+
+        int wait_count = 5;
+        while (
+            ((res = midiInUnprepareHeader(this->inHandle, this->sysexBuffer[i], sizeof(MIDIHDR)))
+             == MIDIERR_STILLPLAYING)
+            && wait_count-- >= 0)
         {
-          midiInClose(this->inHandle);
-          this->inHandle = nullptr;
-          error<driver_error>(
+          Sleep(1);
+        }
+
+        if (res != MMSYSERR_NOERROR)
+        {
+          warning(
               configuration,
               "midi_in_winmm::open_port: error closing Windows MM MIDI input "
               "port (midiInUnprepareHeader).");
-          return;
+          continue;
+        }
+        else
+        {
+          delete[] this->sysexBuffer[i]->lpData;
+          delete[] this->sysexBuffer[i];
         }
       }
 
       midiInClose(this->inHandle);
       this->inHandle = 0;
-      connected_ = false;
       LeaveCriticalSection(&(this->_mutex));
     }
-  }
-
-  unsigned int get_port_count() const override { return midiInGetNumDevs(); }
-
-  std::string get_port_name(unsigned int portNumber) const override
-  {
-    unsigned int nDevices = midiInGetNumDevs();
-    if (portNumber >= nDevices)
-    {
-      error<invalid_parameter_error>(
-          configuration, "midi_in_winmm::get_port_name: invalid 'portNumber' argument: "
-                             + std::to_string(portNumber));
-      return {};
-    }
-
-    MIDIINCAPS deviceCaps{};
-    midiInGetDevCaps(portNumber, &deviceCaps, sizeof(MIDIINCAPS));
-    std::string stringName = ConvertToUTF8(deviceCaps.szPname);
-
-#ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
-    MakeUniqueInPortName(stringName, portNumber);
-#endif
-
-    return stringName;
   }
 
 private:

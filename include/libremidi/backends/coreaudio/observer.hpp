@@ -24,6 +24,9 @@ public:
     if(configuration.client_name.empty())
       configuration.client_name = "libremidi observer";
 
+    if (!configuration.has_callbacks())
+      return;
+
     auto result = MIDIClientCreate(
         toCFString(configuration.client_name).get(),
         +[] (const MIDINotification* message, void* ctx) { ((observer_core*)ctx)->notify(message); },

@@ -23,12 +23,6 @@ LIBREMIDI_INLINE libremidi::API midi_in_emscripten::get_current_api() const noex
 
 LIBREMIDI_INLINE void midi_in_emscripten::open_port(unsigned int portNumber, std::string_view)
 {
-  if (connected_)
-  {
-    warning(configuration, "midi_in_emscripten::open_port: a valid connection already exists.");
-    return;
-  }
-
   auto& midi = webmidi_helpers::midi_access_emscripten::instance();
 
   if (portNumber >= midi.input_count())
@@ -73,16 +67,6 @@ LIBREMIDI_INLINE void midi_in_emscripten::set_client_name(std::string_view clien
 LIBREMIDI_INLINE void midi_in_emscripten::set_port_name(std::string_view portName)
 {
   warning(configuration, "midi_in_emscripten::set_port_name: unsupported.");
-}
-
-LIBREMIDI_INLINE unsigned int midi_in_emscripten::get_port_count() const
-{
-  return webmidi_helpers::midi_access_emscripten::instance().input_count();
-}
-
-LIBREMIDI_INLINE std::string midi_in_emscripten::get_port_name(unsigned int portNumber) const
-{
-  return webmidi_helpers::midi_access_emscripten::instance().inputs()[portNumber].name;
 }
 
 LIBREMIDI_INLINE void midi_in_emscripten::set_timestamp(double ts, libremidi::message& m)

@@ -241,33 +241,59 @@ LIBREMIDI_INLINE
 observer::~observer() = default;
 
 LIBREMIDI_INLINE
+libremidi::API observer::get_current_api() const noexcept
+{
+  return impl_->get_current_api();
+}
+LIBREMIDI_INLINE
+std::vector<libremidi::port_information> observer::get_input_ports() const noexcept
+{
+  return impl_->get_input_ports();
+}
+LIBREMIDI_INLINE
+std::vector<libremidi::port_information> observer::get_output_ports() const noexcept
+{
+  return impl_->get_input_ports();
+}
+
+LIBREMIDI_INLINE
 libremidi::API midi_in::get_current_api() const noexcept
 {
   return impl_->get_current_api();
 }
 
 LIBREMIDI_INLINE
-void midi_in::open_port(unsigned int portNumber, std::string_view portName)
-{
-  impl_->open_port(portNumber, portName);
-}
-
-LIBREMIDI_INLINE
 void midi_in::open_port(const port_information& port, std::string_view portName)
 {
-  impl_->open_port(port, portName);
+  if (impl_->is_port_open())
+    return;
+
+  if (impl_->open_port(port, portName))
+  {
+    impl_->connected_ = true;
+    impl_->port_open_ = true;
+  }
 }
 
 LIBREMIDI_INLINE
 void midi_in::open_virtual_port(std::string_view portName)
 {
-  impl_->open_virtual_port(portName);
+  if (impl_->is_port_open())
+    return;
+
+  if (impl_->open_virtual_port(portName))
+  {
+    impl_->port_open_ = true;
+  }
 }
 
 LIBREMIDI_INLINE
 void midi_in::close_port()
 {
   impl_->close_port();
+
+  impl_->connected_ = false;
+  impl_->port_open_ = false;
 }
 
 LIBREMIDI_INLINE
@@ -277,15 +303,9 @@ bool midi_in::is_port_open() const noexcept
 }
 
 LIBREMIDI_INLINE
-unsigned int midi_in::get_port_count()
+bool midi_in::is_port_connected() const noexcept
 {
-  return impl_->get_port_count();
-}
-
-LIBREMIDI_INLINE
-std::string midi_in::get_port_name(unsigned int portNumber)
-{
-  return impl_->get_port_name(portNumber);
+  return impl_->is_port_connected();
 }
 
 LIBREMIDI_INLINE
@@ -295,21 +315,28 @@ libremidi::API midi_out::get_current_api() noexcept
 }
 
 LIBREMIDI_INLINE
-void midi_out::open_port(unsigned int portNumber, std::string_view portName)
-{
-  impl_->open_port(portNumber, portName);
-}
-
-LIBREMIDI_INLINE
 void midi_out::open_port(const port_information& port, std::string_view portName)
 {
-  impl_->open_port(port, portName);
+  if (impl_->is_port_open())
+    return;
+
+  if (impl_->open_port(port, portName))
+  {
+    impl_->connected_ = true;
+    impl_->port_open_ = true;
+  }
 }
 
 LIBREMIDI_INLINE
 void midi_out::open_virtual_port(std::string_view portName)
 {
-  impl_->open_virtual_port(portName);
+  if (impl_->is_port_open())
+    return;
+
+  if (impl_->open_virtual_port(portName))
+  {
+    impl_->port_open_ = true;
+  }
 }
 
 LIBREMIDI_INLINE
@@ -325,15 +352,9 @@ bool midi_out::is_port_open() const noexcept
 }
 
 LIBREMIDI_INLINE
-unsigned int midi_out::get_port_count()
+bool midi_out::is_port_connected() const noexcept
 {
-  return impl_->get_port_count();
-}
-
-LIBREMIDI_INLINE
-std::string midi_out::get_port_name(unsigned int portNumber)
-{
-  return impl_->get_port_name(portNumber);
+  return impl_->is_port_connected();
 }
 
 LIBREMIDI_INLINE
@@ -375,80 +396,67 @@ void midi_out::send_message(const unsigned char* message, size_t size)
 LIBREMIDI_INLINE
 midi_in::midi_in(input_configuration base_conf, std::any api_conf)
 {
-  if (!api_conf.has_value())
-  {
-    auto from_api = [&]<typename T>(T& backend) mutable {
-      try
-      {
-        this->impl_ = libremidi::make<typename T::midi_in>(
-            std::move(base_conf), typename T::midi_in_configuration{});
-        return true;
-      }
-      catch (...)
-      {
-      }
-      return false;
-    };
-    std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
-  }
-  else
-  {
-    auto from_api = [&]<typename T>(T& backend) mutable {
-      if (auto conf = std::any_cast<typename T::midi_in_configuration>(&api_conf))
-      {
-        this->impl_ = libremidi::make<typename T::midi_in>(std::move(base_conf), std::move(*conf));
-        return true;
-      }
-      return false;
-    };
-    std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
-  }
+  assert(api_conf.has_value());
+  auto from_api = [&]<typename T>(T& backend) mutable {
+    if (auto conf = std::any_cast<typename T::midi_in_configuration>(&api_conf))
+    {
+      this->impl_ = libremidi::make<typename T::midi_in>(std::move(base_conf), std::move(*conf));
+      return true;
+    }
+    return false;
+  };
+  std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
 
   if (!impl_)
-  {
-    // It should not be possible to get here because the preprocessor
-    // definition LIBREMIDI_DUMMY is automatically defined if no
-    // API-specific definitions are passed to the compiler. But just in
-    // case something weird happens, we'll thrown an error.
-    throw midi_exception{"midi_in: no compiled API support found ... critical error!!"};
-  }
+    throw midi_exception{"midi_out: requested API not found"};
 }
 
 LIBREMIDI_INLINE
-midi_in::midi_in(libremidi::API api, std::string_view clientName)
+midi_in::midi_in(input_configuration conf) noexcept
 {
-  if (api != libremidi::API::UNSPECIFIED)
-  {
-    // Attempt to open the specified API.
-    if ((impl_ = open_midi_in(api, clientName)))
+  // First try to open the first API which has ports
+  auto init1 = [&]<typename T>(T& backend) mutable {
+    try
     {
-      return;
-    }
-    else
-    {
-      throw midi_exception{"midi_out: requested API not found"};
-    }
-  }
+      auto obs = libremidi::make<typename T::midi_observer>(
+          observer_configuration{}, typename T::midi_observer_configuration{});
+      if (!obs)
+        return false;
 
-  // Iterate through the compiled APIs and return as soon as we find
-  // one with at least one port or we reach the end of the list.
-  for (const auto& api : available_apis())
-  {
-    impl_ = open_midi_in(api, clientName);
-    if (impl_ && impl_->get_port_count() != 0)
-    {
-      break;
-    }
-  }
+      if (obs->get_input_ports().size() <= 0)
+        return false;
 
-  if (!impl_)
-  {
-    // It should not be possible to get here because the preprocessor
-    // definition LIBREMIDI_DUMMY is automatically defined if no
-    // API-specific definitions are passed to the compiler. But just in
-    // case something weird happens, we'll thrown an error.
-    throw midi_exception{"midi_in: no compiled API support found ... critical error!!"};
-  }
+      impl_ = libremidi::make<typename T::midi_in>(
+          input_configuration{conf}, typename T::midi_in_configuration{});
+      return true;
+    }
+    catch (...)
+    {
+    }
+    return false;
+  };
+  std::apply([&](auto&&... b) { (init1(b) || ...); }, available_backends);
+
+  if (impl_)
+    return;
+
+  // Then try to open simply the first available API if not possible
+  auto init2 = [&]<typename T>(T& backend) mutable {
+    try
+    {
+      impl_ = libremidi::make<typename T::midi_in>(
+          input_configuration{conf}, typename T::midi_in_configuration{});
+      return true;
+    }
+    catch (...)
+    {
+    }
+    return false;
+  };
+  std::apply([&](auto&&... b) { (init2(b) || ...); }, available_backends);
+
+  // If everything false return a dummy backend
+  impl_ = std::make_unique<midi_in_dummy>(input_configuration{}, dummy_configuration{});
 }
 
 LIBREMIDI_INLINE
@@ -460,85 +468,67 @@ void midi_in::set_port_name(std::string_view portName)
 LIBREMIDI_INLINE
 midi_out::midi_out(output_configuration base_conf, std::any api_conf)
 {
-  if (!api_conf.has_value())
-  {
-    auto from_api = [&]<typename T>(T& backend) mutable {
-      try
-      {
-        this->impl_ = std::make_unique<typename T::midi_out>(
-            std::move(base_conf), typename T::midi_out_configuration{});
-        if (this->impl_->get_port_count() != 0)
-          return true;
-        else
-          this->impl_.reset();
-      }
-      catch (...)
-      {
-      }
-      return false;
-    };
-    std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
-  }
-  else
-  {
-    auto from_api = [&]<typename T>(T& backend) mutable {
-      if (auto conf = std::any_cast<typename T::midi_out_configuration>(&api_conf))
-      {
-        this->impl_
-            = std::make_unique<typename T::midi_out>(std::move(base_conf), std::move(*conf));
-        return true;
-      }
-      return false;
-    };
-    std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
-  }
+  assert(api_conf.has_value());
+  auto from_api = [&]<typename T>(T& backend) mutable {
+    if (auto conf = std::any_cast<typename T::midi_out_configuration>(&api_conf))
+    {
+      this->impl_ = libremidi::make<typename T::midi_out>(std::move(base_conf), std::move(*conf));
+      return true;
+    }
+    return false;
+  };
+  std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
 
   if (!impl_)
-  {
-    // It should not be possible to get here because the preprocessor
-    // definition LIBREMIDI_DUMMY is automatically defined if no
-    // API-specific definitions are passed to the compiler. But just in
-    // case something weird happens, we'll thrown an error.
-    throw midi_exception{"midi_in: no compiled API support found ... critical error!!"};
-  }
+    throw midi_exception{"midi_out: requested API not found"};
 }
 
 LIBREMIDI_INLINE
-midi_out::midi_out(libremidi::API api, std::string_view clientName)
+midi_out::midi_out(output_configuration conf) noexcept
 {
-  if (api != libremidi::API::UNSPECIFIED)
-  {
-    // Attempt to open the specified API.
-    impl_ = open_midi_out(api, clientName);
-    if (impl_)
+  // First try to open the first API which has ports
+  auto init1 = [&]<typename T>(T& backend) mutable {
+    try
     {
-      return;
-    }
-    else
-    {
-      throw midi_exception{"midi_out: requested API not found"};
-    }
-  }
+      auto obs = libremidi::make<typename T::midi_observer>(
+          observer_configuration{}, typename T::midi_observer_configuration{});
+      if (!obs)
+        return false;
 
-  // Iterate through the compiled APIs and return as soon as we find
-  // one with at least one port or we reach the end of the list.
-  for (const auto& api : available_apis())
-  {
-    impl_ = open_midi_out(api, clientName);
-    if (impl_ && impl_->get_port_count() != 0)
-    {
-      break;
-    }
-  }
+      if (obs->get_output_ports().size() <= 0)
+        return false;
 
-  if (!impl_)
-  {
-    // It should not be possible to get here because the preprocessor
-    // definition LIBREMIDI_DUMMY is automatically defined if no
-    // API-specific definitions are passed to the compiler. But just in
-    // case something weird happens, we'll thrown an error.
-    throw midi_exception{"midi_out: no compiled API support found ... critical error!!"};
-  }
+      impl_ = libremidi::make<typename T::midi_out>(
+          output_configuration{conf}, typename T::midi_out_configuration{});
+      return true;
+    }
+    catch (...)
+    {
+    }
+    return false;
+  };
+  std::apply([&](auto&&... b) { (init1(b) || ...); }, available_backends);
+
+  if (impl_)
+    return;
+
+  // Then try to open simply the first available API if not possible
+  auto init2 = [&]<typename T>(T& backend) mutable {
+    try
+    {
+      impl_ = libremidi::make<typename T::midi_out>(
+          output_configuration{conf}, typename T::midi_out_configuration{});
+      return true;
+    }
+    catch (...)
+    {
+    }
+    return false;
+  };
+  std::apply([&](auto&&... b) { (init2(b) || ...); }, available_backends);
+
+  // If everything false return a dummy backend
+  impl_ = std::make_unique<midi_out_dummy>(output_configuration{}, dummy_configuration{});
 }
 
 LIBREMIDI_INLINE

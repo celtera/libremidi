@@ -37,9 +37,10 @@ public:
     return libremidi::API::LINUX_ALSA_RAW;
   }
 
-  void open_virtual_port(std::string_view) override
+  bool open_virtual_port(std::string_view) override
   {
     warning(configuration, "midi_out_raw_alsa: open_virtual_port unsupported");
+    return false;
   }
   void set_client_name(std::string_view) override
   {
@@ -50,7 +51,7 @@ public:
     warning(configuration, "midi_out_raw_alsa: set_port_name unsupported");
   }
 
-  void connect_port(const char* portname)
+  int connect_port(const char* portname)
   {
     constexpr int mode = SND_RAWMIDI_SYNC;
     int status = snd_rawmidi_open(NULL, &midiport_, portname, mode);
@@ -58,75 +59,21 @@ public:
     {
       error<driver_error>(
           this->configuration, "midi_out_raw_alsa::open_port: cannot open device.");
-      return;
+      return status;
     }
-
-    connected_ = true;
+    return status;
   }
 
-  void open_port(unsigned int portNumber, std::string_view) override
+  bool open_port(const port_information& p, std::string_view) override
   {
-    if (connected_)
-    {
-      warning(
-          this->configuration, "midi_out_raw_alsa::open_port: a valid connection already exists.");
-      return;
-    }
-
-    auto device_list = get_device_enumerator();
-    device_list.enumerate_cards();
-
-    if (portNumber >= device_list.outputs.size())
-    {
-      error<no_devices_found_error>(
-          this->configuration, "midi_out_raw_alsa::open_port: no MIDI output sources found.");
-      return;
-    }
-
-    connect_port(device_list.outputs[portNumber].device.c_str());
-  }
-
-  void open_port(const port_information& p, std::string_view) override
-  {
-    if (connected_)
-    {
-      warning(
-          this->configuration, "midi_out_raw_alsa::open_port: a valid connection already exists.");
-      return;
-    }
-
-    connect_port(raw_from_port_handle(p.port).to_string().c_str());
+    return connect_port(raw_from_port_handle(p.port).to_string().c_str()) == 0;
   }
 
   void close_port() override
   {
-    if (connected_)
-    {
+    if (midiport_)
       snd_rawmidi_close(midiport_);
-      midiport_ = nullptr;
-      connected_ = false;
-    }
-  }
-
-  unsigned int get_port_count() const override
-  {
-    auto device_list = get_device_enumerator();
-    device_list.enumerate_cards();
-
-    return device_list.outputs.size();
-  }
-
-  std::string get_port_name(unsigned int portNumber) const override
-  {
-    auto device_list = get_device_enumerator();
-    device_list.enumerate_cards();
-
-    if (portNumber < device_list.outputs.size())
-    {
-      return device_list.outputs[portNumber].pretty_name();
-    }
-
-    return {};
+    midiport_ = nullptr;
   }
 
   void send_message(const unsigned char* message, size_t size) override
