@@ -59,13 +59,15 @@ int main()
   const int num_threads = 20;
 
   // Open our midi output
-  libremidi::midi_out output{};
-  if(output.get_port_count() == 0)
+  libremidi::observer obs{libremidi::default_platform_api(), {}};
+  auto ports = obs.get_output_ports();
+  if(ports.size() == 0)
   {
     std::cerr << "No MIDI outputs are available" << std::endl;
     std::exit(1);
   }
-  output.open_port();
+  libremidi::midi_out output;
+  output.open_port(ports.front());
 
   // Create a message queue for communication
   threadsafe_queue<libremidi::message> queue;

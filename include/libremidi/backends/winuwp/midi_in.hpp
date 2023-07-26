@@ -31,9 +31,10 @@ public:
       port_.Close();
   }
 
-  void open_virtual_port(std::string_view) override
+  bool open_virtual_port(std::string_view) override
   {
     warning(configuration, "midi_in_winuwp: open_virtual_port unsupported");
+    return false;
   }
   void set_client_name(std::string_view) override
   {
@@ -46,28 +47,30 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 
-  void open_port(unsigned int portNumber, std::string_view) override
+  bool open_port(const port_information& port, std::string_view) override
   {
-    const auto id = get_port_id(portNumber);
-    if (!id.empty())
-    {
-      port_ = get(MidiInPort::FromIdAsync(id));
-      if (port_)
-      {
-        port_.MessageReceived(
-            [=](const winrt::Windows::Devices::Midi::IMidiInPort& inputPort,
-                const winrt::Windows::Devices::Midi::MidiMessageReceivedEventArgs& args) {
-          const auto& msg = args.Message();
+    const auto id = winrt::to_hstring(port.port_name);
+    if (id.empty())
+      return false;
 
-          auto reader = DataReader::FromBuffer(msg.RawData());
-          array_view<uint8_t> bs;
-          reader.ReadBytes(bs);
+    port_ = get(MidiInPort::FromIdAsync(id));
+    if (!port_)
+        return false;
 
-          auto t = msg.Timestamp().count();
-          this->configuration.on_message(libremidi::message{{bs.begin(), bs.end()}, t});
-        });
-      }
-    }
+    port_.MessageReceived(
+        [=](const winrt::Windows::Devices::Midi::IMidiInPort& inputPort,
+            const winrt::Windows::Devices::Midi::MidiMessageReceivedEventArgs& args) {
+      const auto& msg = args.Message();
+
+      auto reader = DataReader::FromBuffer(msg.RawData());
+      array_view<uint8_t> bs;
+      reader.ReadBytes(bs);
+
+      auto t = msg.Timestamp().count();
+      this->configuration.on_message(libremidi::message{{bs.begin(), bs.end()}, t});
+    });
+
+    return true;
   }
 
   void close_port() override
@@ -75,18 +78,6 @@ public:
     if (port_)
       port_.Close();
     connected_ = false;
-  }
-
-  unsigned int get_port_count() const override
-  {
-    auto& observer = observer_winuwp::get_internal_in_port_observer();
-    return observer.get_port_count();
-  }
-
-  std::string get_port_name(unsigned int portNumber) const override
-  {
-    auto& observer = observer_winuwp::get_internal_in_port_observer();
-    return observer.get_port_name(portNumber);
   }
 
 private:

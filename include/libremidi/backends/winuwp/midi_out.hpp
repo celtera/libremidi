@@ -26,9 +26,10 @@ public:
 
   ~midi_out_winuwp() override { close_port(); }
 
-  void open_virtual_port(std::string_view) override
+  bool open_virtual_port(std::string_view) override
   {
     warning(configuration, "midi_out_winuwp: open_virtual_port unsupported");
+    return false;
   }
   void set_client_name(std::string_view) override
   {
@@ -41,13 +42,14 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 
-  void open_port(unsigned int portNumber, std::string_view) override
+  bool open_port(const port_information& port, std::string_view) override
   {
-    const auto id = get_port_id(portNumber);
-    if (!id.empty())
-    {
-      port_ = get(MidiOutPort::FromIdAsync(id));
-    }
+    const auto id = winrt::to_hstring(port.port_name);
+    if (id.empty())
+      return false;
+    
+    port_ = get(MidiOutPort::FromIdAsync(id));
+    return bool(port_);
   }
 
   void close_port() override
@@ -55,18 +57,6 @@ public:
     if (port_)
       port_.Close();
     connected_ = false;
-  }
-
-  unsigned int get_port_count() const override
-  {
-    auto& out_ports_observer = observer_winuwp::get_internal_out_port_observer();
-    return static_cast<unsigned int>(out_ports_observer.get_ports().size());
-  }
-
-  std::string get_port_name(unsigned int portNumber) const override
-  {
-    auto& observer = observer_winuwp::get_internal_out_port_observer();
-    return observer.get_port_name(portNumber);
   }
 
   void send_message(const unsigned char* message, size_t size) override
