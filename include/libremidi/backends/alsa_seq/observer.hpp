@@ -245,11 +245,15 @@ public:
   {
     event_fd.notify();
 
-    assert(thread.joinable());
-    thread.join();
+    if (thread.joinable())
+      thread.join();
 
-    snd_seq_delete_port(seq_, port_);
-    snd_seq_close(seq_);
+    if (seq_)
+    {
+      if (port_)
+        snd_seq_delete_port(seq_, port_);
+      snd_seq_close(seq_);
+    }
   }
 
 private:

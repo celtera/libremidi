@@ -402,6 +402,7 @@ private:
       }
 
       int res = this->process_events();
+      (void)res;
 #if defined(__LIBREMIDI_DEBUG__)
       if (res < 0)
         std::cerr << "midi_in_alsa::thread_handler: MIDI input error: " << strerror(res) << "\n";

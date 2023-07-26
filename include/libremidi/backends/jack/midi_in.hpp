@@ -123,7 +123,6 @@ private:
   int jackProcessIn(jack_nframes_t nframes)
   {
     jack_midi_event_t event{};
-    jack_time_t time{};
 
     // Is port created?
     if (this->port == nullptr)

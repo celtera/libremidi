@@ -196,42 +196,6 @@ open_midi_observer(libremidi::API api, observer_configuration&& cb)
   return ptr;
 }
 
-[[nodiscard]] static std::unique_ptr<midi_in_api>
-open_midi_in(libremidi::API api, std::string_view clientName)
-{
-  std::unique_ptr<midi_in_api> ptr;
-
-  for_backend(api, [&]<typename T>(T) {
-    using conf_type = typename T::midi_in_configuration;
-    conf_type c;
-    if constexpr (requires(conf_type c) { c.client_name; })
-    {
-      c.client_name = std::string(clientName);
-    }
-    ptr = libremidi::make<typename T::midi_in>(libremidi::input_configuration{}, std::move(c));
-  });
-
-  return ptr;
-}
-
-[[nodiscard]] static std::unique_ptr<midi_out_api>
-open_midi_out(libremidi::API api, std::string_view clientName)
-{
-  std::unique_ptr<midi_out_api> ptr;
-
-  for_backend(api, [&]<typename T>(T) {
-    using conf_type = typename T::midi_out_configuration;
-    conf_type c;
-    if constexpr (requires(conf_type c) { c.client_name; })
-    {
-      c.client_name = std::string(clientName);
-    }
-    ptr = libremidi::make<typename T::midi_out>(libremidi::output_configuration{}, std::move(c));
-  });
-
-  return ptr;
-}
-
 LIBREMIDI_INLINE observer::observer(libremidi::API api, observer_configuration cbs)
     : impl_{open_midi_observer(api, std::move(cbs))}
 {

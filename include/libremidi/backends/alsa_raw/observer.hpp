@@ -115,7 +115,14 @@ private:
   {
     for (;;)
     {
-      int res = poll(fds, 3, -1);
+      if (int err = poll(fds, 3, -1); err < 0)
+      {
+        if (err == -EAGAIN)
+          continue;
+        else
+          return;
+      }
+
       // Check udev
       if (fds[0].revents & POLLIN)
       {
@@ -175,7 +182,6 @@ private:
 
     new_devs.enumerate_cards();
 
-    int k = 0;
     for (auto& in_prev : current_devices.inputs)
     {
       if (auto it = std::find(new_devs.inputs.begin(), new_devs.inputs.end(), in_prev);
@@ -186,10 +192,8 @@ private:
           cb(to_port_info(in_prev));
         }
       }
-      k++;
     }
 
-    k = 0;
     for (auto& in_next : new_devs.inputs)
     {
       if (auto it
@@ -201,10 +205,8 @@ private:
           cb(to_port_info(in_next));
         }
       }
-      k++;
     }
 
-    k = 0;
     for (auto& out_prev : current_devices.outputs)
     {
       if (auto it = std::find(new_devs.outputs.begin(), new_devs.outputs.end(), out_prev);
@@ -215,10 +217,8 @@ private:
           cb(to_port_info(out_prev));
         }
       }
-      k++;
     }
 
-    k = 0;
     for (auto& out_next : new_devs.outputs)
     {
       if (auto it
@@ -230,7 +230,6 @@ private:
           cb(to_port_info(out_next));
         }
       }
-      k++;
     }
     current_devices = new_devs;
   }

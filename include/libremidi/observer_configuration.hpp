@@ -16,7 +16,7 @@ struct LIBREMIDI_EXPORT port_information
   // ALSA Raw: unused
   // ALSA Seq: snd_seq_t*
   // CoreMIDI: MidiClientRef
-  // WebMIDI:
+  // WebMIDI: unused
   // JACK: jack_client_t*
   // WinMM: unused
   // WinUWP:

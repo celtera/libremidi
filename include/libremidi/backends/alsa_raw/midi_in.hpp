@@ -142,7 +142,6 @@ public:
 
     unsigned char bytes[nbytes];
 
-    int z = 0;
     int err = 0;
     while ((err = snd_rawmidi_read(this->midiport_, bytes, nbytes)) > 0)
     {
