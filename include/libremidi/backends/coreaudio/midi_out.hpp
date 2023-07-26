@@ -60,10 +60,12 @@ public:
   {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
 
+    // Find where we want to send
     auto destination = locate_object(*this, info, kMIDIObjectType_Destination);
     if(destination == 0)
       return false;
 
+    // Create our local source
     MIDIPortRef port;
     OSStatus result = MIDIOutputPortCreate(this->client, toCFString(portName).get(), &port);
     if (result != noErr)
