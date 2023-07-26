@@ -1,5 +1,10 @@
 #pragma once
-#include <libremidi/libremidi.hpp>
+#include <libremidi/api.hpp>
+#include <libremidi/config.hpp>
+#include <libremidi/observer_configuration.hpp>
+
+#include <memory>
+#include <vector>
 
 namespace libremidi
 {

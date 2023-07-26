@@ -2,7 +2,6 @@
 #define NOMINMAX 1
 #define WIN32_LEAN_AND_MEAN 1
 #include <libremidi/detail/midi_api.hpp>
-#include <libremidi/libremidi.hpp>
 
 #include <algorithm>
 

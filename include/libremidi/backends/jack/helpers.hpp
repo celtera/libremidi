@@ -10,7 +10,6 @@
   #include <jack/ringbuffer.h>
 #endif
 #include <libremidi/detail/midi_in.hpp>
-#include <libremidi/libremidi.hpp>
 
 namespace libremidi
 {

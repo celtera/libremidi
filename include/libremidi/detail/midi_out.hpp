@@ -1,6 +1,5 @@
 #pragma once
 #include <libremidi/detail/midi_api.hpp>
-#include <libremidi/libremidi.hpp>
 #include <libremidi/output_configuration.hpp>
 
 #include <string_view>

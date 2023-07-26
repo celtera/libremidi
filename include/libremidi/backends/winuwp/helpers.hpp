@@ -2,16 +2,15 @@
 #define NOMINMAX 1
 #define WIN32_LEAN_AND_MEAN 1
 #include <libremidi/detail/midi_api.hpp>
-#include <libremidi/libremidi.hpp>
 
 #include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
 
-#include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Devices.Enumeration.h>
 #include <winrt/Windows.Devices.Midi.h>
+#include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Storage.Streams.h>
 
 namespace libremidi
