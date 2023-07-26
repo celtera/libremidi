@@ -4,14 +4,15 @@
 //
 // by Gary Scavone, 2003-2012.
 
+#include <libremidi/libremidi.hpp>
+
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <map>
-#include <libremidi/libremidi.hpp>
+#include <thread>
 
-#include <winrt/Windows.Foundation.h>
 int main()
-
 try
 {
   // Create an api map.
