@@ -128,8 +128,6 @@ public:
       MIDIPortDispose(this->port);
       this->port = 0;
     }
-
-    connected_ = false;
   }
 
 private:

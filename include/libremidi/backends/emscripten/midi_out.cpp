@@ -21,7 +21,7 @@ LIBREMIDI_INLINE libremidi::API midi_out_emscripten::get_current_api() const noe
   return libremidi::API::EMSCRIPTEN_WEBMIDI;
 }
 
-LIBREMIDI_INLINE void midi_out_emscripten::open_port(unsigned int portNumber, std::string_view)
+LIBREMIDI_INLINE bool midi_out_emscripten::open_port(unsigned int portNumber, std::string_view)
 {
   auto& midi = webmidi_helpers::midi_access_emscripten::instance();
 
@@ -29,28 +29,20 @@ LIBREMIDI_INLINE void midi_out_emscripten::open_port(unsigned int portNumber, st
   {
     error<no_devices_found_error>(
         this->configuration, "midi_out_emscripten::open_port: no MIDI output sources found.");
-    return;
+    return false;
   }
 
   portNumber_ = portNumber;
-  connected_ = true;
+  return true;
 }
 
-LIBREMIDI_INLINE void
+LIBREMIDI_INLINE bool
 midi_out_emscripten::open_port(const port_information& p, std::string_view nm)
 {
   return open_port(p.port, nm);
 }
 
-LIBREMIDI_INLINE void midi_out_emscripten::close_port()
-{
-  if (connected_)
-  {
-    auto& midi = webmidi_helpers::midi_access_emscripten::instance();
-
-    connected_ = false;
-  }
-}
+LIBREMIDI_INLINE void midi_out_emscripten::close_port() { }
 
 LIBREMIDI_INLINE void midi_out_emscripten::set_client_name(std::string_view clientName)
 {
@@ -62,14 +54,15 @@ LIBREMIDI_INLINE void midi_out_emscripten::set_port_name(std::string_view portNa
   warning(configuration, "midi_out_emscripten::set_port_name: unsupported.");
 }
 
-LIBREMIDI_INLINE void midi_out_emscripten::open_virtual_port(std::string_view)
+LIBREMIDI_INLINE bool midi_out_emscripten::open_virtual_port(std::string_view)
 {
   warning(configuration, "midi_in_emscripten::open_virtual_port: unsupported.");
+  return false;
 }
 
 LIBREMIDI_INLINE void midi_out_emscripten::send_message(const unsigned char* message, size_t size)
 {
-  if (!connected_)
+  if (portNumber_ < 0)
     error<invalid_use_error>(
         this->configuration,
         "midi_out_emscripten::send_message: trying to send a message without an open "

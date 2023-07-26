@@ -183,7 +183,7 @@ public:
       }
 
       // And send to an explicit destination port if we're connected.
-      if (connected_)
+      if (this->destinationId != 0)
       {
         auto result = MIDISend(this->port, this->destinationId, packetList);
         if (result != noErr)
