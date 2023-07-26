@@ -106,8 +106,8 @@ private:
           .port = 0,
           .manufacturer = "",
           .device_name = "",
-          .port_name = std::move(portName),
-          .display_name = ""});
+          .port_name = portName,
+          .display_name = portName });
     }
     return ret;
   }
@@ -122,8 +122,8 @@ private:
           .port = 0,
           .manufacturer = "",
           .device_name = "",
-          .port_name = std::move(portName),
-          .display_name = ""});
+          .port_name = portName,
+          .display_name = portName });
     }
     return ret;
   }
