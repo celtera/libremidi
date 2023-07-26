@@ -45,6 +45,49 @@ public:
       configuration.on_create_context(client);
   }
 
+  libremidi::API get_current_api() const noexcept override
+  {
+    return libremidi::API::MACOSX_CORE;
+  }
+
+  std::vector<libremidi::port_information> get_input_ports() const noexcept override
+  {
+    std::vector<libremidi::port_information> ret;
+
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+    for(ItemCount i = 0; i < MIDIGetNumberOfSources(); i++)
+    {
+      ret.push_back(to_port_info(MIDIGetSource(i)));
+    }
+
+    return ret;
+  }
+
+  std::vector<libremidi::port_information> get_output_ports() const noexcept override
+  {
+    std::vector<libremidi::port_information> ret;
+
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+    for(ItemCount i = 0; i < MIDIGetNumberOfDestinations(); i++)
+    {
+      ret.push_back(to_port_info(MIDIGetDestination(i)));
+    }
+    return ret;
+  }
+
+  port_information to_port_info(MIDIObjectRef obj) const noexcept
+  {
+    return {
+              .client = (std::uintptr_t) this->client,
+              .port = std::bit_cast<uint32_t>(get_int_property(obj, kMIDIPropertyUniqueID)),
+              .manufacturer = get_string_property(obj, kMIDIPropertyManufacturer),
+              .device_name = get_string_property(obj, kMIDIPropertyModel),
+              .port_name = get_string_property(obj, kMIDIPropertyName),
+              .display_name = get_string_property(obj, kMIDIPropertyDisplayName)
+    };
+
+  }
+
   void notify(const MIDINotification* message)
   {
     switch(message->messageID)
@@ -53,19 +96,15 @@ public:
       {
         auto obj = reinterpret_cast<const MIDIObjectAddRemoveNotification*>(message);
 
-        std::string name = get_string_property(obj->child, kMIDIPropertyName);
-        std::string dname = get_string_property(obj->child, kMIDIPropertyDisplayName);
-        int32_t uid = get_int_property(obj->child, kMIDIPropertyUniqueID);
-
         switch(obj->childType)
         {
           case kMIDIObjectType_Source:
             if(auto& cb = configuration.input_added)
-              cb(uid, dname);
+              cb(to_port_info(obj->child));
             break;
           case kMIDIObjectType_Destination:
             if(auto& cb = configuration.output_added)
-              cb(uid, dname);
+              cb(to_port_info(obj->child));
             break;
           default:
             break;
@@ -78,19 +117,15 @@ public:
       {
         auto obj = reinterpret_cast<const MIDIObjectAddRemoveNotification*>(message);
 
-        std::string name = get_string_property(obj->child, kMIDIPropertyName);
-        std::string dname = get_string_property(obj->child, kMIDIPropertyDisplayName);
-        int32_t uid = get_int_property(obj->child, kMIDIPropertyUniqueID);
-
         switch(obj->childType)
         {
           case kMIDIObjectType_Source:
             if(auto& cb = configuration.input_removed)
-              cb(uid, dname);
+              cb(to_port_info(obj->child));
             break;
           case kMIDIObjectType_Destination:
             if(auto& cb = configuration.output_removed)
-              cb(uid, dname);
+              cb(to_port_info(obj->child));
             break;
           default:
             break;

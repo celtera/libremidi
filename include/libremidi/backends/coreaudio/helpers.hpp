@@ -200,6 +200,31 @@ inline CFStringRef ConnectedEndpointName(MIDIEndpointRef endpoint)
   return EndpointName(endpoint, false);
 }
 
+inline
+MIDIObjectRef locate_object(auto& self, const port_information& info, MIDIObjectType requested_type)
+{
+  auto uid = std::bit_cast<std::int32_t>((uint32_t)info.port);
+  MIDIObjectRef object{};
+  MIDIObjectType type{};
+  auto ret = MIDIObjectFindByUniqueID(uid, &object, &type);
+  if(ret != noErr)
+  {
+    self.template error<invalid_parameter_error>(
+        self.configuration,
+        "midi_in_core::open_port: cannot find port: " + info.port_name);
+    return 0;
+  }
+
+  if(type != requested_type || object == 0)
+  {
+    self.template error<invalid_parameter_error>(
+        self.configuration,
+        "midi_in_core::open_port: invalid source: " + info.port_name);
+    return 0;
+  }
+
+  return object;
+}
 }
 
 // A structure to hold variables related to the CoreMIDI API

@@ -57,25 +57,16 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::MACOSX_CORE; }
 
-  void open_port(unsigned int portNumber, std::string_view portName) override
+
+  bool open_port(const port_information& info, std::string_view portName) override
   {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-    auto nSrc = MIDIGetNumberOfSources();
-    if (nSrc < 1)
-    {
-      error<no_devices_found_error>(
-          this->configuration, "midi_in_core::open_port: no MIDI input sources found!");
-      return;
-    }
 
-    if (portNumber >= nSrc)
-    {
-      error<invalid_parameter_error>(
-          this->configuration,
-          "midi_in_core::open_port: invalid 'portNumber' argument: " + std::to_string(portNumber));
-      return;
-    }
+    auto source = locate_object(*this, info, kMIDIObjectType_Source);
+    if(source == 0)
+      return false;
 
+    // Create our local sink
     MIDIPortRef port;
     OSStatus result = MIDIInputPortCreate(
         this->client, toCFString(portName).get(), midiInputCallback, (void*)this, &port);
@@ -85,38 +76,25 @@ public:
       close_client();
       error<driver_error>(
           this->configuration, "midi_in_core::open_port: error creating OS-X MIDI input port: " + std::to_string(result));
-      return;
-    }
-
-    // Get the desired input source identifier.
-    MIDIEndpointRef endpoint = MIDIGetSource(portNumber);
-    if (endpoint == 0)
-    {
-      MIDIPortDispose(port);
-      close_client();
-      error<driver_error>(
-          this->configuration,
-          "midi_in_core::open_port: error getting MIDI input source reference.");
-      return;
+      return false;
     }
 
     // Make the connection.
-    if (result = MIDIPortConnectSource(port, endpoint, nullptr); result != noErr)
+    if (result = MIDIPortConnectSource(port, source, nullptr); result != noErr)
     {
       MIDIPortDispose(port);
       close_client();
       error<driver_error>(
           this->configuration, "midi_in_core::open_port: error connecting OS-X MIDI input port.");
-      return;
+      return false;
     }
 
     // Save our api-specific port information.
     this->port = port;
-
-    connected_ = true;
+    return true;
   }
 
-  void open_virtual_port(std::string_view portName) override
+  bool open_virtual_port(std::string_view portName) override
   {
     // Create a virtual MIDI input destination.
     MIDIEndpointRef endpoint;
@@ -129,11 +107,12 @@ public:
           this->configuration,
           "midi_in_core::open_virtual_port: error creating virtual OS-X MIDI "
           "destination.");
-      return;
+      return false;
     }
 
     // Save our api-specific connection information.
     this->endpoint = endpoint;
+    return true;
   }
 
   void close_port() override
@@ -151,33 +130,6 @@ public:
     }
 
     connected_ = false;
-  }
-
-  unsigned int get_port_count() const override
-  {
-    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-    return (unsigned int)MIDIGetNumberOfSources();
-  }
-
-  std::string get_port_name(unsigned int portNumber) const override
-  {
-    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-    if (portNumber >= MIDIGetNumberOfSources())
-    {
-      error<invalid_parameter_error>(
-          this->configuration, "midi_in_core::get_port_name: invalid 'portNumber' argument: "
-                                   + std::to_string(portNumber));
-      return {};
-    }
-
-    auto portRef = MIDIGetSource(portNumber);
-    auto nameRef = ConnectedEndpointName(portRef);
-
-    char name[128];
-    CFStringGetCString(nameRef, name, sizeof(name), kCFStringEncodingUTF8);
-    CFRelease(nameRef);
-
-    return name;
   }
 
 private:
