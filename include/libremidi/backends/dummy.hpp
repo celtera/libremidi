@@ -7,7 +7,7 @@
 
 namespace libremidi
 {
-class observer_dummy final : public observer_api
+class observer_dummy : public observer_api
 {
 public:
   explicit observer_dummy(const observer_configuration& configuration, dummy_configuration)

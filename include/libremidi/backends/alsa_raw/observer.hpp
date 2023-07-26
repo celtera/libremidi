@@ -248,6 +248,12 @@ private:
   #include <libremidi/backends/dummy.hpp>
 namespace libremidi
 {
-using observer_alsa_raw = observer_dummy;
+struct observer_alsa_raw : observer_dummy
+{
+  explicit observer_alsa_raw(
+      observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
+  {
+  }
+};
 }
 #endif
