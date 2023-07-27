@@ -268,17 +268,13 @@ public:
   }
 
 private:
-  static observer_winuwp_internal internalInPortObserver_;
-  static observer_winuwp_internal internalOutPortObserver_;
+  static inline observer_winuwp_internal internalInPortObserver_{MidiInPort::GetDeviceSelector()};
+  static inline observer_winuwp_internal internalOutPortObserver_{MidiOutPort::GetDeviceSelector()};
 
   int evTokenOnInputAdded_{-1};
   int evTokenOnInputRemoved_{ -1 };
   int evTokenOnOutputAdded_{ -1 };
   int evTokenOnOutputRemoved_{ -1 };
 };
-
-observer_winuwp_internal observer_winuwp::internalInPortObserver_(MidiInPort::GetDeviceSelector());
-observer_winuwp_internal
-    observer_winuwp::internalOutPortObserver_(MidiOutPort::GetDeviceSelector());
 
 }
