@@ -1,3 +1,5 @@
+#include "utils.hpp"
+
 #include <libremidi/configurations.hpp>
 #include <libremidi/libremidi.hpp>
 
@@ -10,14 +12,9 @@ int main()
   std::vector<libremidi::midi_in> midiin;
   std::vector<libremidi::midi_out> midiout;
 
-  auto callback = [&](int port, const libremidi::message& message) {
-    auto sz = message.size();
-    for (auto i = 0U; i < sz; i++)
-      std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
-    if (sz > 0)
-      std::cout << "stamp = " << message.timestamp << std::endl;
-
-    midiout[port].send_message(message);
+  auto callback = [&](int port, const libremidi::message& msg) {
+    std::cout << msg << std::endl;
+    midiout[port].send_message(msg);
   };
 
   // Create an alsa client which will be shared across objects

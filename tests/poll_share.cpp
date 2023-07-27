@@ -1,3 +1,5 @@
+#include "utils.hpp"
+
 #include <libremidi/configurations.hpp>
 #include <libremidi/libremidi.hpp>
 
@@ -5,13 +7,7 @@
 
 int main()
 {
-  auto callback = [](const libremidi::message& message) {
-    auto sz = message.size();
-    for (auto i = 0U; i < sz; i++)
-      std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
-    if (sz > 0)
-      std::cout << "stamp = " << message.timestamp << std::endl;
-  };
+  auto callback = [](const libremidi::message& message) { std::cout << message << std::endl; };
 
   std::vector<std::function<int(std::span<pollfd>)>> callbacks;
   std::vector<pollfd> fds;

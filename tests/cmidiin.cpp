@@ -30,11 +30,7 @@ try
       // Set our callback function.
       .on_message
       = [](const libremidi::message& message) {
-    auto nBytes = message.size();
-    for (auto i = 0U; i < nBytes; i++)
-      std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
-    if (nBytes > 0)
-      std::cout << "stamp = " << message.timestamp << std::endl;
+    std::cout << message << std::endl;
       },
 
       // Don't ignore sysex, timing, or active sensing messages.

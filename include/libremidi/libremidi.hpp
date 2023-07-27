@@ -168,7 +168,6 @@ public:
   [[nodiscard]] libremidi::API get_current_api() const noexcept;
 
   //! Open a MIDI input connection
-  [[deprecated]] void open_default_port();
   void open_port(const port_information& pt, std::string_view local_port_name = "libremidi input");
 
   //! Create a virtual input port, with optional name, to allow software
@@ -185,6 +184,8 @@ public:
   void open_virtual_port(std::string_view portName);
   void open_virtual_port() { open_virtual_port("libremidi virtual port"); }
 
+  void set_port_name(std::string_view portName);
+
   //! Close an open MIDI connection (if one exists).
   void close_port();
 
@@ -194,8 +195,6 @@ public:
   //! Returns true if a port is connected to another port.
   //! Never true for virtual ports.
   [[nodiscard]] bool is_port_connected() const noexcept;
-
-  void set_port_name(std::string_view portName);
 
 private:
   std::unique_ptr<class midi_in_api> impl_;
@@ -238,7 +237,6 @@ public:
   [[nodiscard]] libremidi::API get_current_api() noexcept;
 
   //! Open a MIDI output connection.
-  [[deprecated]] void open_default_port();
   void open_port(const port_information& pt, std::string_view local_port_name = "libremidi input");
 
   //! Close an open MIDI connection (if one exists).
@@ -264,6 +262,8 @@ public:
   void open_virtual_port(std::string_view portName);
   void open_virtual_port() { open_virtual_port("libremidi virtual port"); }
 
+  void set_port_name(std::string_view portName);
+
   //! Immediately send a single message out an open MIDI output port.
   /*!
       An exception is thrown if an error occurs during output or an
@@ -280,14 +280,10 @@ public:
       \param size    Length of the MIDI message in bytes
   */
   void send_message(const unsigned char* message, size_t size);
-
   void send_message(std::span<const unsigned char>);
-
   void send_message(unsigned char b0);
   void send_message(unsigned char b0, unsigned char b1);
   void send_message(unsigned char b0, unsigned char b1, unsigned char b2);
-
-  void set_port_name(std::string_view portName);
 
 private:
   std::unique_ptr<class midi_out_api> impl_;

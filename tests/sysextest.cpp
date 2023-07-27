@@ -30,14 +30,7 @@ try
   libremidi::midi_out midiout;
   libremidi::midi_in midiin{{
       // Set our callback function.
-      .on_message
-      = [](const libremidi::message& message) {
-    auto nBytes = message.size();
-    for (auto i = 0U; i < nBytes; i++)
-      std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
-    if (nBytes > 0)
-      std::cout << "stamp = " << message.timestamp << std::endl;
-      },
+      .on_message = [](const libremidi::message& message) { std::cout << message << std::endl; },
 
       .ignore_sysex = false,
       .ignore_timing = true,

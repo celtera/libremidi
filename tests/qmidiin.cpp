@@ -189,15 +189,7 @@ try
   std::cout << "Reading MIDI from port " << ports[port].display_name << " ... quit with Ctrl-C.\n";
   while (!done)
   {
-    auto msg = midiin.get_message();
-    auto nBytes = msg.size();
-
-    for (auto i = 0U; i < nBytes; i++)
-      std::cout << "Byte " << i << " = " << (int)msg[i] << ", ";
-
-    if (nBytes > 0)
-      std::cout << "stamp = " << msg.timestamp << std::endl;
-
+    std::cout << midiin.get_message() << std::endl;
     std::this_thread::sleep_for(10ms);
   }
 

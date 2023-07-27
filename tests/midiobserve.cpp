@@ -14,28 +14,29 @@ int main()
 try
 {
   std::vector<libremidi::observer> observers;
-  for (auto api : {libremidi::API::UNIX_JACK})
+  for (auto api : libremidi::available_apis())
   {
     std::string_view api_name = libremidi::get_api_display_name(api);
 
     std::cout << "Displaying ports for: " << api_name << std::endl;
     libremidi::observer_configuration cbs;
     cbs.input_added = [=](const libremidi::port_information& p) {
-      std::cerr << api_name << " : input added " << p << "\n";
+      std::cout << api_name << " : input added " << p << "\n";
     };
     cbs.input_removed = [=](const libremidi::port_information& p) {
-      std::cerr << api_name << " : input removed " << p << "\n";
+      std::cout << api_name << " : input removed " << p << "\n";
     };
     cbs.output_added = [=](const libremidi::port_information& p) {
-      std::cerr << api_name << " : output added " << p << "\n";
+      std::cout << api_name << " : output added " << p << "\n";
     };
     cbs.output_removed = [=](const libremidi::port_information& p) {
-      std::cerr << api_name << " : output removed " << p << "\n";
+      std::cout << api_name << " : output removed " << p << "\n";
     };
     observers.emplace_back(cbs, libremidi::observer_configuration_for(api));
+    std::cout << "\n" << std::endl;
   }
 
-  std::cerr << "... waiting for hotplug events ...\n";
+  std::cout << "... waiting for hotplug events ...\n";
 
 #if defined(__APPLE__)
   // On macOS, observation can *only* be done in the main thread

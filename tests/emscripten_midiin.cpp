@@ -21,10 +21,8 @@ int main(int argc, char**)
           [&](const libremidi::port_information& id) {
     std::cout << "MIDI Input connected: " << id.port_name << std::endl;
 
-    auto conf = libremidi::input_configuration{.on_message = [](const libremidi::message& msg) {
-      std::cout << (int)msg.bytes[0] << " " << (int)msg.bytes[1] << " " << (int)msg.bytes[2] << " "
-                << (double)msg.timestamp << std::endl;
-    }};
+    auto conf = libremidi::input_configuration{
+        .on_message = [](const libremidi::message& msg) { std::cout << msg << std::endl; }};
     auto input
         = std::make_shared<libremidi::midi_in>(conf, libremidi::emscripten_input_configuration{});
 
@@ -54,8 +52,5 @@ int main(int argc, char**)
 
   libremidi::observer obs{libremidi::API::EMSCRIPTEN_WEBMIDI, std::move(callbacks)};
 
-  std::cerr << "Ooof!!! \n";
   emscripten_set_main_loop([] {}, 60, 1);
-
-  std::cerr << "Owww!! \n";
 }

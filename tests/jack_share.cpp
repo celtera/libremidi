@@ -1,3 +1,5 @@
+#include "utils.hpp"
+
 #include <libremidi/configurations.hpp>
 #include <libremidi/libremidi.hpp>
 
@@ -21,12 +23,7 @@ struct my_app
   my_app()
   {
     auto callback = [&](int port, const libremidi::message& message) {
-      auto sz = message.size();
-      std::cout << "Message from port " << port << " : ";
-      for (auto i = 0U; i < sz; i++)
-        std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
-      if (sz > 0)
-        std::cout << "stamp = " << message.timestamp << std::endl;
+      std::cout << message << std::endl;
 
       midiout[port].send_message(message);
     };

@@ -14,15 +14,9 @@ struct my_app
 
   my_app()
   {
-    auto callback = [&](int port, const libremidi::message& message) {
-      auto sz = message.size();
-      std::cout << "Message from port " << port << " : ";
-      for (auto i = 0U; i < sz; i++)
-        std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
-      if (sz > 0)
-        std::cout << "stamp = " << message.timestamp << std::endl;
-
-      midiout[port].send_message(message);
+    auto callback = [&](int port, const libremidi::message& msg) {
+      std::cout << msg << std::endl;
+      midiout[port].send_message(msg);
     };
 
     auto res = MIDIClientCreate(CFSTR("My App"), 0, 0, &handle);
