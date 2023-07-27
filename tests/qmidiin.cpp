@@ -155,7 +155,7 @@ try
   if (argc > 2)
     usage();
 
-  libremidi::observer obs{};
+  libremidi::observer obs;
   auto ports = obs.get_input_ports();
 
   libremidi::queued_midi_in midiin{

@@ -59,7 +59,7 @@ int main()
   const int num_threads = 20;
 
   // Open our midi output
-  libremidi::observer obs{libremidi::default_platform_api(), {}};
+  libremidi::observer obs;
   auto ports = obs.get_output_ports();
   if(ports.size() == 0)
   {
