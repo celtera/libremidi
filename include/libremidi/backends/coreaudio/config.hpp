@@ -1,9 +1,11 @@
 #pragma once
 #include <libremidi/config.hpp>
 
-#include <string>
-#include <optional>
 #include <cstdint>
+#include <functional>
+#include <optional>
+#include <string>
+
 #if defined(__APPLE__)
   #if __LP64__
 typedef unsigned int UInt32;
@@ -20,19 +22,19 @@ namespace libremidi
 
 struct coremidi_input_configuration
 {
-  std::string client_name;
+  std::string client_name = "libremidi client";
   std::optional<MIDIClientRef> context{};
 };
 
 struct coremidi_output_configuration
 {
-  std::string client_name;
+  std::string client_name = "libremidi client";
   std::optional<MIDIClientRef> context{};
 };
 
 struct coremidi_observer_configuration
 {
-  std::string client_name;
+  std::string client_name = "libremidi client";
   std::function<void(MIDIClientRef)> on_create_context{};
 };
 

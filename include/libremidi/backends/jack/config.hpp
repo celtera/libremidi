@@ -17,7 +17,7 @@ namespace libremidi
 using jack_callback_function = std::function<void(int nframes)>;
 struct jack_input_configuration
 {
-  std::string client_name;
+  std::string client_name = "libremidi client";
 
   jack_client_t* context{};
   std::function<void(jack_callback_function)> set_process_func;
@@ -25,7 +25,7 @@ struct jack_input_configuration
 
 struct jack_output_configuration
 {
-  std::string client_name;
+  std::string client_name = "libremidi client";
 
   jack_client_t* context{};
   std::function<void(jack_callback_function)> set_process_func;
@@ -35,7 +35,7 @@ struct jack_output_configuration
 
 struct jack_observer_configuration
 {
-  std::string client_name;
+  std::string client_name = "libremidi client";
   jack_client_t* context{};
 };
 

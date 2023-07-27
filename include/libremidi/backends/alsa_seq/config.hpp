@@ -14,20 +14,20 @@ namespace libremidi
 
 struct alsa_sequencer_input_configuration
 {
-  std::string client_name;
+  std::string client_name = "libremidi client";
   snd_seq_t* context{};
   std::function<bool(const manual_poll_parameters&)> manual_poll;
 };
 
 struct alsa_sequencer_output_configuration
 {
-  std::string client_name;
+  std::string client_name = "libremidi client";
   snd_seq_t* context{};
 };
 
 struct alsa_sequencer_observer_configuration
 {
-  std::string client_name;
+  std::string client_name = "libremidi client";
   snd_seq_t* context{};
 };
 

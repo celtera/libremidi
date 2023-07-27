@@ -49,7 +49,7 @@ public:
   {
     {
       const char** ports
-          = jack_get_ports(client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput);
+          = jack_get_ports(client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput);
 
       if (ports != nullptr)
       {
@@ -81,7 +81,7 @@ public:
 
     {
       const char** ports
-          = jack_get_ports(client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput);
+          = jack_get_ports(client, nullptr, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput);
 
       if (ports != nullptr)
       {
@@ -135,13 +135,13 @@ public:
       // when disconnecting, jack_port_type and jack_port_flags aren't correctly
       // set anymore.
 
-      if (flags & JackPortIsInput)
+      if (flags & JackPortIsOutput)
       {
         seen_input_ports.insert(name);
         if (this->configuration.input_added)
           this->configuration.input_added(to_port_info(client, port));
       }
-      else if (flags & JackPortIsOutput)
+      else if (flags & JackPortIsInput)
       {
         seen_output_ports.insert(name);
         if (this->configuration.output_added)
@@ -199,12 +199,12 @@ public:
 
   std::vector<libremidi::port_information> get_input_ports() const noexcept override
   {
-    return get_ports(this->client, nullptr, JackPortIsInput);
+    return get_ports(this->client, nullptr, JackPortIsOutput);
   }
 
   std::vector<libremidi::port_information> get_output_ports() const noexcept override
   {
-    return get_ports(this->client, nullptr, JackPortIsOutput);
+    return get_ports(this->client, nullptr, JackPortIsInput);
   }
 
   ~observer_jack() { }
