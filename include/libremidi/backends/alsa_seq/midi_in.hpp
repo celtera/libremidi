@@ -376,6 +376,8 @@ private:
 
     if (this->thread.joinable())
       this->thread.join();
+
+    event_fd.consume();
   }
 
   void thread_handler()
@@ -393,7 +395,7 @@ private:
         if (poll(poll_fds, poll_fd_count, -1) >= 0)
         {
           // We got our stop-thread signal
-          if (poll_fds[0].revents & POLLIN)
+          if (event_fd.ready(poll_fds[0]))
           {
             break;
           }
@@ -411,7 +413,7 @@ private:
   }
 
   std::thread thread{};
-  eventfd_notifier event_fd;
+  eventfd_notifier event_fd{};
 };
 
 class midi_in_alsa_manual : public midi_in_alsa

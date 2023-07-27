@@ -2,8 +2,10 @@
 
 #include <libremidi/libremidi.hpp>
 
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
+#include <thread>
 
 int main(int argc, char**)
 try

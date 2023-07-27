@@ -251,7 +251,7 @@ private:
         continue;
       else if (err < 0)
         return;
-      else if (fds_.back().revents & POLLIN)
+      else if (event_fd.ready(fds_.back()))
         break;
 
       err = do_read_events(parse_func, {fds_.data(), fds_.size() - 1});
@@ -302,6 +302,7 @@ private:
     event_fd.notify();
     if (thread_.joinable())
       thread_.join();
+    event_fd.consume(); // Reset to zero
 
     midi_in_raw_alsa::close_port();
   }

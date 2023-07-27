@@ -5,6 +5,8 @@
 #include <poll.h>
 #include <unistd.h>
 
+#include <iostream>
+
 namespace libremidi
 {
 struct eventfd_notifier
@@ -17,11 +19,22 @@ struct eventfd_notifier
   eventfd_notifier& operator=(const eventfd_notifier&) = delete;
   eventfd_notifier& operator=(eventfd_notifier&&) = delete;
 
-  void notify() { eventfd_write(fd, 1); }
+  void notify() noexcept
+  {
+    ++notify_counts;
+    eventfd_write(fd, 1);
+  }
+  static bool ready(pollfd res) noexcept { return res.revents & POLLIN; }
+  void consume() noexcept
+  {
+    eventfd_t val;
+    eventfd_read(fd, &val);
+  }
 
   operator int() const noexcept { return fd; }
   operator pollfd() const noexcept { return {.fd = fd, .events = POLLIN}; }
   int fd{-1};
+  uint32_t notify_counts{};
 };
 
 struct timerfd_timer
