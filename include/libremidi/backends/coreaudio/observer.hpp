@@ -77,16 +77,20 @@ public:
 
   std::optional<port_information> to_port_info(MIDIObjectRef obj) const noexcept
   {
-    const auto tp = snd_seq_port_info_get_type(pinfo);
+    MIDIEntityRef e{};
+    MIDIEndpointGetEntity(obj, &e);
+    bool physical = bool(e);
+
     bool ok = false;
-    if ((tp & SND_SEQ_PORT_TYPE_HARDWARE) && this->configuration.track_hardware)
+    if (physical && this->configuration.track_hardware)
       ok = true;
-    else if ((tp & SND_SEQ_PORT_TYPE_SOFTWARE) && this->configuration.track_virtual)
+    else if ((!physical) && this->configuration.track_virtual)
       ok = true;
+
     if (!ok)
       return {};
 
-    return {
+    return port_information{
         .client = (std::uintptr_t)this->client,
         .port = std::bit_cast<uint32_t>(get_int_property(obj, kMIDIPropertyUniqueID)),
         .manufacturer = get_string_property(obj, kMIDIPropertyManufacturer),
