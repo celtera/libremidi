@@ -199,9 +199,10 @@ void writer::write(std::ostream& out)
   util::write_uint16_be(out, static_cast<uint16_t>(tracks.size()));
   util::write_uint16_be(out, ticksPerQuarterNote);
 
+  std::vector<uint8_t> trackRawData;
   for (const auto& event_list : tracks)
   {
-    std::vector<uint8_t> trackRawData;
+    trackRawData.clear();
     // Rough estimation of the memory to allocate
     trackRawData.reserve(event_list.size() * 3);
 
@@ -232,18 +233,14 @@ void writer::write(std::ostream& out)
 
         util::write_variable_length(static_cast<uint32_t>(msg.size()) - 1, trackRawData);
 
-        for (size_t k = 1; k < msg.size(); k++)
-        {
-          trackRawData.emplace_back(msg[static_cast<int>(k)]);
-        }
+        trackRawData.insert(
+            trackRawData.end(), msg.bytes.data() + 1, msg.bytes.data() + msg.bytes.size());
       }
       else
       {
         // Non-sysex type of message, so just output the bytes of the message:
-        for (size_t k = 0; k < msg.size(); k++)
-        {
-          trackRawData.emplace_back(msg[static_cast<int>(k)]);
-        }
+        trackRawData.insert(
+            trackRawData.end(), msg.bytes.data(), msg.bytes.data() + msg.bytes.size());
       }
     }
 

@@ -44,3 +44,50 @@ TEST_CASE("write multiple tracks to file", "[midi_writer]")
     CHECK(message2.bytes[1] == 42);
   }
 }
+
+TEST_CASE("issue_54")
+{
+  // test out writer stuff.
+  if (std::ofstream of("x.mid", std::ios::binary); of.good())
+  {
+    libremidi::message meta;
+    libremidi::writer writer;
+
+    // this block seems to create an unreadable file in any of the many tools tested?
+    {
+      // standard 4/4 timing
+      meta = libremidi::meta_events::time_signature(4, 4);
+      writer.add_event(0, libremidi::track_event{0, 0, meta});
+      // 120 BPM as we know it Jim
+      meta = libremidi::meta_events::tempo(50000);
+      writer.add_event(0, libremidi::track_event{0, 0, meta});
+    }
+
+    // play middle C loudly
+    libremidi::message msg = libremidi::message::note_on(1, 60, 127);
+    writer.add_event(0, libremidi::track_event{0, 0, msg});
+    // off -why does it need velocity?
+    msg = libremidi::message::note_off(0, 60, 0);
+    writer.add_event(0, libremidi::track_event{500, 0, msg});
+
+    // does it need an end of track message?
+    // not according to the library code
+    meta = libremidi::meta_events::end_of_track();
+    writer.add_event(0, libremidi::track_event{0, 0, meta});
+
+    // write the content to file.
+    writer.write(of);
+  }
+
+  {
+    std::ifstream file{"x.mid", std::ios::binary};
+    std::vector<uint8_t> bytes;
+    bytes.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+
+    REQUIRE(bytes.size() > 0);
+    libremidi::reader reader;
+    libremidi::reader::parse_result result{};
+    REQUIRE_NOTHROW(result = reader.parse(bytes));
+    CHECK(result == libremidi::reader::validated);
+  }
+}
