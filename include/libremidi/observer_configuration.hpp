@@ -2,8 +2,8 @@
 #include <libremidi/config.hpp>
 #include <libremidi/error.hpp>
 
-#include <string>
 #include <compare>
+#include <string>
 
 namespace libremidi
 {

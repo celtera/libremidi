@@ -317,10 +317,7 @@ public:
     }
   }
 
-  ~midi_in_alsa_threaded()
-  {
-    this->close_port();
-  }
+  ~midi_in_alsa_threaded() { this->close_port(); }
 
 private:
   bool open_port(const port_information& pt, std::string_view local_port_name) override

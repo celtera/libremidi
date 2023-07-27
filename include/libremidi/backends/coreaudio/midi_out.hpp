@@ -20,11 +20,11 @@ public:
   midi_out_core(output_configuration&& conf, coremidi_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    if(auto result = init_client(configuration); result != noErr)
+    if (auto result = init_client(configuration); result != noErr)
     {
       error<driver_error>(
-          this->configuration, "midi_out_core: error creating MIDI client object: "
-                                   + std::to_string(result));
+          this->configuration,
+          "midi_out_core: error creating MIDI client object: " + std::to_string(result));
       return;
     }
   }
@@ -41,7 +41,7 @@ public:
 
   void close_client()
   {
-    if(!configuration.context)
+    if (!configuration.context)
       MIDIClientDispose(this->client);
   }
 
@@ -62,7 +62,7 @@ public:
 
     // Find where we want to send
     auto destination = locate_object(*this, info, kMIDIObjectType_Destination);
-    if(destination == 0)
+    if (destination == 0)
       return false;
 
     // Create our local source
@@ -147,19 +147,21 @@ public:
     const MIDITimeStamp timestamp = AudioGetCurrentHostTime();
 
     const ByteCount bufsize = nBytes > 65535 ? 65535 : nBytes;
-    Byte buffer[bufsize+16]; // pad for other struct members
-    ByteCount listSize = sizeof( buffer );
-    MIDIPacketList *packetList = (MIDIPacketList*)buffer;
+    Byte buffer[bufsize + 16]; // pad for other struct members
+    ByteCount listSize = sizeof(buffer);
+    MIDIPacketList* packetList = (MIDIPacketList*)buffer;
 
     ByteCount remainingBytes = nBytes;
-    while (remainingBytes) {
-      MIDIPacket *packet = MIDIPacketListInit( packetList );
+    while (remainingBytes)
+    {
+      MIDIPacket* packet = MIDIPacketListInit(packetList);
       // A MIDIPacketList can only contain a maximum of 64K of data, so if our message is longer,
       // break it up into chunks of 64K or less and send out as a MIDIPacketList with only one
       // MIDIPacket. Here, we reuse the memory allocated above on the stack for all.
       ByteCount bytesForPacket = remainingBytes > 65535 ? 65535 : remainingBytes;
-      const Byte* dataStartPtr = (const Byte *) &message[nBytes - remainingBytes];
-      packet = MIDIPacketListAdd( packetList, listSize, packet, timestamp, bytesForPacket, dataStartPtr );
+      const Byte* dataStartPtr = (const Byte*)&message[nBytes - remainingBytes];
+      packet = MIDIPacketListAdd(
+          packetList, listSize, packet, timestamp, bytesForPacket, dataStartPtr);
       remainingBytes -= bytesForPacket;
 
       if (!packet)

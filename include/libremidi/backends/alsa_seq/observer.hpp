@@ -19,7 +19,8 @@ public:
   {
   } configuration;
 
-  explicit observer_alsa(observer_configuration&& conf, alsa_sequencer_observer_configuration&& apiconf)
+  explicit observer_alsa(
+      observer_configuration&& conf, alsa_sequencer_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     using namespace std::literals;

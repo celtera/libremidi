@@ -18,7 +18,8 @@ public:
   {
   } configuration;
 
-  explicit observer_emscripten(observer_configuration&& conf, emscripten_observer_configuration&& apiconf);
+  explicit observer_emscripten(
+      observer_configuration&& conf, emscripten_observer_configuration&& apiconf);
   ~observer_emscripten();
 
   void

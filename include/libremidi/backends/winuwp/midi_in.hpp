@@ -58,7 +58,7 @@ public:
 
     port_ = get(MidiInPort::FromIdAsync(id));
     if (!port_)
-        return false;
+      return false;
     port_.MessageReceived(
         [=](const winrt::Windows::Devices::Midi::IMidiInPort& inputPort,
             const winrt::Windows::Devices::Midi::MidiMessageReceivedEventArgs& args) {
@@ -83,7 +83,6 @@ public:
     if (port_)
       port_.Close();
   }
-
 
 private:
   winrt::Windows::Devices::Midi::IMidiInPort port_{nullptr};

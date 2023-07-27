@@ -47,7 +47,7 @@ public:
     const auto id = winrt::to_hstring(port.port_name);
     if (id.empty())
       return false;
-    
+
     port_ = get(MidiOutPort::FromIdAsync(id));
     return bool(port_);
   }

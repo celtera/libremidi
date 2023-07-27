@@ -132,7 +132,7 @@ try
     return ports.front();
   return std::nullopt;
 }
-catch(const std::exception& e) 
+catch (const std::exception& e)
 {
   return std::nullopt;
 }

@@ -2,6 +2,7 @@
 #include <libremidi/libremidi.hpp>
 
 #include <CoreMIDI/CoreMIDI.h>
+
 #include <chrono>
 #include <thread>
 
@@ -24,17 +25,15 @@ struct my_app
       throw std::runtime_error("Could not start CoreMIDI");
 
     // Create our configuration
-    auto api_input_config = libremidi::coremidi_input_configuration{
-                                                                    .context = handle};
-    auto api_output_config = libremidi::coremidi_output_configuration{
-                                                                      .context = handle};
+    auto api_input_config = libremidi::coremidi_input_configuration{.context = handle};
+    auto api_output_config = libremidi::coremidi_output_configuration{.context = handle};
 
     // Create 16 inputs and 16 outputs
     for (int i = 0; i < 16; i++)
     {
       midiin.emplace_back(
           libremidi::input_configuration{
-                                         .on_message = [=](const libremidi::message& msg) { callback(i, msg); }},
+              .on_message = [=](const libremidi::message& msg) { callback(i, msg); }},
           api_input_config);
       midiin[i].open_virtual_port("Input: " + std::to_string(i));
 
@@ -43,10 +42,7 @@ struct my_app
     }
   }
 
-  ~my_app()
-  {
-    MIDIClientDispose(handle);
-  }
+  ~my_app() { MIDIClientDispose(handle); }
 };
 
 int main()

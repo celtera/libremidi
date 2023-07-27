@@ -10,9 +10,7 @@ namespace libremidi
 class observer_dummy : public observer_api
 {
 public:
-  explicit observer_dummy(const observer_configuration& configuration, dummy_configuration)
-  {
-  }
+  explicit observer_dummy(const observer_configuration& configuration, dummy_configuration) { }
 
   ~observer_dummy() { }
   libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }

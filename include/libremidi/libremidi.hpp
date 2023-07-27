@@ -91,9 +91,11 @@ LIBREMIDI_EXPORT
 std::any observer_default_configuration();
 
 LIBREMIDI_EXPORT
-std::optional<port_information> midi_in_default_port(libremidi::API api = libremidi::default_platform_api()) noexcept;
+std::optional<port_information>
+midi_in_default_port(libremidi::API api = libremidi::default_platform_api()) noexcept;
 LIBREMIDI_EXPORT
-std::optional<port_information> midi_out_default_port(libremidi::API api = libremidi::default_platform_api()) noexcept;
+std::optional<port_information>
+midi_out_default_port(libremidi::API api = libremidi::default_platform_api()) noexcept;
 
 //! The callbacks will be called whenever a device is added or removed
 //! for a given API.

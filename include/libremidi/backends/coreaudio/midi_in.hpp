@@ -20,11 +20,11 @@ public:
   midi_in_core(input_configuration&& conf, coremidi_input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    if(auto result = init_client(configuration); result != noErr)
+    if (auto result = init_client(configuration); result != noErr)
     {
       error<driver_error>(
-          this->configuration, "midi_in_core: error creating MIDI client object: "
-                                   + std::to_string(result));
+          this->configuration,
+          "midi_in_core: error creating MIDI client object: " + std::to_string(result));
       return;
     }
   }
@@ -34,7 +34,7 @@ public:
     // Close a connection if it exists.
     midi_in_core::close_port();
 
-    if(this->endpoint)
+    if (this->endpoint)
       MIDIEndpointDispose(this->endpoint);
 
     close_client();
@@ -42,7 +42,7 @@ public:
 
   void close_client()
   {
-    if(!configuration.context)
+    if (!configuration.context)
       MIDIClientDispose(this->client);
   }
 
@@ -57,13 +57,12 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::MACOSX_CORE; }
 
-
   bool open_port(const port_information& info, std::string_view portName) override
   {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
 
     auto source = locate_object(*this, info, kMIDIObjectType_Source);
-    if(source == 0)
+    if (source == 0)
       return false;
 
     // Create our local sink
@@ -75,7 +74,8 @@ public:
     {
       close_client();
       error<driver_error>(
-          this->configuration, "midi_in_core::open_port: error creating OS-X MIDI input port: " + std::to_string(result));
+          this->configuration, "midi_in_core::open_port: error creating OS-X MIDI input port: "
+                                   + std::to_string(result));
       return false;
     }
 

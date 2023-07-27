@@ -54,7 +54,8 @@ public:
   {
   } configuration;
 
-  explicit observer_alsa_raw(observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
+  explicit observer_alsa_raw(
+      observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     // Set-up initial state

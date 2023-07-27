@@ -40,7 +40,7 @@ static inline int32_t get_int_property(MIDIObjectRef object, CFStringRef propert
 
 static inline CFString_handle toCFString(std::string_view str) noexcept
 {
-  return CFString_handle{CFStringCreateWithCString(nullptr, str.data(), kCFStringEncodingASCII) };
+  return CFString_handle{CFStringCreateWithCString(nullptr, str.data(), kCFStringEncodingASCII)};
 }
 
 #if TARGET_OS_IPHONE
@@ -69,14 +69,15 @@ inline CFStringRef EndpointName(MIDIEndpointRef endpoint, bool isExternal)
 {
   CFMutableStringRef result = CFStringCreateMutable(nullptr, 0);
 
-  static constexpr auto getProp = [] (MIDIObjectRef prop) {
+  static constexpr auto getProp = [](MIDIObjectRef prop) {
     CFStringRef str = nullptr;
     MIDIObjectGetStringProperty(prop, kMIDIPropertyName, &str);
     return CFString_handle{str};
   };
 
   // Begin with the endpoint's name.
-  if(auto endpoint_name = getProp(endpoint)) {
+  if (auto endpoint_name = getProp(endpoint))
+  {
     CFStringAppend(result, endpoint_name.get());
   }
 
@@ -92,7 +93,8 @@ inline CFStringRef EndpointName(MIDIEndpointRef endpoint, bool isExternal)
   if (CFStringGetLength(result) == 0)
   {
     // endpoint name has zero length -- try the entity
-    if(auto entity_name = getProp(entity)) {
+    if (auto entity_name = getProp(entity))
+    {
       CFStringAppend(result, entity_name.get());
     }
   }
@@ -108,7 +110,8 @@ inline CFStringRef EndpointName(MIDIEndpointRef endpoint, bool isExternal)
 
     // if an external device has only one entity, throw away
     // the endpoint name and just use the device name
-    if (CFStringGetLength(result) == 0 || (isExternal && MIDIDeviceGetNumberOfEntities(device) < 2))
+    if (CFStringGetLength(result) == 0
+        || (isExternal && MIDIDeviceGetNumberOfEntities(device) < 2))
     {
       CFStringAppend(result, dev_name.get());
       goto finish;
@@ -117,8 +120,7 @@ inline CFStringRef EndpointName(MIDIEndpointRef endpoint, bool isExternal)
     // does the entity name already start with the device name?
     // (some drivers do this though they shouldn't)
     // if so, do not prepend
-    if (CFStringCompareWithOptions(
-            result, dev_name.get(), CFRangeMake(0, dev_strlen), 0)
+    if (CFStringCompareWithOptions(result, dev_name.get(), CFRangeMake(0, dev_strlen), 0)
         != kCFCompareEqualTo)
     {
       // prepend the device name to the entity name
@@ -128,8 +130,8 @@ inline CFStringRef EndpointName(MIDIEndpointRef endpoint, bool isExternal)
     }
   }
 
-  finish:
-  if(CFStringGetLength(result) == 0)
+finish:
+  if (CFStringGetLength(result) == 0)
     return CFSTR("No name");
   else
     return result;
@@ -199,26 +201,24 @@ inline CFStringRef ConnectedEndpointName(MIDIEndpointRef endpoint)
   return EndpointName(endpoint, false);
 }
 
-inline
-MIDIObjectRef locate_object(auto& self, const port_information& info, MIDIObjectType requested_type)
+inline MIDIObjectRef
+locate_object(auto& self, const port_information& info, MIDIObjectType requested_type)
 {
   auto uid = std::bit_cast<std::int32_t>((uint32_t)info.port);
   MIDIObjectRef object{};
   MIDIObjectType type{};
   auto ret = MIDIObjectFindByUniqueID(uid, &object, &type);
-  if(ret != noErr)
+  if (ret != noErr)
   {
     self.template error<invalid_parameter_error>(
-        self.configuration,
-        "midi_in_core::open_port: cannot find port: " + info.port_name);
+        self.configuration, "midi_in_core::open_port: cannot find port: " + info.port_name);
     return 0;
   }
 
-  if(type != requested_type || object == 0)
+  if (type != requested_type || object == 0)
   {
     self.template error<invalid_parameter_error>(
-        self.configuration,
-        "midi_in_core::open_port: invalid source: " + info.port_name);
+        self.configuration, "midi_in_core::open_port: invalid source: " + info.port_name);
     return 0;
   }
 
@@ -234,10 +234,9 @@ struct coremidi_data
   MIDIPortRef port{};
   MIDIEndpointRef endpoint = 0;
 
-  [[nodiscard]]
-  OSStatus init_client(auto& configuration)
+  [[nodiscard]] OSStatus init_client(auto& configuration)
   {
-    if(configuration.context)
+    if (configuration.context)
     {
       client = *configuration.context;
       return noErr;
@@ -245,7 +244,8 @@ struct coremidi_data
     else
     {
       // Set up our client.
-      return MIDIClientCreate(toCFString(configuration.client_name).get(), nullptr, nullptr, &client);
+      return MIDIClientCreate(
+          toCFString(configuration.client_name).get(), nullptr, nullptr, &client);
     }
   }
 };

@@ -33,7 +33,7 @@ try
       for (auto& port : ports)
         std::cout << " - " << port << '\n';
     }
-  
+
     {
       // Check outputs.
       auto ports = midi.get_output_ports();

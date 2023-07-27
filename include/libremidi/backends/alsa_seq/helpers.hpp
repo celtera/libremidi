@@ -109,7 +109,7 @@ inline std::string port_name(snd_seq_t* seq, snd_seq_port_info_t* pinfo)
   str += " "; // These lines added to make sure devices are listed
   str += std::to_string(
       snd_seq_port_info_get_client(pinfo)); // with full portnames added to ensure individual
-      // device names
+                                            // device names
   str += ":";
   str += std::to_string(snd_seq_port_info_get_port(pinfo));
   return str;

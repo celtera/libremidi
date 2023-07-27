@@ -21,7 +21,7 @@ public:
   explicit observer_core(observer_configuration&& conf, coremidi_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    if(configuration.client_name.empty())
+    if (configuration.client_name.empty())
       configuration.client_name = "libremidi observer";
 
     if (!configuration.has_callbacks())
@@ -29,33 +29,31 @@ public:
 
     auto result = MIDIClientCreate(
         toCFString(configuration.client_name).get(),
-        +[] (const MIDINotification* message, void* ctx) { ((observer_core*)ctx)->notify(message); },
-        this,
-        &client);
+        +[](const MIDINotification* message, void* ctx) {
+          ((observer_core*)ctx)->notify(message);
+        },
+        this, &client);
 
-    if(result != noErr)
+    if (result != noErr)
     {
       error<driver_error>(
-          this->configuration, "midi_in_core: error creating MIDI client object: "
-                                   + std::to_string(result));
+          this->configuration,
+          "midi_in_core: error creating MIDI client object: " + std::to_string(result));
       return;
     }
 
-    if(configuration.on_create_context)
+    if (configuration.on_create_context)
       configuration.on_create_context(client);
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::MACOSX_CORE;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::MACOSX_CORE; }
 
   std::vector<libremidi::port_information> get_input_ports() const noexcept override
   {
     std::vector<libremidi::port_information> ret;
 
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-    for(ItemCount i = 0; i < MIDIGetNumberOfSources(); i++)
+    for (ItemCount i = 0; i < MIDIGetNumberOfSources(); i++)
     {
       ret.push_back(to_port_info(MIDIGetSource(i)));
     }
@@ -68,7 +66,7 @@ public:
     std::vector<libremidi::port_information> ret;
 
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-    for(ItemCount i = 0; i < MIDIGetNumberOfDestinations(); i++)
+    for (ItemCount i = 0; i < MIDIGetNumberOfDestinations(); i++)
     {
       ret.push_back(to_port_info(MIDIGetDestination(i)));
     }
@@ -78,32 +76,29 @@ public:
   port_information to_port_info(MIDIObjectRef obj) const noexcept
   {
     return {
-              .client = (std::uintptr_t) this->client,
-              .port = std::bit_cast<uint32_t>(get_int_property(obj, kMIDIPropertyUniqueID)),
-              .manufacturer = get_string_property(obj, kMIDIPropertyManufacturer),
-              .device_name = get_string_property(obj, kMIDIPropertyModel),
-              .port_name = get_string_property(obj, kMIDIPropertyName),
-              .display_name = get_string_property(obj, kMIDIPropertyDisplayName)
-    };
-
+        .client = (std::uintptr_t)this->client,
+        .port = std::bit_cast<uint32_t>(get_int_property(obj, kMIDIPropertyUniqueID)),
+        .manufacturer = get_string_property(obj, kMIDIPropertyManufacturer),
+        .device_name = get_string_property(obj, kMIDIPropertyModel),
+        .port_name = get_string_property(obj, kMIDIPropertyName),
+        .display_name = get_string_property(obj, kMIDIPropertyDisplayName)};
   }
 
   void notify(const MIDINotification* message)
   {
-    switch(message->messageID)
+    switch (message->messageID)
     {
-      case kMIDIMsgObjectAdded:
-      {
+      case kMIDIMsgObjectAdded: {
         auto obj = reinterpret_cast<const MIDIObjectAddRemoveNotification*>(message);
 
-        switch(obj->childType)
+        switch (obj->childType)
         {
           case kMIDIObjectType_Source:
-            if(auto& cb = configuration.input_added)
+            if (auto& cb = configuration.input_added)
               cb(to_port_info(obj->child));
             break;
           case kMIDIObjectType_Destination:
-            if(auto& cb = configuration.output_added)
+            if (auto& cb = configuration.output_added)
               cb(to_port_info(obj->child));
             break;
           default:
@@ -113,18 +108,17 @@ public:
         break;
       }
 
-      case kMIDIMsgObjectRemoved:
-      {
+      case kMIDIMsgObjectRemoved: {
         auto obj = reinterpret_cast<const MIDIObjectAddRemoveNotification*>(message);
 
-        switch(obj->childType)
+        switch (obj->childType)
         {
           case kMIDIObjectType_Source:
-            if(auto& cb = configuration.input_removed)
+            if (auto& cb = configuration.input_removed)
               cb(to_port_info(obj->child));
             break;
           case kMIDIObjectType_Destination:
-            if(auto& cb = configuration.output_removed)
+            if (auto& cb = configuration.output_removed)
               cb(to_port_info(obj->child));
             break;
           default:

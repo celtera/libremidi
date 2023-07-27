@@ -17,24 +17,26 @@ public:
     int token{};
     std::function<void(const port_info&)> function;
   };
-  struct callbacks 
+  struct callbacks
   {
     std::vector<callback> cbs;
     int current_token{};
-    void operator()(const port_info& p) 
+    void operator()(const port_info& p)
     {
-        for (auto& cb : cbs) cb.function(p);
+      for (auto& cb : cbs)
+        cb.function(p);
     }
 
-    int add(std::function<void(const port_info&)> f) {
+    int add(std::function<void(const port_info&)> f)
+    {
       int tk = current_token++;
       cbs.emplace_back(tk, f);
       return tk;
     }
-    void remove(int tk) {
-      auto it = std::remove_if(cbs.begin(), cbs.end(),
-         [tk](const callback& c) { return c.token == tk; }
-      );
+    void remove(int tk)
+    {
+      auto it = std::remove_if(
+          cbs.begin(), cbs.end(), [tk](const callback& c) { return c.token == tk; });
       auto r = std::distance(it, cbs.end());
       cbs.erase(it, cbs.end());
     }
@@ -76,7 +78,7 @@ public:
     return portNumber < portList_.size() ? to_string(portList_[portNumber].name) : std::string{};
   }
 
-  int PortAdded(const std::function<void(port_info)> & handler)
+  int PortAdded(const std::function<void(port_info)>& handler)
   {
     return portAddedEvent_.add(handler);
   }
@@ -125,7 +127,7 @@ private:
     port_info p;
     {
       std::lock_guard<std::mutex> lock(portListMutex_);
-      p = port_info{ deviceInfo.Id(), deviceInfo.Name() };
+      p = port_info{deviceInfo.Id(), deviceInfo.Name()};
       portList_.push_back(p);
     }
     portAddedEvent_(p);
@@ -182,7 +184,7 @@ public:
       : configuration{std::move(conf), std::move(apiconf)}
   {
     if (configuration.input_added)
-      for(const auto& p : get_input_ports())
+      for (const auto& p : get_input_ports())
         configuration.input_added(p);
     if (configuration.output_added)
       for (const auto& p : get_output_ports())
@@ -192,13 +194,13 @@ public:
       return;
 
     evTokenOnInputAdded_
-        = internalInPortObserver_.PortAdded([this] (const port_info & p) { on_input_added(p); });
+        = internalInPortObserver_.PortAdded([this](const port_info& p) { on_input_added(p); });
     evTokenOnInputRemoved_
         = internalInPortObserver_.PortRemoved([this](const port_info& p) { on_input_removed(p); });
     evTokenOnOutputAdded_
         = internalOutPortObserver_.PortAdded([this](const port_info& p) { on_output_added(p); });
-    evTokenOnOutputRemoved_
-        = internalOutPortObserver_.PortRemoved([this](const port_info& p) { on_output_removed(p); });
+    evTokenOnOutputRemoved_ = internalOutPortObserver_.PortRemoved(
+        [this](const port_info& p) { on_output_removed(p); });
   }
 
   ~observer_winuwp()
@@ -213,21 +215,22 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 
-  port_information to_port_info(const observer_winuwp_internal::port_info& p) const noexcept {
-      return {
+  port_information to_port_info(const observer_winuwp_internal::port_info& p) const noexcept
+  {
+    return {
         .client = 0,
         .port = 0,
         .manufacturer = "",
         .device_name = "",
         .port_name = to_string(p.id),
-        .display_name = to_string(p.name) };
+        .display_name = to_string(p.name)};
   }
 
   std::vector<libremidi::port_information> get_input_ports() const noexcept override
   {
     std::vector<libremidi::port_information> ret;
-    for(auto& port : internalInPortObserver_.get_ports())
-        ret.push_back(to_port_info( port));
+    for (auto& port : internalInPortObserver_.get_ports())
+      ret.push_back(to_port_info(port));
     return ret;
   }
 
@@ -235,7 +238,7 @@ public:
   {
     std::vector<libremidi::port_information> ret;
     for (auto& port : internalOutPortObserver_.get_ports())
-        ret.push_back(to_port_info(port));
+      ret.push_back(to_port_info(port));
     return ret;
   }
 
@@ -248,7 +251,6 @@ public:
   {
     return internalOutPortObserver_;
   }
-
 
   void on_input_added(const observer_winuwp_internal::port_info& name)
   {
@@ -276,12 +278,13 @@ public:
 
 private:
   static inline observer_winuwp_internal internalInPortObserver_{MidiInPort::GetDeviceSelector()};
-  static inline observer_winuwp_internal internalOutPortObserver_{MidiOutPort::GetDeviceSelector()};
+  static inline observer_winuwp_internal internalOutPortObserver_{
+      MidiOutPort::GetDeviceSelector()};
 
   int evTokenOnInputAdded_{-1};
-  int evTokenOnInputRemoved_{ -1 };
-  int evTokenOnOutputAdded_{ -1 };
-  int evTokenOnOutputRemoved_{ -1 };
+  int evTokenOnInputRemoved_{-1};
+  int evTokenOnOutputAdded_{-1};
+  int evTokenOnOutputRemoved_{-1};
 };
 
 }

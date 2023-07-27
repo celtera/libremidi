@@ -4,7 +4,8 @@
 
 namespace libremidi
 {
-LIBREMIDI_INLINE observer_emscripten::observer_emscripten(observer_configuration&& conf, emscripten_observer_configuration&& apiconf)
+LIBREMIDI_INLINE observer_emscripten::observer_emscripten(
+    observer_configuration&& conf, emscripten_observer_configuration&& apiconf)
     : configuration{std::move(conf), std::move(apiconf)}
 {
   if (!configuration.has_callbacks())

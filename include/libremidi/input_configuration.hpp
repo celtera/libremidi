@@ -1,11 +1,10 @@
 #pragma once
 #include <libremidi/config.hpp>
-
-#include <libremidi/message.hpp>
 #include <libremidi/error.hpp>
+#include <libremidi/message.hpp>
 
-#include <string>
 #include <functional>
+#include <string>
 
 namespace libremidi
 {

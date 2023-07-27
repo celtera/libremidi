@@ -5,9 +5,9 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <ranges>
 #include <stop_token>
 #include <thread>
-#include <ranges>
 
 namespace libremidi
 {
@@ -43,12 +43,12 @@ public:
 
   std::vector<port_information> get_input_ports() const noexcept override
   {
-      return get_port_list(INPUT);
+    return get_port_list(INPUT);
   }
 
   std::vector<port_information> get_output_ports() const noexcept override
   {
-      return get_port_list(OUTPUT);
+    return get_port_list(OUTPUT);
   }
 
 private:
@@ -75,7 +75,8 @@ private:
     {
       for (const auto& port : currList)
       {
-        auto iter = std::ranges::find(prevList, port.display_name, &port_information::display_name);
+        auto iter
+            = std::ranges::find(prevList, port.display_name, &port_information::display_name);
         if (iter == prevList.end())
           portAddedFunc(port);
       }
@@ -85,7 +86,8 @@ private:
     {
       for (const auto port : prevList)
       {
-        auto iter = std::ranges::find(currList, port.display_name, &port_information::display_name);
+        auto iter
+            = std::ranges::find(currList, port.display_name, &port_information::display_name);
         if (iter == currList.end())
           portRemovedFunc(port);
       }
@@ -101,12 +103,12 @@ private:
     auto portName = rawName;
     MakeUniqueInPortName(portName, index);
     return port_information{
-          .client = 0,
-          .port = index,
-          .manufacturer = "",
-          .device_name = "",
-          .port_name = rawName,
-          .display_name = portName };
+        .client = 0,
+        .port = index,
+        .manufacturer = "",
+        .device_name = "",
+        .port_name = rawName,
+        .display_name = portName};
   }
 
   port_information to_out_port_info(std::size_t index) const noexcept
@@ -118,12 +120,12 @@ private:
     auto portName = rawName;
     MakeUniqueOutPortName(portName, index);
     return port_information{
-          .client = 0,
-          .port = index,
-          .manufacturer = "",
-          .device_name = "",
-          .port_name = rawName,
-          .display_name = portName };
+        .client = 0,
+        .port = index,
+        .manufacturer = "",
+        .device_name = "",
+        .port_name = rawName,
+        .display_name = portName};
   }
 
   std::vector<port_information> get_port_list(bool input) const noexcept

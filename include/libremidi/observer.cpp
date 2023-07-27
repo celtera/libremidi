@@ -44,7 +44,7 @@ LIBREMIDI_INLINE observer::observer(observer_configuration base_conf) noexcept
 LIBREMIDI_INLINE observer::observer(observer_configuration base_conf, std::any api_conf)
     : impl_{make_observer(base_conf, api_conf)}
 {
-  if(!impl_)
+  if (!impl_)
     throw midi_exception("Could not open observer for the given API");
 }
 

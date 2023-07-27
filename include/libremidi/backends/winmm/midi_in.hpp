@@ -124,18 +124,20 @@ public:
 
   bool open_port(const port_information& p, std::string_view) override
   {
-    observer_winmm obs{ {}, winmm_observer_configuration{} };
+    observer_winmm obs{{}, winmm_observer_configuration{}};
     auto ports = obs.get_input_ports();
 
     // First check with the display name, e.g. MIDI KEYBOARD 2 will match MIDI KEYBOARD 2
-    for(auto& port : ports) {
-        if(p.display_name == port.display_name)
-          return do_open(port.port);
+    for (auto& port : ports)
+    {
+      if (p.display_name == port.display_name)
+        return do_open(port.port);
     }
     // If nothing is found, try to check with the raw name
-    for (auto& port : ports) {
-        if (p.port_name == port.port_name)
-            return do_open(port.port);
+    for (auto& port : ports)
+    {
+      if (p.port_name == port.port_name)
+        return do_open(port.port);
     }
     error<invalid_parameter_error>(
         configuration, "midi_in_winmm::open_port: port not found: " + p.port_name);
@@ -195,7 +197,7 @@ private:
       case input_configuration::Relative: {
         const auto time = ts * 1'000'000 - last_time;
 
-        last_time = ts * 1'000'000 ;
+        last_time = ts * 1'000'000;
 
         if (firstMessage == true)
         {

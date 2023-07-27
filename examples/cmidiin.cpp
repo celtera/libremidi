@@ -28,10 +28,7 @@ try
 {
   libremidi::midi_in midiin{{
       // Set our callback function.
-      .on_message
-      = [](const libremidi::message& message) {
-    std::cout << message << std::endl;
-      },
+      .on_message = [](const libremidi::message& message) { std::cout << message << std::endl; },
 
       // Don't ignore sysex, timing, or active sensing messages.
       .ignore_sysex = false,

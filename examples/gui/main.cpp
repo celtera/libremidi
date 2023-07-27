@@ -1,11 +1,12 @@
-#include <QApplication>
-#include <QWidget>
-#include <QSplitter>
-#include <QMessageBox>
-#include <QListWidget>
-#include <QHBoxLayout>
-#include <libremidi/libremidi.hpp>
 #include <libremidi/configurations.hpp>
+#include <libremidi/libremidi.hpp>
+
+#include <QApplication>
+#include <QHBoxLayout>
+#include <QListWidget>
+#include <QMessageBox>
+#include <QSplitter>
+#include <QWidget>
 
 Q_DECLARE_METATYPE(libremidi::port_information);
 
@@ -31,34 +32,37 @@ int main(int argc, char** argv)
 
   // Define the observer callbacks which will fill the list widgets with the input & output devices
   observer_configuration conf{
-      .input_added = [&] (const port_information& p) {
-        auto item = new QListWidgetItem{QString::fromStdString(p.display_name)};
-        item->setData(Qt::UserRole, QVariant::fromValue(p));
-        input_items[p] = item;
+      .input_added =
+          [&](const port_information& p) {
+    auto item = new QListWidgetItem{QString::fromStdString(p.display_name)};
+    item->setData(Qt::UserRole, QVariant::fromValue(p));
+    input_items[p] = item;
 
-        inputs.addItem(item);
-      }
-      , .input_removed = [&] (const port_information& p) {
-        if(auto it = input_items.find(p); it != input_items.end())
-        {
-          inputs.removeItemWidget(it->second);
-          input_items.erase(it);
-        }
-      }
-      , .output_added = [&] (const port_information& p) {
-        auto item = new QListWidgetItem{QString::fromStdString(p.display_name)};
-        item->setData(Qt::UserRole, QVariant::fromValue(p));
-        output_items[p] = item;
+    inputs.addItem(item);
+      },
+      .input_removed =
+          [&](const port_information& p) {
+    if (auto it = input_items.find(p); it != input_items.end())
+    {
+      inputs.removeItemWidget(it->second);
+      input_items.erase(it);
+    }
+      },
+      .output_added
+      = [&](const port_information& p) {
+    auto item = new QListWidgetItem{QString::fromStdString(p.display_name)};
+    item->setData(Qt::UserRole, QVariant::fromValue(p));
+    output_items[p] = item;
 
-        outputs.addItem(item);
-      }
-      , .output_removed = [&] (const port_information& p) {
-        if(auto it = output_items.find(p); it != output_items.end())
+    outputs.addItem(item);
+      },
+      .output_removed = [&](const port_information& p) {
+        if (auto it = output_items.find(p); it != output_items.end())
         {
           outputs.removeItemWidget(it->second);
           output_items.erase(it);
-        } }
-  };
+        }
+      }};
 
   // Create the libremidi structures
   observer obs{conf, observer_api};
@@ -73,17 +77,18 @@ int main(int argc, char** argv)
       msg += QString::number(m.bytes.size());
       msg += ": ";
 
-      for(auto byte : m.bytes)
+      for (auto byte : m.bytes)
       {
         msg += QString::number(byte, 16);
         msg += ' ';
       }
       messages.addItem(msg);
-      if(messages.count() > 10)
+      if (messages.count() > 10)
         delete messages.takeItem(0);
 
       // Forward to the output port
-      if(out.is_port_open()) {
+      if (out.is_port_open())
+      {
         out.send_message(m);
       }
     });
@@ -92,36 +97,47 @@ int main(int argc, char** argv)
   libremidi::midi_in in{{.on_message = input_callback}, in_api};
 
   // Connect gui changes to port changes
-  QObject::connect(&inputs, &QListWidget::currentItemChanged, [&] (QListWidgetItem* selected, QListWidgetItem*){
-    in.close_port();
-    for(auto& [port, item] : input_items)
-    {
-      if(item == selected)
-      {
-        in.open_port(port);
-        if(!in.is_port_open())
+  QObject::connect(
+      &inputs, &QListWidget::currentItemChanged, [&](QListWidgetItem* selected, QListWidgetItem*) {
+        in.close_port();
+        for (auto& [port, item] : input_items)
         {
-          QMessageBox::warning(&main, QString("Error !"), QString("Could not connect to input:\n%1\n%2").arg(port.display_name.c_str()).arg(port.port_name.c_str()));
+          if (item == selected)
+          {
+            in.open_port(port);
+            if (!in.is_port_open())
+            {
+              QMessageBox::warning(
+                  &main, QString("Error !"),
+                  QString("Could not connect to input:\n%1\n%2")
+                      .arg(port.display_name.c_str())
+                      .arg(port.port_name.c_str()));
+            }
+            return;
+          }
         }
-        return;
-      }
-    }
-  });
+      });
 
-  QObject::connect(&outputs, &QListWidget::currentItemChanged, [&] (QListWidgetItem* selected, QListWidgetItem*){
+  QObject::connect(
+      &outputs, &QListWidget::currentItemChanged,
+      [&](QListWidgetItem* selected, QListWidgetItem*) {
     out.close_port();
-    for(auto& [port, item] : output_items)
+    for (auto& [port, item] : output_items)
     {
-      if(item == selected)
+      if (item == selected)
       {
         out.open_port(port);
-        if(!out.is_port_open())
+        if (!out.is_port_open())
         {
-          QMessageBox::warning(&main, QString("Error !"), QString("Could not connect to output:\n%1\n%2").arg(port.display_name.c_str()).arg(port.port_name.c_str()));
+          QMessageBox::warning(
+              &main, QString("Error !"),
+              QString("Could not connect to output:\n%1\n%2")
+                  .arg(port.display_name.c_str())
+                  .arg(port.port_name.c_str()));
         }
         return;
       }
     }
-  });
+      });
   return app.exec();
 }
