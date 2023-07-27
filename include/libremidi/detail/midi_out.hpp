@@ -18,6 +18,12 @@ public:
   midi_out_api& operator=(midi_out_api&&) = delete;
 
   virtual void send_message(const unsigned char* message, size_t size) = 0;
+
+  virtual int64_t current_time() const noexcept { return 0; }
+  virtual void schedule_message(int64_t ts, const unsigned char* message, size_t size)
+  {
+    return send_message(message, size);
+  }
 };
 
 template <typename T, typename Arg>

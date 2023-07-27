@@ -70,10 +70,10 @@ LIBREMIDI_INLINE void midi_in_emscripten::set_timestamp(double ts, libremidi::me
 {
   switch (configuration.timestamps)
   {
-    case input_configuration::NoTimestamp:
+    case timestamp_mode::NoTimestamp:
       m.timestamp = 0;
       break;
-    case input_configuration::Relative: {
+    case timestamp_mode::Relative: {
       if (firstMessage == true)
       {
         firstMessage = false;
@@ -86,8 +86,8 @@ LIBREMIDI_INLINE void midi_in_emscripten::set_timestamp(double ts, libremidi::me
       last_time_ = ts;
       break;
     }
-    case input_configuration::Absolute:
-    case input_configuration::SystemMonotonic:
+    case timestamp_mode::Absolute:
+    case timestamp_mode::SystemMonotonic:
       m.timestamp = ts * 1e6;
       break;
   }

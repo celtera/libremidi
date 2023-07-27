@@ -86,10 +86,10 @@ private:
   {
     switch (configuration.timestamps)
     {
-      case input_configuration::NoTimestamp:
+      case timestamp_mode::NoTimestamp:
         msg.timestamp = 0;
         return;
-      case input_configuration::Relative: {
+      case timestamp_mode::Relative: {
         // FIXME continueSysex logic like in core_midi?
         // time_ns is roughly in CLOCK_MONOTONIC time frame (at least on linux)
         const auto time_ns = 1000 * jack_frames_to_time(client, frame + start_frames);
@@ -106,11 +106,11 @@ private:
         last_time = time_ns;
         return;
       }
-      case input_configuration::Absolute: {
+      case timestamp_mode::Absolute: {
         msg.timestamp = 1000 * jack_frames_to_time(client, frame + start_frames);
         break;
       }
-      case input_configuration::SystemMonotonic: {
+      case timestamp_mode::SystemMonotonic: {
         namespace clk = std::chrono;
         msg.timestamp
             = clk::duration_cast<clk::nanoseconds>(clk::steady_clock::now().time_since_epoch())

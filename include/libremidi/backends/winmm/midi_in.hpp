@@ -191,10 +191,10 @@ private:
   {
     switch (configuration.timestamps)
     {
-      case input_configuration::NoTimestamp:
+      case timestamp_mode::NoTimestamp:
         msg.timestamp = 0;
         return;
-      case input_configuration::Relative: {
+      case timestamp_mode::Relative: {
         const auto time = ts * 1'000'000 - last_time;
 
         last_time = ts * 1'000'000;
@@ -210,11 +210,11 @@ private:
         }
         return;
       }
-      case input_configuration::Absolute: {
+      case timestamp_mode::Absolute: {
         msg.timestamp = ts * 1'000'000;
         break;
       }
-      case input_configuration::SystemMonotonic: {
+      case timestamp_mode::SystemMonotonic: {
         namespace clk = std::chrono;
         msg.timestamp
             = clk::duration_cast<clk::nanoseconds>(clk::steady_clock::now().time_since_epoch())

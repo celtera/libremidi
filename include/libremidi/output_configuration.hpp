@@ -1,6 +1,7 @@
 #pragma once
 #include <libremidi/config.hpp>
 #include <libremidi/error.hpp>
+#include <libremidi/input_configuration.hpp>
 
 #include <string>
 
@@ -15,5 +16,8 @@ struct output_configuration
   */
   midi_error_callback on_error{};
   midi_error_callback on_warning{};
+
+  //! Timestamp mode for the timestamps passed to schedule_message
+  uint32_t timestamps : 2 = timestamp_mode::Absolute;
 };
 }

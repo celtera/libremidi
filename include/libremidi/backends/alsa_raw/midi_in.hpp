@@ -68,7 +68,7 @@ public:
     if (int err = snd_rawmidi_params_set_no_active_sensing(midiport_, params, 1); err < 0)
       return err;
 
-    if (configuration.timestamps == input_configuration::NoTimestamp)
+    if (configuration.timestamps == timestamp_mode::NoTimestamp)
     {
       if (int err = snd_rawmidi_params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_STANDARD);
           err < 0)
@@ -157,9 +157,9 @@ public:
     switch (configuration.timestamps)
     {
       // Unneeded here
-      case input_configuration::NoTimestamp:
+      case timestamp_mode::NoTimestamp:
         break;
-      case input_configuration::Relative: {
+      case timestamp_mode::Relative: {
         auto t = int64_t(ts.tv_sec) * nanos + int64_t(ts.tv_nsec);
         if (firstMessage == true)
         {
@@ -173,8 +173,8 @@ public:
         last_time = t;
         break;
       }
-      case input_configuration::Absolute:
-      case input_configuration::SystemMonotonic:
+      case timestamp_mode::Absolute:
+      case timestamp_mode::SystemMonotonic:
         res = int64_t(ts.tv_sec) * nanos + int64_t(ts.tv_nsec);
         break;
     }
@@ -266,7 +266,7 @@ private:
   {
     try
     {
-      if (configuration.timestamps == input_configuration::NoTimestamp)
+      if (configuration.timestamps == timestamp_mode::NoTimestamp)
       {
         this->thread_ = std::thread{[this] { run_thread(&midi_in_raw_alsa::read_input_buffer); }};
       }
@@ -325,7 +325,7 @@ public:
 private:
   void send_poll_callback()
   {
-    if (configuration.timestamps == input_configuration::NoTimestamp)
+    if (configuration.timestamps == timestamp_mode::NoTimestamp)
     {
       configuration.manual_poll(manual_poll_parameters{
           .fds = {this->fds_.data(), this->fds_.size()},

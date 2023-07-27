@@ -22,11 +22,11 @@ public:
   {
     switch (configuration.timestamps)
     {
-      case input_configuration::timestamp_mode::NoTimestamp:
-      case input_configuration::timestamp_mode::SystemMonotonic:
+      case timestamp_mode::NoTimestamp:
+      case timestamp_mode::SystemMonotonic:
         return false;
-      case input_configuration::timestamp_mode::Absolute:
-      case input_configuration::timestamp_mode::Relative:
+      case timestamp_mode::Absolute:
+      case timestamp_mode::Relative:
         return true;
     }
     return true;
@@ -181,10 +181,10 @@ protected:
     static constexpr int64_t nanos = 1e9;
     switch (configuration.timestamps)
     {
-      case input_configuration::NoTimestamp:
+      case timestamp_mode::NoTimestamp:
         msg.timestamp = 0;
         return;
-      case input_configuration::Relative: {
+      case timestamp_mode::Relative: {
         const auto t1 = int64_t(ev.time.time.tv_sec) * nanos + int64_t(ev.time.time.tv_nsec);
         const auto t0 = int64_t(last_time.tv_sec) * nanos + int64_t(last_time.tv_nsec);
         const auto time = t1 - t0;
@@ -202,11 +202,11 @@ protected:
         }
         return;
       }
-      case input_configuration::Absolute: {
+      case timestamp_mode::Absolute: {
         msg.timestamp = ev.time.time.tv_sec * nanos + ev.time.time.tv_nsec;
         break;
       }
-      case input_configuration::SystemMonotonic: {
+      case timestamp_mode::SystemMonotonic: {
         namespace clk = std::chrono;
         msg.timestamp
             = clk::duration_cast<clk::nanoseconds>(clk::steady_clock::now().time_since_epoch())

@@ -150,10 +150,10 @@ private:
 
     switch (configuration.timestamps)
     {
-      case input_configuration::NoTimestamp:
+      case timestamp_mode::NoTimestamp:
         msg.timestamp = 0;
         return;
-      case input_configuration::Relative: {
+      case timestamp_mode::Relative: {
         if (firstMessage)
         {
           firstMessage = false;
@@ -171,8 +171,8 @@ private:
         }
         break;
       }
-      case input_configuration::Absolute:
-      case input_configuration::SystemMonotonic:
+      case timestamp_mode::Absolute:
+      case timestamp_mode::SystemMonotonic:
         if (continueSysex)
           return;
         msg.timestamp = time_in_nanos(packet.timeStamp);

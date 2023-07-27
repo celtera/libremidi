@@ -281,6 +281,13 @@ public:
   void send_message(unsigned char b0, unsigned char b1);
   void send_message(unsigned char b0, unsigned char b1, unsigned char b2);
 
+  //! Current time in the timestamp referential
+  int64_t current_time();
+
+  //! Try to schedule a message later in time if the underlying API supports it
+  //! (currently not implemented anywhere)
+  void schedule_message(int64_t timestamp, const unsigned char* message, size_t size);
+
 private:
   std::unique_ptr<class midi_out_api> impl_;
 };
