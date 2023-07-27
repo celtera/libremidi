@@ -55,7 +55,8 @@ public:
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
     for (ItemCount i = 0; i < MIDIGetNumberOfSources(); i++)
     {
-      ret.push_back(to_port_info(MIDIGetSource(i)));
+      if (auto p = to_port_info(MIDIGetSource(i)))
+        ret.push_back(std::move(*p));
     }
 
     return ret;
@@ -68,13 +69,23 @@ public:
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
     for (ItemCount i = 0; i < MIDIGetNumberOfDestinations(); i++)
     {
-      ret.push_back(to_port_info(MIDIGetDestination(i)));
+      if (auto p = to_port_info(MIDIGetDestination(i)))
+        ret.push_back(std::move(*p));
     }
     return ret;
   }
 
-  port_information to_port_info(MIDIObjectRef obj) const noexcept
+  std::optional<port_information> to_port_info(MIDIObjectRef obj) const noexcept
   {
+    const auto tp = snd_seq_port_info_get_type(pinfo);
+    bool ok = false;
+    if ((tp & SND_SEQ_PORT_TYPE_HARDWARE) && this->configuration.track_hardware)
+      ok = true;
+    else if ((tp & SND_SEQ_PORT_TYPE_SOFTWARE) && this->configuration.track_virtual)
+      ok = true;
+    if (!ok)
+      return {};
+
     return {
         .client = (std::uintptr_t)this->client,
         .port = std::bit_cast<uint32_t>(get_int_property(obj, kMIDIPropertyUniqueID)),
@@ -95,11 +106,13 @@ public:
         {
           case kMIDIObjectType_Source:
             if (auto& cb = configuration.input_added)
-              cb(to_port_info(obj->child));
+              if (auto p = to_port_info(obj->child))
+                cb(std::move(*p));
             break;
           case kMIDIObjectType_Destination:
             if (auto& cb = configuration.output_added)
-              cb(to_port_info(obj->child));
+              if (auto p = to_port_info(obj->child))
+                cb(std::move(*p));
             break;
           default:
             break;
@@ -115,11 +128,13 @@ public:
         {
           case kMIDIObjectType_Source:
             if (auto& cb = configuration.input_removed)
-              cb(to_port_info(obj->child));
+              if (auto p = to_port_info(obj->child))
+                cb(std::move(*p));
             break;
           case kMIDIObjectType_Destination:
             if (auto& cb = configuration.output_removed)
-              cb(to_port_info(obj->child));
+              if (auto p = to_port_info(obj->child))
+                cb(std::move(*p));
             break;
           default:
             break;
