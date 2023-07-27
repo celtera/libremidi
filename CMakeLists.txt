@@ -117,6 +117,9 @@ else()
     include/libremidi/writer.hpp
 
     include/libremidi/libremidi.cpp
+    include/libremidi/midi_in.cpp
+    include/libremidi/midi_out.cpp
+    include/libremidi/observer.cpp
     include/libremidi/reader.cpp
     include/libremidi/writer.cpp
   )
@@ -339,9 +342,6 @@ if(LIBREMIDI_EXAMPLES)
 
   add_executable(sysextest tests/sysextest.cpp)
   target_link_libraries(sysextest PRIVATE libremidi)
-
-  add_executable(midi2 tests/midi2.cpp)
-  target_link_libraries(midi2 PRIVATE libremidi)
 
   if(ALSA_FOUND)
     add_executable(poll_share tests/poll_share.cpp)

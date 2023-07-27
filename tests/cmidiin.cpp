@@ -26,7 +26,7 @@
 int main(int argc, char**)
 try
 {
-  libremidi::midi_in midiin{libremidi::input_configuration{
+  libremidi::midi_in midiin{{
       // Set our callback function.
       .on_message
       = [](const libremidi::message& message) {

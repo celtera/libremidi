@@ -32,7 +32,7 @@ try
     cbs.output_removed = [=](const libremidi::port_information& p) {
       std::cerr << api_name << " : output removed " << p << "\n";
     };
-    observers.emplace_back(api, cbs);
+    observers.emplace_back(cbs, libremidi::observer_configuration_for(api));
   }
 
   std::cerr << "... waiting for hotplug events ...\n";

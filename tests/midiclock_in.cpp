@@ -47,7 +47,7 @@ try
       clock_count = 0;
   };
 
-  libremidi::midi_in midiin{libremidi::input_configuration{
+  libremidi::midi_in midiin{{
       // Setup a callback
       .on_message = midi_callback,
 

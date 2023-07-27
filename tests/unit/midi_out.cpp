@@ -32,7 +32,8 @@ TEST_CASE("sending chunked messages", "[midi_out]")
                 return true;
               }}}};
 
-  if (auto ports = libremidi::observer{libremidi::API::LINUX_ALSA_RAW, {}}.get_output_ports();
+  if (auto ports
+      = libremidi::observer{{}, libremidi::alsa_raw_observer_configuration{}}.get_output_ports();
       ports.size() > 0)
   {
     midi.open_port(ports.front());

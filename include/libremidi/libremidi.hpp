@@ -79,13 +79,41 @@
 
 namespace libremidi
 {
+class midi_in;
+class midi_out;
+class observer;
+LIBREMIDI_EXPORT
+std::any midi_in_configuration_for(libremidi::API);
+LIBREMIDI_EXPORT
+std::any midi_out_configuration_for(libremidi::API);
+LIBREMIDI_EXPORT
+std::any observer_configuration_for(libremidi::API);
+
+LIBREMIDI_EXPORT
+std::any midi_in_configuration_for(const libremidi::observer&);
+LIBREMIDI_EXPORT
+std::any midi_out_configuration_for(const libremidi::observer&);
+
+LIBREMIDI_EXPORT
+std::any midi_in_default_configuration();
+LIBREMIDI_EXPORT
+std::any midi_out_default_configuration();
+LIBREMIDI_EXPORT
+std::any observer_default_configuration();
 
 //! The callbacks will be called whenever a device is added or removed
 //! for a given API.
 class LIBREMIDI_EXPORT observer
 {
 public:
-  explicit observer(libremidi::API, observer_configuration);
+  //! Open an observer instance with the given configuration.
+  //!
+  //! api_conf can be either
+  //! - an instance of observer_configuration,
+  //!   such as jack_observer_configuration, winmm_observer_configuration, etc...
+  //! - a libremidi::API enum to simply request a specific api
+  explicit observer(observer_configuration conf = {}) noexcept;
+  explicit observer(observer_configuration conf, std::any api_conf);
   observer(const observer&) = delete;
   observer(observer&& other) noexcept;
   observer& operator=(const observer&) = delete;
@@ -268,6 +296,9 @@ private:
 
 #if defined(LIBREMIDI_HEADER_ONLY)
   #include <libremidi/libremidi.cpp>
+  #include <libremidi/midi_in.cpp>
+  #include <libremidi/midi_out.cpp>
+  #include <libremidi/observer.cpp>
 
   #if defined(__EMSCRIPTEN__)
     #include <libremidi/backends/emscripten/midi_access.cpp>

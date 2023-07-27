@@ -22,7 +22,7 @@ int main()
     return true;
   };
 
-  libremidi::observer obs{libremidi::default_platform_api(), {}};
+  libremidi::observer obs{{}, libremidi::alsa_raw_observer_configuration{}};
 
   // Create as many midi_in as there are connected MIDI sources
   std::vector<libremidi::midi_in> midiin;

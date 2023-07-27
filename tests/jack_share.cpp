@@ -10,6 +10,8 @@ struct my_app
 {
   libremidi::unique_handle<jack_client_t, jack_client_close> handle;
 
+  std::optional<libremidi::observer> observer;
+
   std::vector<libremidi::midi_in> midiin;
   std::vector<libremidi::midi_out> midiout;
 
@@ -36,6 +38,10 @@ struct my_app
     if (!handle)
       throw std::runtime_error("Could not start JACK client");
 
+    // Create an observer
+    observer = libremidi::observer{
+        libremidi::observer_configuration{},
+        libremidi::jack_observer_configuration{.context = handle.get()}};
     jack_set_process_callback(handle.get(), jack_callback, this);
     jack_activate(handle.get());
 

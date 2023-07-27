@@ -155,20 +155,24 @@ try
   if (argc > 2)
     usage();
 
+  libremidi::observer obs{};
+  auto ports = obs.get_input_ports();
+
   libremidi::queued_midi_in midiin{
-      1024, libremidi::input_configuration{
-                // Don't ignore sysex, timing, or active sensing messages.
-                .ignore_sysex = false,
-                .ignore_timing = false,
-                .ignore_sensing = false,
-            }};
+      1024,
+      libremidi::input_configuration{
+          // Don't ignore sysex, timing, or active sensing messages.
+          .ignore_sysex = false,
+          .ignore_timing = false,
+          .ignore_sensing = false,
+      },
+      libremidi::midi_in_configuration_for(obs)};
 
   // Check available ports vs. specified.
   auto port = 0U;
   if (argc == 2)
     port = atoi(argv[1]);
 
-  auto ports = libremidi::observer{midiin.get_current_api(), {}}.get_input_ports();
   if (port >= ports.size())
   {
     std::cout << "Invalid port specifier!\n";
