@@ -181,6 +181,13 @@ public:
   explicit observer_winuwp(observer_configuration&& conf, winuwp_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
+    if (configuration.input_added)
+      for(const auto& p : get_input_ports())
+        configuration.input_added(p);
+    if (configuration.output_added)
+      for (const auto& p : get_output_ports())
+        configuration.output_added(p);
+
     if (!configuration.has_callbacks())
       return;
 

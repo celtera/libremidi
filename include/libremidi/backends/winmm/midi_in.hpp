@@ -1,6 +1,7 @@
 #pragma once
 #include <libremidi/backends/winmm/config.hpp>
 #include <libremidi/backends/winmm/helpers.hpp>
+#include <libremidi/backends/winmm/observer.hpp>
 #include <libremidi/detail/midi_in.hpp>
 
 namespace libremidi
@@ -123,21 +124,19 @@ public:
 
   bool open_port(const port_information& p, std::string_view) override
   {
-    unsigned int nDevices = midiInGetNumDevs();
-    MIDIINCAPS deviceCaps{};
-    for (unsigned int i = 0; i < nDevices; i++)
-    {
-      midiInGetDevCaps(i, &deviceCaps, sizeof(MIDIINCAPS));
-      std::string stringName = ConvertToUTF8(deviceCaps.szPname);
+    observer_winmm obs{ {}, winmm_observer_configuration{} };
+    auto ports = obs.get_input_ports();
 
-#ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
-      MakeUniqueInPortName(stringName, i);
-#endif
-
-      if (stringName == p.port_name)
-        return do_open(i);
+    // First check with the display name, e.g. MIDI KEYBOARD 2 will match MIDI KEYBOARD 2
+    for(auto& port : ports) {
+        if(p.display_name == port.display_name)
+          return do_open(port.port);
     }
-
+    // If nothing is found, try to check with the raw name
+    for (auto& port : ports) {
+        if (p.port_name == port.port_name)
+            return do_open(port.port);
+    }
     error<invalid_parameter_error>(
         configuration, "midi_in_winmm::open_port: port not found: " + p.port_name);
     return false;

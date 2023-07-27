@@ -312,55 +312,58 @@ install(FILES
 ### Examples ###
 if(LIBREMIDI_EXAMPLES)
     message(STATUS "libremidi: compiling examples")
-  add_executable(midiobserve tests/midiobserve.cpp)
+  add_executable(midiobserve examples/midiobserve.cpp)
   target_link_libraries(midiobserve PRIVATE libremidi)
 
-  add_executable(cmidiin tests/cmidiin.cpp)
+  add_executable(echo examples/echo.cpp)
+  target_link_libraries(echo PRIVATE libremidi)
+
+  add_executable(cmidiin examples/cmidiin.cpp)
   target_link_libraries(cmidiin PRIVATE libremidi)
 
-  add_executable(midiclock_in tests/midiclock_in.cpp)
+  add_executable(midiclock_in examples/midiclock_in.cpp)
   target_link_libraries(midiclock_in PRIVATE libremidi)
 
-  add_executable(midiclock_out tests/midiclock_out.cpp)
+  add_executable(midiclock_out examples/midiclock_out.cpp)
   target_link_libraries(midiclock_out PRIVATE libremidi)
 
-  add_executable(midiout tests/midiout.cpp)
+  add_executable(midiout examples/midiout.cpp)
   target_link_libraries(midiout PRIVATE libremidi)
 
   check_cxx_source_compiles("#include <thread>\nint main() { std::jthread t; }" HAS_STD_JTHREAD)
 
   if(HAS_STD_JTHREAD)
-    add_executable(multithread_midiout tests/multithread_midiout.cpp)
+    add_executable(multithread_midiout examples/multithread_midiout.cpp)
     target_link_libraries(multithread_midiout PRIVATE libremidi)
   endif()
 
-  add_executable(midiprobe tests/midiprobe.cpp)
+  add_executable(midiprobe examples/midiprobe.cpp)
   target_link_libraries(midiprobe PRIVATE libremidi)
 
-  add_executable(qmidiin tests/qmidiin.cpp)
+  add_executable(qmidiin examples/qmidiin.cpp)
   target_link_libraries(qmidiin PRIVATE libremidi)
 
-  add_executable(sysextest tests/sysextest.cpp)
+  add_executable(sysextest examples/sysextest.cpp)
   target_link_libraries(sysextest PRIVATE libremidi)
 
   if(ALSA_FOUND)
-    add_executable(poll_share tests/poll_share.cpp)
+    add_executable(poll_share examples/poll_share.cpp)
     target_link_libraries(poll_share PRIVATE libremidi)
-    add_executable(alsa_share tests/alsa_share.cpp)
+    add_executable(alsa_share examples/alsa_share.cpp)
     target_link_libraries(alsa_share PRIVATE libremidi)
   endif()
 
   if(HAS_JACK)
-    add_executable(jack_share tests/jack_share.cpp)
+    add_executable(jack_share examples/jack_share.cpp)
     target_link_libraries(jack_share PRIVATE libremidi)
   endif()
 
   if(APPLE)
-      add_executable(coremidi_share tests/coremidi_share.cpp)
+      add_executable(coremidi_share examples/coremidi_share.cpp)
       target_link_libraries(coremidi_share PRIVATE libremidi)
   endif()
   if(EMSCRIPTEN)
-    add_executable(emscripten_midiin tests/emscripten_midiin.cpp)
+    add_executable(emscripten_midiin examples/emscripten_midiin.cpp)
     target_link_libraries(emscripten_midiin PRIVATE libremidi)
   endif()
 endif()

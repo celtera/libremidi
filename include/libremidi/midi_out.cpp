@@ -23,7 +23,6 @@ LIBREMIDI_INLINE auto make_midi_out(output_configuration base_conf, std::any api
 }
 
 LIBREMIDI_INLINE midi_out::midi_out(output_configuration base_conf) noexcept
-    : midi_out{std::move(base_conf), midi_out_configuration_for(libremidi::default_platform_api())}
 {
   for (const auto& api : available_apis())
   {

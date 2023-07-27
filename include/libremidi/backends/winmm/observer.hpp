@@ -7,6 +7,7 @@
 #include <mutex>
 #include <stop_token>
 #include <thread>
+#include <ranges>
 
 namespace libremidi
 {
@@ -38,6 +39,18 @@ public:
 
   ~observer_winmm() { thread.get_stop_source().request_stop(); }
 
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
+
+  std::vector<port_information> get_input_ports() const noexcept override
+  {
+      return get_port_list(INPUT);
+  }
+
+  std::vector<port_information> get_output_ports() const noexcept override
+  {
+      return get_port_list(OUTPUT);
+  }
+
 private:
   void check_new_ports()
   {
@@ -54,110 +67,73 @@ private:
   }
 
   void compare_port_lists_and_notify_clients(
-      const std::vector<std::string>& prevList, const std::vector<std::string>& currList,
+      const std::vector<port_information>& prevList, const std::vector<port_information>& currList,
       const libremidi::port_callback& portAddedFunc,
       const libremidi::port_callback& portRemovedFunc)
   {
     if (portAddedFunc)
     {
-      for (const auto& portName : currList)
+      for (const auto& port : currList)
       {
-        auto iter = std::find(prevList.begin(), prevList.end(), portName);
+        auto iter = std::ranges::find(prevList, port.display_name, &port_information::display_name);
         if (iter == prevList.end())
-        {
-          portAddedFunc(port_information{
-              .client = 0,
-              .port = 0,
-              .manufacturer = "",
-              .device_name = "",
-              .port_name = portName,
-              .display_name = ""});
-        }
+          portAddedFunc(port);
       }
     }
 
     if (portRemovedFunc)
     {
-      for (const auto portName : prevList)
+      for (const auto port : prevList)
       {
-        auto iter = std::find(currList.begin(), currList.end(), portName);
+        auto iter = std::ranges::find(currList, port.display_name, &port_information::display_name);
         if (iter == currList.end())
-        {
-          portRemovedFunc(port_information{
-              .client = 0,
-              .port = 0,
-              .manufacturer = "",
-              .device_name = "",
-              .port_name = portName,
-              .display_name = ""});
-        }
+          portRemovedFunc(port);
       }
     }
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
-  std::vector<port_information> get_input_ports() const noexcept override
+  port_information to_in_port_info(std::size_t index) const noexcept
   {
-    std::vector<port_information> ret;
-    for (auto&& portName : get_port_list(INPUT))
-    {
-      ret.push_back(port_information{
+    MIDIINCAPS deviceCaps;
+    midiInGetDevCaps(index, &deviceCaps, sizeof(MIDIINCAPS));
+
+    auto rawName = ConvertToUTF8(deviceCaps.szPname);
+    auto portName = rawName;
+    MakeUniqueInPortName(portName, index);
+    return port_information{
           .client = 0,
-          .port = 0,
+          .port = index,
           .manufacturer = "",
           .device_name = "",
-          .port_name = portName,
-          .display_name = portName });
-    }
-    return ret;
+          .port_name = rawName,
+          .display_name = portName };
   }
 
-  std::vector<port_information> get_output_ports() const noexcept override
+  port_information to_out_port_info(std::size_t index) const noexcept
   {
-    std::vector<port_information> ret;
-    for (auto&& portName : get_port_list(OUTPUT))
-    {
-      ret.push_back(port_information{
+    MIDIOUTCAPS deviceCaps;
+    midiOutGetDevCaps(index, &deviceCaps, sizeof(MIDIOUTCAPS));
+
+    auto rawName = ConvertToUTF8(deviceCaps.szPname);
+    auto portName = rawName;
+    MakeUniqueOutPortName(portName, index);
+    return port_information{
           .client = 0,
-          .port = 0,
+          .port = index,
           .manufacturer = "",
           .device_name = "",
-          .port_name = portName,
-          .display_name = portName });
-    }
-    return ret;
+          .port_name = rawName,
+          .display_name = portName };
   }
 
-  std::vector<std::string> get_port_list(bool input) const noexcept
+  std::vector<port_information> get_port_list(bool input) const noexcept
   {
-    // true Get input, false get output
-    std::vector<std::string> portList;
-    unsigned int nDevices = input ? midiInGetNumDevs() : midiOutGetNumDevs();
-    std::string portName;
+    std::vector<port_information> portList;
+    std::size_t nDevices = input ? midiInGetNumDevs() : midiOutGetNumDevs();
 
-    for (unsigned int ix = 0; ix < nDevices; ++ix)
+    for (std::size_t i = 0; i < nDevices; ++i)
     {
-      if (input)
-      {
-        MIDIINCAPS deviceCaps;
-        midiInGetDevCaps(ix, &deviceCaps, sizeof(MIDIINCAPS));
-        portName = ConvertToUTF8(deviceCaps.szPname);
-
-#ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
-        MakeUniqueInPortName(portName, ix);
-#endif
-      }
-      else
-      {
-        MIDIOUTCAPS deviceCaps;
-        midiOutGetDevCaps(ix, &deviceCaps, sizeof(MIDIOUTCAPS));
-        portName = ConvertToUTF8(deviceCaps.szPname);
-
-#ifndef LIBREMIDI_DO_NOT_ENSURE_UNIQUE_PORTNAMES
-        MakeUniqueOutPortName(portName, ix);
-#endif
-      }
-      portList.push_back(portName);
+      portList.push_back(input ? to_in_port_info(i) : to_out_port_info(i));
     }
     return portList;
   }
@@ -167,7 +143,7 @@ private:
 
   std::jthread thread;
 
-  std::vector<std::string> inputPortList;
-  std::vector<std::string> outputPortList;
+  std::vector<port_information> inputPortList;
+  std::vector<port_information> outputPortList;
 };
 }
