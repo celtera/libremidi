@@ -78,9 +78,20 @@ struct message
       : bytes{args}
   {
   }
+
+  static constexpr uint8_t clamp_channel(int channel) noexcept
+  {
+    channel--;
+    if (channel < 0)
+      channel = 0;
+    else if (channel > 15)
+      channel = 15;
+    return channel;
+  }
+
   static uint8_t make_command(const message_type type, const int channel) noexcept
   {
-    return (uint8_t)((uint8_t)type | std::clamp(channel, 0, channel - 1));
+    return (uint8_t)((uint8_t)type | clamp_channel(channel));
   }
 
   static message note_on(uint8_t channel, uint8_t note, uint8_t velocity) noexcept
