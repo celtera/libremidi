@@ -102,7 +102,7 @@ std::any midi_in_configuration_for(const libremidi::observer& obs)
 LIBREMIDI_EXPORT
 std::any midi_out_configuration_for(const libremidi::observer& obs)
 {
-  return midi_in_configuration_for(obs.get_current_api());
+  return midi_out_configuration_for(obs.get_current_api());
 }
 
 LIBREMIDI_EXPORT
@@ -121,5 +121,33 @@ LIBREMIDI_EXPORT
 std::any observer_default_configuration()
 {
   return observer_configuration_for(default_platform_api());
+}
+
+LIBREMIDI_EXPORT
+std::optional<port_information> midi_in_default_port(libremidi::API api) noexcept
+try
+{
+  libremidi::observer obs{{}, observer_configuration_for(api)};
+  if (auto ports = obs.get_input_ports(); !ports.empty())
+    return ports.front();
+  return std::nullopt;
+}
+catch(const std::exception& e) 
+{
+  return std::nullopt;
+}
+
+LIBREMIDI_EXPORT
+std::optional<port_information> midi_out_default_port(libremidi::API api) noexcept
+try
+{
+  libremidi::observer obs{{}, observer_configuration_for(api)};
+  if (auto ports = obs.get_output_ports(); !ports.empty())
+    return ports.front();
+  return std::nullopt;
+}
+catch (const std::exception& e)
+{
+  return std::nullopt;
 }
 }

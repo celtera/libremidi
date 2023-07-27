@@ -28,7 +28,10 @@ public:
   ~midi_in_winuwp() override
   {
     if (port_)
+    {
       port_.Close();
+      port_ = nullptr;
+    }
   }
 
   bool open_virtual_port(std::string_view) override
@@ -56,38 +59,33 @@ public:
     port_ = get(MidiInPort::FromIdAsync(id));
     if (!port_)
         return false;
-
     port_.MessageReceived(
         [=](const winrt::Windows::Devices::Midi::IMidiInPort& inputPort,
             const winrt::Windows::Devices::Midi::MidiMessageReceivedEventArgs& args) {
-      const auto& msg = args.Message();
-
-      auto reader = DataReader::FromBuffer(msg.RawData());
-      array_view<uint8_t> bs;
-      reader.ReadBytes(bs);
-
-      auto t = msg.Timestamp().count();
-      this->configuration.on_message(libremidi::message{{bs.begin(), bs.end()}, t});
+      this->process_message(args.Message());
     });
 
     return true;
+  }
+
+  void process_message(const winrt::Windows::Devices::Midi::IMidiMessage& msg)
+  {
+    auto reader = DataReader::FromBuffer(msg.RawData());
+    auto begin = msg.RawData().data();
+    auto end = begin + msg.RawData().Length();
+
+    auto t = msg.Timestamp().count();
+    this->configuration.on_message(libremidi::message{{begin, end}, t});
   }
 
   void close_port() override
   {
     if (port_)
       port_.Close();
-    connected_ = false;
   }
 
-private:
-  hstring get_port_id(unsigned int portNumber)
-  {
-    auto& observer = observer_winuwp::get_internal_in_port_observer();
-    return observer.get_port_id(portNumber);
-  }
 
 private:
-  winrt::Windows::Devices::Midi::MidiInPort port_{nullptr};
+  winrt::Windows::Devices::Midi::IMidiInPort port_{nullptr};
 };
 }

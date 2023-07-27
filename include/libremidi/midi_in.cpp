@@ -48,6 +48,8 @@ LIBREMIDI_INLINE
 midi_in::midi_in(input_configuration base_conf, std::any api_conf)
     : impl_{make_midi_in(base_conf, api_conf)}
 {
+  if(!impl_)
+    throw midi_exception("Could not open midi in for the given api");
 }
 
 LIBREMIDI_INLINE midi_in::~midi_in() = default;

@@ -9,10 +9,8 @@ class midi_in_api : public midi_api
   friend struct midi_stream_decoder;
 
 public:
-  explicit midi_in_api() { }
-
+  midi_in_api() = default;
   ~midi_in_api() override = default;
-
   midi_in_api(const midi_in_api&) = delete;
   midi_in_api(midi_in_api&&) = delete;
   midi_in_api& operator=(const midi_in_api&) = delete;

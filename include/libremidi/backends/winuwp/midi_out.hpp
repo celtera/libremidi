@@ -55,13 +55,15 @@ public:
   void close_port() override
   {
     if (port_)
+    {
       port_.Close();
-    connected_ = false;
+      port_ = {};
+    }
   }
 
   void send_message(const unsigned char* message, size_t size) override
   {
-    if (!connected_)
+    if (!port_)
       return;
 
     InMemoryRandomAccessStream str;
@@ -69,13 +71,6 @@ public:
     rb.WriteBytes(
         winrt::array_view<const uint8_t>{(const uint8_t*)message, (const uint8_t*)message + size});
     port_.SendBuffer(rb.DetachBuffer());
-  }
-
-private:
-  hstring get_port_id(unsigned int portNumber)
-  {
-    auto& observer = observer_winuwp::get_internal_out_port_observer();
-    return observer.get_port_id(portNumber);
   }
 
 private:

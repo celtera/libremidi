@@ -58,24 +58,13 @@
 */
 
 #include <libremidi/api.hpp>
-#include <libremidi/error.hpp>
 #include <libremidi/input_configuration.hpp>
 #include <libremidi/message.hpp>
 #include <libremidi/observer_configuration.hpp>
 #include <libremidi/output_configuration.hpp>
 
-#include <algorithm>
 #include <any>
-#include <cassert>
-#include <chrono>
-#include <functional>
-#include <iostream>
-#include <memory>
 #include <optional>
-#include <span>
-#include <string>
-#include <string_view>
-#include <vector>
 
 namespace libremidi
 {
@@ -100,6 +89,11 @@ LIBREMIDI_EXPORT
 std::any midi_out_default_configuration();
 LIBREMIDI_EXPORT
 std::any observer_default_configuration();
+
+LIBREMIDI_EXPORT
+std::optional<port_information> midi_in_default_port(libremidi::API api = libremidi::default_platform_api()) noexcept;
+LIBREMIDI_EXPORT
+std::optional<port_information> midi_out_default_port(libremidi::API api = libremidi::default_platform_api()) noexcept;
 
 //! The callbacks will be called whenever a device is added or removed
 //! for a given API.

@@ -21,7 +21,9 @@ try
     return -1;
   }
 
-  libremidi::midi_out midiout;
+  libremidi::midi_out midiout{
+      libremidi::output_configuration{}
+    , libremidi::midi_out_configuration_for(obs)};
 
   libremidi::midi_in midiin{{
       // Set our callback function.
@@ -30,13 +32,22 @@ try
     std::cout << message << std::endl;
     midiout.send_message(message);
       },
-  }};
+  }, libremidi::midi_in_configuration_for(obs)};
 
-  std::cerr << "Observer? " << outputs[0].display_name << " : " << outputs[0].port_name << std::endl;
   midiout.open_port(outputs[0]);
+  if (!midiout.is_port_connected()) {
+    std::cerr << "Could not connect to midi out\n";
+    return -1;
+  }
   midiin.open_port(inputs[0]);
+  if (!midiin.is_port_connected()) {
+    std::cerr << "Could not connect to midi in\n";
+    return -1;
+  }
 
   std::cout << "Creating an echo bridge: " << inputs[0].display_name << " => " << outputs[0].display_name << "\n";
+  while (1)
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
   char input;
   std::cin.get(input);
 }

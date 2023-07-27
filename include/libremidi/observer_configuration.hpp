@@ -3,6 +3,7 @@
 #include <libremidi/error.hpp>
 
 #include <string>
+#include <compare>
 
 namespace libremidi
 {
@@ -35,6 +36,9 @@ struct LIBREMIDI_EXPORT port_information
   std::string device_name;
   std::string port_name;
   std::string display_name;
+
+  bool operator==(const port_information& other) const noexcept = default;
+  std::strong_ordering operator<=>(const port_information& other) const noexcept = default;
 };
 
 using port_callback = std::function<void(const port_information&)>;

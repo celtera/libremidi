@@ -4,6 +4,7 @@
 
 #include <libremidi/backends/backends.hpp>
 #include <libremidi/detail/midi_api.hpp>
+#include <array>
 
 namespace libremidi
 {
@@ -45,6 +46,8 @@ LIBREMIDI_INLINE
 midi_out::midi_out(output_configuration base_conf, std::any api_conf)
     : impl_{make_midi_out(base_conf, api_conf)}
 {
+  if(!impl_)
+    throw midi_exception("Could not open midi out for the given api");
 }
 
 LIBREMIDI_INLINE midi_out::~midi_out() = default;
@@ -104,6 +107,8 @@ LIBREMIDI_INLINE
 void midi_out::close_port()
 {
   impl_->close_port();
+  impl_->connected_ = false;
+  impl_->port_open_ = false;
 }
 
 LIBREMIDI_INLINE
