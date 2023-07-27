@@ -4,6 +4,7 @@
 #include <CoreMIDI/CoreMIDI.h>
 
 #include <chrono>
+#include <iostream>
 #include <thread>
 
 struct my_app
