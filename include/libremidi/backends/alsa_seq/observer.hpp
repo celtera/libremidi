@@ -98,7 +98,7 @@ public:
     bool isOutput{};
   };
 
-  alsa_seq_port_info get_info(int client, int port) const noexcept
+  std::optional<alsa_seq_port_info> get_info(int client, int port) const noexcept
   {
     alsa_seq_port_info p;
     p.client = client;
@@ -106,11 +106,22 @@ public:
 
     snd_seq_client_info_t* cinfo;
     snd_seq_client_info_alloca(&cinfo);
-    snd_seq_get_any_client_info(seq_, client, cinfo);
+    if(int err = snd_seq_get_any_client_info(seq_, client, cinfo); err < 0)
+      return std::nullopt;
 
     snd_seq_port_info_t* pinfo;
     snd_seq_port_info_alloca(&pinfo);
-    snd_seq_get_any_port_info(seq_, client, port, pinfo);
+    if(int err = snd_seq_get_any_port_info(seq_, client, port, pinfo); err < 0)
+      return std::nullopt;
+
+    const auto tp = snd_seq_port_info_get_type(pinfo);
+    bool ok = false;
+    if((tp & SND_SEQ_PORT_TYPE_HARDWARE) && this->configuration.track_hardware)
+      ok = true;
+    else if((tp & SND_SEQ_PORT_TYPE_SOFTWARE) && this->configuration.track_virtual)
+      ok = true;
+    if(!ok)
+      return {};
 
     if (auto name = snd_seq_client_info_get_name(cinfo))
       p.client_name = name;
@@ -161,9 +172,9 @@ public:
         this->seq_, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
           int clt = snd_seq_client_info_get_client(&client);
           int pt = snd_seq_port_info_get_port(&port);
-          auto p = get_info(clt, pt);
-          if (p.isInput)
-            ret.push_back(to_port_info(p));
+          if (auto p = get_info(clt, pt))
+            if (p->isInput)
+              ret.push_back(to_port_info(*p));
         });
     return ret;
   }
@@ -175,16 +186,19 @@ public:
         this->seq_, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
           int clt = snd_seq_client_info_get_client(&client);
           int pt = snd_seq_port_info_get_port(&port);
-          auto p = get_info(clt, pt);
-          if (p.isOutput)
-            ret.push_back(to_port_info(p));
+          if (auto p = get_info(clt, pt))
+            if (p->isOutput)
+              ret.push_back(to_port_info(*p));
         });
     return ret;
   }
 
   void register_port(int client, int port)
   {
-    auto p = get_info(client, port);
+    auto pp = get_info(client, port);
+    if (!pp)
+      return;
+    auto& p = *pp;
     if (p.client == client_)
       return;
 
@@ -202,7 +216,10 @@ public:
 
   void unregister_port(int client, int port)
   {
-    auto p = get_info(client, port);
+    auto pp = get_info(client, port);
+    if (!pp)
+      return;
+    auto& p = *pp;
     if (p.client == client_)
       return;
 
