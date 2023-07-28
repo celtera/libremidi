@@ -353,7 +353,7 @@ private:
 };
 
 template <>
-inline std::unique_ptr<midi1::in_api> make<midi_in_raw_alsa>(
+inline std::unique_ptr<midi_in_api> make<midi_in_raw_alsa>(
     libremidi::input_configuration&& conf, libremidi::alsa_raw_input_configuration&& api)
 {
   if (api.manual_poll)

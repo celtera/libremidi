@@ -462,7 +462,7 @@ class midi_in_alsa_manual : public midi_in_alsa
 };
 
 template <>
-inline std::unique_ptr<midi1::in_api> make<midi_in_alsa>(
+inline std::unique_ptr<midi_in_api> make<midi_in_alsa>(
     libremidi::input_configuration&& conf, libremidi::alsa_sequencer_input_configuration&& api)
 {
   if (api.manual_poll)

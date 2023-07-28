@@ -104,7 +104,7 @@ namespace midi_2
 {
 static constexpr auto available_backends = make_tl(
     0
-#if defined(LIBREMIDI_ALSA)
+#if defined(LIBREMIDI_ALSA) && __has_include(<alsa/ump.h>)
     ,
     alsa_raw_ump::backend{}
 #endif
