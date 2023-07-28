@@ -179,7 +179,38 @@ LIBREMIDI_INLINE
 LIBREMIDI_INLINE
     void midi_out::send_ump(const libremidi::ump& message)
 {
-  send_ump(message.bytes, 4);
+  send_ump(message.bytes, message.size());
 }
+
+LIBREMIDI_INLINE
+    void midi_out::send_ump(std::span<const uint32_t> message)
+{
+  send_ump(message.data(), message.size());
+}
+
+LIBREMIDI_INLINE
+    void midi_out::send_ump(uint32_t b0)
+{
+  send_ump(&b0, 1);
+}
+
+LIBREMIDI_INLINE
+    void midi_out::send_ump(uint32_t b0, uint32_t b1)
+{
+  send_ump(std::to_array({b0, b1}));
+}
+
+LIBREMIDI_INLINE
+    void midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2)
+{
+  send_ump(std::to_array({b0, b1, b2}));
+}
+
+LIBREMIDI_INLINE
+    void midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b3)
+{
+  send_ump(std::to_array({b0, b1, b2, b3}));
+}
+
 
 }

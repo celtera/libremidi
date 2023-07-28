@@ -325,6 +325,15 @@ public:
 
   void send_ump(const uint32_t* message, size_t size);
   void send_ump(const libremidi::ump&);
+  void send_ump(std::span<const uint32_t>);
+  void send_ump(uint32_t b0);
+  void send_ump(uint32_t b0, uint32_t b1);
+  void send_ump(uint32_t b0, uint32_t b1, uint32_t b2);
+  void send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b3);
+
+  //! Try to schedule a message later in time if the underlying API supports it
+  //! (currently not implemented anywhere)
+  void schedule_ump(int64_t timestamp, const uint32_t* message, size_t size);
 
 private:
   std::unique_ptr<class midi_out_api> impl_;
