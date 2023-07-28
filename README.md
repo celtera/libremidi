@@ -26,6 +26,7 @@ Additionnally, for MIDI 2 parsing support we use [cmidi2](https://github.com/ats
 * Increase the checks done by the MIDI parser.
 * Internally it's pretty much a complete rewrite. Standard threading primitives are now used, as well as modern Linux facilities for polling control (eventfd, timerfd).
   Most of the code has been refactored.
+* Ability to set a fixed message size for zero-allocation scenarios, with `-DLIBREMIDI_SLIM_MESSAGE=<NBytes>` (in CMake or directly to the compiler)
 
 ### Since v3
 * Allow to pass `span` when available (C++20) or `(uint8_t* bytes, std::size_t size)` pairs whenever possible to reduce copying.

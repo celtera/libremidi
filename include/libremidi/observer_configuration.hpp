@@ -20,16 +20,16 @@ struct LIBREMIDI_EXPORT port_information
   // WebMIDI: unused
   // JACK: jack_client_t*
   // WinMM: unused
-  // WinUWP:
+  // WinUWP: unused
   client_handle client;
 
   // ALSA Raw: { uint16_t card, device, sub, padding; }
   // ALSA Seq: { uint32_t client, uint32_t port; }
   // CoreMIDI: MidiObjectRef
-  // WebMIDI:
+  // WebMIDI: unused
   // JACK: jack_port_id_t
   // WinMM: unset, identified by port_name
-  // WinUWP:
+  // WinUWP: unused
   port_handle port;
 
   std::string manufacturer;
@@ -53,10 +53,10 @@ struct observer_configuration
   port_callback output_removed;
 
   // Observe hardware ports
-  bool track_hardware : 1 = true;
+  uint32_t track_hardware : 1 = true;
 
   // Observe software (virtual) ports if the API provides it
-  bool track_virtual : 1 = false;
+  uint32_t track_virtual : 1 = false;
 
   bool has_callbacks() const noexcept
   {

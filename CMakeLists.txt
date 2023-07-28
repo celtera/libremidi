@@ -108,7 +108,7 @@ else()
     include/libremidi/backends/alsa_seq.hpp
     include/libremidi/backends/alsa_raw.hpp
     include/libremidi/backends/alsa_raw_ump.hpp
-    include/libremidi/backends/coreaudio.hpp
+    include/libremidi/backends/coremidi.hpp
     include/libremidi/backends/coremidi_ump.hpp
     include/libremidi/backends/dummy.hpp
     include/libremidi/backends/emscripten.hpp
