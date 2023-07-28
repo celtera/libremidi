@@ -25,6 +25,7 @@
 
 #if defined(LIBREMIDI_COREAUDIO)
   #include <libremidi/backends/coreaudio.hpp>
+  #include <libremidi/backends/coremidi_ump.hpp>
 #endif
 
 #if defined(LIBREMIDI_WINMM)

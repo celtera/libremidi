@@ -6,6 +6,7 @@
 #include <libremidi/detail/midi_api.hpp>
 
 #include <array>
+#include <cassert>
 
 namespace libremidi
 {
@@ -158,6 +159,27 @@ void midi_out::send_message(unsigned char b0, unsigned char b1, unsigned char b2
 LIBREMIDI_INLINE
 void midi_out::send_message(const unsigned char* message, size_t size)
 {
+#if defined(LIBREMIDI_ASSERTIONS)
+  assert(size > 0);
+#endif
+
   (static_cast<midi_out_api*>(impl_.get()))->send_message(message, size);
 }
+
+LIBREMIDI_INLINE
+    void midi_out::send_ump(const uint32_t* message, size_t size)
+{
+#if defined(LIBREMIDI_ASSERTIONS)
+  assert(size > 0);
+  assert(size <= 4);
+#endif
+
+  (static_cast<midi_out_api*>(impl_.get()))->send_ump(message, size);
+}
+LIBREMIDI_INLINE
+    void midi_out::send_ump(const libremidi::ump& message)
+{
+  send_ump(message.bytes, 4);
+}
+
 }

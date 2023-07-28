@@ -57,11 +57,21 @@ else()
     include/libremidi/backends/alsa_raw/midi_in.hpp
     include/libremidi/backends/alsa_raw/midi_out.hpp
     include/libremidi/backends/alsa_raw/observer.hpp
+    include/libremidi/backends/alsa_raw_ump/config.hpp
+    include/libremidi/backends/alsa_raw_ump/helpers.hpp
+    include/libremidi/backends/alsa_raw_ump/midi_in.hpp
+    include/libremidi/backends/alsa_raw_ump/midi_out.hpp
+    include/libremidi/backends/alsa_raw_ump/observer.hpp
     include/libremidi/backends/coreaudio/config.hpp
     include/libremidi/backends/coreaudio/helpers.hpp
     include/libremidi/backends/coreaudio/midi_in.hpp
     include/libremidi/backends/coreaudio/midi_out.hpp
     include/libremidi/backends/coreaudio/observer.hpp
+    include/libremidi/backends/coremidi_ump/config.hpp
+    include/libremidi/backends/coremidi_ump/helpers.hpp
+    include/libremidi/backends/coremidi_ump/midi_in.hpp
+    include/libremidi/backends/coremidi_ump/midi_out.hpp
+    include/libremidi/backends/coremidi_ump/observer.hpp
     include/libremidi/backends/jack/config.hpp
     include/libremidi/backends/jack/helpers.hpp
     include/libremidi/backends/jack/midi_out.hpp

@@ -84,18 +84,45 @@ LIBREMIDI_EXPORT
 std::any midi_out_configuration_for(const libremidi::observer&);
 
 LIBREMIDI_EXPORT
-std::any midi_in_default_configuration();
+    std::optional<port_information>
+    in_default_port(libremidi::API api) noexcept;
 LIBREMIDI_EXPORT
-std::any midi_out_default_configuration();
+    std::optional<port_information>
+    out_default_port(libremidi::API api) noexcept;
+
+namespace midi1
+{
+LIBREMIDI_EXPORT
+std::any in_default_configuration();
+LIBREMIDI_EXPORT
+std::any out_default_configuration();
 LIBREMIDI_EXPORT
 std::any observer_default_configuration();
 
-LIBREMIDI_EXPORT
+inline
 std::optional<port_information>
-midi_in_default_port(libremidi::API api = libremidi::default_platform_api()) noexcept;
-LIBREMIDI_EXPORT
+in_default_port() noexcept { return libremidi::in_default_port(default_api()); }
+inline
 std::optional<port_information>
-midi_out_default_port(libremidi::API api = libremidi::default_platform_api()) noexcept;
+out_default_port() noexcept { return libremidi::out_default_port(default_api()); }
+}
+
+namespace midi2
+{
+LIBREMIDI_EXPORT
+std::any in_default_configuration();
+LIBREMIDI_EXPORT
+std::any out_default_configuration();
+LIBREMIDI_EXPORT
+std::any observer_default_configuration();
+
+inline
+std::optional<port_information>
+in_default_port() noexcept { return libremidi::in_default_port(default_api()); }
+inline
+std::optional<port_information>
+out_default_port() noexcept { return libremidi::out_default_port(default_api()); }
+}
 
 //! The callbacks will be called whenever a device is added or removed
 //! for a given API.
@@ -295,6 +322,9 @@ public:
   //! Try to schedule a message later in time if the underlying API supports it
   //! (currently not implemented anywhere)
   void schedule_message(int64_t timestamp, const unsigned char* message, size_t size);
+
+  void send_ump(const uint32_t* message, size_t size);
+  void send_ump(const libremidi::ump&);
 
 private:
   std::unique_ptr<class midi_out_api> impl_;

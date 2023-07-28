@@ -48,7 +48,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override
   {
-    return libremidi::API::LINUX_ALSA_RAW_UMP;
+    return libremidi::API::ALSA_RAW_UMP;
   }
 
   // Must be a string such as: "hw:2,4,1"

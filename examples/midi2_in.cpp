@@ -1,17 +1,16 @@
 #include "utils.hpp"
 
-#include <libremidi/backends/backends.hpp>
 #include <libremidi/libremidi.hpp>
+
+// Credits to https://raw.githubusercontent.com/atsushieno/cmidi2
+#include <libremidi/cmidi2.hpp>
 
 #include <cstdlib>
 #include <iostream>
 
-// Credits to https://raw.githubusercontent.com/atsushieno/cmidi2
-#include "cmidi2.hpp"
-
 std::ostream& operator <<(std::ostream& s, const libremidi::ump& message)
 {
-  auto b = (cmidi2_ump*)&message.bytes[0];
+  auto b = const_cast<uint32_t*>(&message.bytes[0]);
   int bytes = cmidi2_ump_get_num_bytes(message.bytes[0]);
   int group = cmidi2_ump_get_group(b);
   int status = cmidi2_ump_get_status_code(b);
@@ -39,36 +38,44 @@ std::ostream& operator <<(std::ostream& s, const libremidi::ump& message)
 int main()
 try
 {
-  libremidi::observer obs{{}, libremidi::coremidi_ump::observer_configuration{}};
+  libremidi::observer obs{{}, libremidi::midi2::observer_default_configuration()};
+  libremidi::midi_out midiout{{}, libremidi::midi2::out_default_configuration()};
 
   libremidi::midi_in midiin{
       {
           // Set our callback function.
           .on_message
-          = [](const libremidi::ump& message) {
+          = [&](const libremidi::ump& message) {
     std::cout << message << std::endl;
-          },
-
-          // Don't ignore sysex, timing, or active sensing messages.
-          .ignore_sysex = false,
-          .ignore_timing = false,
-          .ignore_sensing = false,
+    if(midiout.is_port_connected())
+      midiout.send_ump(message);
+          }
       },
-      libremidi::coremidi_ump::input_configuration{}};
+      libremidi::midi2::in_default_configuration()};
 
-  auto p = obs.get_input_ports();
-  if (p.empty())
+  auto pi = obs.get_input_ports();
+  if (pi.empty())
   {
-    std::cerr << "No device found\n";
+    std::cerr << "No MIDI 2 device found\n";
     return -1;
   }
 
-  for (const auto& port : p)
+  for (const auto& port : pi)
   {
-    std::cout << port.port_name << " | " << port.display_name << std::endl;
+    std::cout << "In: " << port.port_name << " | " << port.display_name << std::endl;
   }
-  midiin.open_port(p[0]);
+
+  auto po = obs.get_output_ports();
+  for (const auto& port : po)
+  {
+    std::cout << "Out: " << port.port_name << " | " << port.display_name << std::endl;
+  }
+  midiin.open_port(pi[0]);
+
+  if(!po.empty())
+    midiout.open_port(po[0]);
   std::cout << "\nReading MIDI input ... press <enter> to quit.\n";
+
   char input;
   std::cin.get(input);
 }

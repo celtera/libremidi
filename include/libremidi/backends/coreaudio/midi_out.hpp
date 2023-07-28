@@ -6,7 +6,7 @@
 namespace libremidi
 {
 class midi_out_core final
-    : public midi_out_api
+    : public midi1::out_api
     , private coremidi_data
     , public error_handler
 {

@@ -82,6 +82,6 @@ std::vector<libremidi::port_information> observer::get_input_ports() const noexc
 LIBREMIDI_INLINE
 std::vector<libremidi::port_information> observer::get_output_ports() const noexcept
 {
-  return impl_->get_input_ports();
+  return impl_->get_output_ports();
 }
 }

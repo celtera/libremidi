@@ -22,7 +22,7 @@ enum class API
   EMSCRIPTEN_WEBMIDI, /*!< Web MIDI API through Emscripten */
 
   // MIDI 2.0 APIs
-  LINUX_ALSA_RAW_UMP, /*!< Raw ALSA API for MIDI 2.0 */
+  ALSA_RAW_UMP, /*!< Raw ALSA API for MIDI 2.0 */
   COREMIDI_UMP,
   WINDOWS_MIDI_SERVICES,
 
@@ -47,12 +47,14 @@ LIBREMIDI_EXPORT std::string_view get_api_name(libremidi::API api);
 LIBREMIDI_EXPORT std::string_view get_api_display_name(libremidi::API api);
 LIBREMIDI_EXPORT libremidi::API get_compiled_api_by_name(std::string_view api);
 
+namespace midi1
+{
 /**
  * @brief Returns the default backend to use for the target OS.
  *
  * e.g. the one that uses the "recommended" system MIDI API.
  */
-inline constexpr libremidi::API default_platform_api() noexcept
+inline constexpr libremidi::API default_api() noexcept
 {
 #if defined(__APPLE__)
   return API::MACOSX_CORE;
@@ -65,5 +67,24 @@ inline constexpr libremidi::API default_platform_api() noexcept
 #else
   return API::DUMMY;
 #endif
+}
+}
+
+namespace midi2
+{
+inline constexpr libremidi::API default_api() noexcept
+{
+#if defined(__APPLE__)
+  return API::COREMIDI_UMP;
+#elif defined(_WIN32)
+  return API::WINDOWS_MIDI_SERVICES;
+#elif defined(__linux__)
+  return API::ALSA_RAW_UMP;
+#elif defined(__emscripten__)
+  return API::DUMMY;
+#else
+  return API::DUMMY;
+#endif
+}
 }
 }

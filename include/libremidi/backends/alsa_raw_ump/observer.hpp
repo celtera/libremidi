@@ -50,7 +50,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override
   {
-    return libremidi::API::LINUX_ALSA_RAW_UMP;
+    return libremidi::API::ALSA_RAW_UMP;
   }
 
   std::vector<libremidi::port_information> get_input_ports() const noexcept override

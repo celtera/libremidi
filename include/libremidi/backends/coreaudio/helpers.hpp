@@ -1,5 +1,6 @@
 #pragma once
 #include <libremidi/detail/midi_api.hpp>
+#include <libremidi/input_configuration.hpp>
 
 #include <CoreMIDI/CoreMIDI.h>
 #include <CoreServices/CoreServices.h>
@@ -211,14 +212,15 @@ locate_object(auto& self, const port_information& info, MIDIObjectType requested
   if (ret != noErr)
   {
     self.template error<invalid_parameter_error>(
-        self.configuration, "midi_in_core::open_port: cannot find port: " + info.port_name);
+        self.configuration, "coremidi::locate_object: cannot find port: " + info.port_name);
     return 0;
   }
+  fprintf(stderr, "type: %d\n", (int) type);
 
   if (type != requested_type || object == 0)
   {
     self.template error<invalid_parameter_error>(
-        self.configuration, "midi_in_core::open_port: invalid source: " + info.port_name);
+        self.configuration, "coremidi::locate_object: invalid object: " + info.port_name + " : " + std::to_string(object));
     return 0;
   }
 
@@ -248,6 +250,62 @@ struct coremidi_data
           toCFString(configuration.client_name).get(), nullptr, nullptr, &client);
     }
   }
+
+  static uint64_t time_in_nanos(MIDITimeStamp tp) noexcept
+  {
+    if (tp == 0)
+    { // this happens when receiving asynchronous sysex messages
+      return clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+    }
+    else
+    {
+      return AudioConvertHostTimeToNanos(tp);
+    }
+  }
+
+  static void set_timestamp(auto& self, MIDITimeStamp packet, int64_t& msg) noexcept
+  {
+    // packet.timeStamp is in mach_absolute_time units
+    // We want a timestamp in nanoseconds
+
+    switch (self.configuration.timestamps)
+    {
+      case timestamp_mode::NoTimestamp:
+        msg = 0;
+        return;
+      case timestamp_mode::Relative: {
+        if (self.firstMessage)
+        {
+          self.firstMessage = false;
+          msg = 0;
+          return;
+        }
+        else
+        {
+          if constexpr(requires { self.continueSysex; })
+          {
+            if (self.continueSysex)
+              return;
+          }
+
+          auto time = time_in_nanos(packet);
+          time -= self.last_time;
+          msg = time;
+        }
+        break;
+      }
+      case timestamp_mode::Absolute:
+      case timestamp_mode::SystemMonotonic:
+        if constexpr(requires { self.continueSysex; })
+        {
+          if (self.continueSysex)
+            return;
+        }
+        msg = time_in_nanos(packet);
+        break;
+    }
+  }
+
 };
 
 }

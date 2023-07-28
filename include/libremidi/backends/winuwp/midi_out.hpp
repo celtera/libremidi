@@ -8,7 +8,7 @@ namespace libremidi
 {
 
 class midi_out_winuwp final
-    : public midi_out_api
+    : public midi1::out_api
     , public error_handler
 {
 public:

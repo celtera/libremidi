@@ -69,7 +69,7 @@ public:
 };
 
 class midi_out_jack final
-    : public midi_out_api
+    : public midi1::out_api
     , private jack_helpers
     , public error_handler
 {
