@@ -27,4 +27,10 @@ std::unique_ptr<midi_in_api> make(libremidi::input_configuration&& conf, Arg&& a
 {
   return std::make_unique<T>(std::move(conf), std::move(arg));
 }
+
+template <typename T, typename Arg>
+std::unique_ptr<midi_in_api> make(libremidi::ump_input_configuration&& conf, Arg&& arg)
+{
+  return std::make_unique<T>(std::move(conf), std::move(arg));
+}
 }

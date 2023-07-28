@@ -9,7 +9,7 @@
 
 namespace libremidi
 {
-LIBREMIDI_INLINE auto make_midi_out(output_configuration base_conf, std::any api_conf)
+LIBREMIDI_INLINE auto make_midi_out(auto base_conf, std::any api_conf)
 {
   std::unique_ptr<midi_out_api> ptr;
   auto from_api = [&]<typename T>(T& backend) mutable {
@@ -20,7 +20,8 @@ LIBREMIDI_INLINE auto make_midi_out(output_configuration base_conf, std::any api
     }
     return false;
   };
-  std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
+  std::apply([&](auto&&... b) { (from_api(b) || ...); }, midi_1::available_backends);
+  std::apply([&](auto&&... b) { (from_api(b) || ...); }, midi_2::available_backends);
   return ptr;
 }
 

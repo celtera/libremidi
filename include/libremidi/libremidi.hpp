@@ -146,13 +146,21 @@ private:
 class LIBREMIDI_EXPORT midi_in
 {
 public:
-  //! Construct a midi_in object with the default back-end for the platform
+  //! Construct a midi_in object with the default MIDI 1 back-end for the platform
   explicit midi_in(input_configuration conf) noexcept;
 
-  //! Construct a midi_in object with a configuration object for a specific back-end
+  //! Construct a midi_in object with a configuration object for a specific MIDI 1 back-end
   //! see configuration.hpp for the available configuration types.
   //! An exception will be thrown if the requested back-end cannot be opened.
   explicit midi_in(input_configuration conf, std::any api_conf);
+
+  //! Construct a midi_in object with the default MIDI 2 back-end for the platform
+  explicit midi_in(ump_input_configuration conf) noexcept;
+
+  //! Construct a midi_in object with a configuration object for a specific MIDI 2 back-end
+  //! see configuration.hpp for the available configuration types.
+  //! An exception will be thrown if the requested back-end cannot be opened.
+  explicit midi_in(ump_input_configuration conf, std::any api_conf);
 
   midi_in(const midi_in&) = delete;
   midi_in(midi_in&& other) noexcept;

@@ -10,6 +10,8 @@ namespace libremidi
 enum class API
 {
   UNSPECIFIED, /*!< Search for a working compiled API. */
+
+  // MIDI 1.0 APIs
   MACOSX_CORE, /*!< Macintosh OS-X Core Midi API. */
   LINUX_ALSA,  /*!< The Advanced Linux Sound Architecture API. */
   LINUX_ALSA_SEQ = LINUX_ALSA,
@@ -18,7 +20,13 @@ enum class API
   WINDOWS_MM,         /*!< The Microsoft Multimedia MIDI API. */
   WINDOWS_UWP,        /*!< The Microsoft WinRT MIDI API. */
   EMSCRIPTEN_WEBMIDI, /*!< Web MIDI API through Emscripten */
-  DUMMY               /*!< A compilable but non-functional API. */
+
+  // MIDI 2.0 APIs
+  LINUX_ALSA_RAW_UMP, /*!< Raw ALSA API for MIDI 2.0 */
+  COREMIDI_UMP,
+  WINDOWS_MIDI_SERVICES,
+
+  DUMMY /*!< A compilable but non-functional API. */
 };
 
 /**
@@ -29,6 +37,7 @@ enum class API
   API compiled for certain operating systems.
 */
 LIBREMIDI_EXPORT std::vector<libremidi::API> available_apis() noexcept;
+LIBREMIDI_EXPORT std::vector<libremidi::API> available_ump_apis() noexcept;
 
 //! A static function to determine the current version.
 LIBREMIDI_EXPORT std::string_view get_version() noexcept;

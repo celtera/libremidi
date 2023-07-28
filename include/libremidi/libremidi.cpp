@@ -22,21 +22,21 @@ std::string_view get_version() noexcept
 LIBREMIDI_INLINE std::string_view get_api_name(libremidi::API api)
 {
   std::string_view ret;
-  for_backend(api, [&](auto& b) { ret = b.name; });
+  midi_any::for_backend(api, [&](auto& b) { ret = b.name; });
   return ret;
 }
 
 LIBREMIDI_INLINE std::string_view get_api_display_name(libremidi::API api)
 {
   std::string_view ret;
-  for_backend(api, [&](auto& b) { ret = b.display_name; });
+  midi_any::for_backend(api, [&](auto& b) { ret = b.display_name; });
   return ret;
 }
 
 LIBREMIDI_INLINE libremidi::API get_compiled_api_by_name(std::string_view name)
 {
   libremidi::API ret = libremidi::API::UNSPECIFIED;
-  for_all_backends([&](auto& b) {
+  midi_any::for_all_backends([&](auto& b) {
     if (name == b.name)
       ret = b.API;
   });
@@ -46,7 +46,14 @@ LIBREMIDI_INLINE libremidi::API get_compiled_api_by_name(std::string_view name)
 [[nodiscard]] LIBREMIDI_INLINE std::vector<libremidi::API> available_apis() noexcept
 {
   std::vector<libremidi::API> apis;
-  for_all_backends([&](auto b) { apis.push_back(b.API); });
+  midi_1::for_all_backends([&](auto b) { apis.push_back(b.API); });
+  return apis;
+}
+
+[[nodiscard]] LIBREMIDI_INLINE std::vector<libremidi::API> available_ump_apis() noexcept
+{
+  std::vector<libremidi::API> apis;
+  midi_2::for_all_backends([&](auto b) { apis.push_back(b.API); });
   return apis;
 }
 
@@ -64,7 +71,7 @@ LIBREMIDI_EXPORT
 std::any midi_in_configuration_for(libremidi::API api)
 {
   std::any ret;
-  for_backend(api, [&]<typename T>(T) {
+  midi_any::for_backend(api, [&]<typename T>(T) {
     using conf_type = typename T::midi_in_configuration;
     ret = conf_type{};
   });
@@ -75,7 +82,7 @@ LIBREMIDI_EXPORT
 std::any midi_out_configuration_for(libremidi::API api)
 {
   std::any ret;
-  for_backend(api, [&]<typename T>(T) {
+  midi_any::for_backend(api, [&]<typename T>(T) {
     using conf_type = typename T::midi_out_configuration;
     ret = conf_type{};
   });
@@ -86,7 +93,7 @@ LIBREMIDI_EXPORT
 std::any observer_configuration_for(libremidi::API api)
 {
   std::any ret;
-  for_backend(api, [&]<typename T>(T) {
+  midi_any::for_backend(api, [&]<typename T>(T) {
     using conf_type = typename T::midi_observer_configuration;
     ret = conf_type{};
   });

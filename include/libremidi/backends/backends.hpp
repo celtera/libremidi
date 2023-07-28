@@ -14,6 +14,9 @@
 #if defined(LIBREMIDI_ALSA)
   #include <libremidi/backends/alsa.hpp>
   #include <libremidi/backends/raw_alsa.hpp>
+  #if __has_include(<alsa/ump.h>)
+    #include <libremidi/backends/alsa_raw_ump.hpp>
+  #endif
 #endif
 
 #if defined(LIBREMIDI_JACK)
@@ -40,9 +43,6 @@
 
 namespace libremidi
 {
-
-namespace
-{
 // The order here will control the order of the API search in
 // the constructor.
 template <typename unused, typename... Args>
@@ -50,6 +50,9 @@ constexpr auto make_tl(unused, Args...)
 {
   return std::tuple<Args...>{};
 }
+
+namespace midi_1
+{
 static constexpr auto available_backends = make_tl(
     0
 #if defined(LIBREMIDI_ALSA)
@@ -95,5 +98,63 @@ auto for_backend(libremidi::API api, F&& f)
       = [](auto& backend, libremidi::API api) { return backend.API == api; };
   std::apply([&](auto&&... b) { ((is_api(b, api) && (f(b), true)) || ...); }, available_backends);
 }
+}
+
+namespace midi_2
+{
+static constexpr auto available_backends = make_tl(
+    0
+#if defined(LIBREMIDI_ALSA)
+    ,
+    alsa_raw_ump::backend{}
+#endif
+#if defined(LIBREMIDI_COREAUDIO)
+#endif
+#if defined(LIBREMIDI_JACK)
+#endif
+#if defined(LIBREMIDI_WINMM)
+#endif
+#if defined(LIBREMIDI_WINUWP)
+#endif
+#if defined(LIBREMIDI_EMSCRIPTEN)
+#endif
+    ,
+    dummy_backend{});
+
+// There should always be at least one back-end.
+static_assert(std::tuple_size_v<decltype(available_backends)> >= 1);
+
+template <typename F>
+auto for_all_backends(F&& f)
+{
+  std::apply([&](auto&&... x) { (f(x), ...); }, available_backends);
+}
+
+template <typename F>
+auto for_backend(libremidi::API api, F&& f)
+{
+  static constexpr auto is_api
+      = [](auto& backend, libremidi::API api) { return backend.API == api; };
+  std::apply([&](auto&&... b) { ((is_api(b, api) && (f(b), true)) || ...); }, available_backends);
+}
+}
+
+namespace midi_any
+{
+
+template <typename F>
+auto for_all_backends(F&& f)
+{
+  midi_1::for_all_backends(f);
+  midi_2::for_all_backends(f);
+}
+
+template <typename F>
+auto for_backend(libremidi::API api, F&& f)
+{
+  midi_1::for_backend(api, f);
+  midi_2::for_backend(api, f);
+}
+
 }
 }

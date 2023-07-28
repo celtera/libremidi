@@ -10,7 +10,7 @@ namespace libremidi
 class observer_dummy : public observer_api
 {
 public:
-  explicit observer_dummy(const observer_configuration& configuration, dummy_configuration) { }
+  explicit observer_dummy(const auto& configuration, dummy_configuration) { }
 
   ~observer_dummy() { }
   libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }
@@ -26,7 +26,7 @@ class midi_in_dummy final
     , public error_handler
 {
 public:
-  explicit midi_in_dummy(const input_configuration& configuration, dummy_configuration)
+  explicit midi_in_dummy(const auto& configuration, dummy_configuration)
   {
     warning(configuration, "midi_in_dummy: This class provides no functionality.");
   }
@@ -47,7 +47,7 @@ class midi_out_dummy final
     , public error_handler
 {
 public:
-  explicit midi_out_dummy(const output_configuration& configuration, dummy_configuration)
+  explicit midi_out_dummy(const auto& configuration, dummy_configuration)
   {
     warning(configuration, "midi_out_dummy: This class provides no functionality.");
   }

@@ -7,7 +7,7 @@
 
 namespace libremidi
 {
-LIBREMIDI_INLINE auto make_midi_in(input_configuration base_conf, std::any api_conf)
+LIBREMIDI_INLINE auto make_midi_in(auto base_conf, std::any api_conf, auto backends)
 {
   std::unique_ptr<midi_in_api> ptr;
 
@@ -21,7 +21,7 @@ LIBREMIDI_INLINE auto make_midi_in(input_configuration base_conf, std::any api_c
     }
     return false;
   };
-  std::apply([&](auto&&... b) { (from_api(b) || ...); }, available_backends);
+  std::apply([&](auto&&... b) { (from_api(b) || ...); }, backends);
   return ptr;
 }
 
@@ -31,7 +31,7 @@ LIBREMIDI_INLINE midi_in::midi_in(input_configuration base_conf) noexcept
   {
     try
     {
-      impl_ = make_midi_in(base_conf, midi_in_configuration_for(api));
+      impl_ = make_midi_in(base_conf, midi_in_configuration_for(api), midi_1::available_backends);
     }
     catch (const std::exception& e)
     {
@@ -46,7 +46,34 @@ LIBREMIDI_INLINE midi_in::midi_in(input_configuration base_conf) noexcept
 
 LIBREMIDI_INLINE
 midi_in::midi_in(input_configuration base_conf, std::any api_conf)
-    : impl_{make_midi_in(base_conf, api_conf)}
+    : impl_{make_midi_in(base_conf, api_conf, midi_1::available_backends)}
+{
+  if (!impl_)
+    throw midi_exception("Could not open midi in for the given api");
+}
+
+LIBREMIDI_INLINE midi_in::midi_in(ump_input_configuration base_conf) noexcept
+{
+  for (const auto& api : available_apis())
+  {
+    try
+    {
+      impl_ = make_midi_in(base_conf, midi_in_configuration_for(api), midi_2::available_backends);
+    }
+    catch (const std::exception& e)
+    {
+    }
+
+    if (impl_)
+      return;
+  }
+  if (!impl_)
+    impl_ = std::make_unique<midi_in_dummy>(input_configuration{}, dummy_configuration{});
+}
+
+LIBREMIDI_INLINE
+midi_in::midi_in(ump_input_configuration base_conf, std::any api_conf)
+    : impl_{make_midi_in(base_conf, api_conf, midi_2::available_backends)}
 {
   if (!impl_)
     throw midi_exception("Could not open midi in for the given api");
