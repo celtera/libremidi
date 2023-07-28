@@ -7,7 +7,7 @@
 namespace libremidi
 {
 class midi_in_alsa
-    : public midi_in_api
+    : public midi1::in_api
     , protected alsa_data
     , public error_handler
 {
@@ -33,7 +33,7 @@ public:
   }
 
   explicit midi_in_alsa(input_configuration&& conf, alsa_sequencer_input_configuration&& apiconf)
-      : midi_in_api{}
+      : midi1::in_api{}
       , configuration{std::move(conf), std::move(apiconf)}
   {
     if (init_client(configuration) < 0)
@@ -462,7 +462,7 @@ class midi_in_alsa_manual : public midi_in_alsa
 };
 
 template <>
-inline std::unique_ptr<midi_in_api> make<midi_in_alsa>(
+inline std::unique_ptr<midi1::in_api> make<midi_in_alsa>(
     libremidi::input_configuration&& conf, libremidi::alsa_sequencer_input_configuration&& api)
 {
   if (api.manual_poll)

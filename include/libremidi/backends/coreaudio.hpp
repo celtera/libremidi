@@ -18,6 +18,22 @@ struct core_backend
   static const constexpr auto display_name = "CoreMIDI";
 };
 }
+
+namespace libremidi::coremidi_ump
+{
+struct backend
+{
+  using midi_in = midi_in_impl;
+  using midi_out = midi_out_core;
+  using midi_observer = observer_core;
+  using midi_in_configuration = coremidi_input_configuration;
+  using midi_out_configuration = coremidi_output_configuration;
+  using midi_observer_configuration = coremidi_observer_configuration;
+  static const constexpr auto API = libremidi::API::COREMIDI_UMP;
+  static const constexpr auto name = "core_ump";
+  static const constexpr auto display_name = "CoreMIDI UMP";
+};
+}
 #if TARGET_OS_IPHONE
   #undef AudioGetCurrentHostTime
 #endif

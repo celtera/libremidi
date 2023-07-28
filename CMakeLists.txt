@@ -346,16 +346,12 @@ if(LIBREMIDI_EXAMPLES)
   add_executable(sysextest examples/sysextest.cpp)
   target_link_libraries(sysextest PRIVATE libremidi)
 
+
   if(ALSA_FOUND)
     add_executable(poll_share examples/poll_share.cpp)
     target_link_libraries(poll_share PRIVATE libremidi)
     add_executable(alsa_share examples/alsa_share.cpp)
     target_link_libraries(alsa_share PRIVATE libremidi)
-
-    add_executable(midi2_in examples/midi2_in.cpp)
-    target_link_libraries(midi2_in PRIVATE libremidi)
-    add_executable(midi2_out examples/midi2_out.cpp)
-    target_link_libraries(midi2_out PRIVATE libremidi)
   endif()
 
   if(HAS_JACK)
@@ -364,6 +360,11 @@ if(LIBREMIDI_EXAMPLES)
   endif()
 
   if(APPLE)
+      add_executable(midi2_in examples/midi2_in.cpp)
+      target_link_libraries(midi2_in PRIVATE libremidi)
+      add_executable(midi2_out examples/midi2_out.cpp)
+      target_link_libraries(midi2_out PRIVATE libremidi)
+
       add_executable(coremidi_share examples/coremidi_share.cpp)
       target_link_libraries(coremidi_share PRIVATE libremidi)
   endif()

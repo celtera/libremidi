@@ -8,7 +8,7 @@
 namespace libremidi
 {
 class midi_in_jack final
-    : public midi_in_api
+    : public midi1::in_api
     , private jack_helpers
     , public error_handler
 {

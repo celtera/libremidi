@@ -13,7 +13,7 @@
 namespace libremidi::alsa_raw_ump
 {
 class midi_in_impl
-    : public midi_in_api
+    : public midi2::in_api
     , public error_handler
 {
 public:

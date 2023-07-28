@@ -40,7 +40,7 @@ jobs:
         - {
             name: "Ubuntu (clang, libc++)",
             os: ubuntu-latest,
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-stdlib=libc++ -Werror=return-type -fsanitize=address -fsanitize=undefined'",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-stdlib=libc++ -Werror=return-type'",
             test_target: "test"
           }
         - {

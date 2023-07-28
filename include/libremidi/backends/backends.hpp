@@ -109,6 +109,8 @@ static constexpr auto available_backends = make_tl(
     alsa_raw_ump::backend{}
 #endif
 #if defined(LIBREMIDI_COREAUDIO)
+    ,
+    coremidi_ump::backend{}
 #endif
 #if defined(LIBREMIDI_JACK)
 #endif

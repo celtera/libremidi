@@ -22,7 +22,7 @@ public:
 };
 
 class midi_in_dummy final
-    : public midi_in_api
+    : public midi1::in_api
     , public error_handler
 {
 public:

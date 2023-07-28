@@ -38,4 +38,10 @@ struct coremidi_observer_configuration
   std::function<void(MIDIClientRef)> on_create_context{};
 };
 
+namespace coremidi_ump
+{
+using input_configuration = coremidi_input_configuration;
+using output_configuration = coremidi_input_configuration;
+using observer_configuration = coremidi_observer_configuration;
+}
 }
