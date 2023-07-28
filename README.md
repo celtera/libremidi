@@ -14,7 +14,7 @@ Additionnally, for MIDI 2 parsing support we use [cmidi2](https://github.com/ats
 ## Changelog 
 
 ### Since v4
-* Experimental MIDI 2.0 support. For now only for CoreMIDI (input) and ALSA raw (input, with kernel 6.5+). 
+* Experimental MIDI 2.0 support. For now only for CoreMIDI (input / output) and ALSA raw (input, with kernel 6.5+). 
   * More backends to come!
 * A neat configuration system which enables to pass options to the underlying backends
 * Possibility to share the contexts across inputs and outputs to avoid creating multiple clients in e.g. JACK
