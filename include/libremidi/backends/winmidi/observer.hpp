@@ -1,0 +1,140 @@
+#pragma once
+#include <libremidi/backends/winmidi/config.hpp>
+#include <libremidi/backends/winmidi/helpers.hpp>
+#include <libremidi/detail/observer.hpp>
+;
+namespace libremidi::winmidi
+{
+struct port_info
+{
+  hstring id;
+  hstring name;
+};
+
+class observer_impl final : public observer_api
+{
+public:
+  struct
+      : libremidi::observer_configuration
+      , winmidi::observer_configuration
+  {
+  } configuration;
+
+  MidiSession session;
+
+  explicit observer_impl(libremidi::observer_configuration&& conf, winmidi::observer_configuration&& apiconf)
+      : configuration{std::move(conf), std::move(apiconf)}
+      , session{MidiSession::CreateNewSession(L"libremidi session", MidiSessionSettings::Default())}
+  {
+    if (configuration.input_added)
+      for (const auto& p : get_input_ports())
+        configuration.input_added(p);
+    if (configuration.output_added)
+      for (const auto& p : get_output_ports())
+        configuration.output_added(p);
+
+    if (!configuration.has_callbacks())
+      return;
+/*
+    evTokenOnInputAdded_
+        = internalInPortObserver_.PortAdded([this](const port_info& p) { on_input_added(p); });
+    evTokenOnInputRemoved_
+        = internalInPortObserver_.PortRemoved([this](const port_info& p) { on_input_removed(p); });
+    evTokenOnOutputAdded_
+        = internalOutPortObserver_.PortAdded([this](const port_info& p) { on_output_added(p); });
+    evTokenOnOutputRemoved_ = internalOutPortObserver_.PortRemoved(
+        [this](const port_info& p) { on_output_removed(p); });
+*/
+  }
+
+  ~observer_impl()
+  {
+    if (!configuration.has_callbacks())
+      return;
+    // internalInPortObserver_.PortAdded(evTokenOnInputAdded_);
+    // internalInPortObserver_.PortRemoved(evTokenOnInputRemoved_);
+    // internalOutPortObserver_.PortAdded(evTokenOnOutputAdded_);
+    // internalOutPortObserver_.PortRemoved(evTokenOnOutputRemoved_);
+  }
+
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MIDI_SERVICES; }
+
+  port_information to_port_info(const DeviceInformation& p) const noexcept
+  {
+    return {
+        .client = 0,
+        .port = 0,
+        .manufacturer = "",
+        .device_name = "",
+        .port_name = to_string(p.Id()),
+        .display_name = to_string(p.Name())};
+  }
+
+  std::vector<libremidi::port_information> get_input_ports() const noexcept override
+  {
+    std::vector<libremidi::port_information> ret;
+
+    auto deviceSelector = MidiEndpointConnection::GetDeviceSelector();
+    auto endpointDevices = DeviceInformation::FindAllAsync(deviceSelector).get();
+    for(const auto& selectedEndpointInformation : endpointDevices)
+    {
+      // FIXME if(has input...)
+      ret.emplace_back(to_port_info(selectedEndpointInformation));
+    }
+
+    return ret;
+  }
+
+  std::vector<libremidi::port_information> get_output_ports() const noexcept override
+  {
+    std::vector<libremidi::port_information> ret;
+
+    auto deviceSelector = MidiEndpointConnection::GetDeviceSelector();
+    auto endpointDevices = DeviceInformation::FindAllAsync(deviceSelector).get();
+    for(const auto& selectedEndpointInformation : endpointDevices)
+    {
+      // FIXME if(has output...)
+      ret.emplace_back(to_port_info(selectedEndpointInformation));
+    }
+
+    return ret;
+  }
+
+  void on_input_added(const DeviceInformation& name)
+  {
+    if (configuration.input_added)
+      configuration.input_added(to_port_info(name));
+  }
+
+  void on_input_removed(const DeviceInformation& name)
+  {
+    if (configuration.input_removed)
+      configuration.input_removed(to_port_info(name));
+  }
+
+  void on_output_added(const DeviceInformation& name)
+  {
+    if (configuration.output_added)
+      configuration.output_added(to_port_info(name));
+  }
+
+  void on_output_removed(const DeviceInformation& name)
+  {
+    if (configuration.output_removed)
+      configuration.output_removed(to_port_info(name));
+  }
+
+private:
+#if 0
+  static inline observer_winmidi_internal internalInPortObserver_{MidiInPort::GetDeviceSelector()};
+  static inline observer_winmidi_internal internalOutPortObserver_{
+      MidiOutPort::GetDeviceSelector()};
+
+  int evTokenOnInputAdded_{-1};
+  int evTokenOnInputRemoved_{-1};
+  int evTokenOnOutputAdded_{-1};
+  int evTokenOnOutputRemoved_{-1};
+#endif
+};
+
+}

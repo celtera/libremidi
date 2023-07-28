@@ -88,6 +88,11 @@ else()
     include/libremidi/backends/emscripten/midi_out.cpp
     include/libremidi/backends/emscripten/observer.hpp
     include/libremidi/backends/emscripten/observer.cpp
+    include/libremidi/backends/winmidi/config.hpp
+    include/libremidi/backends/winmidi/helpers.hpp
+    include/libremidi/backends/winmidi/midi_out.hpp
+    include/libremidi/backends/winmidi/midi_in.hpp
+    include/libremidi/backends/winmidi/observer.hpp
     include/libremidi/backends/winmm/config.hpp
     include/libremidi/backends/winmm/helpers.hpp
     include/libremidi/backends/winmm/midi_in.hpp

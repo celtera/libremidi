@@ -34,7 +34,11 @@
 
 #if defined(LIBREMIDI_WINUWP)
   #include <libremidi/backends/winuwp.hpp>
+  #if __has_include(<winrt/Microsoft.Devices.Midi2.h>)
+    #include <libremidi/backends/winmidi.hpp>
+  #endif
 #endif
+
 
 #if defined(LIBREMIDI_EMSCRIPTEN)
   #include <libremidi/backends/emscripten.hpp>
@@ -115,9 +119,11 @@ static constexpr auto available_backends = make_tl(
 #endif
 #if defined(LIBREMIDI_JACK)
 #endif
-#if defined(LIBREMIDI_WINMM)
-#endif
 #if defined(LIBREMIDI_WINUWP)
+  #if __has_include(<winrt/Microsoft.Devices.Midi2.h>)
+    ,
+    winmidi::backend{}
+  #endif
 #endif
 #if defined(LIBREMIDI_EMSCRIPTEN)
 #endif
