@@ -1,5 +1,6 @@
 #pragma once
 #include <libremidi/config.hpp>
+#include <libremidi/cmidi2.hpp>
 
 #include <span>
 
@@ -10,7 +11,8 @@ struct ump
   alignas(4) uint32_t bytes[4];
   int64_t timestamp{};
 
-  constexpr operator std::span<const uint32_t>() const noexcept { return {bytes, 4}; }
+  constexpr operator std::span<const uint32_t>() const noexcept {
+    return {bytes, size()}; }
 
   constexpr ump() noexcept = default;
   constexpr ump(uint32_t b0) noexcept
@@ -30,22 +32,23 @@ struct ump
   {
   }
 
-  constexpr auto size() const noexcept { return 0; }
+  constexpr std::size_t size() const noexcept {
+    auto res = cmidi2_ump_get_num_bytes(bytes[0]);
+    if(res == 0xFF)
+      return 0;
+    return res / 4;
+  }
 
-  constexpr auto& front() const noexcept { return bytes[0]; }
-  constexpr auto& back() const noexcept { return bytes[0]; }
   constexpr auto& operator[](int i) const noexcept { return bytes[i]; }
-  constexpr auto& front() noexcept { return bytes[0]; }
-  constexpr auto& back() noexcept { return bytes[0]; }
   constexpr auto& operator[](int i) noexcept { return bytes[i]; }
 
   constexpr auto begin() const noexcept { return bytes; }
-  constexpr auto end() const noexcept { return bytes + 1; }
+  constexpr auto end() const noexcept { return bytes + size(); }
   constexpr auto begin() noexcept { return bytes; }
-  constexpr auto end() noexcept { return bytes + 1; }
+  constexpr auto end() noexcept { return bytes + size(); }
   constexpr auto cbegin() const noexcept { return bytes; }
-  constexpr auto cend() const noexcept { return bytes + 1; }
+  constexpr auto cend() const noexcept { return bytes + size(); }
   constexpr auto cbegin() noexcept { return bytes; }
-  constexpr auto cend() noexcept { return bytes + 1; }
+  constexpr auto cend() noexcept { return bytes + size(); }
 };
 }
