@@ -1,5 +1,5 @@
 #pragma once
-#include <libremidi/backends/coreaudio/config.hpp>
+#include <libremidi/backends/coremidi/config.hpp>
 
 namespace libremidi::coremidi_ump
 {

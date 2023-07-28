@@ -1,7 +1,7 @@
 #pragma once
-#include <libremidi/backends/coreaudio/midi_in.hpp>
-#include <libremidi/backends/coreaudio/midi_out.hpp>
-#include <libremidi/backends/coreaudio/observer.hpp>
+#include <libremidi/backends/coremidi/midi_in.hpp>
+#include <libremidi/backends/coremidi/midi_out.hpp>
+#include <libremidi/backends/coremidi/observer.hpp>
 
 namespace libremidi
 {

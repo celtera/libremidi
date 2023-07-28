@@ -47,7 +47,7 @@ TEST_CASE("poly aftertouch", "[midi_in]")
   }
 
   // Send a message
-  midi_out.send_message(libremidi::message::poly_pressure(0, 60, 100));
+  midi_out.send_message(libremidi::channel_events::poly_pressure(0, 60, 100));
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   // Check that we receive it correctly
@@ -55,7 +55,7 @@ TEST_CASE("poly aftertouch", "[midi_in]")
     std::lock_guard _{qmtx};
     REQUIRE(queue.size() == 1);
     libremidi::message mess = queue.back();
-    REQUIRE(mess.bytes == libremidi::message::poly_pressure(0, 60, 100).bytes);
+    REQUIRE(mess.bytes == libremidi::channel_events::poly_pressure(0, 60, 100).bytes);
   }
 #endif
 #endif

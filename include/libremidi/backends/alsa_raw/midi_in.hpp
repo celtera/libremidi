@@ -10,9 +10,9 @@
 #include <atomic>
 #include <thread>
 
-namespace libremidi
+namespace libremidi::alsa_raw
 {
-class midi_in_raw_alsa
+class midi_in_impl
     : public midi1::in_api
     , public error_handler
 {
@@ -23,32 +23,29 @@ public:
   {
   } configuration;
 
-  explicit midi_in_raw_alsa(input_configuration&& conf, alsa_raw_input_configuration&& apiconf)
+  explicit midi_in_impl(input_configuration&& conf, alsa_raw_input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     fds_.reserve(4);
   }
 
-  ~midi_in_raw_alsa() override { }
+  ~midi_in_impl() override { }
 
   bool open_virtual_port(std::string_view) override
   {
-    warning(configuration, "midi_in_raw_alsa: open_virtual_port unsupported");
+    warning(configuration, "midi_in_alsa_raw: open_virtual_port unsupported");
     return false;
   }
   void set_client_name(std::string_view) override
   {
-    warning(configuration, "midi_in_raw_alsa: set_client_name unsupported");
+    warning(configuration, "midi_in_alsa_raw: set_client_name unsupported");
   }
   void set_port_name(std::string_view) override
   {
-    warning(configuration, "midi_in_raw_alsa: set_port_name unsupported");
+    warning(configuration, "midi_in_alsa_raw: set_port_name unsupported");
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::LINUX_ALSA_RAW;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_RAW; }
 
   // Must be a string such as: "hw:2,4,1"
   [[nodiscard]] int do_init_port(const char* portname)
@@ -56,7 +53,7 @@ public:
     constexpr int mode = SND_RAWMIDI_NONBLOCK;
     if (int err = snd_rawmidi_open(&midiport_, nullptr, portname, mode); err < 0)
     {
-      error<driver_error>(this->configuration, "midi_in_raw_alsa::open_port: cannot open device.");
+      error<driver_error>(this->configuration, "midi_in_alsa_raw::open_port: cannot open device.");
       return err;
     }
 
@@ -205,9 +202,9 @@ public:
     midiport_ = nullptr;
   }
 
-  raw_alsa_helpers::enumerator get_device_enumerator() const noexcept
+  alsa_raw_helpers::enumerator get_device_enumerator() const noexcept
   {
-    raw_alsa_helpers::enumerator device_list;
+    alsa_raw_helpers::enumerator device_list;
     device_list.error_callback
         = [this](std::string_view text) { this->error<driver_error>(this->configuration, text); };
     return device_list;
@@ -219,11 +216,11 @@ public:
   int64_t last_time{};
 };
 
-class midi_in_raw_alsa_threaded : public midi_in_raw_alsa
+class midi_in_alsa_raw_threaded : public midi_in_impl
 {
 public:
-  midi_in_raw_alsa_threaded(input_configuration&& conf, alsa_raw_input_configuration&& apiconf)
-      : midi_in_raw_alsa{std::move(conf), std::move(apiconf)}
+  midi_in_alsa_raw_threaded(input_configuration&& conf, alsa_raw_input_configuration&& apiconf)
+      : midi_in_impl{std::move(conf), std::move(apiconf)}
   {
     if (this->event_fd < 0)
     {
@@ -232,7 +229,7 @@ public:
     }
   }
 
-  ~midi_in_raw_alsa_threaded()
+  ~midi_in_alsa_raw_threaded()
   {
     // Close a connection if it exists.
     this->close_port();
@@ -268,12 +265,12 @@ private:
     {
       if (configuration.timestamps == timestamp_mode::NoTimestamp)
       {
-        this->thread_ = std::thread{[this] { run_thread(&midi_in_raw_alsa::read_input_buffer); }};
+        this->thread_ = std::thread{[this] { run_thread(&midi_in_impl::read_input_buffer); }};
       }
       else
       {
         this->thread_ = std::thread{
-            [this] { run_thread(&midi_in_raw_alsa::read_input_buffer_with_timestamps); }};
+            [this] { run_thread(&midi_in_impl::read_input_buffer_with_timestamps); }};
       }
     }
     catch (const std::system_error& e)
@@ -290,7 +287,7 @@ private:
 
   bool open_port(const port_information& port, std::string_view name) override
   {
-    if (int err = midi_in_raw_alsa::init_port(port); err < 0)
+    if (int err = midi_in_impl::init_port(port); err < 0)
       return false;
     if (!start_thread())
       return false;
@@ -304,19 +301,19 @@ private:
       thread_.join();
     event_fd.consume(); // Reset to zero
 
-    midi_in_raw_alsa::close_port();
+    midi_in_impl::close_port();
   }
 
   std::thread thread_;
   eventfd_notifier event_fd{};
 };
 
-class midi_in_raw_alsa_manual : public midi_in_raw_alsa
+class midi_in_alsa_raw_manual : public midi_in_impl
 {
 public:
-  using midi_in_raw_alsa::midi_in_raw_alsa;
+  using midi_in_impl::midi_in_impl;
 
-  ~midi_in_raw_alsa_manual()
+  ~midi_in_alsa_raw_manual()
   {
     // Close a connection if it exists.
     this->close_port();
@@ -330,7 +327,7 @@ private:
       configuration.manual_poll(manual_poll_parameters{
           .fds = {this->fds_.data(), this->fds_.size()},
           .callback = [this](std::span<pollfd> fds) {
-            return do_read_events(&midi_in_raw_alsa::read_input_buffer, fds);
+            return do_read_events(&midi_in_impl::read_input_buffer, fds);
           }});
     }
     else
@@ -338,27 +335,30 @@ private:
       configuration.manual_poll(manual_poll_parameters{
           .fds = {this->fds_.data(), this->fds_.size()},
           .callback = [this](std::span<pollfd> fds) {
-            return do_read_events(&midi_in_raw_alsa::read_input_buffer_with_timestamps, fds);
+            return do_read_events(&midi_in_impl::read_input_buffer_with_timestamps, fds);
           }});
     }
   }
 
   bool open_port(const port_information& p, std::string_view name) override
   {
-    if (midi_in_raw_alsa::init_port(p) < 0)
+    if (midi_in_impl::init_port(p) < 0)
       return false;
     send_poll_callback();
     return true;
   }
 };
+}
 
+namespace libremidi
+{
 template <>
-inline std::unique_ptr<midi_in_api> make<midi_in_raw_alsa>(
+inline std::unique_ptr<midi_in_api> make<alsa_raw::midi_in_impl>(
     libremidi::input_configuration&& conf, libremidi::alsa_raw_input_configuration&& api)
 {
   if (api.manual_poll)
-    return std::make_unique<midi_in_raw_alsa_manual>(std::move(conf), std::move(api));
+    return std::make_unique<alsa_raw::midi_in_alsa_raw_manual>(std::move(conf), std::move(api));
   else
-    return std::make_unique<midi_in_raw_alsa_threaded>(std::move(conf), std::move(api));
+    return std::make_unique<alsa_raw::midi_in_alsa_raw_threaded>(std::move(conf), std::move(api));
 }
 }

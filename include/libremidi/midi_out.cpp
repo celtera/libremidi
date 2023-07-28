@@ -2,7 +2,7 @@
   #include <libremidi/libremidi.hpp>
 #endif
 
-#include <libremidi/backends/backends.hpp>
+#include <libremidi/backends.hpp>
 #include <libremidi/detail/midi_api.hpp>
 
 #include <array>

@@ -4,17 +4,17 @@
 #include <libremidi/backends/linux/helpers.hpp>
 #include <libremidi/detail/midi_in.hpp>
 
-namespace libremidi
+namespace libremidi::alsa_seq
 {
-class midi_in_alsa
+class midi_in_impl
     : public midi1::in_api
     , protected alsa_data
     , public error_handler
 {
 public:
   struct
-      : input_configuration
-      , alsa_sequencer_input_configuration
+      : libremidi::input_configuration
+      , alsa_seq::input_configuration
   {
   } configuration;
 
@@ -32,7 +32,8 @@ public:
     return true;
   }
 
-  explicit midi_in_alsa(input_configuration&& conf, alsa_sequencer_input_configuration&& apiconf)
+  explicit midi_in_impl(
+      libremidi::input_configuration&& conf, alsa_seq::input_configuration&& apiconf)
       : midi1::in_api{}
       , configuration{std::move(conf), std::move(apiconf)}
   {
@@ -72,7 +73,7 @@ public:
     }
   }
 
-  ~midi_in_alsa() override
+  ~midi_in_impl() override
   {
     // Cleanup.
     if (this->vport >= 0)
@@ -88,10 +89,7 @@ public:
       snd_seq_close(this->seq);
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::LINUX_ALSA_SEQ;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_SEQ; }
 
   [[nodiscard]] bool create_port(std::string_view portName)
   {
@@ -304,11 +302,12 @@ protected:
   std::vector<unsigned char> decoding_buffer = std::vector<unsigned char>(32);
 };
 
-class midi_in_alsa_threaded : public midi_in_alsa
+class midi_in_alsa_threaded : public midi_in_impl
 {
 public:
-  midi_in_alsa_threaded(input_configuration&& conf, alsa_sequencer_input_configuration&& apiconf)
-      : midi_in_alsa{std::move(conf), std::move(apiconf)}
+  midi_in_alsa_threaded(
+      libremidi::input_configuration&& conf, alsa_seq::input_configuration&& apiconf)
+      : midi_in_impl{std::move(conf), std::move(apiconf)}
   {
     if (this->event_fd < 0)
     {
@@ -343,7 +342,7 @@ private:
 
   void close_port() override
   {
-    midi_in_alsa::close_port();
+    midi_in_impl::close_port();
 
     stop_thread();
   }
@@ -413,9 +412,9 @@ private:
   eventfd_notifier event_fd{};
 };
 
-class midi_in_alsa_manual : public midi_in_alsa
+class midi_in_alsa_manual : public midi_in_impl
 {
-  using midi_in_alsa::midi_in_alsa;
+  using midi_in_impl::midi_in_impl;
 
   [[nodiscard]] int init_fds()
   {
@@ -460,14 +459,17 @@ class midi_in_alsa_manual : public midi_in_alsa
 
   std::vector<pollfd> fds_;
 };
+}
 
+namespace libremidi
+{
 template <>
-inline std::unique_ptr<midi_in_api> make<midi_in_alsa>(
-    libremidi::input_configuration&& conf, libremidi::alsa_sequencer_input_configuration&& api)
+inline std::unique_ptr<midi_in_api> make<alsa_seq::midi_in_impl>(
+    libremidi::input_configuration&& conf, libremidi::alsa_seq::input_configuration&& api)
 {
   if (api.manual_poll)
-    return std::make_unique<midi_in_alsa_manual>(std::move(conf), std::move(api));
+    return std::make_unique<alsa_seq::midi_in_alsa_manual>(std::move(conf), std::move(api));
   else
-    return std::make_unique<midi_in_alsa_threaded>(std::move(conf), std::move(api));
+    return std::make_unique<alsa_seq::midi_in_alsa_threaded>(std::move(conf), std::move(api));
 }
 }

@@ -638,7 +638,7 @@ try
       try
       {
         track_event ev = parse_event(tickCount, i, dataPtr, trackEnd, runningEvent);
-        if (!ev.m.bytes.empty())
+        if (!ev.m.empty())
         {
           if (!ev.m.is_meta_event())
           {

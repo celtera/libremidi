@@ -21,7 +21,7 @@ struct jack_backend
   using midi_in_configuration = jack_input_configuration;
   using midi_out_configuration = jack_output_configuration;
   using midi_observer_configuration = jack_observer_configuration;
-  static const constexpr auto API = libremidi::API::UNIX_JACK;
+  static const constexpr auto API = libremidi::API::JACK_MIDI;
   static const constexpr auto name = "jack";
   static const constexpr auto display_name = "JACK";
 };

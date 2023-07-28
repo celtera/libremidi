@@ -8,10 +8,10 @@
 #include <atomic>
 #include <thread>
 
-namespace libremidi
+namespace libremidi::alsa_raw_ump
 {
-class midi_out_raw_alsa final
-    : public midi_out_api
+class midi_out_impl final
+    : public midi2::out_api
     , public error_handler
 {
 public:
@@ -21,44 +21,41 @@ public:
   {
   } configuration;
 
-  midi_out_raw_alsa(output_configuration&& conf, alsa_raw_output_configuration&& apiconf)
+  midi_out_impl(output_configuration&& conf, alsa_raw_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
   }
 
-  ~midi_out_raw_alsa() override
+  ~midi_out_impl() override
   {
     // Close a connection if it exists.
-    midi_out_raw_alsa::close_port();
+    midi_out_impl::close_port();
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::LINUX_ALSA_RAW;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_RAW; }
 
   bool open_virtual_port(std::string_view) override
   {
-    warning(configuration, "midi_out_raw_alsa: open_virtual_port unsupported");
+    warning(configuration, "midi_out_alsa_raw: open_virtual_port unsupported");
     return false;
   }
   void set_client_name(std::string_view) override
   {
-    warning(configuration, "midi_out_raw_alsa: set_client_name unsupported");
+    warning(configuration, "midi_out_alsa_raw: set_client_name unsupported");
   }
   void set_port_name(std::string_view) override
   {
-    warning(configuration, "midi_out_raw_alsa: set_port_name unsupported");
+    warning(configuration, "midi_out_alsa_raw: set_port_name unsupported");
   }
 
   int connect_port(const char* portname)
   {
-    constexpr int mode = SND_RAWMIDI_SYNC;
-    int status = snd_rawmidi_open(NULL, &midiport_, portname, mode);
+    constexpr int mode = SND_UMP_SYNC;
+    int status = snd_ump_open(NULL, &midiport_, portname, mode);
     if (status < 0)
     {
       error<driver_error>(
-          this->configuration, "midi_out_raw_alsa::open_port: cannot open device.");
+          this->configuration, "midi_out_alsa_raw::open_port: cannot open device.");
       return status;
     }
     return status;
@@ -72,16 +69,16 @@ public:
   void close_port() override
   {
     if (midiport_)
-      snd_rawmidi_close(midiport_);
+      snd_ump_close(midiport_);
     midiport_ = nullptr;
   }
 
-  void send_message(const unsigned char* message, size_t size) override
+  void send_ump(const uint32_t* message, size_t size) override
   {
     if (!midiport_)
       error<invalid_use_error>(
           this->configuration,
-          "midi_out_raw_alsa::send_message: trying to send a message without an open "
+          "midi_out_alsa_raw::send_message: trying to send a message without an open "
           "port.");
 
     if (!this->configuration.chunking || size <= 16)
@@ -94,12 +91,12 @@ public:
     }
   }
 
-  bool write(const unsigned char* message, size_t size)
+  bool write(const uint32_t* message, size_t size)
   {
-    if (snd_rawmidi_write(midiport_, message, size) < 0)
+    if (snd_ump_write(midiport_, message, size) < 0)
     {
       error<driver_error>(
-          this->configuration, "midi_out_raw_alsa::send_message: cannot write message.");
+          this->configuration, "midi_out_alsa_raw::send_message: cannot write message.");
       return false;
     }
 
@@ -110,31 +107,35 @@ public:
   {
     snd_rawmidi_params_t* param;
     snd_rawmidi_params_alloca(&param);
-    snd_rawmidi_params_current(midiport_, param);
+
+    auto rawmidi = snd_ump_rawmidi(midiport_);
+    snd_rawmidi_params_current(rawmidi, param);
 
     std::size_t buffer_size = snd_rawmidi_params_get_buffer_size(param);
-    return std::min(buffer_size, (std::size_t)configuration.chunking->size);
+    return std::min(buffer_size, (std::size_t)configuration.chunking->size) / 4;
   }
 
   std::size_t get_available_bytes_to_write() const noexcept
   {
     snd_rawmidi_status_t* st{};
     snd_rawmidi_status_alloca(&st);
-    snd_rawmidi_status(midiport_, st);
+
+    auto rawmidi = snd_ump_rawmidi(midiport_);
+    snd_rawmidi_status(rawmidi, st);
 
     return snd_rawmidi_status_get_avail(st);
   }
 
   // inspired from ALSA amidi.c source code
-  void write_chunked(const unsigned char* const begin, size_t size)
+  void write_chunked(const uint32_t* const begin, size_t size)
   {
-    const unsigned char* data = begin;
-    const unsigned char* end = begin + size;
+    const auto* data = begin;
+    const auto* end = begin + size;
 
-    const std::size_t chunk_size = std::min(get_chunk_size(), size);
+    const std::size_t chunk_size_in_words = std::min(get_chunk_size(), size);
 
     // Send the first buffer
-    int len = chunk_size;
+    int len = chunk_size_in_words;
 
     if (!write(data, len))
       return;
@@ -144,12 +145,12 @@ public:
     while (data < end)
     {
       // Wait for the buffer to have some space available
-      const std::size_t written_bytes = data - begin;
+      const std::size_t written_bytes = (data - begin) * sizeof(uint32_t);
       std::size_t available{};
-      while ((available = get_available_bytes_to_write()) < chunk_size)
+      while ((available = get_available_bytes_to_write() / sizeof(uint32_t)) < chunk_size_in_words)
       {
         if (!configuration.chunking->wait(
-                std::chrono::microseconds((chunk_size - available) * 320), written_bytes))
+                std::chrono::microseconds((chunk_size_in_words - available) * 320), written_bytes))
           return;
       };
 
@@ -160,11 +161,12 @@ public:
       int len = end - data;
 
       // Maybe until the end of the sysex
-      if (auto sysex_end = (unsigned char*)memchr(data, 0xf7, len))
-        len = sysex_end - data + 1;
+      // FIXME implement this for UMP (if it makes sense?)
+      // if (auto sysex_end = (unsigned char*)memchr(data, 0xf7, len))
+      //   len = sysex_end - data + 1;
 
-      if (len > chunk_size)
-        len = chunk_size;
+      if (len > chunk_size_in_words)
+        len = chunk_size_in_words;
 
       if (!write(data, len))
         return;
@@ -173,14 +175,14 @@ public:
     }
   }
 
-  raw_alsa_helpers::enumerator get_device_enumerator() const noexcept
+  alsa_raw_helpers::enumerator get_device_enumerator() const noexcept
   {
-    raw_alsa_helpers::enumerator device_list;
+    alsa_raw_helpers::enumerator device_list;
     device_list.error_callback
         = [this](std::string_view text) { this->error<driver_error>(this->configuration, text); };
     return device_list;
   }
 
-  snd_rawmidi_t* midiport_{};
+  snd_ump_t* midiport_{};
 };
 }

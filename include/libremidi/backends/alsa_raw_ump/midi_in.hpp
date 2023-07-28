@@ -212,9 +212,9 @@ public:
     midiport_ = nullptr;
   }
 
-  raw_alsa_helpers::enumerator get_device_enumerator() const noexcept
+  alsa_raw_helpers::enumerator get_device_enumerator() const noexcept
   {
-    raw_alsa_helpers::enumerator device_list;
+    alsa_raw_helpers::enumerator device_list;
     device_list.error_callback
         = [this](std::string_view text) { this->error<driver_error>(this->configuration, text); };
     return device_list;

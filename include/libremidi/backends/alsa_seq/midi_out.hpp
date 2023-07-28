@@ -3,22 +3,22 @@
 #include <libremidi/backends/alsa_seq/helpers.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
-namespace libremidi
+namespace libremidi::alsa_seq
 {
 
-class midi_out_alsa final
+class midi_out_impl final
     : public midi1::out_api
     , private alsa_data
     , public error_handler
 {
 public:
   struct
-      : output_configuration
-      , alsa_sequencer_output_configuration
+      : libremidi::output_configuration
+      , alsa_seq::output_configuration
   {
   } configuration;
 
-  midi_out_alsa(output_configuration&& conf, alsa_sequencer_output_configuration&& apiconf)
+  midi_out_impl(libremidi::output_configuration&& conf, alsa_seq::output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     if (init_client(configuration) < 0)
@@ -41,10 +41,10 @@ public:
     snd_midi_event_init(this->coder);
   }
 
-  ~midi_out_alsa() override
+  ~midi_out_impl() override
   {
     // Close a connection if it exists.
-    midi_out_alsa::close_port();
+    midi_out_impl::close_port();
 
     // Cleanup.
     if (this->vport >= 0)
@@ -56,7 +56,7 @@ public:
       snd_seq_close(this->seq);
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::LINUX_ALSA; }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_SEQ; }
 
   [[nodiscard]] bool create_port(std::string_view portName)
   {

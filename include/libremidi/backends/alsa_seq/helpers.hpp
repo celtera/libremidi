@@ -7,9 +7,7 @@
 
 #include <string>
 
-namespace libremidi
-{
-namespace alsa_seq
+namespace libremidi::alsa_seq
 {
 namespace
 {
@@ -113,7 +111,6 @@ inline std::string port_name(snd_seq_t* seq, snd_seq_port_info_t* pinfo)
   str += ":";
   str += std::to_string(snd_seq_port_info_get_port(pinfo));
   return str;
-}
 }
 }
 

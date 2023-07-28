@@ -12,8 +12,8 @@
 #endif
 
 #if defined(LIBREMIDI_ALSA)
-  #include <libremidi/backends/alsa.hpp>
-  #include <libremidi/backends/raw_alsa.hpp>
+  #include <libremidi/backends/alsa_seq.hpp>
+  #include <libremidi/backends/alsa_raw.hpp>
   #if __has_include(<alsa/ump.h>)
     #include <libremidi/backends/alsa_raw_ump.hpp>
   #endif
@@ -24,7 +24,7 @@
 #endif
 
 #if defined(LIBREMIDI_COREAUDIO)
-  #include <libremidi/backends/coreaudio.hpp>
+  #include <libremidi/backends/coremidi.hpp>
   #include <libremidi/backends/coremidi_ump.hpp>
 #endif
 
@@ -62,7 +62,7 @@ static constexpr auto available_backends = make_tl(
     0
 #if defined(LIBREMIDI_ALSA)
     ,
-    raw_alsa_backend{}, alsa_backend{}
+    alsa_raw::backend{}, alsa_seq::backend{}
 #endif
 #if defined(LIBREMIDI_COREAUDIO)
     ,

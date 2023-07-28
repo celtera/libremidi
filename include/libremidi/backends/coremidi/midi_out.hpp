@@ -1,6 +1,6 @@
 #pragma once
-#include <libremidi/backends/coreaudio/config.hpp>
-#include <libremidi/backends/coreaudio/helpers.hpp>
+#include <libremidi/backends/coremidi/config.hpp>
+#include <libremidi/backends/coremidi/helpers.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
 namespace libremidi
@@ -72,7 +72,7 @@ public:
     {
       close_client();
       error<driver_error>(
-          this->configuration, "midi_out_core::open_port: error creating OS-X MIDI output port.");
+          this->configuration, "midi_out_core::open_port: error creating macOS MIDI output port.");
       return false;
     }
 
@@ -102,7 +102,7 @@ public:
     {
       error<driver_error>(
           this->configuration,
-          "midi_out_core::initialize: error creating OS-X virtual MIDI source.");
+          "midi_out_core::initialize: error creating macOS virtual MIDI source.");
       return false;
     }
 

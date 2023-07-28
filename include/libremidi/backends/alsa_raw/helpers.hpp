@@ -48,7 +48,7 @@ static_assert(raw_from_port_handle(raw_to_port_handle({102, 7, 3})).card == 102)
 static_assert(raw_from_port_handle(raw_to_port_handle({12, 7, 3})).dev == 7);
 static_assert(raw_from_port_handle(raw_to_port_handle({12, 7, 3})).port == 3);
 
-struct raw_alsa_helpers
+struct alsa_raw_helpers
 {
   struct alsa_raw_port_info
   {
@@ -76,7 +76,7 @@ struct raw_alsa_helpers
       if (status < 0)
       {
         self.error(
-            "raw_alsa_helpers::enumerator::snd_ctl_wrapper: "
+            "alsa_raw_helpers::enumerator::snd_ctl_wrapper: "
             "cannot open control for card",
             name, snd_strerror(status));
       }
@@ -152,7 +152,7 @@ struct raw_alsa_helpers
       else if (status < 0 && status != -ENXIO)
       {
         error(
-            "raw_alsa_helpers::enumerator::is: cannot get rawmidi information:", card, device, sub,
+            "alsa_raw_helpers::enumerator::is: cannot get rawmidi information:", card, device, sub,
             snd_strerror(status));
         return status;
       }
@@ -193,7 +193,7 @@ struct raw_alsa_helpers
       if (status < 0)
       {
         error(
-            "raw_alsa_helpers::enumerator::enumerate_cards: "
+            "alsa_raw_helpers::enumerator::enumerate_cards: "
             "cannot determine card number: ",
             snd_strerror(status));
         return;
@@ -202,7 +202,7 @@ struct raw_alsa_helpers
       if (card < 0)
       {
         error(
-            "raw_alsa_helpers::enumerator::enumerate_cards: "
+            "alsa_raw_helpers::enumerator::enumerate_cards: "
             "no sound cards found");
         return;
       }
@@ -214,7 +214,7 @@ struct raw_alsa_helpers
         if ((status = snd_card_next(&card)) < 0)
         {
           error(
-              "raw_alsa_helpers::enumerator::enumerate_cards: "
+              "alsa_raw_helpers::enumerator::enumerate_cards: "
               "cannot determine card number: ",
               snd_strerror(status));
           break;
@@ -244,7 +244,7 @@ struct raw_alsa_helpers
         if (status < 0)
         {
           error(
-              "raw_alsa_helpers::enumerator::enumerate_devices: "
+              "alsa_raw_helpers::enumerator::enumerate_devices: "
               "cannot determine device number: ",
               snd_strerror(status));
           break;

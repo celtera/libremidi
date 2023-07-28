@@ -4,48 +4,16 @@
   #include <libremidi/backends/alsa_raw/helpers.hpp>
   #include <libremidi/backends/dummy.hpp>
   #include <libremidi/backends/linux/helpers.hpp>
+  #include <libremidi/backends/linux/udev.hpp>
   #include <libremidi/detail/observer.hpp>
 
-  #include <libudev.h>
   #include <poll.h>
 
   #include <stdexcept>
 
-namespace libremidi
+namespace libremidi::alsa_raw
 {
-struct udev_helper
-{
-  udev_helper()
-  {
-    instance = udev_new();
-    assert(instance);
-
-    monitor = udev_monitor_new_from_netlink(instance, "udev");
-    assert(monitor);
-    udev_monitor_enable_receiving(monitor);
-  }
-
-  ~udev_helper()
-  {
-    udev_monitor_unref(monitor);
-    udev_unref(instance);
-  }
-
-  udev_helper(const udev_helper&) = delete;
-  udev_helper(udev_helper&&) = delete;
-  udev_helper& operator=(const udev_helper&) = delete;
-  udev_helper& operator=(udev_helper&&) = delete;
-
-  operator pollfd() const noexcept
-  {
-    return {.fd = udev_monitor_get_fd(monitor), .events = POLLIN};
-  }
-
-  udev* instance{};
-  udev_monitor* monitor{};
-};
-
-class observer_alsa_raw final : public observer_api
+class observer_impl final : public observer_api
 {
 public:
   struct
@@ -54,8 +22,7 @@ public:
   {
   } configuration;
 
-  explicit observer_alsa_raw(
-      observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
+  explicit observer_impl(observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     // Set-up initial state
@@ -72,7 +39,7 @@ public:
     thread = std::thread{[this] { run(); }};
   }
 
-  ~observer_alsa_raw()
+  ~observer_impl()
   {
     event_fd.notify();
 
@@ -80,15 +47,12 @@ public:
       thread.join();
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::LINUX_ALSA_RAW;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_RAW; }
 
   std::vector<libremidi::port_information> get_input_ports() const noexcept override
   {
     std::vector<libremidi::port_information> ret;
-    raw_alsa_helpers::enumerator new_devs;
+    alsa_raw_helpers::enumerator new_devs;
 
     new_devs.enumerate_cards();
     for (auto& d : new_devs.inputs)
@@ -101,7 +65,7 @@ public:
   std::vector<libremidi::port_information> get_output_ports() const noexcept override
   {
     std::vector<libremidi::port_information> ret;
-    raw_alsa_helpers::enumerator new_devs;
+    alsa_raw_helpers::enumerator new_devs;
 
     new_devs.enumerate_cards();
     for (auto& d : new_devs.outputs)
@@ -166,7 +130,7 @@ private:
     }
   }
 
-  libremidi::port_information to_port_info(raw_alsa_helpers::alsa_raw_port_info p) const noexcept
+  libremidi::port_information to_port_info(alsa_raw_helpers::alsa_raw_port_info p) const noexcept
   {
     return {
         .client = 0,
@@ -179,7 +143,7 @@ private:
 
   void check_devices()
   {
-    raw_alsa_helpers::enumerator new_devs;
+    alsa_raw_helpers::enumerator new_devs;
 
     new_devs.enumerate_cards();
 
@@ -240,7 +204,7 @@ private:
   timerfd_timer timer_fd{};
   int timer_check_counts = 0;
   std::thread thread;
-  raw_alsa_helpers::enumerator current_devices;
+  alsa_raw_helpers::enumerator current_devices;
 
   pollfd fds[3]{};
 };

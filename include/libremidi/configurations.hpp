@@ -6,7 +6,7 @@
 #endif
 
 #if defined(__APPLE__)
-  #include <libremidi/backends/coreaudio/config.hpp>
+  #include <libremidi/backends/coremidi/config.hpp>
 #endif
 
 #if defined(_WIN32)

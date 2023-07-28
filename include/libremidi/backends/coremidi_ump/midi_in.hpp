@@ -79,7 +79,7 @@ public:
     {
       close_client();
       error<driver_error>(
-          this->configuration, "midi_in_core::open_port: error creating OS-X MIDI input port: "
+          this->configuration, "midi_in_core::open_port: error creating macOS MIDI input port: "
                                    + std::to_string(result));
       return false;
     }
@@ -90,7 +90,7 @@ public:
       MIDIPortDispose(port);
       close_client();
       error<driver_error>(
-          this->configuration, "midi_in_core::open_port: error connecting OS-X MIDI input port.");
+          this->configuration, "midi_in_core::open_port: error connecting macOS MIDI input port.");
       return false;
     }
 
@@ -113,7 +113,7 @@ public:
     {
       error<driver_error>(
           this->configuration,
-          "midi_in_core::open_virtual_port: error creating virtual OS-X MIDI "
+          "midi_in_core::open_virtual_port: error creating virtual macOS MIDI "
           "destination.");
       return false;
     }

@@ -12,26 +12,22 @@
 // Thanks to Pedro Lopez-Cabanillas for help with the ALSA sequencer
 // time stamps and other assorted fixes!!!
 
-// If you don't need timestamping for incoming MIDI events, define the
-// preprocessor definition LIBREMIDI_ALSA_AVOID_TIMESTAMPING to save resources
-// associated with the ALSA sequencer queues.
-
 #include <libremidi/backends/alsa_seq/midi_in.hpp>
 #include <libremidi/backends/alsa_seq/midi_out.hpp>
 #include <libremidi/backends/alsa_seq/observer.hpp>
 
-namespace libremidi
+namespace libremidi::alsa_seq
 {
 
-struct alsa_backend
+struct backend
 {
-  using midi_in = midi_in_alsa;
-  using midi_out = midi_out_alsa;
-  using midi_observer = observer_alsa;
-  using midi_in_configuration = alsa_sequencer_input_configuration;
-  using midi_out_configuration = alsa_sequencer_output_configuration;
-  using midi_observer_configuration = alsa_sequencer_observer_configuration;
-  static const constexpr auto API = libremidi::API::LINUX_ALSA;
+  using midi_in = midi_in_impl;
+  using midi_out = midi_out_impl;
+  using midi_observer = observer_impl;
+  using midi_in_configuration = alsa_seq::input_configuration;
+  using midi_out_configuration = alsa_seq::output_configuration;
+  using midi_observer_configuration = alsa_seq::observer_configuration;
+  static const constexpr auto API = libremidi::API::ALSA_SEQ;
   static const constexpr auto name = "alsa_seq";
   static const constexpr auto display_name = "ALSA (sequencer)";
 };

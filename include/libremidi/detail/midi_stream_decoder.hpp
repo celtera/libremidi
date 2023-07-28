@@ -9,13 +9,13 @@ struct midi_stream_decoder
 {
   uint8_t runningStatusType_{};
   message_callback& callback;
-  midi_bytes bytes;
+  std::vector<unsigned char> bytes;
   message msg;
 
   explicit midi_stream_decoder(message_callback& data)
       : callback{data}
   {
-    bytes.reserve(16);
+    bytes.reserve(64);
   }
 
   void add_bytes(unsigned char* data, std::size_t sz, int64_t nanos = 0)

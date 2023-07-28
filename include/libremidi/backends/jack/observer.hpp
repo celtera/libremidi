@@ -195,7 +195,7 @@ public:
         this);
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::UNIX_JACK; }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_MIDI; }
 
   std::vector<libremidi::port_information> get_input_ports() const noexcept override
   {

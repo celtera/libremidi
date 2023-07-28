@@ -58,6 +58,7 @@
 */
 
 #include <libremidi/api.hpp>
+#include <libremidi/defaults.hpp>
 #include <libremidi/input_configuration.hpp>
 #include <libremidi/message.hpp>
 #include <libremidi/observer_configuration.hpp>
@@ -68,62 +69,7 @@
 
 namespace libremidi
 {
-class midi_in;
-class midi_out;
-class observer;
-LIBREMIDI_EXPORT
-std::any midi_in_configuration_for(libremidi::API);
-LIBREMIDI_EXPORT
-std::any midi_out_configuration_for(libremidi::API);
-LIBREMIDI_EXPORT
-std::any observer_configuration_for(libremidi::API);
-
-LIBREMIDI_EXPORT
-std::any midi_in_configuration_for(const libremidi::observer&);
-LIBREMIDI_EXPORT
-std::any midi_out_configuration_for(const libremidi::observer&);
-
-LIBREMIDI_EXPORT
-    std::optional<port_information>
-    in_default_port(libremidi::API api) noexcept;
-LIBREMIDI_EXPORT
-    std::optional<port_information>
-    out_default_port(libremidi::API api) noexcept;
-
-namespace midi1
-{
-LIBREMIDI_EXPORT
-std::any in_default_configuration();
-LIBREMIDI_EXPORT
-std::any out_default_configuration();
-LIBREMIDI_EXPORT
-std::any observer_default_configuration();
-
-inline
-std::optional<port_information>
-in_default_port() noexcept { return libremidi::in_default_port(default_api()); }
-inline
-std::optional<port_information>
-out_default_port() noexcept { return libremidi::out_default_port(default_api()); }
-}
-
-namespace midi2
-{
-LIBREMIDI_EXPORT
-std::any in_default_configuration();
-LIBREMIDI_EXPORT
-std::any out_default_configuration();
-LIBREMIDI_EXPORT
-std::any observer_default_configuration();
-
-inline
-std::optional<port_information>
-in_default_port() noexcept { return libremidi::in_default_port(default_api()); }
-inline
-std::optional<port_information>
-out_default_port() noexcept { return libremidi::out_default_port(default_api()); }
-}
-
+//! Main class for observing hotplug of MIDI 1.0 and 2.0 devices.
 //! The callbacks will be called whenever a device is added or removed
 //! for a given API.
 class LIBREMIDI_EXPORT observer
@@ -131,10 +77,9 @@ class LIBREMIDI_EXPORT observer
 public:
   //! Open an observer instance with the given configuration.
   //!
-  //! api_conf can be either
-  //! - an instance of observer_configuration,
+  //! * api_conf can be an instance of observer_configuration,
   //!   such as jack_observer_configuration, winmm_observer_configuration, etc...
-  //! - a libremidi::API enum to simply request a specific api
+  //! * if no callbacks are passed, no secondary thread will be created unless absolutely necessary
   explicit observer(observer_configuration conf = {}) noexcept;
   explicit observer(observer_configuration conf, std::any api_conf);
   observer(const observer&) = delete;
@@ -153,23 +98,7 @@ private:
   std::unique_ptr<class observer_api> impl_;
 };
 
-/**********************************************************************/
-/*! \class midi_in
-    \brief A realtime MIDI input class.
-
-    This class provides a common, platform-independent API for
-    realtime MIDI input.  It allows access to a single MIDI input
-    port.  Incoming MIDI messages are either saved to a queue for
-    retrieval using the getMessage() function or immediately passed to
-    a user-specified callback function.  Create multiple instances of
-    this class to connect to more than one MIDI device at the same
-    time.  With the OS-X, Linux ALSA, and JACK MIDI APIs, it is also
-    possible to open a virtual input port to which other MIDI software
-    clients can connect.
-
-    by Gary P. Scavone, 2003-2017.
-*/
-
+//! Main class for receiving MIDI 1.0 and 2.0 messages.
 class LIBREMIDI_EXPORT midi_in
 {
 public:
@@ -202,18 +131,11 @@ public:
   void open_port(const port_information& pt, std::string_view local_port_name = "libremidi input");
 
   //! Create a virtual input port, with optional name, to allow software
-  //! connections (OS X, JACK and ALSA only).
-  /*!
-    This function creates a virtual MIDI input port to which other
-    software applications can connect.  This type of functionality
-    is currently only supported by the Macintosh OS-X, any JACK,
-    and Linux ALSA APIs (the function returns an error for the other APIs).
-
-    \param portName An optional name for the application port that is
-                    used to connect to portId can be specified.
-  */
-  void open_virtual_port(std::string_view portName);
-  void open_virtual_port() { open_virtual_port("libremidi virtual port"); }
+  //! connections.
+  //!
+  //! \param portName An optional name for the application port that is
+  //!                 used to connect to portId can be specified.
+  void open_virtual_port(std::string_view portName = "libremidi virtual port");
 
   void set_port_name(std::string_view portName);
 
@@ -231,22 +153,7 @@ private:
   std::unique_ptr<class midi_in_api> impl_;
 };
 
-/**********************************************************************/
-/*! \class midi_out
-    \brief A realtime MIDI output class.
-
-    This class provides a common, platform-independent API for MIDI
-    output.  It allows one to probe available MIDI output ports, to
-    connect to one such port, and to send MIDI bytes immediately over
-    the connection.  Create multiple instances of this class to
-    connect to more than one MIDI device at the same time.  With the
-    OS-X, Linux ALSA and JACK MIDI APIs, it is also possible to open a
-    virtual port to which other MIDI software clients can connect.
-
-    by Gary P. Scavone, 2003-2017.
-*/
-/**********************************************************************/
-
+//! Main class for sending MIDI 1.0 and 2.0 messages.
 class LIBREMIDI_EXPORT midi_out
 {
 public:
@@ -281,17 +188,11 @@ public:
   [[nodiscard]] bool is_port_connected() const noexcept;
 
   //! Create a virtual output port, with optional name, to allow software
-  //! connections (OS X, JACK and ALSA only).
-  /*!
-      This function creates a virtual MIDI output port to which other
-      software applications can connect.  This type of functionality
-      is currently only supported by the Macintosh OS-X, Linux ALSA
-      and JACK APIs (the function does nothing with the other APIs).
-      An exception is thrown if an error occurs while attempting to
-      create the virtual port.
-  */
-  void open_virtual_port(std::string_view portName);
-  void open_virtual_port() { open_virtual_port("libremidi virtual port"); }
+  //! connections.
+  //!
+  //! \param portName An optional name for the application port that is
+  //!                 used to connect to portId can be specified.
+  void open_virtual_port(std::string_view portName = "libremidi virtual port");
 
   void set_port_name(std::string_view portName);
 
@@ -302,14 +203,7 @@ public:
   */
   void send_message(const libremidi::message& message);
 
-  //! Immediately send a single message out an open MIDI output port.
-  /*!
-      An exception is thrown if an error occurs during output or an
-      output connection was not previously established.
-
-      \param message A pointer to the MIDI message as raw bytes
-      \param size    Length of the MIDI message in bytes
-  */
+  //! Immediately send a single message to an open MIDI output port.
   void send_message(const unsigned char* message, size_t size);
   void send_message(std::span<const unsigned char>);
   void send_message(unsigned char b0);
@@ -323,6 +217,7 @@ public:
   //! (currently not implemented anywhere)
   void schedule_message(int64_t timestamp, const unsigned char* message, size_t size);
 
+  //! Immediately send a single UMP packete to an open MIDI output port.
   void send_ump(const uint32_t* message, size_t size);
   void send_ump(const libremidi::ump&);
   void send_ump(std::span<const uint32_t>);
@@ -331,7 +226,7 @@ public:
   void send_ump(uint32_t b0, uint32_t b1, uint32_t b2);
   void send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b3);
 
-  //! Try to schedule a message later in time if the underlying API supports it
+  //! Try to schedule an UMP packet later in time if the underlying API supports it
   //! (currently not implemented anywhere)
   void schedule_ump(int64_t timestamp, const uint32_t* message, size_t size);
 

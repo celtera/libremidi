@@ -3,7 +3,7 @@
 
 extern "C" typedef struct _snd_seq snd_seq_t;
 
-namespace libremidi
+namespace libremidi::alsa_seq
 {
 
 // Possible parameters:
@@ -12,20 +12,20 @@ namespace libremidi
 // - Timestamping
 // - Tempo, ppq?
 
-struct alsa_sequencer_input_configuration
+struct input_configuration
 {
   std::string client_name = "libremidi client";
   snd_seq_t* context{};
   std::function<bool(const manual_poll_parameters&)> manual_poll;
 };
 
-struct alsa_sequencer_output_configuration
+struct output_configuration
 {
   std::string client_name = "libremidi client";
   snd_seq_t* context{};
 };
 
-struct alsa_sequencer_observer_configuration
+struct observer_configuration
 {
   std::string client_name = "libremidi client";
   snd_seq_t* context{};

@@ -209,7 +209,7 @@ void writer::write(std::ostream& out)
     for (const auto& event : event_list)
     {
       const auto& msg = event.m;
-      if (msg.bytes.empty())
+      if (msg.empty())
         continue;
 
       // Suppress end-of-track meta messages (one will be added

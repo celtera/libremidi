@@ -8,9 +8,9 @@
 #include <atomic>
 #include <thread>
 
-namespace libremidi
+namespace libremidi::alsa_raw
 {
-class midi_out_raw_alsa final
+class midi_out_impl final
     : public midi1::out_api
     , public error_handler
 {
@@ -21,34 +21,31 @@ public:
   {
   } configuration;
 
-  midi_out_raw_alsa(output_configuration&& conf, alsa_raw_output_configuration&& apiconf)
+  midi_out_impl(output_configuration&& conf, alsa_raw_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
   }
 
-  ~midi_out_raw_alsa() override
+  ~midi_out_impl() override
   {
     // Close a connection if it exists.
-    midi_out_raw_alsa::close_port();
+    midi_out_impl::close_port();
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::LINUX_ALSA_RAW;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_RAW; }
 
   bool open_virtual_port(std::string_view) override
   {
-    warning(configuration, "midi_out_raw_alsa: open_virtual_port unsupported");
+    warning(configuration, "midi_out_alsa_raw: open_virtual_port unsupported");
     return false;
   }
   void set_client_name(std::string_view) override
   {
-    warning(configuration, "midi_out_raw_alsa: set_client_name unsupported");
+    warning(configuration, "midi_out_alsa_raw: set_client_name unsupported");
   }
   void set_port_name(std::string_view) override
   {
-    warning(configuration, "midi_out_raw_alsa: set_port_name unsupported");
+    warning(configuration, "midi_out_alsa_raw: set_port_name unsupported");
   }
 
   int connect_port(const char* portname)
@@ -58,7 +55,7 @@ public:
     if (status < 0)
     {
       error<driver_error>(
-          this->configuration, "midi_out_raw_alsa::open_port: cannot open device.");
+          this->configuration, "midi_out_alsa_raw::open_port: cannot open device.");
       return status;
     }
     return status;
@@ -81,7 +78,7 @@ public:
     if (!midiport_)
       error<invalid_use_error>(
           this->configuration,
-          "midi_out_raw_alsa::send_message: trying to send a message without an open "
+          "midi_out_alsa_raw::send_message: trying to send a message without an open "
           "port.");
 
     if (!this->configuration.chunking)
@@ -99,7 +96,7 @@ public:
     if (snd_rawmidi_write(midiport_, message, size) < 0)
     {
       error<driver_error>(
-          this->configuration, "midi_out_raw_alsa::send_message: cannot write message.");
+          this->configuration, "midi_out_alsa_raw::send_message: cannot write message.");
       return false;
     }
 
@@ -173,9 +170,9 @@ public:
     }
   }
 
-  raw_alsa_helpers::enumerator get_device_enumerator() const noexcept
+  alsa_raw_helpers::enumerator get_device_enumerator() const noexcept
   {
-    raw_alsa_helpers::enumerator device_list;
+    alsa_raw_helpers::enumerator device_list;
     device_list.error_callback
         = [this](std::string_view text) { this->error<driver_error>(this->configuration, text); };
     return device_list;

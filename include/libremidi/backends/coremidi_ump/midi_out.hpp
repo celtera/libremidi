@@ -73,7 +73,7 @@ public:
     {
       close_client();
       error<driver_error>(
-          this->configuration, "midi_out_impl::open_port: error creating OS-X MIDI output port.");
+          this->configuration, "midi_out_impl::open_port: error creating macOS MIDI output port.");
       return false;
     }
 
@@ -103,7 +103,7 @@ public:
       this->endpoint = 0;
       error<driver_error>(
           this->configuration,
-          "midi_out_impl::initialize: error creating OS-X virtual MIDI source.");
+          "midi_out_impl::initialize: error creating macOS virtual MIDI source.");
       return false;
     }
 

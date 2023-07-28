@@ -34,11 +34,22 @@
 #endif
 
 #if __has_include(<boost/container/small_vector.hpp>) && !defined(LIBREMIDI_NO_BOOST)
-  #include <boost/container/small_vector.hpp>
+
+  #if LIBREMIDI_SLIM_MESSAGE > 0
+    #include <boost/container/static_vector.hpp>
 namespace libremidi
 {
-using midi_bytes = boost::container::small_vector<unsigned char, 4>;
+using midi_bytes = boost::container::static_vector<unsigned char, LIBREMIDI_SLIM_MESSAGE>;
 }
+  #else
+    #include <boost/container/small_vector.hpp>
+namespace libremidi
+{
+static constexpr int small_vector_minimum_size
+    = sizeof(boost::container::small_vector<unsigned char, 1>);
+using midi_bytes = boost::container::small_vector<unsigned char, small_vector_minimum_size>;
+}
+  #endif
 #else
 namespace libremidi
 {

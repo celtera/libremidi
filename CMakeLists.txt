@@ -22,6 +22,7 @@ option(LIBREMIDI_NO_JACK "Disable JACK back-end" OFF)
 
 option(LIBREMIDI_NO_EXPORTS "Disable dynamic symbol exporting" OFF)
 option(LIBREMIDI_NO_BOOST "Do not use Boost if available" OFF)
+option(LIBREMIDI_SLIM_MESSAGE "Use a fixed-size message format" 0)
 option(LIBREMIDI_FIND_BOOST "Actively look for Boost" OFF)
 option(LIBREMIDI_EXAMPLES "Enable examples" OFF)
 option(LIBREMIDI_TESTS "Enable tests" OFF)
@@ -62,11 +63,11 @@ else()
     include/libremidi/backends/alsa_raw_ump/midi_in.hpp
     include/libremidi/backends/alsa_raw_ump/midi_out.hpp
     include/libremidi/backends/alsa_raw_ump/observer.hpp
-    include/libremidi/backends/coreaudio/config.hpp
-    include/libremidi/backends/coreaudio/helpers.hpp
-    include/libremidi/backends/coreaudio/midi_in.hpp
-    include/libremidi/backends/coreaudio/midi_out.hpp
-    include/libremidi/backends/coreaudio/observer.hpp
+    include/libremidi/backends/coremidi/config.hpp
+    include/libremidi/backends/coremidi/helpers.hpp
+    include/libremidi/backends/coremidi/midi_in.hpp
+    include/libremidi/backends/coremidi/midi_out.hpp
+    include/libremidi/backends/coremidi/observer.hpp
     include/libremidi/backends/coremidi_ump/config.hpp
     include/libremidi/backends/coremidi_ump/helpers.hpp
     include/libremidi/backends/coremidi_ump/midi_in.hpp
@@ -104,12 +105,14 @@ else()
     include/libremidi/backends/winuwp/midi_in.hpp
     include/libremidi/backends/winuwp/observer.hpp
 
-    include/libremidi/backends/alsa.hpp
+    include/libremidi/backends/alsa_seq.hpp
+    include/libremidi/backends/alsa_raw.hpp
+    include/libremidi/backends/alsa_raw_ump.hpp
     include/libremidi/backends/coreaudio.hpp
+    include/libremidi/backends/coremidi_ump.hpp
     include/libremidi/backends/dummy.hpp
     include/libremidi/backends/emscripten.hpp
     include/libremidi/backends/jack.hpp
-    include/libremidi/backends/raw_alsa.hpp
     include/libremidi/backends/winmm.hpp
     include/libremidi/backends/winuwp.hpp
 
@@ -143,6 +146,10 @@ else()
 endif()
 
 add_library(libremidi::libremidi ALIAS libremidi)
+
+if(LIBREMIDI_SLIM_MESSAGE GREATER 0)
+  target_compile_definitions(libremidi ${_public} LIBREMIDI_SLIM_MESSAGE=${LIBREMIDI_SLIM_MESSAGE})
+endif()
 
 if(LIBREMIDI_NO_BOOST)
   target_compile_definitions(libremidi ${_public} LIBREMIDI_NO_BOOST)

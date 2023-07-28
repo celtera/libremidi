@@ -14,8 +14,8 @@ TEST_CASE("write multiple tracks to file", "[midi_writer]")
   {
     libremidi::writer writer;
 
-    const auto message1 = libremidi::message::note_on(1, key1, 127);
-    const auto message2 = libremidi::message::note_on(1, key2, 127);
+    const auto message1 = libremidi::channel_events::note_on(1, key1, 127);
+    const auto message2 = libremidi::channel_events::note_on(1, key2, 127);
 
     writer.add_event(0, 0, message1);
     writer.add_event(0, 1, message2);
@@ -64,10 +64,10 @@ TEST_CASE("issue_54")
     }
 
     // play middle C loudly
-    libremidi::message msg = libremidi::message::note_on(1, 60, 127);
+    libremidi::message msg = libremidi::channel_events::note_on(1, 60, 127);
     writer.add_event(0, libremidi::track_event{0, 0, msg});
     // off -why does it need velocity?
-    msg = libremidi::message::note_off(0, 60, 0);
+    msg = libremidi::channel_events::note_off(0, 60, 0);
     writer.add_event(0, libremidi::track_event{500, 0, msg});
 
     // does it need an end of track message?

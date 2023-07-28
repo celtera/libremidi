@@ -40,7 +40,7 @@ public:
     warning(configuration, "midi_in_jack: set_client_name unsupported");
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::UNIX_JACK; }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_MIDI; }
 
   bool open_port(const port_information& port, std::string_view portName) override
   {

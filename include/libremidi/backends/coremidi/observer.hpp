@@ -1,6 +1,6 @@
 #pragma once
-#include <libremidi/backends/coreaudio/config.hpp>
-#include <libremidi/backends/coreaudio/helpers.hpp>
+#include <libremidi/backends/coremidi/config.hpp>
+#include <libremidi/backends/coremidi/helpers.hpp>
 #include <libremidi/detail/observer.hpp>
 
 #include <CoreMIDI/CoreMIDI.h>

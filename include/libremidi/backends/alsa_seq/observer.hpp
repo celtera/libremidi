@@ -8,19 +8,19 @@
 
 #include <map>
 
-namespace libremidi
+namespace libremidi::alsa_seq
 {
-class observer_alsa final : public observer_api
+class observer_impl final : public observer_api
 {
 public:
   struct
-      : observer_configuration
-      , alsa_sequencer_observer_configuration
+      : libremidi::observer_configuration
+      , alsa_seq::observer_configuration
   {
   } configuration;
 
-  explicit observer_alsa(
-      observer_configuration&& conf, alsa_sequencer_observer_configuration&& apiconf)
+  explicit observer_impl(
+      libremidi::observer_configuration&& conf, alsa_seq::observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     using namespace std::literals;
@@ -162,7 +162,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override
   {
-    return libremidi::API::LINUX_ALSA_SEQ;
+    return libremidi::API::ALSA_SEQ;
   }
 
   std::vector<libremidi::port_information> get_input_ports() const noexcept override
@@ -259,7 +259,7 @@ public:
     }
   }
 
-  ~observer_alsa()
+  ~observer_impl()
   {
     event_fd.notify();
 
