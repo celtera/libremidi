@@ -9,7 +9,7 @@ This is a fork / rewrite based on two libraries:
 * [RtMidi](https://github.com/theSTK/RtMidi)
 * [ModernMIDI](https://github.com/ddiakopoulos/ModernMIDI)
 
-Additionnally, for MIDI 2 parsing support we use [cmidi2](https://raw.githubusercontent.com/atsushieno/cmidi2)!
+Additionnally, for MIDI 2 parsing support we use [cmidi2](https://github.com/atsushieno/cmidi2)!
 
 ## Changelog 
 
