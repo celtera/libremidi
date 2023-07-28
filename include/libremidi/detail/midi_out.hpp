@@ -42,7 +42,10 @@ public:
 
   void send_ump(const uint32_t* message, size_t size)
   {
-    // FIXME UMP to MIDI
+    uint8_t midi[65536];
+    int n = cmidi2_convert_single_ump_to_midi1(midi, sizeof(midi), (uint32_t*)message);
+    if (n > 0)
+      send_message(midi, n);
   }
 };
 }
@@ -57,7 +60,22 @@ public:
 
   void send_message(const unsigned char* message, size_t size)
   {
-    // FIXME MIDI to UMP
+    cmidi2_midi_conversion_context context{};
+    cmidi2_midi_conversion_context_initialize(&context);
+
+    uint32_t ump[65536 / 4];
+
+    context.midi1 = const_cast<unsigned char*>(message);
+    context.midi1_num_bytes = size;
+    context.midi1_proceeded_bytes = 0;
+    context.ump = ump;
+    context.ump_num_bytes = sizeof(ump);
+    context.ump_proceeded_bytes = 0;
+
+    if (auto res = cmidi2_convert_midi1_to_ump(&context); res != CMIDI2_CONVERSION_RESULT_OK)
+      return;
+
+    send_ump(context.ump, context.ump_proceeded_bytes);
   }
 };
 }
