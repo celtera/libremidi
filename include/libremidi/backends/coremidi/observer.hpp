@@ -76,7 +76,7 @@ public:
     if (!ok)
       return {};
 
-    return {
+    return std::conditional_t<Input, input_port, output_port>{
         {.client = (std::uintptr_t)this->client,
          .port = std::bit_cast<uint32_t>(get_int_property(obj, kMIDIPropertyUniqueID)),
          .manufacturer = get_string_property(obj, kMIDIPropertyManufacturer),

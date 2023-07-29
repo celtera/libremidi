@@ -64,7 +64,7 @@ namespace midi1
 inline constexpr libremidi::API default_api() noexcept
 {
 #if defined(__APPLE__)
-  return API::MACOSX_CORE;
+  return API::COREMIDI;
 #elif defined(_WIN32)
   return API::WINDOWS_MM;
 #elif defined(__linux__)
