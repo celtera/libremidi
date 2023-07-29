@@ -218,8 +218,7 @@ namespace libremidi::alsa_raw
 {
 struct observer_impl : observer_dummy
 {
-  explicit observer_alsa_raw(
-      observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
+  explicit observer_impl(observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
       : observer_dummy{dummy_configuration{}, dummy_configuration{}}
   {
   }
