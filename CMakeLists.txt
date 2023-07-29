@@ -282,11 +282,6 @@ if(NOT LIBREMIDI_NO_JACK)
 
   if(HAS_JACK)
     target_compile_definitions(libremidi ${_public} LIBREMIDI_JACK)
-
-    check_symbol_exists(jack_port_rename jack/jack.h HAS_JACK_PORT_RENAME)
-    if(HAS_JACK_PORT_RENAME)
-      target_compile_definitions(libremidi ${_public} LIBREMIDI_JACK_HAS_PORT_RENAME)
-    endif()
   endif()
 endif()
 
