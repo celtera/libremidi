@@ -15,12 +15,18 @@ typedef int (*JackProcessCallback)(jack_nframes_t nframes, void* arg);
 namespace libremidi
 {
 using jack_callback_function = std::function<void(int nframes)>;
+struct jack_callback
+{
+  int64_t token;
+  std::function<void(int nframes)> callback;
+};
 struct jack_input_configuration
 {
   std::string client_name = "libremidi client";
 
   jack_client_t* context{};
-  std::function<void(jack_callback_function)> set_process_func;
+  std::function<void(jack_callback)> set_process_func;
+  std::function<void(int64_t)> clear_process_func;
 };
 
 struct jack_output_configuration
@@ -28,7 +34,8 @@ struct jack_output_configuration
   std::string client_name = "libremidi client";
 
   jack_client_t* context{};
-  std::function<void(jack_callback_function)> set_process_func;
+  std::function<void(jack_callback)> set_process_func;
+  std::function<void(int64_t)> clear_process_func;
 
   int32_t ringbuffer_size = 16384;
 };

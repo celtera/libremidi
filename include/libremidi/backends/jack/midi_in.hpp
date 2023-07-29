@@ -9,7 +9,7 @@ namespace libremidi
 {
 class midi_in_jack final
     : public midi1::in_api
-    , private jack_helpers
+    , public jack_helpers
     , public error_handler
 {
 public:
@@ -22,7 +22,7 @@ public:
   explicit midi_in_jack(input_configuration&& conf, jack_input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    auto status = connect<&midi_in_jack::jackProcessIn>(*this);
+    auto status = connect(*this);
     if (status != jack_status_t{})
       warning(configuration, "midi_in_jack: " + std::to_string((int)jack_status_t{}));
   }
@@ -63,24 +63,13 @@ public:
     return create_local_port(*this, portName, JackPortIsInput);
   }
 
-  void close_port() override
-  {
-    if (this->port == nullptr)
-      return;
-    jack_port_unregister(this->client, this->port);
-    this->port = nullptr;
-  }
+  void close_port() override { return do_close_port(); }
 
   void set_port_name(std::string_view portName) override
   {
-#if defined(LIBREMIDI_JACK_HAS_PORT_RENAME)
     jack_port_rename(this->client, this->port, portName.data());
-#else
-    jack_port_set_name(this->port, portName.data());
-#endif
   }
 
-private:
   void set_timestamp(
       jack_nframes_t frame, jack_nframes_t start_frames, jack_time_t abs_usec,
       libremidi::message& msg) noexcept
@@ -121,13 +110,8 @@ private:
     }
   }
 
-  int jackProcessIn(jack_nframes_t nframes)
+  int process(jack_nframes_t nframes)
   {
-    jack_midi_event_t event{};
-
-    // Is port created?
-    if (this->port == nullptr)
-      return 0;
     void* buff = jack_port_get_buffer(this->port, nframes);
 
     // Timing
@@ -144,6 +128,7 @@ private:
     {
       auto& m = this->message;
 
+      jack_midi_event_t event{};
       jack_midi_event_get(&event, buff, j);
       this->set_timestamp(event.time, current_frames, current_usecs, m);
 

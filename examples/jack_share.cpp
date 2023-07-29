@@ -17,8 +17,8 @@ struct my_app
   std::vector<libremidi::midi_in> midiin;
   std::vector<libremidi::midi_out> midiout;
 
-  std::vector<libremidi::jack_callback_function> midiin_callbacks;
-  std::vector<libremidi::jack_callback_function> midiout_callbacks;
+  std::vector<libremidi::jack_callback> midiin_callbacks;
+  std::vector<libremidi::jack_callback> midiout_callbacks;
 
   my_app()
   {
@@ -44,11 +44,11 @@ struct my_app
 
     // Create our configuration
     auto api_input_config = libremidi::jack_input_configuration{
-        .context = handle.get(), .set_process_func = [this](libremidi::jack_callback_function cb) {
+        .context = handle.get(), .set_process_func = [this](libremidi::jack_callback cb) {
           midiin_callbacks.push_back(std::move(cb));
         }};
     auto api_output_config = libremidi::jack_output_configuration{
-        .context = handle.get(), .set_process_func = [this](libremidi::jack_callback_function cb) {
+        .context = handle.get(), .set_process_func = [this](libremidi::jack_callback cb) {
           midiout_callbacks.push_back(std::move(cb));
         }};
 
@@ -72,13 +72,13 @@ struct my_app
 
     // Process the midi inputs
     for (auto& cb : self.midiin_callbacks)
-      cb(cnt);
+      cb.callback(cnt);
 
     // Do some other things
 
     // Process the midi outputs
     for (auto& cb : self.midiout_callbacks)
-      cb(cnt);
+      cb.callback(cnt);
 
     return 0;
   }

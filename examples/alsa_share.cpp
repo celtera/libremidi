@@ -75,6 +75,7 @@ int main()
     {
       if (fds[i].revents & POLLIN)
       {
+        // Read alsa event
         snd_seq_event_t* ev{};
         libremidi::unique_handle<snd_seq_event_t, snd_seq_free_event> handle;
         int result = 0;
@@ -84,6 +85,7 @@ int main()
           auto it = std::find(addresses.begin(), addresses.end(), ev->dest);
           if (it != addresses.end())
           {
+            // Dispatch the event to the correct observer or midi_in object
             int index = std::distance(addresses.begin(), it);
             int err = callbacks[index](*ev);
             if (err < 0 && err != -EAGAIN)

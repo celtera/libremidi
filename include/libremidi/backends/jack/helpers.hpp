@@ -11,6 +11,9 @@
 #endif
 #include <libremidi/detail/midi_in.hpp>
 
+#include <atomic>
+#include <semaphore>
+
 namespace libremidi
 {
 struct jack_client
@@ -84,9 +87,51 @@ struct jack_client
 
 struct jack_helpers : jack_client
 {
-  jack_port_t* port{};
+  struct port_handle
+  {
+    port_handle& operator=(jack_port_t* p)
+    {
+      impl.get()->store(p);
+      return *this;
+    }
 
-  template <auto callback, typename Self>
+    operator jack_port_t*() const noexcept
+    {
+      if (impl)
+        return impl.get()->load();
+      return {};
+    }
+
+    std::shared_ptr<std::atomic<jack_port_t*>> impl
+        = std::make_shared<std::atomic<jack_port_t*>>(nullptr);
+  } port;
+
+  int64_t this_instance{};
+  std::binary_semaphore sem_cleanup{0};
+  std::binary_semaphore sem_needpost{0};
+
+  jack_helpers()
+  {
+    static std::atomic_int64_t instance{};
+    this_instance = ++instance;
+  }
+
+  void prepare_release_client()
+  {
+    using namespace std::literals;
+
+    // FIXME if jack is not running we can skip this
+    this->sem_needpost.release();
+    this->sem_cleanup.try_acquire_for(1s);
+  }
+
+  void check_client_released()
+  {
+    if (!this->sem_needpost.try_acquire())
+      this->sem_cleanup.release();
+  }
+
+  template <typename Self>
   jack_status_t connect(Self& self)
   {
     auto& configuration = self.configuration;
@@ -99,8 +144,22 @@ struct jack_helpers : jack_client
     {
       if (!configuration.set_process_func)
         return JackFailure;
+
       configuration.set_process_func(
-          [&self](jack_nframes_t nf) -> int { return (self.*callback)(nf); });
+          {.token = this_instance,
+           .callback = [&self, p = std::weak_ptr{this->port.impl}](jack_nframes_t nf) -> int {
+             auto pt = p.lock();
+             if (!pt)
+               return 0;
+             auto ppt = pt->load();
+             if (!ppt)
+               return 0;
+
+             self.process(nf);
+
+             self.check_client_released();
+             return 0;
+           }});
 
       this->client = configuration.context;
       return jack_status_t{};
@@ -115,12 +174,34 @@ struct jack_helpers : jack_client
         jack_set_process_callback(
             this->client,
             +[](jack_nframes_t nf, void* ctx) -> int {
-              return (static_cast<Self*>(ctx)->*callback)(nf);
+              auto& self = *static_cast<Self*>(ctx);
+              jack_port_t* port = self.port;
+
+              // Is port created?
+              if (port == nullptr)
+                return 0;
+
+              self.process(nf);
+
+              self.check_client_released();
+              return 0;
             },
             &self);
         jack_activate(this->client);
       }
       return status;
+    }
+  }
+
+  template <typename Self>
+  void disconnect(Self& self)
+  {
+    if (self.configuration.context)
+    {
+      if (self.configuration.clear_process_func)
+      {
+        self.configuration.clear_process_func(this_instance);
+      }
     }
   }
 
@@ -138,8 +219,10 @@ struct jack_helpers : jack_client
     }
 
     if (!this->port)
+    {
       this->port
           = jack_port_register(this->client, portName.data(), JACK_DEFAULT_MIDI_TYPE, flags, 0);
+    }
 
     if (!this->port)
     {
@@ -147,6 +230,22 @@ struct jack_helpers : jack_client
       return false;
     }
     return true;
+  }
+
+  void do_close_port()
+  {
+    if (this->port == nullptr)
+      return;
+
+    // 1. Ensure thaqt the next time the cycle runs it sees the port as nullptr
+    jack_port_t* port_ptr = this->port.impl->load();
+    this->port = nullptr;
+
+    // 2. Signal through the semaphore and wait for the signal return
+    this->prepare_release_client();
+
+    // 3. Now we are sure that the client is not going to use the port anymore
+    jack_port_unregister(this->client, port_ptr);
   }
 };
 }

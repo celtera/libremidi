@@ -70,7 +70,7 @@ public:
 
 class midi_out_jack final
     : public midi1::out_api
-    , private jack_helpers
+    , public jack_helpers
     , public error_handler
 {
 public:
@@ -84,7 +84,7 @@ public:
       : configuration{std::move(conf), std::move(apiconf)}
       , queue{configuration.ringbuffer_size}
   {
-    auto status = connect<&midi_out_jack::jackProcessOut>(*this);
+    auto status = connect(*this);
     if (status != jack_status_t{})
       warning(configuration, "midi_in_jack: " + std::to_string((int)jack_status_t{}));
   }
@@ -125,26 +125,11 @@ public:
     return create_local_port(*this, portName, JackPortIsOutput);
   }
 
-  void close_port() override
-  {
-    using namespace std::literals;
-    if (this->port == nullptr)
-      return;
-
-    this->sem_needpost.release();
-    this->sem_cleanup.try_acquire_for(1s);
-
-    jack_port_unregister(this->client, this->port);
-    this->port = nullptr;
-  }
+  void close_port() override { return do_close_port(); }
 
   void set_port_name(std::string_view portName) override
   {
-#if defined(LIBREMIDI_JACK_HAS_PORT_RENAME)
     jack_port_rename(this->client, this->port, portName.data());
-#else
-    jack_port_set_name(this->port, portName.data());
-#endif
   }
 
   void send_message(const unsigned char* message, size_t size) override
@@ -152,29 +137,18 @@ public:
     queue.write(message, size);
   }
 
-private:
-  int jackProcessOut(jack_nframes_t nframes)
+  int process(jack_nframes_t nframes)
   {
-    // Is port created?
-    if (this->port == nullptr)
-      return 0;
-
     void* buff = jack_port_get_buffer(this->port, nframes);
     jack_midi_clear_buffer(buff);
 
     this->queue.read(buff);
-
-    if (!this->sem_needpost.try_acquire())
-      this->sem_cleanup.release();
 
     return 0;
   }
 
 private:
   jack_queue queue;
-
-  std::counting_semaphore<> sem_cleanup{0};
-  std::counting_semaphore<> sem_needpost{0};
 };
 
 }
