@@ -1,7 +1,19 @@
 #pragma once
 #include <libremidi/backends/alsa_raw/config.hpp>
 
-extern "C" typedef struct _snd_seq snd_seq_t;
+#if __has_include(<alsa/asoundlib.h>)
+  #include <alsa/asoundlib.h>
+#else
+extern "C" {
+typedef struct _snd_seq snd_seq_t;
+typedef struct snd_seq_event snd_seq_event_t;
+typedef struct snd_seq_addr
+{
+  unsigned char client;
+  unsigned char port;
+} snd_seq_addr_t;
+}
+#endif
 
 namespace libremidi::alsa_seq
 {
@@ -12,11 +24,17 @@ namespace libremidi::alsa_seq
 // - Timestamping
 // - Tempo, ppq?
 
+struct poll_parameters
+{
+  snd_seq_addr_t addr{};
+  std::function<int(const snd_seq_event_t&)> callback;
+};
+
 struct input_configuration
 {
   std::string client_name = "libremidi client";
   snd_seq_t* context{};
-  std::function<bool(const manual_poll_parameters&)> manual_poll;
+  std::function<bool(const poll_parameters&)> manual_poll;
 };
 
 struct output_configuration
@@ -29,6 +47,7 @@ struct observer_configuration
 {
   std::string client_name = "libremidi client";
   snd_seq_t* context{};
+  std::function<bool(const poll_parameters&)> manual_poll;
 };
 
 }

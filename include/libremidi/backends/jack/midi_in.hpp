@@ -48,7 +48,8 @@ public:
       return false;
 
     // Connecting to the output
-    if (jack_connect(this->client, port.port_name.c_str(), jack_port_name(this->port)) != 0)
+    if (auto ret = jack_connect(this->client, port.port_name.c_str(), jack_port_name(this->port));
+        ret != 0)
     {
       error<invalid_parameter_error>(
           configuration, "JACK: could not connect to port: " + port.port_name);

@@ -5,6 +5,7 @@
 #include <alsa/asoundlib.h>
 #include <sys/time.h>
 
+#include <optional>
 #include <string>
 
 namespace libremidi::alsa_seq
@@ -53,7 +54,7 @@ inline void for_all_ports(
 // This function is used to count or get the pinfo structure for a given port
 // number.
 inline unsigned int
-port_info(snd_seq_t* seq, snd_seq_port_info_t* pinfo, unsigned int type, int portNumber)
+iterate_port_info(snd_seq_t* seq, snd_seq_port_info_t* pinfo, unsigned int type, int portNumber)
 {
   snd_seq_client_info_t* cinfo{};
   int count = 0;
@@ -120,6 +121,7 @@ struct alsa_data
 {
   snd_seq_t* seq{};
   int vport{-1};
+  snd_seq_addr_t vaddr{};
 
   snd_seq_port_subscribe_t* subscription{};
   snd_midi_event_t* coder{};
@@ -166,7 +168,7 @@ struct alsa_data
     snd_seq_port_info_t* pinfo;
     snd_seq_port_info_alloca(&pinfo);
 
-    return alsa_seq::port_info(seq, pinfo, caps, -1);
+    return alsa_seq::iterate_port_info(seq, pinfo, caps, -1);
   }
 
   std::optional<snd_seq_addr_t> get_port_info(const port_information& portNumber)
@@ -190,8 +192,9 @@ struct alsa_data
     return addr;
   }
 
-  [[nodiscard]] int
-  create_port(auto& self, std::string_view portName, int caps, std::optional<int> queue)
+  [[nodiscard]] int create_port(
+      auto& self, std::string_view portName, unsigned int caps, unsigned int type,
+      std::optional<int> queue)
   {
     if (this->vport < 0)
     {
@@ -201,11 +204,13 @@ struct alsa_data
       snd_seq_port_info_set_name(pinfo, portName.data());
       snd_seq_port_info_set_client(pinfo, 0);
       snd_seq_port_info_set_port(pinfo, 0);
-      snd_seq_port_info_set_capability(
-          pinfo, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
-      snd_seq_port_info_set_type(
-          pinfo, SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
-      snd_seq_port_info_set_midi_channels(pinfo, 16);
+      snd_seq_port_info_set_capability(pinfo, caps);
+      snd_seq_port_info_set_type(pinfo, type);
+
+      if (type & SND_SEQ_PORT_TYPE_MIDI_GENERIC)
+      {
+        snd_seq_port_info_set_midi_channels(pinfo, 16);
+      }
 
       if (queue)
       {
@@ -215,13 +220,18 @@ struct alsa_data
       }
 
       if (int err = snd_seq_create_port(this->seq, pinfo); err < 0)
-      {
-        self.template error<driver_error>(
-            self.configuration, "midi_in_alsa::create_port: ALSA error creating port.");
         return err;
-      }
+
       this->vport = snd_seq_port_info_get_port(pinfo);
-      return this->vport >= 0;
+      if (int err = snd_seq_get_port_info(this->seq, this->vport, pinfo); err < 0)
+        return err;
+
+      if (auto addr = snd_seq_port_info_get_addr(pinfo))
+        this->vaddr = *addr;
+      else
+        return -1;
+
+      return this->vport;
     }
     return 0;
   }
@@ -250,8 +260,6 @@ struct alsa_data
     {
       snd_seq_port_subscribe_free(this->subscription);
       this->subscription = nullptr;
-      self.template error<driver_error>(
-          self.configuration, "create_connection: ALSA error making port connection.");
       return err;
     }
     return 0;

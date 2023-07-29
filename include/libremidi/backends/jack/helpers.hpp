@@ -127,6 +127,9 @@ struct jack_helpers : jack_client
   bool create_local_port(const auto& self, std::string_view portName, JackPortFlags flags)
   {
     // full name: "client_name:port_name\0"
+    if (portName.empty())
+      portName = flags & JackPortIsInput ? "i" : "o";
+
     if (self.configuration.client_name.size() + portName.size() + 1 + 1 >= jack_port_name_size())
     {
       self.template error<invalid_use_error>(

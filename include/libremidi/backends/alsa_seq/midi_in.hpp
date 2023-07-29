@@ -91,12 +91,12 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_SEQ; }
 
-  [[nodiscard]] bool create_port(std::string_view portName)
+  [[nodiscard]] int create_port(std::string_view portName)
   {
     return alsa_data::create_port(
-               *this, portName, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
-               require_timestamps() ? std::optional<int>{this->queue_id} : std::nullopt)
-           >= 0;
+        *this, portName, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
+        SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION,
+        require_timestamps() ? std::optional<int>{this->queue_id} : std::nullopt);
   }
 
   void start_queue()
@@ -138,11 +138,18 @@ public:
     if (!source)
       return -1;
 
-    if (!create_port(portName))
-      return -1;
+    if (int ret = create_port(portName); ret < 0)
+    {
+      error<driver_error>(configuration, "midi_in_alsa::create_port: ALSA error creating port.");
+      return ret;
+    }
 
     if (int ret = connect_port(*source); ret < 0)
+    {
+      error<driver_error>(
+          configuration, "midi_in_alsa::create_port: ALSA error making port connection.");
       return ret;
+    }
 
     start_queue();
 
@@ -153,8 +160,8 @@ public:
   {
     this->close_port();
 
-    if (!create_port(portName))
-      return -1;
+    if (int ret = create_port(portName); ret < 0)
+      return ret;
 
     start_queue();
     return 0;
@@ -174,7 +181,7 @@ public:
   void set_port_name(std::string_view portName) override { alsa_data::set_port_name(portName); }
 
 protected:
-  void set_timestamp(snd_seq_event_t& ev, libremidi::message& msg) noexcept
+  void set_timestamp(const snd_seq_event_t& ev, libremidi::message& msg) noexcept
   {
     static constexpr int64_t nanos = 1e9;
     switch (configuration.timestamps)
@@ -214,6 +221,80 @@ protected:
     }
   }
 
+  int process_event(const snd_seq_event_t& ev)
+  {
+    if (!continueSysex)
+      message.bytes.clear();
+
+    // Filter the message types before any decoding
+    switch (ev.type)
+    {
+      case SND_SEQ_EVENT_PORT_SUBSCRIBED:
+      case SND_SEQ_EVENT_PORT_UNSUBSCRIBED:
+        return 0;
+
+      case SND_SEQ_EVENT_QFRAME: // MIDI time code
+      case SND_SEQ_EVENT_TICK:   // 0xF9 ... MIDI timing tick
+      case SND_SEQ_EVENT_CLOCK:  // 0xF8 ... MIDI timing (clock) tick
+        if (configuration.ignore_timing)
+          return 0;
+        break;
+
+      case SND_SEQ_EVENT_SENSING: // Active sensing
+        if (configuration.ignore_sensing)
+          return 0;
+        break;
+
+      case SND_SEQ_EVENT_SYSEX: {
+        if (configuration.ignore_sysex)
+          return 0;
+        else if (ev.data.ext.len > decoding_buffer.size())
+          decoding_buffer.resize(ev.data.ext.len);
+        break;
+      }
+    }
+
+    // Decode the message
+    auto buf = decoding_buffer.data();
+    auto buf_space = decoding_buffer.size();
+    const uint64_t avail = snd_midi_event_decode(coder, buf, buf_space, &ev);
+    if (avail > 0)
+    {
+      // The ALSA sequencer has a maximum buffer size for MIDI sysex
+      // events of 256 bytes.  If a device sends sysex messages larger
+      // than this, they are segmented into 256 byte chunks.  So,
+      // we'll watch for this and concatenate sysex chunks into a
+      // single sysex message if necessary.
+      assert(avail < buf_space);
+      if (!continueSysex)
+        message.bytes.assign(buf, buf + avail);
+      else
+        message.bytes.insert(message.bytes.end(), buf, buf + avail);
+
+      continueSysex = ((ev.type == SND_SEQ_EVENT_SYSEX) && (message.bytes.back() != 0xF7));
+      if (!continueSysex)
+      {
+        set_timestamp(ev, message);
+      }
+      else
+      {
+#if defined(__LIBREMIDI_DEBUG__)
+        std::cerr << "\nmidi_in_alsa::alsaMidiHandler: event parsing error or "
+                     "not a MIDI event!\n\n";
+#endif
+        return -EINVAL;
+      }
+    }
+
+    if (message.bytes.size() == 0 || continueSysex)
+      return 0;
+
+    // Finally the message is ready
+    configuration.on_message(std::move(message));
+    message.clear();
+    return 0;
+  }
+
   int process_events()
   {
     snd_seq_event_t* ev{};
@@ -222,76 +303,8 @@ protected:
     while ((result = snd_seq_event_input(seq, &ev)) > 0)
     {
       handle.reset(ev);
-
-      if (!continueSysex)
-        message.bytes.clear();
-
-      // Filter the message types before any decoding
-      switch (ev->type)
-      {
-        case SND_SEQ_EVENT_PORT_SUBSCRIBED:
-        case SND_SEQ_EVENT_PORT_UNSUBSCRIBED:
-          return 0;
-
-        case SND_SEQ_EVENT_QFRAME: // MIDI time code
-        case SND_SEQ_EVENT_TICK:   // 0xF9 ... MIDI timing tick
-        case SND_SEQ_EVENT_CLOCK:  // 0xF8 ... MIDI timing (clock) tick
-          if (configuration.ignore_timing)
-            continue;
-          break;
-
-        case SND_SEQ_EVENT_SENSING: // Active sensing
-          if (configuration.ignore_sensing)
-            continue;
-          break;
-
-        case SND_SEQ_EVENT_SYSEX: {
-          if (configuration.ignore_sysex)
-            continue;
-          else if (ev->data.ext.len > decoding_buffer.size())
-            decoding_buffer.resize(ev->data.ext.len);
-          break;
-        }
-      }
-
-      // Decode the message
-      auto buf = decoding_buffer.data();
-      auto buf_space = decoding_buffer.size();
-      const uint64_t avail = snd_midi_event_decode(coder, buf, buf_space, ev);
-      if (avail > 0)
-      {
-        // The ALSA sequencer has a maximum buffer size for MIDI sysex
-        // events of 256 bytes.  If a device sends sysex messages larger
-        // than this, they are segmented into 256 byte chunks.  So,
-        // we'll watch for this and concatenate sysex chunks into a
-        // single sysex message if necessary.
-        assert(avail < buf_space);
-        if (!continueSysex)
-          message.bytes.assign(buf, buf + avail);
-        else
-          message.bytes.insert(message.bytes.end(), buf, buf + avail);
-
-        continueSysex = ((ev->type == SND_SEQ_EVENT_SYSEX) && (message.bytes.back() != 0xF7));
-        if (!continueSysex)
-        {
-          set_timestamp(*ev, message);
-        }
-        else
-        {
-#if defined(__LIBREMIDI_DEBUG__)
-          std::cerr << "\nmidi_in_alsa::alsaMidiHandler: event parsing error or "
-                       "not a MIDI event!\n\n";
-#endif
-          return -EINVAL;
-        }
-      }
-
-      if (message.bytes.size() == 0 || continueSysex)
-        continue;
-
-      // Finally the message is ready
-      configuration.on_message(std::move(message));
-      message.clear();
+      if (int err = process_event(*ev); err < 0)
+        return err;
     }
     return result;
   }
@@ -416,25 +429,13 @@ class midi_in_alsa_manual : public midi_in_impl
 {
   using midi_in_impl::midi_in_impl;
 
-  [[nodiscard]] int init_fds()
+  [[nodiscard]] int init_callback()
   {
-    auto poll_fd_count = snd_seq_poll_descriptors_count(seq, POLLIN);
-    fds_.resize(poll_fd_count);
-    if (int err = snd_seq_poll_descriptors(seq, fds_.data(), poll_fd_count, POLLIN); err < 0)
-      return err;
-
-    configuration.manual_poll(manual_poll_parameters{
-        .fds = {this->fds_.data(), this->fds_.size()},
-        .callback = [this](std::span<pollfd> fds) { return do_read_events(); }});
+    configuration.manual_poll(
+        poll_parameters{.addr = this->vaddr, .callback = [this](const snd_seq_event_t& ev) {
+                          return process_event(ev);
+                        }});
     return 0;
-  }
-
-  int do_read_events()
-  {
-    if (snd_seq_event_input_pending(seq, 1) == 0)
-      return 0;
-
-    return process_events();
   }
 
   bool open_port(const port_information& pt, std::string_view local_port_name) override
@@ -442,7 +443,7 @@ class midi_in_alsa_manual : public midi_in_impl
     if (int err = init_port(to_address(pt), local_port_name); err < 0)
       return false;
 
-    if (int err = init_fds(); err < 0)
+    if (int err = init_callback(); err < 0)
       return false;
     return true;
   }
@@ -452,12 +453,10 @@ class midi_in_alsa_manual : public midi_in_impl
     if (int err = init_virtual_port(name); err < 0)
       return false;
 
-    if (int err = init_fds(); err < 0)
+    if (int err = init_callback(); err < 0)
       return false;
     return true;
   }
-
-  std::vector<pollfd> fds_;
 };
 }
 

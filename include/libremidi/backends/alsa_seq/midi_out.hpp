@@ -58,11 +58,11 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_SEQ; }
 
-  [[nodiscard]] bool create_port(std::string_view portName)
+  [[nodiscard]] int create_port(std::string_view portName)
   {
     return alsa_data::create_port(
-               *this, portName, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ, std::nullopt)
-           >= 0;
+        *this, portName, SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
+        SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION, std::nullopt);
   }
 
   bool open_port(const port_information& p, std::string_view portName) override
@@ -79,13 +79,20 @@ public:
     if (!sink)
       return false;
 
-    if (!create_port(portName))
+    if (int err = create_port(portName); err < 0)
+    {
+      error<driver_error>(configuration, "midi_out_alsa::create_port: ALSA error creating port.");
       return false;
+    }
 
     snd_seq_addr_t source{
         .client = (unsigned char)snd_seq_client_id(this->seq), .port = (unsigned char)this->vport};
     if (int err = create_connection(*this, source, *sink, true); err < 0)
+    {
+      error<driver_error>(
+          configuration, "midi_out_alsa::create_port: ALSA error making port connection.");
       return false;
+    }
 
     return true;
   }

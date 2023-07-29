@@ -10,7 +10,19 @@
 
 namespace libremidi::alsa_seq
 {
-class observer_impl final : public observer_api
+
+struct port_info
+{
+  std::string client_name;
+  std::string port_name;
+  int client{};
+  int port{};
+  bool isInput{};
+  bool isOutput{};
+};
+class observer_impl
+    : public observer_api
+    , public alsa_data
 {
 public:
   struct
@@ -24,13 +36,10 @@ public:
       : configuration{std::move(conf), std::move(apiconf)}
   {
     using namespace std::literals;
-    int err = snd_seq_open(&seq_, "default", SND_SEQ_OPEN_DUPLEX, SND_SEQ_NONBLOCK);
-    if (err < 0)
+    if (int err = init_client(configuration); err < 0)
     {
       throw driver_error("observer_alsa: snd_seq_open failed");
     }
-
-    client_ = snd_seq_client_id(seq_);
 
     // Init with the existing ports
     init_all_ports();
@@ -38,80 +47,44 @@ public:
     if (!configuration.has_callbacks())
       return;
 
-    // Create relevant descriptors
-    const auto N = snd_seq_poll_descriptors_count(seq_, POLLIN);
-    descriptors_.resize(N + 1);
-    snd_seq_poll_descriptors(seq_, descriptors_.data(), N, POLLIN);
-    descriptors_.back() = this->event_fd;
-
-    err = snd_seq_set_client_name(seq_, "libremidi-observe");
-    if (err < 0)
+    // Create the port to listen on the server events
     {
-      throw driver_error("observer_alsa: snd_seq_set_client_name failed");
-    }
-
-    err = snd_seq_create_simple_port(
-        seq_, "libremidi-observe",
-        SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_READ
-            | SND_SEQ_PORT_CAP_SUBS_WRITE,
-        SND_SEQ_PORT_TYPE_APPLICATION);
-    if (err < 0)
-    {
-      throw driver_error("observer_alsa: snd_seq_create_simple_port failed");
-    }
-    port_ = err;
-
-    err = snd_seq_connect_from(seq_, port_, SND_SEQ_CLIENT_SYSTEM, SND_SEQ_PORT_SYSTEM_ANNOUNCE);
-    if (err < 0)
-    {
-      throw driver_error("observer_alsa: snd_seq_connect_from failed");
-    }
-
-    thread = std::thread{[this] {
-      for (;;)
+      int err = alsa_data::create_port(
+          *this, "libremidi-observe",
+          SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_READ
+              | SND_SEQ_PORT_CAP_SUBS_WRITE,
+          SND_SEQ_PORT_TYPE_APPLICATION, false);
+      if (err < 0)
       {
-        int err = poll(descriptors_.data(), descriptors_.size(), -1);
-        if (err >= 0)
-        {
-          // We got our stop-thread signal
-          if (descriptors_.back().revents & POLLIN)
-            break;
-
-          // Otherwise handle ALSA events
-          snd_seq_event_t* ev;
-          while (snd_seq_event_input(seq_, &ev) >= 0)
-          {
-            handle_event(ev);
-          }
-        }
+        throw driver_error("observer: ALSA error creating port.");
       }
-    }};
+    }
+
+    // Connect the ALSA server events to our port
+    {
+      int err
+          = snd_seq_connect_from(seq, vport, SND_SEQ_CLIENT_SYSTEM, SND_SEQ_PORT_SYSTEM_ANNOUNCE);
+      if (err < 0)
+      {
+        throw driver_error("observer_alsa: snd_seq_connect_from failed");
+      }
+    }
   }
 
-  struct alsa_seq_port_info
+  std::optional<port_info> get_info(int client, int port) const noexcept
   {
-    std::string client_name;
-    std::string port_name;
-    int client{};
-    int port{};
-    bool isInput{};
-    bool isOutput{};
-  };
-
-  std::optional<alsa_seq_port_info> get_info(int client, int port) const noexcept
-  {
-    alsa_seq_port_info p;
+    port_info p;
     p.client = client;
     p.port = port;
 
     snd_seq_client_info_t* cinfo;
     snd_seq_client_info_alloca(&cinfo);
-    if(int err = snd_seq_get_any_client_info(seq_, client, cinfo); err < 0)
+    if (int err = snd_seq_get_any_client_info(seq, client, cinfo); err < 0)
       return std::nullopt;
 
     snd_seq_port_info_t* pinfo;
     snd_seq_port_info_alloca(&pinfo);
-    if(int err = snd_seq_get_any_port_info(seq_, client, port, pinfo); err < 0)
+    if (int err = snd_seq_get_any_port_info(seq, client, port, pinfo); err < 0)
       return std::nullopt;
 
     const auto tp = snd_seq_port_info_get_type(pinfo);
@@ -137,12 +110,12 @@ public:
     return p;
   }
 
-  libremidi::port_information to_port_info(alsa_seq_port_info p) const noexcept
+  libremidi::port_information to_port_info(port_info p) const noexcept
   {
-    static_assert(sizeof(this->seq_) <= sizeof(libremidi::client_handle));
+    static_assert(sizeof(this->seq) <= sizeof(libremidi::client_handle));
     static_assert(sizeof(std::uintptr_t) <= sizeof(libremidi::client_handle));
     return {
-        .client = std::uintptr_t(this->seq_),
+        .client = std::uintptr_t(this->seq),
         .port = alsa_seq::seq_to_port_handle(p.client, p.port),
         .manufacturer = "",
         .device_name = p.client_name,
@@ -153,7 +126,7 @@ public:
   void init_all_ports()
   {
     alsa_seq::for_all_ports(
-        this->seq_, [this](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
+        this->seq, [this](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
           int clt = snd_seq_client_info_get_client(&client);
           int pt = snd_seq_port_info_get_port(&port);
           register_port(clt, pt);
@@ -169,7 +142,7 @@ public:
   {
     std::vector<libremidi::port_information> ret;
     alsa_seq::for_all_ports(
-        this->seq_, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
+        this->seq, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
           int clt = snd_seq_client_info_get_client(&client);
           int pt = snd_seq_port_info_get_port(&port);
           if (auto p = get_info(clt, pt))
@@ -183,7 +156,7 @@ public:
   {
     std::vector<libremidi::port_information> ret;
     alsa_seq::for_all_ports(
-        this->seq_, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
+        this->seq, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
           int clt = snd_seq_client_info_get_client(&client);
           int pt = snd_seq_port_info_get_port(&port);
           if (auto p = get_info(clt, pt))
@@ -199,7 +172,7 @@ public:
     if (!pp)
       return;
     auto& p = *pp;
-    if (p.client == client_)
+    if (p.client == snd_seq_client_id(seq))
       return;
 
     knownClients_[{p.client, p.port}] = p;
@@ -220,7 +193,7 @@ public:
     if (!pp)
       return;
     auto& p = *pp;
-    if (p.client == client_)
+    if (p.client == snd_seq_client_id(seq))
       return;
 
     auto it = knownClients_.find({p.client, p.port});
@@ -241,16 +214,16 @@ public:
     }
   }
 
-  void handle_event(snd_seq_event_t* ev)
+  void handle_event(const snd_seq_event_t& ev)
   {
-    switch (ev->type)
+    switch (ev.type)
     {
       case SND_SEQ_EVENT_PORT_START: {
-        register_port(ev->data.addr.client, ev->data.addr.port);
+        register_port(ev.data.addr.client, ev.data.addr.port);
         break;
       }
       case SND_SEQ_EVENT_PORT_EXIT: {
-        unregister_port(ev->data.addr.client, ev->data.addr.port);
+        unregister_port(ev.data.addr.client, ev.data.addr.port);
         break;
       }
       case SND_SEQ_EVENT_PORT_CHANGE:
@@ -261,26 +234,95 @@ public:
 
   ~observer_impl()
   {
-    event_fd.notify();
-
-    if (thread.joinable())
-      thread.join();
-
-    if (seq_)
+    if (seq)
     {
-      if (port_)
-        snd_seq_delete_port(seq_, port_);
-      snd_seq_close(seq_);
+      if (vport)
+        snd_seq_delete_port(seq, vport);
+
+      if (!configuration.context)
+        snd_seq_close(seq);
     }
   }
 
 private:
-  snd_seq_t* seq_{};
+  std::map<std::pair<int, int>, port_info> knownClients_;
+};
+
+class observer_threaded : public observer_impl
+{
+public:
+  observer_threaded(
+      libremidi::observer_configuration&& conf, alsa_seq::observer_configuration&& apiconf)
+      : observer_impl{std::move(conf), std::move(apiconf)}
+  {
+    // Create relevant descriptors
+    const auto N = snd_seq_poll_descriptors_count(seq, POLLIN);
+    descriptors_.resize(N + 1);
+    snd_seq_poll_descriptors(seq, descriptors_.data(), N, POLLIN);
+    descriptors_.back() = this->event_fd;
+
+    // Start the listening thread
+    thread = std::thread{[this] {
+      for (;;)
+      {
+        int err = poll(descriptors_.data(), descriptors_.size(), -1);
+        if (err >= 0)
+        {
+          // We got our stop-thread signal
+          if (descriptors_.back().revents & POLLIN)
+            break;
+
+          // Otherwise handle ALSA events
+          snd_seq_event_t* ev{};
+          libremidi::unique_handle<snd_seq_event_t, snd_seq_free_event> handle;
+          while (snd_seq_event_input(seq, &ev) >= 0)
+          {
+            handle.reset(ev);
+            handle_event(*ev);
+          }
+        }
+      }
+    }};
+  }
+
+  ~observer_threaded()
+  {
+    event_fd.notify();
+
+    if (thread.joinable())
+      thread.join();
+  }
+
   eventfd_notifier event_fd{};
   std::thread thread;
   std::vector<pollfd> descriptors_;
-  std::map<std::pair<int, int>, alsa_seq_port_info> knownClients_;
-  int client_{};
-  int port_{};
 };
+
+class observer_manual : public observer_impl
+{
+public:
+  observer_manual(
+      libremidi::observer_configuration&& conf, alsa_seq::observer_configuration&& apiconf)
+      : observer_impl{std::move(conf), std::move(apiconf)}
+  {
+    configuration.manual_poll(
+        poll_parameters{.addr = this->vaddr, .callback = [this](const snd_seq_event_t& v) {
+                          handle_event(v);
+                          return 0;
+                        }});
+  }
+};
+}
+
+namespace libremidi
+{
+template <>
+inline std::unique_ptr<observer_api> make<alsa_seq::observer_impl>(
+    libremidi::observer_configuration&& conf, libremidi::alsa_seq::observer_configuration&& api)
+{
+  if (api.manual_poll)
+    return std::make_unique<alsa_seq::observer_manual>(std::move(conf), std::move(api));
+  else
+    return std::make_unique<alsa_seq::observer_threaded>(std::move(conf), std::move(api));
+}
 }

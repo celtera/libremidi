@@ -62,15 +62,11 @@ static constexpr auto available_backends = make_tl(
     0
 #if defined(LIBREMIDI_ALSA)
     ,
-    alsa_raw::backend{}, alsa_seq::backend{}
+    alsa_seq::backend{}, alsa_raw::backend{}
 #endif
 #if defined(LIBREMIDI_COREAUDIO)
     ,
     core_backend{}
-#endif
-#if defined(LIBREMIDI_JACK)
-    ,
-    jack_backend{}
 #endif
 #if defined(LIBREMIDI_WINMM)
     ,
@@ -83,6 +79,10 @@ static constexpr auto available_backends = make_tl(
 #if defined(LIBREMIDI_EMSCRIPTEN)
     ,
     emscripten_backend{}
+#endif
+#if defined(LIBREMIDI_JACK)
+    ,
+    jack_backend{}
 #endif
     ,
     dummy_backend{});
