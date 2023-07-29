@@ -1,10 +1,13 @@
 #pragma once
-#include <libremidi/backends/alsa_seq/config.hpp>
-#include <libremidi/backends/alsa_seq/helpers.hpp>
-#include <libremidi/backends/linux/helpers.hpp>
-#include <libremidi/shared_context.hpp>
+#if __has_include(<boost/lockfree/spsc_queue.hpp>)
+  #include <libremidi/backends/alsa_seq/config.hpp>
+  #include <libremidi/backends/alsa_seq/helpers.hpp>
+  #include <libremidi/backends/linux/helpers.hpp>
+  #include <libremidi/shared_context.hpp>
 
-#include <boost/lockfree/spsc_queue.hpp>
+  #include <boost/lockfree/spsc_queue.hpp>
+
+  #include <variant>
 
 namespace libremidi::alsa_seq
 {
@@ -190,3 +193,4 @@ struct shared_handler : public libremidi::shared_context
   std::thread thread;
 };
 }
+#endif

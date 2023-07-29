@@ -7,7 +7,7 @@
 #if LIBREMIDI_ALSA
   #include <libremidi/backends/alsa_seq/shared_handler.hpp>
 #endif
-#if LIBREMIDI_JACK && __has_include(<boost/lockfree/spsc_queue.hpp>)
+#if LIBREMIDI_JACK
   #include <libremidi/backends/jack/shared_handler.hpp>
 #endif
 namespace libremidi
@@ -17,6 +17,7 @@ shared_configurations create_shared_context(libremidi::API api, std::string_view
 {
   switch (api)
   {
+#if __has_include(<boost/lockfree/spsc_queue.hpp>)
   #if defined(LIBREMIDI_ALSA)
     case libremidi::API::ALSA_SEQ:
       return alsa_seq::shared_handler::make(client_name);
@@ -26,6 +27,7 @@ shared_configurations create_shared_context(libremidi::API api, std::string_view
     case libremidi::API::JACK_MIDI:
       return jack::shared_handler::make(client_name);
   #endif
+#endif
     case libremidi::API::COREMIDI:
     case libremidi::API::COREMIDI_UMP:
       // TODO

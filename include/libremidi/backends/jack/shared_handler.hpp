@@ -1,11 +1,12 @@
 #pragma once
-#include <libremidi/backends/jack/config.hpp>
-#include <libremidi/backends/jack/helpers.hpp>
-#include <libremidi/shared_context.hpp>
+#if __has_include(<boost/lockfree/spsc_queue.hpp>)
+  #include <libremidi/backends/jack/config.hpp>
+  #include <libremidi/backends/jack/helpers.hpp>
+  #include <libremidi/shared_context.hpp>
 
-#include <boost/lockfree/spsc_queue.hpp>
+  #include <boost/lockfree/spsc_queue.hpp>
 
-#include <variant>
+  #include <variant>
 
 namespace libremidi::jack
 {
@@ -149,3 +150,4 @@ struct shared_handler : public libremidi::shared_context
   std::vector<libremidi::jack_callback> midiout_callbacks;
 };
 }
+#endif
