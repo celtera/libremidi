@@ -14,8 +14,8 @@ public:
 
   ~observer_dummy() { }
   libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }
-  std::vector<libremidi::port_information> get_input_ports() const noexcept override { return {}; }
-  std::vector<libremidi::port_information> get_output_ports() const noexcept override
+  std::vector<libremidi::input_port> get_input_ports() const noexcept override { return {}; }
+  std::vector<libremidi::output_port> get_output_ports() const noexcept override
   {
     return {};
   }
@@ -32,10 +32,7 @@ public:
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }
-  bool open_port(const port_information& pt, std::string_view local_port_name) override
-  {
-    return true;
-  }
+  bool open_port(const input_port& pt, std::string_view local_port_name) override { return true; }
   bool open_virtual_port(std::string_view /*portName*/) override { return true; }
   void close_port() override { }
   void set_client_name(std::string_view /*clientName*/) override { }
@@ -53,10 +50,7 @@ public:
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }
-  bool open_port(const port_information& pt, std::string_view local_port_name) override
-  {
-    return true;
-  }
+  bool open_port(const output_port& pt, std::string_view local_port_name) override { return true; }
   bool open_virtual_port(std::string_view /*portName*/) override { return true; }
   void close_port() override { }
   void set_client_name(std::string_view /*clientName*/) override { }

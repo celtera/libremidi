@@ -61,7 +61,7 @@ public:
     return status;
   }
 
-  bool open_port(const port_information& p, std::string_view) override
+  bool open_port(const output_port& p, std::string_view) override
   {
     return connect_port(raw_from_port_handle(p.port).to_string().c_str()) == 0;
   }

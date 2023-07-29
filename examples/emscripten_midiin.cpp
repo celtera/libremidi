@@ -50,7 +50,7 @@ int main(int argc, char**)
         std::cout << "MIDI Output removed: " << id.port_name << std::endl;
       }};
 
-  libremidi::observer obs{libremidi::API::EMSCRIPTEN_WEBMIDI, std::move(callbacks)};
+  libremidi::observer obs{libremidi::API::WEBMIDI, std::move(callbacks)};
 
   emscripten_set_main_loop([] {}, 60, 1);
 }

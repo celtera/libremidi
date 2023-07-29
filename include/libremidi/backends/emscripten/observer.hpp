@@ -27,8 +27,8 @@ public:
 
   libremidi::API get_current_api() const noexcept override;
 
-  std::vector<libremidi::port_information> get_input_ports() const noexcept override;
-  std::vector<libremidi::port_information> get_output_ports() const noexcept override;
+  std::vector<libremidi::input_port> get_input_ports() const noexcept override;
+  std::vector<libremidi::output_port> get_output_ports() const noexcept override;
 
 private:
   std::vector<device> m_known_inputs;

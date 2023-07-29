@@ -74,13 +74,13 @@ libremidi::API observer::get_current_api() const noexcept
 }
 
 LIBREMIDI_INLINE
-std::vector<libremidi::port_information> observer::get_input_ports() const noexcept
+std::vector<libremidi::input_port> observer::get_input_ports() const noexcept
 {
   return impl_->get_input_ports();
 }
 
 LIBREMIDI_INLINE
-std::vector<libremidi::port_information> observer::get_output_ports() const noexcept
+std::vector<libremidi::output_port> observer::get_output_ports() const noexcept
 {
   return impl_->get_output_ports();
 }

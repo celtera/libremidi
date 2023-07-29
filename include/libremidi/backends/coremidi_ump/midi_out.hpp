@@ -57,7 +57,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::COREMIDI_UMP; }
 
-  bool open_port(const port_information& info, std::string_view portName) override
+  bool open_port(const output_port& info, std::string_view portName) override
   {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
 

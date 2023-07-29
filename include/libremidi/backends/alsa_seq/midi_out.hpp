@@ -65,7 +65,7 @@ public:
         SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION, std::nullopt);
   }
 
-  bool open_port(const port_information& p, std::string_view portName) override
+  bool open_port(const output_port& p, std::string_view portName) override
   {
     unsigned int nSrc = this->get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
     if (nSrc < 1)

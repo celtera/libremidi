@@ -93,6 +93,8 @@ public:
   {
     midi_out_jack::close_port();
 
+    disconnect(*this);
+
     if (this->client && !configuration.context)
       jack_client_close(this->client);
   }
@@ -104,7 +106,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_MIDI; }
 
-  bool open_port(const port_information& port, std::string_view portName) override
+  bool open_port(const output_port& port, std::string_view portName) override
   {
     if (!create_local_port(*this, portName, JackPortIsOutput))
       return false;

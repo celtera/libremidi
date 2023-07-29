@@ -215,7 +215,6 @@ locate_object(auto& self, const port_information& info, MIDIObjectType requested
         self.configuration, "coremidi::locate_object: cannot find port: " + info.port_name);
     return 0;
   }
-  fprintf(stderr, "type: %d\n", (int) type);
 
   if (type != requested_type || object == 0)
   {

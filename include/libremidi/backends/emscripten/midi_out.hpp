@@ -22,7 +22,7 @@ public:
   libremidi::API get_current_api() const noexcept override;
 
   bool open_port(unsigned int portNumber, std::string_view);
-  bool open_port(const port_information& p, std::string_view) override;
+  bool open_port(const output_port& p, std::string_view) override;
   bool open_virtual_port(std::string_view) override;
   void close_port() override;
 

@@ -41,11 +41,12 @@ public:
       throw driver_error("observer_alsa: snd_seq_open failed");
     }
 
-    // Init with the existing ports
-    init_all_ports();
-
     if (!configuration.has_callbacks())
       return;
+
+    // Init with the existing ports
+    if (configuration.notify_in_constructor)
+      init_all_ports();
 
     // Create the port to listen on the server events
     {
@@ -110,17 +111,19 @@ public:
     return p;
   }
 
-  libremidi::port_information to_port_info(port_info p) const noexcept
+  template <bool Input>
+  auto to_port_info(port_info p) const noexcept
+      -> std::conditional_t<Input, input_port, output_port>
   {
     static_assert(sizeof(this->seq) <= sizeof(libremidi::client_handle));
     static_assert(sizeof(std::uintptr_t) <= sizeof(libremidi::client_handle));
     return {
-        .client = std::uintptr_t(this->seq),
-        .port = alsa_seq::seq_to_port_handle(p.client, p.port),
-        .manufacturer = "",
-        .device_name = p.client_name,
-        .port_name = p.port_name,
-        .display_name = p.port_name};
+        {.client = std::uintptr_t(this->seq),
+         .port = alsa_seq::seq_to_port_handle(p.client, p.port),
+         .manufacturer = "",
+         .device_name = p.client_name,
+         .port_name = p.port_name,
+         .display_name = p.port_name}};
   }
 
   void init_all_ports()
@@ -138,30 +141,30 @@ public:
     return libremidi::API::ALSA_SEQ;
   }
 
-  std::vector<libremidi::port_information> get_input_ports() const noexcept override
+  std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
-    std::vector<libremidi::port_information> ret;
+    std::vector<libremidi::input_port> ret;
     alsa_seq::for_all_ports(
         this->seq, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
           int clt = snd_seq_client_info_get_client(&client);
           int pt = snd_seq_port_info_get_port(&port);
           if (auto p = get_info(clt, pt))
             if (p->isInput)
-              ret.push_back(to_port_info(*p));
+              ret.push_back(to_port_info<true>(*p));
         });
     return ret;
   }
 
-  std::vector<libremidi::port_information> get_output_ports() const noexcept override
+  std::vector<libremidi::output_port> get_output_ports() const noexcept override
   {
-    std::vector<libremidi::port_information> ret;
+    std::vector<libremidi::output_port> ret;
     alsa_seq::for_all_ports(
         this->seq, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
           int clt = snd_seq_client_info_get_client(&client);
           int pt = snd_seq_port_info_get_port(&port);
           if (auto p = get_info(clt, pt))
             if (p->isOutput)
-              ret.push_back(to_port_info(*p));
+              ret.push_back(to_port_info<false>(*p));
         });
     return ret;
   }
@@ -178,39 +181,32 @@ public:
     knownClients_[{p.client, p.port}] = p;
     if (p.isInput && configuration.input_added)
     {
-      configuration.input_added(to_port_info(p));
+      configuration.input_added(to_port_info<true>(p));
     }
 
     if (p.isOutput && configuration.output_added)
     {
-      configuration.output_added(to_port_info(p));
+      configuration.output_added(to_port_info<false>(p));
     }
   }
 
   void unregister_port(int client, int port)
   {
-    auto pp = get_info(client, port);
-    if (!pp)
-      return;
-    auto& p = *pp;
-    if (p.client == snd_seq_client_id(seq))
-      return;
-
-    auto it = knownClients_.find({p.client, p.port});
+    auto it = knownClients_.find({client, port});
     if (it != knownClients_.end())
     {
-      p = it->second;
+      auto p = it->second;
       knownClients_.erase(it);
-    }
 
-    if (p.isInput && configuration.input_removed)
-    {
-      configuration.input_removed(to_port_info(p));
-    }
+      if (p.isInput && configuration.input_removed)
+      {
+        configuration.input_removed(to_port_info<true>(p));
+      }
 
-    if (p.isOutput && configuration.output_added)
-    {
-      configuration.output_removed(to_port_info(p));
+      if (p.isOutput && configuration.output_removed)
+      {
+        configuration.output_removed(to_port_info<false>(p));
+      }
     }
   }
 
@@ -259,7 +255,7 @@ public:
     const auto N = snd_seq_poll_descriptors_count(seq, POLLIN);
     descriptors_.resize(N + 1);
     snd_seq_poll_descriptors(seq, descriptors_.data(), N, POLLIN);
-    descriptors_.back() = this->event_fd;
+    descriptors_.back() = this->termination_event;
 
     // Start the listening thread
     thread = std::thread{[this] {
@@ -287,13 +283,13 @@ public:
 
   ~observer_threaded()
   {
-    event_fd.notify();
+    termination_event.notify();
 
     if (thread.joinable())
       thread.join();
   }
 
-  eventfd_notifier event_fd{};
+  eventfd_notifier termination_event{};
   std::thread thread;
   std::vector<pollfd> descriptors_;
 };
@@ -311,6 +307,8 @@ public:
                           return 0;
                         }});
   }
+
+  ~observer_manual() { configuration.stop_poll(this->vaddr); }
 };
 }
 

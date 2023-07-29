@@ -27,11 +27,15 @@ public:
     if (!configuration.has_callbacks())
       return;
 
-    check_new_ports();
+    if (configuration.notify_in_constructor)
+      check_new_ports<true>();
+    else
+      check_new_ports<false>();
+
     thread = std::jthread([this](std::stop_token tk) {
       while (!tk.stop_requested())
       {
-        check_new_ports();
+        check_new_ports<true>();
         std::this_thread::sleep_for(this->configuration.poll_period);
       }
     });
@@ -41,35 +45,44 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
-  std::vector<port_information> get_input_ports() const noexcept override
+  std::vector<input_port> get_input_ports() const noexcept override
   {
-    return get_port_list(INPUT);
+    return get_port_list<true>();
   }
 
-  std::vector<port_information> get_output_ports() const noexcept override
+  std::vector<output_port> get_output_ports() const noexcept override
   {
-    return get_port_list(OUTPUT);
+    return get_port_list<false>();
   }
 
 private:
+  template <bool Notify>
   void check_new_ports()
   {
-    auto currInputPortList = get_port_list(INPUT);
-    compare_port_lists_and_notify_clients(
-        inputPortList, currInputPortList, configuration.input_added, configuration.input_removed);
+    auto currInputPortList = get_port_list<true>();
+
+    if constexpr (Notify)
+    {
+      compare_port_lists_and_notify_clients(
+          inputPortList, currInputPortList, configuration.input_added,
+          configuration.input_removed);
+    }
     inputPortList = std::move(currInputPortList);
 
-    auto currOutputPortList = get_port_list(OUTPUT);
-    compare_port_lists_and_notify_clients(
-        outputPortList, currOutputPortList, configuration.output_added,
-        configuration.output_removed);
+    auto currOutputPortList = get_port_list<false>();
+
+    if constexpr (Notify)
+    {
+      compare_port_lists_and_notify_clients(
+          outputPortList, currOutputPortList, configuration.output_added,
+          configuration.output_removed);
+    }
     outputPortList = std::move(currOutputPortList);
   }
 
   void compare_port_lists_and_notify_clients(
-      const std::vector<port_information>& prevList, const std::vector<port_information>& currList,
-      const libremidi::port_callback& portAddedFunc,
-      const libremidi::port_callback& portRemovedFunc)
+      const auto& prevList, const auto& currList, const auto& portAddedFunc,
+      const auto& portRemovedFunc)
   {
     if (portAddedFunc)
     {
@@ -94,7 +107,7 @@ private:
     }
   }
 
-  port_information to_in_port_info(std::size_t index) const noexcept
+  input_port to_in_port_info(std::size_t index) const noexcept
   {
     MIDIINCAPS deviceCaps;
     midiInGetDevCaps(index, &deviceCaps, sizeof(MIDIINCAPS));
@@ -102,16 +115,16 @@ private:
     auto rawName = ConvertToUTF8(deviceCaps.szPname);
     auto portName = rawName;
     MakeUniqueInPortName(portName, index);
-    return port_information{
-        .client = 0,
-        .port = index,
-        .manufacturer = "",
-        .device_name = "",
-        .port_name = rawName,
-        .display_name = portName};
+    return {
+        {.client = 0,
+         .port = index,
+         .manufacturer = "",
+         .device_name = "",
+         .port_name = rawName,
+         .display_name = portName}};
   }
 
-  port_information to_out_port_info(std::size_t index) const noexcept
+  output_port to_out_port_info(std::size_t index) const noexcept
   {
     MIDIOUTCAPS deviceCaps;
     midiOutGetDevCaps(index, &deviceCaps, sizeof(MIDIOUTCAPS));
@@ -119,23 +132,36 @@ private:
     auto rawName = ConvertToUTF8(deviceCaps.szPname);
     auto portName = rawName;
     MakeUniqueOutPortName(portName, index);
-    return port_information{
-        .client = 0,
-        .port = index,
-        .manufacturer = "",
-        .device_name = "",
-        .port_name = rawName,
-        .display_name = portName};
+    return {
+        {.client = 0,
+         .port = index,
+         .manufacturer = "",
+         .device_name = "",
+         .port_name = rawName,
+         .display_name = portName}};
   }
 
-  std::vector<port_information> get_port_list(bool input) const noexcept
+  template <bool Input>
+  auto get_port_list() const noexcept
+      -> std::vector<std::conditional_t<Input, input_port, output_port>>
   {
-    std::vector<port_information> portList;
-    std::size_t nDevices = input ? midiInGetNumDevs() : midiOutGetNumDevs();
+    std::vector<std::conditional_t<Input, input_port, output_port>> portList;
 
-    for (std::size_t i = 0; i < nDevices; ++i)
+    if constexpr (Input)
     {
-      portList.push_back(input ? to_in_port_info(i) : to_out_port_info(i));
+      std::size_t nDevices = midiInGetNumDevs();
+      for (std::size_t i = 0; i < nDevices; ++i)
+      {
+        portList.push_back(to_in_port_info(i));
+      }
+    }
+    else
+    {
+      std::size_t nDevices = midiOutGetNumDevs();
+      for (std::size_t i = 0; i < nDevices; ++i)
+      {
+        portList.push_back(to_out_port_info(i));
+      }
     }
     return portList;
   }
@@ -145,7 +171,7 @@ private:
 
   std::jthread thread;
 
-  std::vector<port_information> inputPortList;
-  std::vector<port_information> outputPortList;
+  std::vector<input_port> inputPortList;
+  std::vector<output_port> outputPortList;
 };
 }

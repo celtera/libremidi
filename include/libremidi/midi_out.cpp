@@ -82,7 +82,7 @@ libremidi::API midi_out::get_current_api() noexcept
 }
 
 LIBREMIDI_INLINE
-void midi_out::open_port(const port_information& port, std::string_view portName)
+void midi_out::open_port(const output_port& port, std::string_view portName)
 {
   if (impl_->is_port_open())
     return;

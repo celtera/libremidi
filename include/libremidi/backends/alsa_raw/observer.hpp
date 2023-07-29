@@ -13,7 +13,7 @@
 
 namespace libremidi::alsa_raw
 {
-class observer_impl final : public observer_api
+class observer_impl : public observer_api
 {
 public:
   struct
@@ -25,15 +25,16 @@ public:
   explicit observer_impl(observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    // Set-up initial state
     if (!configuration.has_callbacks())
       return;
 
     fds[0] = udev;
-    fds[1] = event_fd;
+    fds[1] = termination_event;
     fds[2] = timer_fd;
 
-    check_devices();
+    // Set-up initial state
+    if (configuration.notify_in_constructor)
+      check_devices();
 
     // Start thread
     thread = std::thread{[this] { run(); }};
@@ -41,7 +42,7 @@ public:
 
   ~observer_impl()
   {
-    event_fd.notify();
+    termination_event.notify();
 
     if (thread.joinable())
       thread.join();
@@ -49,28 +50,28 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_RAW; }
 
-  std::vector<libremidi::port_information> get_input_ports() const noexcept override
+  std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
-    std::vector<libremidi::port_information> ret;
+    std::vector<libremidi::input_port> ret;
     alsa_raw_helpers::enumerator new_devs;
 
     new_devs.enumerate_cards();
     for (auto& d : new_devs.inputs)
     {
-      ret.push_back(to_port_info(d));
+      ret.push_back(to_port_info<true>(d));
     }
     return ret;
   }
 
-  std::vector<libremidi::port_information> get_output_ports() const noexcept override
+  std::vector<libremidi::output_port> get_output_ports() const noexcept override
   {
-    std::vector<libremidi::port_information> ret;
+    std::vector<libremidi::output_port> ret;
     alsa_raw_helpers::enumerator new_devs;
 
     new_devs.enumerate_cards();
     for (auto& d : new_devs.outputs)
     {
-      ret.push_back(to_port_info(d));
+      ret.push_back(to_port_info<false>(d));
     }
     return ret;
   }
@@ -130,15 +131,17 @@ private:
     }
   }
 
-  libremidi::port_information to_port_info(alsa_raw_helpers::alsa_raw_port_info p) const noexcept
+  template <bool Input>
+  auto to_port_info(alsa_raw_helpers::alsa_raw_port_info p) const noexcept
+      -> std::conditional_t<Input, input_port, output_port>
   {
     return {
-        .client = 0,
-        .port = raw_to_port_handle({p.card, p.dev, p.sub}),
-        .manufacturer = p.card_name,
-        .device_name = p.device_name,
-        .port_name = p.subdevice_name,
-        .display_name = p.subdevice_name};
+        {.client = 0,
+         .port = raw_to_port_handle({p.card, p.dev, p.sub}),
+         .manufacturer = p.card_name,
+         .device_name = p.device_name,
+         .port_name = p.subdevice_name,
+         .display_name = p.subdevice_name}};
   }
 
   void check_devices()
@@ -154,7 +157,7 @@ private:
       {
         if (auto& cb = this->configuration.input_removed)
         {
-          cb(to_port_info(in_prev));
+          cb(to_port_info<true>(in_prev));
         }
       }
     }
@@ -167,7 +170,7 @@ private:
       {
         if (auto& cb = this->configuration.input_added)
         {
-          cb(to_port_info(in_next));
+          cb(to_port_info<true>(in_next));
         }
       }
     }
@@ -179,7 +182,7 @@ private:
       {
         if (auto& cb = this->configuration.output_removed)
         {
-          cb(to_port_info(out_prev));
+          cb(to_port_info<false>(out_prev));
         }
       }
     }
@@ -192,7 +195,7 @@ private:
       {
         if (auto& cb = this->configuration.output_added)
         {
-          cb(to_port_info(out_next));
+          cb(to_port_info<false>(out_next));
         }
       }
     }
@@ -200,7 +203,7 @@ private:
   }
 
   udev_helper udev{};
-  eventfd_notifier event_fd{};
+  eventfd_notifier termination_event{};
   timerfd_timer timer_fd{};
   int timer_check_counts = 0;
   std::thread thread;

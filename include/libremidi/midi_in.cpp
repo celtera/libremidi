@@ -5,6 +5,8 @@
 #include <libremidi/backends.hpp>
 #include <libremidi/detail/midi_api.hpp>
 
+#include <cassert>
+
 namespace libremidi
 {
 LIBREMIDI_INLINE auto make_midi_in(auto base_conf, std::any api_conf, auto backends)
@@ -109,7 +111,7 @@ libremidi::API midi_in::get_current_api() const noexcept
 }
 
 LIBREMIDI_INLINE
-void midi_in::open_port(const port_information& port, std::string_view portName)
+void midi_in::open_port(const input_port& port, std::string_view portName)
 {
   if (impl_->is_port_open())
     return;

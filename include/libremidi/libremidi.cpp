@@ -113,7 +113,7 @@ std::any midi_out_configuration_for(const libremidi::observer& obs)
 }
 
 LIBREMIDI_EXPORT
-    std::optional<port_information> in_default_port(libremidi::API api) noexcept
+std::optional<input_port> in_default_port(libremidi::API api) noexcept
 try
 {
   libremidi::observer obs{{}, observer_configuration_for(api)};
@@ -127,7 +127,7 @@ catch (const std::exception& e)
 }
 
 LIBREMIDI_EXPORT
-    std::optional<port_information> out_default_port(libremidi::API api) noexcept
+std::optional<output_port> out_default_port(libremidi::API api) noexcept
 try
 {
   libremidi::observer obs{{}, observer_configuration_for(api)};

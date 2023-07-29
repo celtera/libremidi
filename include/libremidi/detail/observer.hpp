@@ -14,8 +14,8 @@ public:
   virtual ~observer_api() = default;
 
   virtual libremidi::API get_current_api() const noexcept = 0;
-  virtual std::vector<libremidi::port_information> get_input_ports() const noexcept = 0;
-  virtual std::vector<libremidi::port_information> get_output_ports() const noexcept = 0;
+  virtual std::vector<libremidi::input_port> get_input_ports() const noexcept = 0;
+  virtual std::vector<libremidi::output_port> get_output_ports() const noexcept = 0;
 };
 
 template <typename T, typename Arg>

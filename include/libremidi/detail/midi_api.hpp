@@ -69,10 +69,6 @@ public:
 
   [[nodiscard]] virtual libremidi::API get_current_api() const noexcept = 0;
 
-  [[nodiscard]] virtual bool
-  open_port(const port_information& pt, std::string_view local_port_name)
-      = 0;
-
   [[nodiscard]] virtual bool open_virtual_port(std::string_view) = 0;
 
   virtual void close_port() = 0;

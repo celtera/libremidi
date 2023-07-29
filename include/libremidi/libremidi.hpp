@@ -91,8 +91,8 @@ public:
   [[nodiscard]] libremidi::API get_current_api() const noexcept;
 
   //! Return identifiers for the available MIDI ports
-  std::vector<libremidi::port_information> get_input_ports() const noexcept;
-  std::vector<libremidi::port_information> get_output_ports() const noexcept;
+  std::vector<libremidi::input_port> get_input_ports() const noexcept;
+  std::vector<libremidi::output_port> get_output_ports() const noexcept;
 
 private:
   std::unique_ptr<class observer_api> impl_;
@@ -128,7 +128,7 @@ public:
   [[nodiscard]] libremidi::API get_current_api() const noexcept;
 
   //! Open a MIDI input connection
-  void open_port(const port_information& pt, std::string_view local_port_name = "libremidi input");
+  void open_port(const input_port& pt, std::string_view local_port_name = "libremidi input");
 
   //! Create a virtual input port, with optional name, to allow software
   //! connections.
@@ -175,7 +175,7 @@ public:
   [[nodiscard]] libremidi::API get_current_api() noexcept;
 
   //! Open a MIDI output connection.
-  void open_port(const port_information& pt, std::string_view local_port_name = "libremidi input");
+  void open_port(const output_port& pt, std::string_view local_port_name = "libremidi input");
 
   //! Close an open MIDI connection (if one exists).
   void close_port();

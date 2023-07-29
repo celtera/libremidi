@@ -18,7 +18,7 @@ LIBREMIDI_INLINE midi_out_emscripten::~midi_out_emscripten()
 
 LIBREMIDI_INLINE libremidi::API midi_out_emscripten::get_current_api() const noexcept
 {
-  return libremidi::API::EMSCRIPTEN_WEBMIDI;
+  return libremidi::API::WEBMIDI;
 }
 
 LIBREMIDI_INLINE bool midi_out_emscripten::open_port(unsigned int portNumber, std::string_view)
@@ -36,8 +36,7 @@ LIBREMIDI_INLINE bool midi_out_emscripten::open_port(unsigned int portNumber, st
   return true;
 }
 
-LIBREMIDI_INLINE bool
-midi_out_emscripten::open_port(const port_information& p, std::string_view nm)
+LIBREMIDI_INLINE bool midi_out_emscripten::open_port(const output_port& p, std::string_view nm)
 {
   return open_port(p.port, nm);
 }

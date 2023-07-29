@@ -36,12 +36,12 @@ std::any midi_out_configuration_for(const libremidi::observer&);
 //! Get the default port for midi input (if any) in a given API.
 //! Note that this will only return a hardware / physical port.
 LIBREMIDI_EXPORT
-std::optional<port_information> in_default_port(libremidi::API api) noexcept;
+std::optional<input_port> in_default_port(libremidi::API api) noexcept;
 
 //! Get the default port for midi output (if any) in a given API.
 //! Note that this will only return a hardware / physical port.
 LIBREMIDI_EXPORT
-std::optional<port_information> out_default_port(libremidi::API api) noexcept;
+std::optional<output_port> out_default_port(libremidi::API api) noexcept;
 
 namespace midi1
 {
@@ -58,13 +58,13 @@ LIBREMIDI_EXPORT
 std::any observer_default_configuration();
 
 //! Get a default MIDI 1 input port for the default API of the system
-inline std::optional<port_information> in_default_port() noexcept
+inline std::optional<input_port> in_default_port() noexcept
 {
   return libremidi::in_default_port(default_api());
 }
 
 //! Get a default MIDI 1 output port for the default API of the system
-inline std::optional<port_information> out_default_port() noexcept
+inline std::optional<output_port> out_default_port() noexcept
 {
   return libremidi::out_default_port(default_api());
 }
@@ -85,12 +85,12 @@ LIBREMIDI_EXPORT
 std::any observer_default_configuration();
 
 //! Get a default MIDI 2 input port for the default API of the system
-inline std::optional<port_information> in_default_port() noexcept
+inline std::optional<input_port> in_default_port() noexcept
 {
   return libremidi::in_default_port(default_api());
 }
 //! Get a default MIDI 2 output port for the default API of the system
-inline std::optional<port_information> out_default_port() noexcept
+inline std::optional<output_port> out_default_port() noexcept
 {
   return libremidi::out_default_port(default_api());
 }

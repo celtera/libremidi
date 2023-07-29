@@ -15,6 +15,8 @@ public:
   midi_in_api(midi_in_api&&) = delete;
   midi_in_api& operator=(const midi_in_api&) = delete;
   midi_in_api& operator=(midi_in_api&&) = delete;
+
+  [[nodiscard]] virtual bool open_port(const input_port& pt, std::string_view local_port_name) = 0;
 };
 
 namespace midi1 {

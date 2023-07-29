@@ -322,7 +322,7 @@ public:
       libremidi::input_configuration&& conf, alsa_seq::input_configuration&& apiconf)
       : midi_in_impl{std::move(conf), std::move(apiconf)}
   {
-    if (this->event_fd < 0)
+    if (this->termination_event < 0)
     {
       error<driver_error>(
           this->configuration, "midi_in_alsa::initialize: error creating eventfd.");
@@ -332,7 +332,7 @@ public:
   ~midi_in_alsa_threaded() { this->close_port(); }
 
 private:
-  bool open_port(const port_information& pt, std::string_view local_port_name) override
+  bool open_port(const input_port& pt, std::string_view local_port_name) override
   {
     if (int err = init_port(to_address(pt), local_port_name); err < 0)
       return false;
@@ -381,19 +381,19 @@ private:
 
   void stop_thread()
   {
-    event_fd.notify();
+    termination_event.notify();
 
     if (this->thread.joinable())
       this->thread.join();
 
-    event_fd.consume();
+    termination_event.consume();
   }
 
   void thread_handler()
   {
     int poll_fd_count = snd_seq_poll_descriptors_count(this->seq, POLLIN) + 1;
     auto poll_fds = (struct pollfd*)alloca(poll_fd_count * sizeof(struct pollfd));
-    poll_fds[0] = this->event_fd;
+    poll_fds[0] = this->termination_event;
     snd_seq_poll_descriptors(this->seq, poll_fds + 1, poll_fd_count - 1, POLLIN);
 
     for (;;)
@@ -404,7 +404,7 @@ private:
         if (poll(poll_fds, poll_fd_count, -1) >= 0)
         {
           // We got our stop-thread signal
-          if (event_fd.ready(poll_fds[0]))
+          if (termination_event.ready(poll_fds[0]))
           {
             break;
           }
@@ -422,12 +422,19 @@ private:
   }
 
   std::thread thread{};
-  eventfd_notifier event_fd{};
+  eventfd_notifier termination_event{};
 };
 
 class midi_in_alsa_manual : public midi_in_impl
 {
-  using midi_in_impl::midi_in_impl;
+public:
+  midi_in_alsa_manual(
+      libremidi::input_configuration&& conf, alsa_seq::input_configuration&& apiconf)
+      : midi_in_impl{std::move(conf), std::move(apiconf)}
+  {
+    assert(this->configuration.manual_poll);
+    assert(this->configuration.stop_poll);
+  }
 
   [[nodiscard]] int init_callback()
   {
@@ -438,7 +445,9 @@ class midi_in_alsa_manual : public midi_in_impl
     return 0;
   }
 
-  bool open_port(const port_information& pt, std::string_view local_port_name) override
+  ~midi_in_alsa_manual() { this->close_port(); }
+
+  bool open_port(const input_port& pt, std::string_view local_port_name) override
   {
     if (int err = init_port(to_address(pt), local_port_name); err < 0)
       return false;
@@ -456,6 +465,13 @@ class midi_in_alsa_manual : public midi_in_impl
     if (int err = init_callback(); err < 0)
       return false;
     return true;
+  }
+
+  void close_port() override
+  {
+    configuration.stop_poll(this->vaddr);
+
+    midi_in_impl::close_port();
   }
 };
 }

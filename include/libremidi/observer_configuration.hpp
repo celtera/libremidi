@@ -41,22 +41,37 @@ struct LIBREMIDI_EXPORT port_information
   std::strong_ordering operator<=>(const port_information& other) const noexcept = default;
 };
 
-using port_callback = std::function<void(const port_information&)>;
+struct input_port : port_information
+{
+  bool operator==(const input_port& other) const noexcept = default;
+  std::strong_ordering operator<=>(const input_port& other) const noexcept = default;
+};
+struct output_port : port_information
+{
+  bool operator==(const output_port& other) const noexcept = default;
+  std::strong_ordering operator<=>(const output_port& other) const noexcept = default;
+};
+
+using input_port_callback = std::function<void(const input_port&)>;
+using output_port_callback = std::function<void(const output_port&)>;
 struct observer_configuration
 {
   midi_error_callback on_error{};
   midi_error_callback on_warning{};
 
-  port_callback input_added;
-  port_callback input_removed;
-  port_callback output_added;
-  port_callback output_removed;
+  input_port_callback input_added;
+  input_port_callback input_removed;
+  output_port_callback output_added;
+  output_port_callback output_removed;
 
   // Observe hardware ports
   uint32_t track_hardware : 1 = true;
 
   // Observe software (virtual) ports if the API provides it
   uint32_t track_virtual : 1 = false;
+
+  // Notify of the existing ports in the observer constructor
+  uint32_t notify_in_constructor : 1 = true;
 
   bool has_callbacks() const noexcept
   {

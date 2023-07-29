@@ -20,16 +20,16 @@ try
 
     std::cout << "Displaying ports for: " << api_name << std::endl;
     libremidi::observer_configuration cbs;
-    cbs.input_added = [=](const libremidi::port_information& p) {
+    cbs.input_added = [=](const libremidi::input_port& p) {
       std::cout << api_name << " : input added " << p << "\n";
     };
-    cbs.input_removed = [=](const libremidi::port_information& p) {
+    cbs.input_removed = [=](const libremidi::input_port& p) {
       std::cout << api_name << " : input removed " << p << "\n";
     };
-    cbs.output_added = [=](const libremidi::port_information& p) {
+    cbs.output_added = [=](const libremidi::output_port& p) {
       std::cout << api_name << " : output added " << p << "\n";
     };
-    cbs.output_removed = [=](const libremidi::port_information& p) {
+    cbs.output_removed = [=](const libremidi::output_port& p) {
       std::cout << api_name << " : output removed " << p << "\n";
     };
     observers.emplace_back(cbs, libremidi::observer_configuration_for(api));

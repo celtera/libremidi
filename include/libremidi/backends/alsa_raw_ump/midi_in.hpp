@@ -233,7 +233,7 @@ public:
       libremidi::ump_input_configuration&& conf, alsa_raw_ump::input_configuration&& apiconf)
       : midi_in_impl{std::move(conf), std::move(apiconf)}
   {
-    if (this->event_fd < 0)
+    if (this->termination_event < 0)
     {
       error<driver_error>(
           this->configuration, "midi_in_alsa::initialize: error creating eventfd.");
@@ -249,7 +249,7 @@ public:
 private:
   void run_thread(auto parse_func)
   {
-    fds_.push_back(this->event_fd);
+    fds_.push_back(this->termination_event);
 
     for (;;)
     {
@@ -259,7 +259,7 @@ private:
         continue;
       else if (err < 0)
         return;
-      else if (event_fd.ready(fds_.back()))
+      else if (termination_event.ready(fds_.back()))
         break;
 
       err = do_read_events(parse_func, {fds_.data(), fds_.size() - 1});
@@ -296,7 +296,7 @@ private:
     return true;
   }
 
-  bool open_port(const port_information& port, std::string_view name) override
+  bool open_port(const input_port& port, std::string_view name) override
   {
     if (int err = midi_in_impl::init_port(port); err < 0)
       return false;
@@ -307,16 +307,16 @@ private:
 
   void close_port() override
   {
-    event_fd.notify();
+    termination_event.notify();
     if (thread_.joinable())
       thread_.join();
-    event_fd.consume(); // Reset to zero
+    termination_event.consume(); // Reset to zero
 
     midi_in_impl::close_port();
   }
 
   std::thread thread_;
-  eventfd_notifier event_fd{};
+  eventfd_notifier termination_event{};
 };
 
 class midi_in_impl_manual : public midi_in_impl
@@ -351,7 +351,7 @@ private:
     }
   }
 
-  bool open_port(const port_information& p, std::string_view name) override
+  bool open_port(const input_port& p, std::string_view name) override
   {
     if (midi_in_impl::init_port(p) < 0)
       return false;

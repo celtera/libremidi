@@ -46,22 +46,25 @@ struct jack_client
     }
   }
 
-  static libremidi::port_information to_port_info(jack_client_t* client, jack_port_t* port)
+  template <bool Input>
+  static auto to_port_info(jack_client_t* client, jack_port_t* port)
+      -> std::conditional_t<Input, input_port, output_port>
   {
-    return port_information{
+    return {{
         .client = std::uintptr_t(client),
         .port = 0,
         .manufacturer = "",
         .device_name = "",
         .port_name = jack_port_name(port),
         .display_name = get_port_display_name(port),
-    };
+    }};
   }
 
-  static std::vector<libremidi::port_information>
-  get_ports(jack_client_t* client, const char* pattern, JackPortFlags flags) noexcept
+  template <bool Input>
+  static auto get_ports(jack_client_t* client, const char* pattern, JackPortFlags flags) noexcept
+      -> std::vector<std::conditional_t<Input, input_port, output_port>>
   {
-    std::vector<libremidi::port_information> ret;
+    std::vector<std::conditional_t<Input, input_port, output_port>> ret;
 
     if (!client)
       return {};
@@ -75,7 +78,7 @@ struct jack_client
     while (ports[i] != nullptr)
     {
       auto port = jack_port_by_name(client, ports[i]);
-      ret.push_back(to_port_info(client, port));
+      ret.push_back(to_port_info<Input>(client, port));
       i++;
     }
 
@@ -237,7 +240,7 @@ struct jack_helpers : jack_client
     if (this->port == nullptr)
       return;
 
-    // 1. Ensure thaqt the next time the cycle runs it sees the port as nullptr
+    // 1. Ensure that the next time the cycle runs it sees the port as nullptr
     jack_port_t* port_ptr = this->port.impl->load();
     this->port = nullptr;
 
@@ -246,6 +249,8 @@ struct jack_helpers : jack_client
 
     // 3. Now we are sure that the client is not going to use the port anymore
     jack_port_unregister(this->client, port_ptr);
+
+    assert(this->port.impl->load() == nullptr);
   }
 };
 }

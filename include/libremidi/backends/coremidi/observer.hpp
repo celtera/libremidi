@@ -7,7 +7,7 @@
 
 namespace libremidi
 {
-class observer_core final
+class observer_core
     : public observer_api
     , public error_handler
 {
@@ -44,38 +44,24 @@ public:
 
     if (configuration.on_create_context)
       configuration.on_create_context(client);
-  }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::MACOSX_CORE; }
-
-  std::vector<libremidi::port_information> get_input_ports() const noexcept override
-  {
-    std::vector<libremidi::port_information> ret;
-
-    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-    for (ItemCount i = 0; i < MIDIGetNumberOfSources(); i++)
+    if (configuration.notify_in_constructor)
     {
-      if (auto p = to_port_info(MIDIGetSource(i)))
-        ret.push_back(std::move(*p));
-    }
+      if (this->configuration.input_added)
+        for (auto& p : get_input_ports())
+          this->configuration.input_added(p);
 
-    return ret;
+      if (this->configuration.output_added)
+        for (auto& p : get_output_ports())
+          this->configuration.output_added(p);
+    }
   }
 
-  std::vector<libremidi::port_information> get_output_ports() const noexcept override
-  {
-    std::vector<libremidi::port_information> ret;
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::COREMIDI; }
 
-    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-    for (ItemCount i = 0; i < MIDIGetNumberOfDestinations(); i++)
-    {
-      if (auto p = to_port_info(MIDIGetDestination(i)))
-        ret.push_back(std::move(*p));
-    }
-    return ret;
-  }
-
-  std::optional<port_information> to_port_info(MIDIObjectRef obj) const noexcept
+  template <bool Input>
+  auto to_port_info(MIDIObjectRef obj) const noexcept
+      -> std::optional<std::conditional_t<Input, input_port, output_port>>
   {
     MIDIEntityRef e{};
     MIDIEndpointGetEntity(obj, &e);
@@ -90,13 +76,40 @@ public:
     if (!ok)
       return {};
 
-    return port_information{
-        .client = (std::uintptr_t)this->client,
-        .port = std::bit_cast<uint32_t>(get_int_property(obj, kMIDIPropertyUniqueID)),
-        .manufacturer = get_string_property(obj, kMIDIPropertyManufacturer),
-        .device_name = get_string_property(obj, kMIDIPropertyModel),
-        .port_name = get_string_property(obj, kMIDIPropertyName),
-        .display_name = get_string_property(obj, kMIDIPropertyDisplayName)};
+    return {
+        {.client = (std::uintptr_t)this->client,
+         .port = std::bit_cast<uint32_t>(get_int_property(obj, kMIDIPropertyUniqueID)),
+         .manufacturer = get_string_property(obj, kMIDIPropertyManufacturer),
+         .device_name = get_string_property(obj, kMIDIPropertyModel),
+         .port_name = get_string_property(obj, kMIDIPropertyName),
+         .display_name = get_string_property(obj, kMIDIPropertyDisplayName)}};
+  }
+
+  std::vector<libremidi::input_port> get_input_ports() const noexcept override
+  {
+    std::vector<libremidi::input_port> ret;
+
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+    for (ItemCount i = 0; i < MIDIGetNumberOfSources(); i++)
+    {
+      if (auto p = to_port_info<true>(MIDIGetSource(i)))
+        ret.push_back(std::move(*p));
+    }
+
+    return ret;
+  }
+
+  std::vector<libremidi::output_port> get_output_ports() const noexcept override
+  {
+    std::vector<libremidi::output_port> ret;
+
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+    for (ItemCount i = 0; i < MIDIGetNumberOfDestinations(); i++)
+    {
+      if (auto p = to_port_info<false>(MIDIGetDestination(i)))
+        ret.push_back(std::move(*p));
+    }
+    return ret;
   }
 
   void notify(const MIDINotification* message)
@@ -110,12 +123,12 @@ public:
         {
           case kMIDIObjectType_Source:
             if (auto& cb = configuration.input_added)
-              if (auto p = to_port_info(obj->child))
+              if (auto p = to_port_info<true>(obj->child))
                 cb(std::move(*p));
             break;
           case kMIDIObjectType_Destination:
             if (auto& cb = configuration.output_added)
-              if (auto p = to_port_info(obj->child))
+              if (auto p = to_port_info<false>(obj->child))
                 cb(std::move(*p));
             break;
           default:
@@ -132,12 +145,12 @@ public:
         {
           case kMIDIObjectType_Source:
             if (auto& cb = configuration.input_removed)
-              if (auto p = to_port_info(obj->child))
+              if (auto p = to_port_info<true>(obj->child))
                 cb(std::move(*p));
             break;
           case kMIDIObjectType_Destination:
             if (auto& cb = configuration.output_removed)
-              if (auto p = to_port_info(obj->child))
+              if (auto p = to_port_info<false>(obj->child))
                 cb(std::move(*p));
             break;
           default:

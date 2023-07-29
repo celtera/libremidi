@@ -35,6 +35,7 @@ struct input_configuration
   std::string client_name = "libremidi client";
   snd_seq_t* context{};
   std::function<bool(const poll_parameters&)> manual_poll;
+  std::function<bool(snd_seq_addr_t)> stop_poll;
 };
 
 struct output_configuration
@@ -48,6 +49,7 @@ struct observer_configuration
   std::string client_name = "libremidi client";
   snd_seq_t* context{};
   std::function<bool(const poll_parameters&)> manual_poll;
+  std::function<bool(snd_seq_addr_t)> stop_poll;
 };
 
 }

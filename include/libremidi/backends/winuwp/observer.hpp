@@ -183,15 +183,19 @@ public:
   explicit observer_winuwp(observer_configuration&& conf, winuwp_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    if (configuration.input_added)
-      for (const auto& p : get_input_ports())
-        configuration.input_added(p);
-    if (configuration.output_added)
-      for (const auto& p : get_output_ports())
-        configuration.output_added(p);
-
     if (!configuration.has_callbacks())
       return;
+
+    if (configuration.notify_in_constructor)
+    {
+      if (configuration.input_added)
+        for (const auto& p : get_input_ports())
+          configuration.input_added(p);
+
+      if (configuration.output_added)
+        for (const auto& p : get_output_ports())
+          configuration.output_added(p);
+    }
 
     evTokenOnInputAdded_
         = internalInPortObserver_.PortAdded([this](const port_info& p) { on_input_added(p); });
@@ -215,30 +219,32 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 
-  port_information to_port_info(const observer_winuwp_internal::port_info& p) const noexcept
+  template <bool Input>
+  auto to_port_info(const observer_winuwp_internal::port_info& p) const noexcept
+      -> std::conditional_t<Input, input_port, output_port>
   {
     return {
-        .client = 0,
-        .port = 0,
-        .manufacturer = "",
-        .device_name = "",
-        .port_name = to_string(p.id),
-        .display_name = to_string(p.name)};
+        {.client = 0,
+         .port = 0,
+         .manufacturer = "",
+         .device_name = "",
+         .port_name = to_string(p.id),
+         .display_name = to_string(p.name)}};
   }
 
-  std::vector<libremidi::port_information> get_input_ports() const noexcept override
+  std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
-    std::vector<libremidi::port_information> ret;
+    std::vector<libremidi::input_port> ret;
     for (auto& port : internalInPortObserver_.get_ports())
-      ret.push_back(to_port_info(port));
+      ret.push_back(to_port_info<true>(port));
     return ret;
   }
 
-  std::vector<libremidi::port_information> get_output_ports() const noexcept override
+  std::vector<libremidi::output_port> get_output_ports() const noexcept override
   {
-    std::vector<libremidi::port_information> ret;
+    std::vector<libremidi::output_port> ret;
     for (auto& port : internalOutPortObserver_.get_ports())
-      ret.push_back(to_port_info(port));
+      ret.push_back(to_port_info<false>(port));
     return ret;
   }
 
@@ -255,25 +261,25 @@ public:
   void on_input_added(const observer_winuwp_internal::port_info& name)
   {
     if (configuration.input_added)
-      configuration.input_added(to_port_info(name));
+      configuration.input_added(to_port_info<true>(name));
   }
 
   void on_input_removed(const observer_winuwp_internal::port_info& name)
   {
     if (configuration.input_removed)
-      configuration.input_removed(to_port_info(name));
+      configuration.input_removed(to_port_info<true>(name));
   }
 
   void on_output_added(const observer_winuwp_internal::port_info& name)
   {
     if (configuration.output_added)
-      configuration.output_added(to_port_info(name));
+      configuration.output_added(to_port_info<false>(name));
   }
 
   void on_output_removed(const observer_winuwp_internal::port_info& name)
   {
     if (configuration.output_removed)
-      configuration.output_removed(to_port_info(name));
+      configuration.output_removed(to_port_info<false>(name));
   }
 
 private:

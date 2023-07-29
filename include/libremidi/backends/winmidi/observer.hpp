@@ -26,15 +26,19 @@ public:
       : configuration{std::move(conf), std::move(apiconf)}
       , session{MidiSession::CreateNewSession(L"libremidi session", MidiSessionSettings::Default())}
   {
-    if (configuration.input_added)
-      for (const auto& p : get_input_ports())
-        configuration.input_added(p);
-    if (configuration.output_added)
-      for (const auto& p : get_output_ports())
-        configuration.output_added(p);
-
     if (!configuration.has_callbacks())
       return;
+
+    if (configuration.notify_in_constructor)
+    {
+      if (configuration.input_added)
+        for (const auto& p : get_input_ports())
+          configuration.input_added(p);
+      if (configuration.output_added)
+        for (const auto& p : get_output_ports())
+          configuration.output_added(p);
+    }
+
 /*
     evTokenOnInputAdded_
         = internalInPortObserver_.PortAdded([this](const port_info& p) { on_input_added(p); });
@@ -59,20 +63,22 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MIDI_SERVICES; }
 
-  port_information to_port_info(const DeviceInformation& p) const noexcept
+  template <bool Input>
+  auto to_port_info(const DeviceInformation& p) const noexcept
+      -> std::conditional_t<Input, input_port, output_port>
   {
     return {
-        .client = 0,
-        .port = 0,
-        .manufacturer = "",
-        .device_name = "",
-        .port_name = to_string(p.Id()),
-        .display_name = to_string(p.Name())};
+        {.client = 0,
+         .port = 0,
+         .manufacturer = "",
+         .device_name = "",
+         .port_name = to_string(p.Id()),
+         .display_name = to_string(p.Name())}};
   }
 
-  std::vector<libremidi::port_information> get_input_ports() const noexcept override
+  std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
-    std::vector<libremidi::port_information> ret;
+    std::vector<libremidi::input_port> ret;
 
     auto deviceSelector = MidiEndpointConnection::GetDeviceSelector();
     auto endpointDevices = DeviceInformation::FindAllAsync(deviceSelector).get();
@@ -85,9 +91,9 @@ public:
     return ret;
   }
 
-  std::vector<libremidi::port_information> get_output_ports() const noexcept override
+  std::vector<libremidi::output_port> get_output_ports() const noexcept override
   {
-    std::vector<libremidi::port_information> ret;
+    std::vector<libremidi::output_port> ret;
 
     auto deviceSelector = MidiEndpointConnection::GetDeviceSelector();
     auto endpointDevices = DeviceInformation::FindAllAsync(deviceSelector).get();

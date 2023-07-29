@@ -68,7 +68,7 @@ public:
     return true;
   }
 
-  bool open_port(const port_information& p, std::string_view) override
+  bool open_port(const output_port& p, std::string_view) override
   {
     observer_winmm obs{{}, winmm_observer_configuration{}};
     auto ports = obs.get_output_ports();

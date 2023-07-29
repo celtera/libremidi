@@ -55,9 +55,9 @@ public:
     warning(configuration, "midi_in_core: set_port_name unsupported");
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::MACOSX_CORE; }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::COREMIDI; }
 
-  bool open_port(const port_information& info, std::string_view portName) override
+  bool open_port(const input_port& info, std::string_view portName) override
   {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
 

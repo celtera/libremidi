@@ -42,7 +42,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 
-  bool open_port(const port_information& port, std::string_view) override
+  bool open_port(const output_port& port, std::string_view) override
   {
     const auto id = winrt::to_hstring(port.port_name);
     if (id.empty())
