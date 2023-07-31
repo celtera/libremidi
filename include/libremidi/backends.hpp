@@ -56,7 +56,7 @@ constexpr auto make_tl(unused, Args...)
   return std::tuple<Args...>{};
 }
 
-namespace midi_1
+namespace midi1
 {
 static constexpr auto available_backends = make_tl(
     0
@@ -105,7 +105,7 @@ auto for_backend(libremidi::API api, F&& f)
 }
 }
 
-namespace midi_2
+namespace midi2
 {
 static constexpr auto available_backends = make_tl(
     0
@@ -154,15 +154,15 @@ namespace midi_any
 template <typename F>
 auto for_all_backends(F&& f)
 {
-  midi_1::for_all_backends(f);
-  midi_2::for_all_backends(f);
+  midi1::for_all_backends(f);
+  midi2::for_all_backends(f);
 }
 
 template <typename F>
 auto for_backend(libremidi::API api, F&& f)
 {
-  midi_1::for_backend(api, f);
-  midi_2::for_backend(api, f);
+  midi1::for_backend(api, f);
+  midi2::for_backend(api, f);
 }
 
 }

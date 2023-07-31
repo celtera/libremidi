@@ -21,8 +21,8 @@ LIBREMIDI_INLINE auto make_midi_out(auto base_conf, std::any api_conf)
     }
     return false;
   };
-  std::apply([&](auto&&... b) { (from_api(b) || ...); }, midi_1::available_backends);
-  std::apply([&](auto&&... b) { (from_api(b) || ...); }, midi_2::available_backends);
+  std::apply([&](auto&&... b) { (from_api(b) || ...); }, midi1::available_backends);
+  std::apply([&](auto&&... b) { (from_api(b) || ...); }, midi2::available_backends);
   return ptr;
 }
 

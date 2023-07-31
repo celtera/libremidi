@@ -33,7 +33,7 @@ LIBREMIDI_INLINE midi_in::midi_in(input_configuration base_conf) noexcept
   {
     try
     {
-      impl_ = make_midi_in(base_conf, midi_in_configuration_for(api), midi_1::available_backends);
+      impl_ = make_midi_in(base_conf, midi_in_configuration_for(api), midi1::available_backends);
     }
     catch (const std::exception& e)
     {
@@ -48,7 +48,7 @@ LIBREMIDI_INLINE midi_in::midi_in(input_configuration base_conf) noexcept
 
 LIBREMIDI_INLINE
 midi_in::midi_in(input_configuration base_conf, std::any api_conf)
-    : impl_{make_midi_in(base_conf, api_conf, midi_1::available_backends)}
+    : impl_{make_midi_in(base_conf, api_conf, midi1::available_backends)}
 {
   if (!impl_)
     throw midi_exception("Could not open midi in for the given api");
@@ -60,7 +60,7 @@ LIBREMIDI_INLINE midi_in::midi_in(ump_input_configuration base_conf) noexcept
   {
     try
     {
-      impl_ = make_midi_in(base_conf, midi_in_configuration_for(api), midi_2::available_backends);
+      impl_ = make_midi_in(base_conf, midi_in_configuration_for(api), midi2::available_backends);
     }
     catch (const std::exception& e)
     {
@@ -75,7 +75,7 @@ LIBREMIDI_INLINE midi_in::midi_in(ump_input_configuration base_conf) noexcept
 
 LIBREMIDI_INLINE
 midi_in::midi_in(ump_input_configuration base_conf, std::any api_conf)
-    : impl_{make_midi_in(base_conf, api_conf, midi_2::available_backends)}
+    : impl_{make_midi_in(base_conf, api_conf, midi2::available_backends)}
 {
   if (!impl_)
     throw midi_exception("Could not open midi in for the given api");

@@ -46,14 +46,14 @@ LIBREMIDI_INLINE libremidi::API get_compiled_api_by_name(std::string_view name)
 [[nodiscard]] LIBREMIDI_INLINE std::vector<libremidi::API> available_apis() noexcept
 {
   std::vector<libremidi::API> apis;
-  midi_1::for_all_backends([&](auto b) { apis.push_back(b.API); });
+  midi1::for_all_backends([&](auto b) { apis.push_back(b.API); });
   return apis;
 }
 
 [[nodiscard]] LIBREMIDI_INLINE std::vector<libremidi::API> available_ump_apis() noexcept
 {
   std::vector<libremidi::API> apis;
-  midi_2::for_all_backends([&](auto b) { apis.push_back(b.API); });
+  midi2::for_all_backends([&](auto b) { apis.push_back(b.API); });
   return apis;
 }
 
