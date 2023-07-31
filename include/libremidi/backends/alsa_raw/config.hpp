@@ -9,13 +9,20 @@
 
 #if __has_include(<poll.h>)
   #include <poll.h>
+namespace libremidi
+{
+using poll_descriptors = pollfd;
+}
 #else
-struct pollfd
+namespace libremidi
+{
+struct poll_descriptors
 {
   int fd;
   short int events;
   short int revents;
 };
+}
 #endif
 
 namespace libremidi
@@ -47,8 +54,8 @@ struct LIBREMIDI_EXPORT chunking_parameters
 
 struct manual_poll_parameters
 {
-  std::span<pollfd> fds;
-  std::function<int(std::span<pollfd> fds)> callback;
+  std::span<poll_descriptors> fds;
+  std::function<int(std::span<poll_descriptors> fds)> callback;
 };
 
 struct alsa_raw_input_configuration
