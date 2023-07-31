@@ -6,6 +6,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <ranges>
+#include <thread>
 
 namespace libremidi
 {
@@ -166,7 +167,6 @@ protected:
 
 #if __has_include(<stop_token>)
   #include <stop_token>
-  #include <thread>
 namespace libremidi::winmm
 {
 class observer_threaded final : public observer_winmm
@@ -194,6 +194,46 @@ public:
 
 private:
   std::jthread thread;
+};
+}
+#else
+  #include <atomic>
+  #include <semaphore>
+namespace libremidi::winmm
+{
+class observer_threaded final : public observer_winmm
+{
+public:
+  struct
+      : observer_configuration
+      , winmm_observer_configuration
+  {
+  } configuration;
+
+  explicit observer_threaded(observer_configuration&& conf, winmm_observer_configuration&& apiconf)
+      : observer_winmm{std::move(conf), std::move(apiconf)}
+      , sema{0}
+  {
+    thread = std::thread([this] {
+      while (!stop_flag.test(std::memory_order_acquire))
+      {
+        check_new_ports<true>();
+        std::this_thread::sleep_for(this->configuration.poll_period);
+      }
+      sema.release();
+    });
+  }
+
+  ~observer_threaded()
+  {
+    stop_flag.test_and_set();
+    sema.acquire();
+  }
+
+private:
+  std::thread thread;
+  std::atomic_flag stop_flag{ATOMIC_FLAG_INIT};
+  std::binary_semaphore sema;
 };
 }
 #endif
@@ -224,10 +264,9 @@ template <>
 inline std::unique_ptr<observer_api> make<observer_winmm>(
     libremidi::observer_configuration&& conf, libremidi::winmm_observer_configuration&& api)
 {
-#if __has_include(<stop_token>)
-  if (!api.manual_poll)
+  if (api.manual_poll)
+    return std::make_unique<winmm::observer_manual>(std::move(conf), std::move(api));
+  else
     return std::make_unique<winmm::observer_threaded>(std::move(conf), std::move(api));
-#endif
-  return std::make_unique<observer_winmm>(std::move(conf), std::move(api));
 }
 }
