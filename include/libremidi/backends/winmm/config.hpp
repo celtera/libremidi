@@ -2,6 +2,7 @@
 #include <libremidi/config.hpp>
 
 #include <chrono>
+#include <functional>
 
 namespace libremidi
 {
@@ -16,9 +17,15 @@ struct winmm_output_configuration
 {
 };
 
+struct poll_parameters
+{
+  std::function<void()> callback;
+};
+
 struct winmm_observer_configuration
 {
   std::chrono::milliseconds poll_period{100};
+  std::function<void(const poll_parameters&)> manual_poll;
 };
 
 }

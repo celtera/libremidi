@@ -6,13 +6,11 @@
 #include <condition_variable>
 #include <mutex>
 #include <ranges>
-#include <stop_token>
-#include <thread>
 
 namespace libremidi
 {
 
-class observer_winmm final : public observer_api
+class observer_winmm : public observer_api
 {
 public:
   struct
@@ -31,17 +29,9 @@ public:
       check_new_ports<true>();
     else
       check_new_ports<false>();
-
-    thread = std::jthread([this](std::stop_token tk) {
-      while (!tk.stop_requested())
-      {
-        check_new_ports<true>();
-        std::this_thread::sleep_for(this->configuration.poll_period);
-      }
-    });
   }
 
-  ~observer_winmm() { thread.get_stop_source().request_stop(); }
+  ~observer_winmm() { }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
@@ -55,7 +45,7 @@ public:
     return get_port_list<false>();
   }
 
-private:
+protected:
   template <bool Notify>
   void check_new_ports()
   {
@@ -169,9 +159,75 @@ private:
   static constexpr bool INPUT = true;
   static constexpr bool OUTPUT = false;
 
-  std::jthread thread;
-
   std::vector<input_port> inputPortList;
   std::vector<output_port> outputPortList;
 };
+}
+
+#if __has_include(<stop_token>)
+  #include <stop_token>
+  #include <thread>
+namespace libremidi::winmm
+{
+class observer_threaded final : public observer_winmm
+{
+public:
+  struct
+      : observer_configuration
+      , winmm_observer_configuration
+  {
+  } configuration;
+
+  explicit observer_threaded(observer_configuration&& conf, winmm_observer_configuration&& apiconf)
+      : observer_winmm{std::move(conf), std::move(apiconf)}
+  {
+    thread = std::jthread([this](std::stop_token tk) {
+      while (!tk.stop_requested())
+      {
+        check_new_ports<true>();
+        std::this_thread::sleep_for(this->configuration.poll_period);
+      }
+    });
+  }
+
+  ~observer_threaded() { thread.get_stop_source().request_stop(); }
+
+private:
+  std::jthread thread;
+};
+}
+#endif
+
+namespace libremidi::winmm
+{
+class observer_manual final : public observer_winmm
+{
+public:
+  struct
+      : observer_configuration
+      , winmm_observer_configuration
+  {
+  } configuration;
+
+  explicit observer_manual(observer_configuration&& conf, winmm_observer_configuration&& apiconf)
+      : observer_winmm{std::move(conf), std::move(apiconf)}
+  {
+    this->configuration.manual_poll({.callback = [this] { this->check_new_ports<true>(); }});
+  }
+
+  ~observer_manual() { }
+};
+}
+namespace libremidi
+{
+template <>
+inline std::unique_ptr<observer_api> make<observer_winmm>(
+    libremidi::observer_configuration&& conf, libremidi::winmm_observer_configuration&& api)
+{
+#if __has_include(<stop_token>)
+  if (!api.manual_poll)
+    return std::make_unique<winmm::observer_threaded>(std::move(conf), std::move(api));
+#endif
+  return std::make_unique<observer_winmm>(std::move(conf), std::move(api));
+}
 }
