@@ -6,6 +6,7 @@
 #include <CoreServices/CoreServices.h>
 
 #include <cmath>
+#include <bit>
 
 #if TARGET_OS_IPHONE
   #include <CoreAudio/CoreAudioTypes.h>
