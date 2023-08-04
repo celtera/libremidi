@@ -67,7 +67,7 @@ LIBREMIDI_INLINE driver_error::~driver_error() = default;
 LIBREMIDI_INLINE system_error::~system_error() = default;
 LIBREMIDI_INLINE thread_error::~thread_error() = default;
 
-LIBREMIDI_EXPORT
+LIBREMIDI_INLINE
 std::any midi_in_configuration_for(libremidi::API api)
 {
   std::any ret;
@@ -78,7 +78,7 @@ std::any midi_in_configuration_for(libremidi::API api)
   return ret;
 }
 
-LIBREMIDI_EXPORT
+LIBREMIDI_INLINE
 std::any midi_out_configuration_for(libremidi::API api)
 {
   std::any ret;
@@ -89,7 +89,7 @@ std::any midi_out_configuration_for(libremidi::API api)
   return ret;
 }
 
-LIBREMIDI_EXPORT
+LIBREMIDI_INLINE
 std::any observer_configuration_for(libremidi::API api)
 {
   std::any ret;
@@ -100,19 +100,19 @@ std::any observer_configuration_for(libremidi::API api)
   return ret;
 }
 
-LIBREMIDI_EXPORT
+LIBREMIDI_INLINE
 std::any midi_in_configuration_for(const libremidi::observer& obs)
 {
   return midi_in_configuration_for(obs.get_current_api());
 }
 
-LIBREMIDI_EXPORT
+LIBREMIDI_INLINE
 std::any midi_out_configuration_for(const libremidi::observer& obs)
 {
   return midi_out_configuration_for(obs.get_current_api());
 }
 
-LIBREMIDI_EXPORT
+LIBREMIDI_INLINE
 std::optional<input_port> in_default_port(libremidi::API api) noexcept
 try
 {
@@ -126,7 +126,7 @@ catch (const std::exception& e)
   return std::nullopt;
 }
 
-LIBREMIDI_EXPORT
+LIBREMIDI_INLINE
 std::optional<output_port> out_default_port(libremidi::API api) noexcept
 try
 {
@@ -142,19 +142,19 @@ catch (const std::exception& e)
 
 namespace midi1
 {
-LIBREMIDI_EXPORT
+LIBREMIDI_INLINE
 std::any in_default_configuration()
 {
   return midi_in_configuration_for(default_api());
 }
 
-LIBREMIDI_EXPORT
+LIBREMIDI_INLINE
 std::any out_default_configuration()
 {
   return midi_out_configuration_for(default_api());
 }
 
-LIBREMIDI_EXPORT
+LIBREMIDI_INLINE
 std::any observer_default_configuration()
 {
   return observer_configuration_for(default_api());
@@ -163,19 +163,19 @@ std::any observer_default_configuration()
 
 namespace midi2
 {
-LIBREMIDI_EXPORT
+LIBREMIDI_INLINE
     std::any in_default_configuration()
 {
   return midi_in_configuration_for(default_api());
 }
 
-LIBREMIDI_EXPORT
+LIBREMIDI_INLINE
     std::any out_default_configuration()
 {
   return midi_out_configuration_for(default_api());
 }
 
-LIBREMIDI_EXPORT
+LIBREMIDI_INLINE
     std::any observer_default_configuration()
 {
   return observer_configuration_for(default_api());
