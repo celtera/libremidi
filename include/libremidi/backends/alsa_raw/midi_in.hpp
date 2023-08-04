@@ -7,6 +7,9 @@
 
 #include <alsa/asoundlib.h>
 
+#if SND_LIB_VERSION >= ((1<<16) | (2<<8) | 6)
+#define LIBREMIDI_ALSA_SUPPORTS_TREAD 1
+#endif
 #include <atomic>
 #include <thread>
 
@@ -64,7 +67,7 @@ public:
       return err;
     if (int err = snd_rawmidi_params_set_no_active_sensing(midiport_, params, 1); err < 0)
       return err;
-
+#if LIBREMIDI_ALSA_SUPPORTS_TREAD
     if (configuration.timestamps == timestamp_mode::NoTimestamp)
     {
       if (int err = snd_rawmidi_params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_STANDARD);
@@ -84,6 +87,7 @@ public:
           err < 0)
         return err;
     }
+#endif
 
     if (int err = snd_rawmidi_params(midiport_, params); err < 0)
       return err;
@@ -177,6 +181,7 @@ public:
     }
   }
 
+#if LIBREMIDI_ALSA_SUPPORTS_TREAD
   int read_input_buffer_with_timestamps()
   {
     static const constexpr int nbytes = 1024;
@@ -194,6 +199,9 @@ public:
     }
     return err;
   }
+#else
+  int read_input_buffer_with_timestamps() { return read_input_buffer(); }
+#endif
 
   void close_port() override
   {
