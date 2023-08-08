@@ -38,6 +38,7 @@ struct jack_output_configuration
   std::function<void(int64_t)> clear_process_func;
 
   int32_t ringbuffer_size = 16384;
+  bool direct = false;
 };
 
 struct jack_observer_configuration

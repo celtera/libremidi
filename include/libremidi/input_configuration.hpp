@@ -30,6 +30,10 @@ enum timestamp_mode
   //! but is more useful for system-wide synchronization.
   //! Note: depending on the backend, Absolute and SystemMonotonic may be the same.
   SystemMonotonic,
+
+  //! For APIs which are based on audio process cycles such as JACK, timestamps will be in frames since
+  //! the beginning of the current cycle's audio buffer
+  AudioFrame
 };
 
 using message_callback = std::function<void(message&& message)>;
@@ -60,7 +64,7 @@ struct input_configuration
   uint32_t ignore_timing : 1 = true;
   uint32_t ignore_sensing : 1 = true;
 
-  uint32_t timestamps : 2 = timestamp_mode::Absolute;
+  uint32_t timestamps : 3 = timestamp_mode::Absolute;
 };
 
 using ump_callback = std::function<void(ump&&)>;
@@ -90,6 +94,6 @@ struct ump_input_configuration
   uint32_t ignore_timing : 1 = true;
   uint32_t ignore_sensing : 1 = true;
 
-  uint32_t timestamps : 2 = timestamp_mode::Absolute;
+  uint32_t timestamps : 3 = timestamp_mode::Absolute;
 };
 }

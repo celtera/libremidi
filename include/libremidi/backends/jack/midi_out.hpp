@@ -68,7 +68,7 @@ public:
   int32_t ringbuffer_space{}; // actual writable size, usually 1 less than ringbuffer
 };
 
-class midi_out_jack final
+class midi_out_jack
     : public midi1::out_api
     , public jack_helpers
     , public error_handler
@@ -82,22 +82,10 @@ public:
 
   midi_out_jack(output_configuration&& conf, jack_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-      , queue{configuration.ringbuffer_size}
   {
-    auto status = connect(*this);
-    if (status != jack_status_t{})
-      warning(configuration, "midi_in_jack: " + std::to_string((int)jack_status_t{}));
   }
 
-  ~midi_out_jack() override
-  {
-    midi_out_jack::close_port();
-
-    disconnect(*this);
-
-    if (this->client && !configuration.context)
-      jack_client_close(this->client);
-  }
+  ~midi_out_jack() override { }
 
   void set_client_name(std::string_view) override
   {
@@ -133,6 +121,29 @@ public:
   {
     jack_port_rename(this->client, this->port, portName.data());
   }
+};
+
+class midi_out_jack_queued final : public midi_out_jack
+{
+public:
+  midi_out_jack_queued(output_configuration&& conf, jack_output_configuration&& apiconf)
+      : midi_out_jack{std::move(conf), std::move(apiconf)}
+      , queue{configuration.ringbuffer_size}
+  {
+    auto status = connect(*this);
+    if (status != jack_status_t{})
+      warning(configuration, "midi_out_jack_queued: " + std::to_string((int)jack_status_t{}));
+  }
+
+  ~midi_out_jack_queued() override
+  {
+    midi_out_jack::close_port();
+
+    disconnect(*this);
+
+    if (this->client && !configuration.context)
+      jack_client_close(this->client);
+  }
 
   void send_message(const unsigned char* message, size_t size) override
   {
@@ -153,4 +164,75 @@ private:
   jack_queue queue;
 };
 
+class midi_out_jack_direct final : public midi_out_jack
+{
+public:
+  midi_out_jack_direct(output_configuration&& conf, jack_output_configuration&& apiconf)
+      : midi_out_jack{std::move(conf), std::move(apiconf)}
+  {
+    auto status = connect(*this);
+    if (status != jack_status_t{})
+      warning(configuration, "midi_out_jack_direct: " + std::to_string((int)jack_status_t{}));
+
+    buffer_size = jack_get_buffer_size(this->client);
+    std::cerr << buffer_size << std::endl;
+  }
+
+  ~midi_out_jack_direct() override
+  {
+    midi_out_jack::close_port();
+
+    disconnect(*this);
+
+    if (this->client && !configuration.context)
+      jack_client_close(this->client);
+  }
+
+  int process(jack_nframes_t nframes)
+  {
+    void* buff = jack_port_get_buffer(this->port, nframes);
+    jack_midi_clear_buffer(buff);
+    return 0;
+  }
+
+  void send_message(const unsigned char* message, size_t size) override
+  {
+    void* buff = jack_port_get_buffer(this->port, buffer_size);
+    jack_midi_event_write(buff, 0, message, size);
+  }
+
+  int convert_timestamp(int64_t user) const noexcept
+  {
+    switch (configuration.timestamps)
+    {
+      case timestamp_mode::AudioFrame:
+        return user;
+
+      default:
+        // TODO
+        return 0;
+    }
+  }
+
+  void schedule_message(int64_t ts, const unsigned char* message, size_t size) override
+  {
+    void* buff = jack_port_get_buffer(this->port, buffer_size);
+    jack_midi_event_write(buff, convert_timestamp(ts), message, size);
+  }
+
+  int buffer_size{};
+};
+}
+
+namespace libremidi
+{
+template <>
+inline std::unique_ptr<midi_out_api> make<midi_out_jack>(
+    libremidi::output_configuration&& conf, libremidi::jack_output_configuration&& api)
+{
+  if (api.direct)
+    return std::make_unique<midi_out_jack_direct>(std::move(conf), std::move(api));
+  else
+    return std::make_unique<midi_out_jack_queued>(std::move(conf), std::move(api));
+}
 }

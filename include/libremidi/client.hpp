@@ -48,7 +48,7 @@ struct client_configuration
   uint32_t ignore_sysex : 1 = true;
   uint32_t ignore_timing : 1 = true;
   uint32_t ignore_sensing : 1 = true;
-  uint32_t timestamps : 2 = timestamp_mode::Absolute;
+  uint32_t timestamps : 3 = timestamp_mode::Absolute;
 
   //! Observe hardware ports
   uint32_t track_hardware : 1 = true;

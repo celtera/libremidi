@@ -18,6 +18,6 @@ struct output_configuration
   midi_error_callback on_warning{};
 
   //! Timestamp mode for the timestamps passed to schedule_message
-  uint32_t timestamps : 2 = timestamp_mode::Absolute;
+  uint32_t timestamps : 3 = timestamp_mode::Absolute;
 };
 }

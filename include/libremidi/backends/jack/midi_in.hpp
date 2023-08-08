@@ -108,6 +108,9 @@ public:
                   .count();
         break;
       }
+      case timestamp_mode::AudioFrame:
+        msg.timestamp = frame;
+        break;
     }
   }
 
