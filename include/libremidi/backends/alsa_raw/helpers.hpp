@@ -23,7 +23,6 @@ namespace libremidi
 {
 namespace
 {
-
 struct alsa_raw_port_id
 {
   int card{}, dev{}, port{};
@@ -47,6 +46,7 @@ inline constexpr alsa_raw_port_id raw_from_port_handle(port_handle p) noexcept
 static_assert(raw_from_port_handle(raw_to_port_handle({102, 7, 3})).card == 102);
 static_assert(raw_from_port_handle(raw_to_port_handle({12, 7, 3})).dev == 7);
 static_assert(raw_from_port_handle(raw_to_port_handle({12, 7, 3})).port == 3);
+}
 
 struct alsa_raw_helpers
 {
@@ -317,5 +317,4 @@ struct alsa_raw_helpers
     }
   };
 };
-}
 }
