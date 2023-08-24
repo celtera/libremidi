@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 project(libremidi
   VERSION 4.0
   DESCRIPTION "A cross-platform MIDI library"
