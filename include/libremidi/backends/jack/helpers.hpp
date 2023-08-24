@@ -13,6 +13,7 @@
 
 #include <atomic>
 #include <semaphore>
+#include <cassert>
 
 namespace libremidi
 {
