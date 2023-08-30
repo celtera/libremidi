@@ -13,7 +13,6 @@
 
 #include <atomic>
 #include <semaphore>
-#include <cassert>
 
 namespace libremidi
 {
@@ -250,8 +249,6 @@ struct jack_helpers : jack_client
 
     // 3. Now we are sure that the client is not going to use the port anymore
     jack_port_unregister(this->client, port_ptr);
-
-    assert(this->port.impl->load() == nullptr);
   }
 };
 }
