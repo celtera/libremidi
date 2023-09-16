@@ -1,6 +1,5 @@
 #pragma once
 #include <libremidi/config.hpp>
-#include <libremidi/cmidi2.hpp>
 
 #include <span>
 
@@ -35,16 +34,28 @@ struct ump
 
   constexpr std::size_t size() const noexcept
   {
+    // Imported from cmidi2
+    enum midi2_message_type
+    {
+      // MIDI 2.0 UMP Section 3.
+      UTILITY = 0,
+      SYSTEM = 1,
+      MIDI_1_CHANNEL = 2,
+      SYSEX7 = 3,
+      MIDI_2_CHANNEL = 4,
+      SYSEX8_MDS = 5,
+    };
+
     switch (((bytes[0] & 0xF0000000) >> 28) & 0xF)
     {
-      case CMIDI2_MESSAGE_TYPE_UTILITY:
-      case CMIDI2_MESSAGE_TYPE_SYSTEM:
-      case CMIDI2_MESSAGE_TYPE_MIDI_1_CHANNEL:
+      case UTILITY:
+      case SYSTEM:
+      case MIDI_1_CHANNEL:
         return 1;
-      case CMIDI2_MESSAGE_TYPE_MIDI_2_CHANNEL:
-      case CMIDI2_MESSAGE_TYPE_SYSEX7:
+      case MIDI_2_CHANNEL:
+      case SYSEX7:
         return 2;
-      case CMIDI2_MESSAGE_TYPE_SYSEX8_MDS:
+      case SYSEX8_MDS:
         return 4;
       default:
         return 0;
