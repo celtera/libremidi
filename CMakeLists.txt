@@ -416,6 +416,10 @@ if(LIBREMIDI_TESTS)
   )
 
   FetchContent_MakeAvailable(Catch2)
+  if(NOT TARGET Catch2::Catch2WithMain)
+    message(WARNING "libremidi: Catch2::Catch2WithMain target not found")
+    return()
+  endif()
 
   message(STATUS "libremidi: compiling tests")
   if(LIBREMIDI_CI)
