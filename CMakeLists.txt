@@ -9,6 +9,7 @@ project(libremidi
 include(CMakeDependentOption)
 include(CheckSymbolExists)
 include(CheckCXXSourceCompiles)
+include(CheckIncludeFile)
 
 option(LIBREMIDI_HEADER_ONLY "Header-only mode" OFF)
 
@@ -222,6 +223,10 @@ elseif(APPLE)
 
 elseif(WIN32)
   ## WinMM support ##
+  if(${CMAKE_SYSTEM_NAME} MATCHES WindowsStore)
+    set(LIBREMIDI_NO_WINMM 1)
+  endif()
+
   if(NOT LIBREMIDI_NO_WINMM)
     message(STATUS "libremidi: using WinMM")
     target_compile_definitions(libremidi
@@ -258,7 +263,10 @@ elseif(UNIX AND NOT APPLE)
   ## ALSA support ##
   if(NOT LIBREMIDI_NO_ALSA)
     find_package(ALSA)
-    if(ALSA_FOUND)
+    check_include_file("<sys/eventfd.h>" LIBREMIDI_HAS_EVENTFD)
+    check_include_file("<sys/timerfd.h>" LIBREMIDI_HAS_TIMERFD)
+
+    if(ALSA_FOUND AND LIBREMIDI_HAS_EVENTFD AND LIBREMIDI_HAS_TIMERFD)
       message(STATUS "libremidi: using ALSA")
       target_compile_definitions(libremidi ${_public} LIBREMIDI_ALSA)
       target_link_libraries(libremidi ${_public} ${ALSA_LIBRARIES})
