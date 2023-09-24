@@ -217,7 +217,7 @@ public:
   //! (currently not implemented anywhere)
   void schedule_message(int64_t timestamp, const unsigned char* message, size_t size);
 
-  //! Immediately send a single UMP packete to an open MIDI output port.
+  //! Immediately send a single UMP packet to an open MIDI output port.
   void send_ump(const uint32_t* message, size_t size);
   void send_ump(const libremidi::ump&);
   void send_ump(std::span<const uint32_t>);
