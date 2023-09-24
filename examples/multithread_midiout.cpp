@@ -1,5 +1,6 @@
 #include <libremidi/libremidi.hpp>
 
+#include <iostream>
 #include <mutex>
 #include <thread>
 #include <vector>

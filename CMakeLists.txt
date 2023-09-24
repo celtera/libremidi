@@ -6,11 +6,14 @@ project(libremidi
   HOMEPAGE_URL "https://github.com/jcelerier/libremidi"
 )
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 include(CMakeDependentOption)
 include(CheckSymbolExists)
 include(CheckCXXSourceCompiles)
 include(CheckIncludeFileCXX)
 
+### Options ###
 option(LIBREMIDI_HEADER_ONLY "Header-only mode" OFF)
 
 cmake_dependent_option(LIBREMIDI_NO_COREMIDI "Disable CoreMidi back-end" OFF "APPLE" OFF)
@@ -28,6 +31,12 @@ option(LIBREMIDI_FIND_BOOST "Actively look for Boost" OFF)
 option(LIBREMIDI_EXAMPLES "Enable examples" OFF)
 option(LIBREMIDI_TESTS "Enable tests" OFF)
 option(LIBREMIDI_CI "To be enabled only in CI, some tests cannot run there" OFF)
+
+### C++ features ###
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 20)
+endif()
+check_cxx_source_compiles("#include <thread>\nint main() { std::jthread t; }" HAS_STD_JTHREAD)
 
 
 ### Main library ###
@@ -256,6 +265,7 @@ elseif(WIN32)
       target_compile_options(libremidi ${_public} /EHsc /await)
     else()
       message(STATUS "libremidi: Failed to find Windows SDK, UWP MIDI backend will not be available")
+      set(LIBREMIDI_NO_WINUWP 1)
     endif()
   endif()
 
@@ -263,8 +273,8 @@ elseif(UNIX AND NOT APPLE)
   ## ALSA support ##
   if(NOT LIBREMIDI_NO_ALSA)
     find_package(ALSA)
-    check_include_file_cxx("<sys/eventfd.h>" LIBREMIDI_HAS_EVENTFD)
-    check_include_file_cxx("<sys/timerfd.h>" LIBREMIDI_HAS_TIMERFD)
+    check_include_file_cxx("sys/eventfd.h" LIBREMIDI_HAS_EVENTFD)
+    check_include_file_cxx("sys/timerfd.h" LIBREMIDI_HAS_TIMERFD)
 
     if(ALSA_FOUND AND LIBREMIDI_HAS_EVENTFD AND LIBREMIDI_HAS_TIMERFD)
       message(STATUS "libremidi: using ALSA")
@@ -280,6 +290,8 @@ elseif(UNIX AND NOT APPLE)
           target_link_libraries(libremidi ${_public} ${UDEV_LIBRARY})
         endif()
       endif()
+    else()
+      set(LIBREMIDI_NO_ALSA 1)
     endif()
   endif()
 endif()
@@ -304,157 +316,21 @@ if(NOT LIBREMIDI_NO_JACK)
 
   if(HAS_JACK)
     target_compile_definitions(libremidi ${_public} LIBREMIDI_JACK)
+  else()
+    set(LIBREMIDI_NO_JACK 1)
   endif()
 endif()
 
-### Install  ###
-if(NOT LIBREMIDI_HEADER_ONLY)
-  install(TARGETS libremidi
-          EXPORT libremidi-targets
-          ARCHIVE DESTINATION lib/static
-          RUNTIME DESTINATION bin
-          LIBRARY DESTINATION lib
-  )
-else()
-  install(TARGETS libremidi
-          EXPORT libremidi-targets
-  )
-endif()
-install(EXPORT libremidi-targets
-        DESTINATION lib/cmake/libremidi)
-install(DIRECTORY include
-        DESTINATION .)
-export(EXPORT libremidi-targets)
-
-include(CMakePackageConfigHelpers)
-
-# generate the config file that includes the exports
-configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/libremidi-config.cmake.in
-  "${CMAKE_CURRENT_BINARY_DIR}/libremidi-config.cmake"
-  INSTALL_DESTINATION "lib/cmake/libremidi"
-  NO_SET_AND_CHECK_MACRO
-  NO_CHECK_REQUIRED_COMPONENTS_MACRO
-)
-
-write_basic_package_version_file(
-  "${CMAKE_CURRENT_BINARY_DIR}/libremidi-config-version.cmake"
-  VERSION "${CMAKE_PROJECT_VERSION}"
-  COMPATIBILITY AnyNewerVersion
-)
-
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/libremidi-config.cmake
-  ${CMAKE_CURRENT_BINARY_DIR}/libremidi-config-version.cmake
-  DESTINATION lib/cmake/libremidi
-)
+### Install ###
+include(libremidi.install)
 
 ### Examples ###
 if(LIBREMIDI_EXAMPLES)
-    message(STATUS "libremidi: compiling examples")
-  add_executable(midiobserve examples/midiobserve.cpp)
-  target_link_libraries(midiobserve PRIVATE libremidi)
-
-  add_executable(echo examples/echo.cpp)
-  target_link_libraries(echo PRIVATE libremidi)
-
-  add_executable(cmidiin examples/cmidiin.cpp)
-  target_link_libraries(cmidiin PRIVATE libremidi)
-
-  add_executable(midiclock_in examples/midiclock_in.cpp)
-  target_link_libraries(midiclock_in PRIVATE libremidi)
-
-  add_executable(midiclock_out examples/midiclock_out.cpp)
-  target_link_libraries(midiclock_out PRIVATE libremidi)
-
-  add_executable(midiout examples/midiout.cpp)
-  target_link_libraries(midiout PRIVATE libremidi)
-
-  check_cxx_source_compiles("#include <thread>\nint main() { std::jthread t; }" HAS_STD_JTHREAD)
-
-  if(HAS_STD_JTHREAD)
-    add_executable(multithread_midiout examples/multithread_midiout.cpp)
-    target_link_libraries(multithread_midiout PRIVATE libremidi)
-  endif()
-
-  add_executable(midiclient examples/client.cpp)
-  target_link_libraries(midiclient PRIVATE libremidi)
-
-  add_executable(midiprobe examples/midiprobe.cpp)
-  target_link_libraries(midiprobe PRIVATE libremidi)
-
-  add_executable(qmidiin examples/qmidiin.cpp)
-  target_link_libraries(qmidiin PRIVATE libremidi)
-
-  add_executable(sysextest examples/sysextest.cpp)
-  target_link_libraries(sysextest PRIVATE libremidi)
-
-  add_executable(midi2_echo examples/midi2_echo.cpp)
-  target_link_libraries(midi2_echo PRIVATE libremidi)
-
-  if(ALSA_FOUND)
-    add_executable(poll_share examples/poll_share.cpp)
-    target_link_libraries(poll_share PRIVATE libremidi)
-    add_executable(alsa_share examples/alsa_share.cpp)
-    target_link_libraries(alsa_share PRIVATE libremidi)
-  endif()
-
-  if(HAS_JACK)
-    add_executable(jack_share examples/jack_share.cpp)
-    target_link_libraries(jack_share PRIVATE libremidi)
-  endif()
-
-  if(APPLE)
-    add_executable(coremidi_share examples/coremidi_share.cpp)
-    target_link_libraries(coremidi_share PRIVATE libremidi)
-  endif()
-
-  if(EMSCRIPTEN)
-    add_executable(emscripten_midiin examples/emscripten_midiin.cpp)
-    target_link_libraries(emscripten_midiin PRIVATE libremidi)
-  endif()
+  message(STATUS "libremidi: compiling examples")
+  include(libremidi.examples)
 endif()
 
+### Tests ###
 if(LIBREMIDI_TESTS)
-  include(FetchContent)
-
-  FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG        v3.4.0
-  )
-
-  FetchContent_MakeAvailable(Catch2)
-  if(NOT TARGET Catch2::Catch2WithMain)
-    message(WARNING "libremidi: Catch2::Catch2WithMain target not found")
-    return()
-  endif()
-
-  message(STATUS "libremidi: compiling tests")
-  if(LIBREMIDI_CI)
-    target_compile_definitions(libremidi ${_public} LIBREMIDI_CI)
-  endif()
-
-  add_executable(midiin_test tests/unit/midi_in.cpp)
-  target_link_libraries(midiin_test PRIVATE libremidi Catch2::Catch2WithMain)
-
-  add_executable(midiout_test tests/unit/midi_out.cpp)
-  target_link_libraries(midiout_test PRIVATE libremidi Catch2::Catch2WithMain)
-
-  add_executable(midifile_read_test tests/unit/midifile_read.cpp)
-  target_link_libraries(midifile_read_test PRIVATE libremidi Catch2::Catch2WithMain)
-  target_compile_definitions(midifile_read_test PRIVATE "LIBREMIDI_TEST_CORPUS=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus\"")
-
-  add_executable(midifile_write_test tests/unit/midifile_write.cpp)
-  target_link_libraries(midifile_write_test PRIVATE libremidi Catch2::Catch2WithMain)
-  target_compile_definitions(midifile_write_test PRIVATE "LIBREMIDI_TEST_CORPUS=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus\"")
-
-  add_executable(midifile_write_tracks_test tests/integration/midifile_write_tracks.cpp)
-  target_link_libraries(midifile_write_tracks_test PRIVATE libremidi Catch2::Catch2WithMain)
-
-  include(CTest)
-  add_test(NAME midiin_test COMMAND midiin_test)
-  add_test(NAME midiout_test COMMAND midiout_test)
-  add_test(NAME midifile_read_test COMMAND midifile_read_test)
-  add_test(NAME midifile_write_test COMMAND midifile_write_test)
-  add_test(NAME midifile_write_tracks_test COMMAND midifile_write_tracks_test)
+  include(libremidi.tests)
 endif()
