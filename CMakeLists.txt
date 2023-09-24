@@ -9,7 +9,7 @@ project(libremidi
 include(CMakeDependentOption)
 include(CheckSymbolExists)
 include(CheckCXXSourceCompiles)
-include(CheckIncludeFile)
+include(CheckIncludeFileCXX)
 
 option(LIBREMIDI_HEADER_ONLY "Header-only mode" OFF)
 
@@ -263,8 +263,8 @@ elseif(UNIX AND NOT APPLE)
   ## ALSA support ##
   if(NOT LIBREMIDI_NO_ALSA)
     find_package(ALSA)
-    check_include_file("<sys/eventfd.h>" LIBREMIDI_HAS_EVENTFD)
-    check_include_file("<sys/timerfd.h>" LIBREMIDI_HAS_TIMERFD)
+    check_include_file_cxx("<sys/eventfd.h>" LIBREMIDI_HAS_EVENTFD)
+    check_include_file_cxx("<sys/timerfd.h>" LIBREMIDI_HAS_TIMERFD)
 
     if(ALSA_FOUND AND LIBREMIDI_HAS_EVENTFD AND LIBREMIDI_HAS_TIMERFD)
       message(STATUS "libremidi: using ALSA")
