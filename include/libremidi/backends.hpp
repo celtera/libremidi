@@ -6,7 +6,7 @@
     #undef LIBREMIDI_JACK
   #endif
 #endif
-#if !defined(LIBREMIDI_ALSA) && !defined(LIBREMIDI_JACK) && !defined(LIBREMIDI_COREAUDIO) \
+#if !defined(LIBREMIDI_ALSA) && !defined(LIBREMIDI_JACK) && !defined(LIBREMIDI_COREMIDI) \
     && !defined(LIBREMIDI_WINMM)
   #define LIBREMIDI_DUMMY
 #endif
@@ -23,7 +23,7 @@
   #include <libremidi/backends/jack.hpp>
 #endif
 
-#if defined(LIBREMIDI_COREAUDIO)
+#if defined(LIBREMIDI_COREMIDI)
   #include <libremidi/backends/coremidi.hpp>
   #include <libremidi/backends/coremidi_ump.hpp>
 #endif
@@ -64,7 +64,7 @@ static constexpr auto available_backends = make_tl(
     ,
     alsa_seq::backend{}, alsa_raw::backend{}
 #endif
-#if defined(LIBREMIDI_COREAUDIO)
+#if defined(LIBREMIDI_COREMIDI)
     ,
     core_backend{}
 #endif
@@ -113,7 +113,7 @@ static constexpr auto available_backends = make_tl(
     ,
     alsa_raw_ump::backend{}
 #endif
-#if defined(LIBREMIDI_COREAUDIO)
+#if defined(LIBREMIDI_COREMIDI)
     ,
     coremidi_ump::backend{}
 #endif

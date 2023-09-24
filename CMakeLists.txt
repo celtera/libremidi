@@ -209,6 +209,8 @@ target_include_directories(libremidi ${_public}
 
 if(EMSCRIPTEN)
   message(STATUS "libremidi: using Emscripten MIDI")
+  set(LIBREMIDI_HAS_EMSCRIPTEN 1)
+
   set(CMAKE_EXECUTABLE_SUFFIX .html)
   target_compile_definitions(libremidi ${_public} LIBREMIDI_EMSCRIPTEN)
   target_link_options(libremidi ${_public} "SHELL:-s 'EXPORTED_FUNCTIONS=[\"_main\", \"_free\", \"_libremidi_devices_poll\", \"_libremidi_devices_input\"]'")
@@ -216,7 +218,9 @@ elseif(APPLE)
   ## CoreMIDI support ##
   if(NOT LIBREMIDI_NO_COREMIDI)
     message(STATUS "libremidi: using CoreMIDI")
-    target_compile_definitions(libremidi ${_public} LIBREMIDI_COREAUDIO)
+    set(LIBREMIDI_HAS_COREMIDI 1)
+
+    target_compile_definitions(libremidi ${_public} LIBREMIDI_COREMIDI)
 
     find_library(COREMIDI_LIBRARY CoreMIDI)
     find_library(COREAUDIO_LIBRARY CoreAudio)
@@ -238,6 +242,7 @@ elseif(WIN32)
 
   if(NOT LIBREMIDI_NO_WINMM)
     message(STATUS "libremidi: using WinMM")
+    set(LIBREMIDI_HAS_WINMM 1)
     target_compile_definitions(libremidi
       ${_public}
         LIBREMIDI_WINMM
@@ -258,6 +263,8 @@ elseif(WIN32)
             Include/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt)
     if(CPPWINRT_PATH)
       message(STATUS "libremidi: using WinUWP")
+      set(LIBREMIDI_HAS_WINUWP 1)
+
       target_include_directories(libremidi ${_public} "${CPPWINRT_PATH}")
       target_compile_definitions(libremidi ${_public} LIBREMIDI_WINUWP)
       target_link_libraries(libremidi INTERFACE RuntimeObject)
@@ -265,7 +272,6 @@ elseif(WIN32)
       target_compile_options(libremidi ${_public} /EHsc /await)
     else()
       message(STATUS "libremidi: Failed to find Windows SDK, UWP MIDI backend will not be available")
-      set(LIBREMIDI_NO_WINUWP 1)
     endif()
   endif()
 
@@ -278,6 +284,8 @@ elseif(UNIX AND NOT APPLE)
 
     if(ALSA_FOUND AND LIBREMIDI_HAS_EVENTFD AND LIBREMIDI_HAS_TIMERFD)
       message(STATUS "libremidi: using ALSA")
+      set(LIBREMIDI_HAS_ALSA 1)
+
       target_compile_definitions(libremidi ${_public} LIBREMIDI_ALSA)
       target_link_libraries(libremidi ${_public} ${ALSA_LIBRARIES})
 
@@ -290,8 +298,6 @@ elseif(UNIX AND NOT APPLE)
           target_link_libraries(libremidi ${_public} ${UDEV_LIBRARY})
         endif()
       endif()
-    else()
-      set(LIBREMIDI_NO_ALSA 1)
     endif()
   endif()
 endif()
@@ -302,22 +308,22 @@ if(NOT LIBREMIDI_NO_JACK)
   find_path(JACK_PATH jack/jack.h)
   if(WEAKJACK_PATH AND JACK_PATH)
     message(STATUS "libremidi: using WeakJACK")
-    set(HAS_JACK 1)
+    set(LIBREMIDI_HAS_JACK 1)
+
     target_include_directories(libremidi ${_public} $<BUILD_INTERFACE:${WEAKJACK_PATH}> $<BUILD_INTERFACE:${JACK_PATH}>)
   elseif(JACK_PATH)
-    message(STATUS "libremidi: using linked JACK")
     find_library(JACK_LIBRARIES jack)
     if(JACK_LIBRARIES)
-      set(HAS_JACK 1)
+      message(STATUS "libremidi: using linked JACK")
+      set(LIBREMIDI_HAS_JACK 1)
+      
       target_link_libraries(libremidi ${_public} ${JACK_LIBRARIES})
       target_include_directories(libremidi ${_public} $<BUILD_INTERFACE:${JACK_PATH}>)
     endif()
   endif()
 
-  if(HAS_JACK)
+  if(LIBREMIDI_HAS_JACK)
     target_compile_definitions(libremidi ${_public} LIBREMIDI_JACK)
-  else()
-    set(LIBREMIDI_NO_JACK 1)
   endif()
 endif()
 

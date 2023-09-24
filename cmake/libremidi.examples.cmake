@@ -37,24 +37,24 @@
   add_executable(midi2_echo examples/midi2_echo.cpp)
   target_link_libraries(midi2_echo PRIVATE libremidi)
 
-  if(NOT LIBREMIDI_NO_ALSA)
+  if(LIBREMIDI_HAS_ALSA)
     add_executable(poll_share examples/poll_share.cpp)
     target_link_libraries(poll_share PRIVATE libremidi)
     add_executable(alsa_share examples/alsa_share.cpp)
     target_link_libraries(alsa_share PRIVATE libremidi)
   endif()
 
-  if(NOT LIBREMIDI_NO_JACK)
+  if(LIBREMIDI_HAS_JACK)
     add_executable(jack_share examples/jack_share.cpp)
     target_link_libraries(jack_share PRIVATE libremidi)
   endif()
 
-  if(APPLE)
+  if(LIBREMIDI_HAS_COREMIDI)
     add_executable(coremidi_share examples/coremidi_share.cpp)
     target_link_libraries(coremidi_share PRIVATE libremidi)
   endif()
 
-  if(EMSCRIPTEN)
+  if(LIBREMIDI_HAS_EMSCRIPTEN)
     add_executable(emscripten_midiin examples/emscripten_midiin.cpp)
     target_link_libraries(emscripten_midiin PRIVATE libremidi)
   endif()
