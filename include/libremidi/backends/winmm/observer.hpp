@@ -228,6 +228,7 @@ public:
   {
     stop_flag.test_and_set();
     sema.acquire();
+    thread.join();
   }
 
 private:
