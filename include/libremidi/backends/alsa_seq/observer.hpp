@@ -51,8 +51,13 @@ public:
 
     // Create the port to listen on the server events
     {
+#if __has_include(<alsa/ump.h>)
       constexpr int midi2_cap
           = ConfigurationImpl::midi_version == 2 ? SND_SEQ_PORT_CAP_UMP_ENDPOINT : 0;
+#else
+      constexpr int midi2_cap = 0;
+#endif
+
       constexpr int caps = SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_WRITE
                            | SND_SEQ_PORT_CAP_SUBS_READ | SND_SEQ_PORT_CAP_SUBS_WRITE | midi2_cap;
       int err = alsa_data::create_port(
