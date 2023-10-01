@@ -21,6 +21,8 @@ struct emscripten_backend
   static const constexpr auto API = libremidi::API::WEBMIDI;
   static const constexpr auto name = "webmidi";
   static const constexpr auto display_name = "WebMIDI";
+
+  static constexpr inline bool available() noexcept { return true; }
 };
 
 }

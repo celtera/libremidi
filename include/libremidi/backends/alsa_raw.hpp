@@ -21,5 +21,11 @@ struct backend
   static const constexpr auto API = libremidi::API::ALSA_RAW;
   static const constexpr auto name = "alsa_raw";
   static const constexpr auto display_name = "ALSA (raw)";
+
+  static inline bool available() noexcept
+  {
+    static const libasound& snd = libasound::instance();
+    return snd.available && snd.rawmidi.available;
+  }
 };
 }

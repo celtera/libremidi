@@ -314,6 +314,7 @@ if(NOT LIBREMIDI_NO_JACK)
   if(WEAKJACK_PATH AND JACK_PATH)
     message(STATUS "libremidi: using WeakJACK")
     set(LIBREMIDI_HAS_JACK 1)
+    set(LIBREMIDI_HAS_WEAKJACK 1)
 
     target_include_directories(libremidi ${_public} $<BUILD_INTERFACE:${WEAKJACK_PATH}> $<BUILD_INTERFACE:${JACK_PATH}>)
   elseif(JACK_PATH)
@@ -329,6 +330,9 @@ if(NOT LIBREMIDI_NO_JACK)
 
   if(LIBREMIDI_HAS_JACK)
     target_compile_definitions(libremidi ${_public} LIBREMIDI_JACK)
+    if(LIBREMIDI_HAS_WEAKJACK)
+      target_compile_definitions(libremidi ${_public} LIBREMIDI_WEAKJACK)
+    endif()
   endif()
 endif()
 

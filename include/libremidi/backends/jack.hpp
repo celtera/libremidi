@@ -24,5 +24,14 @@ struct jack_backend
   static const constexpr auto API = libremidi::API::JACK_MIDI;
   static const constexpr auto name = "jack";
   static const constexpr auto display_name = "JACK";
+
+  static constexpr inline bool available() noexcept
+  {
+#if LIBREMIDI_WEAKJACK
+    return WeakJack::instance().available() == 0;
+#else
+    return true;
+#endif
+  }
 };
 }

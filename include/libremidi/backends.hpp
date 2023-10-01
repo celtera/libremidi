@@ -93,14 +93,15 @@ static_assert(std::tuple_size_v<decltype(available_backends)> >= 1);
 template <typename F>
 auto for_all_backends(F&& f)
 {
-  std::apply([&](auto&&... x) { (f(x), ...); }, available_backends);
+  std::apply([&](auto&&... x) { ((x.available() && (f(x), true)), ...); }, available_backends);
 }
 
 template <typename F>
 auto for_backend(libremidi::API api, F&& f)
 {
-  static constexpr auto is_api
-      = [](auto& backend, libremidi::API api) { return backend.API == api; };
+  static constexpr auto is_api = [](auto& backend, libremidi::API api) {
+    return backend.available() && backend.API == api;
+  };
   std::apply([&](auto&&... b) { ((is_api(b, api) && (f(b), true)) || ...); }, available_backends);
 }
 }

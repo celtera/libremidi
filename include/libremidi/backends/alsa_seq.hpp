@@ -31,6 +31,12 @@ struct backend
   static const constexpr auto API = libremidi::API::ALSA_SEQ;
   static const constexpr auto name = "alsa_seq";
   static const constexpr auto display_name = "ALSA (sequencer)";
+
+  static inline bool available() noexcept
+  {
+    static const libasound& snd = libasound::instance();
+    return snd.available && snd.seq.available;
+  }
 };
 
 }

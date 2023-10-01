@@ -66,5 +66,7 @@ struct dummy_backend
   static const constexpr auto API = libremidi::API::DUMMY;
   static const constexpr auto name = "dummy";
   static const constexpr auto display_name = "Dummy";
+
+  static constexpr inline bool available() noexcept { return true; }
 };
 }

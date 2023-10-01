@@ -16,6 +16,8 @@ struct core_backend
   static const constexpr auto API = libremidi::API::COREMIDI;
   static const constexpr auto name = "core";
   static const constexpr auto display_name = "CoreMIDI";
+
+  static constexpr inline bool available() noexcept { return true; }
 };
 }
 

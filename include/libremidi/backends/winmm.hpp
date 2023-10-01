@@ -30,5 +30,7 @@ struct winmm_backend
   static const constexpr auto API = libremidi::API::WINDOWS_MM;
   static const constexpr auto name = "winmm";
   static const constexpr auto display_name = "Windows Multimedia";
+
+  static constexpr inline bool available() noexcept { return true; }
 };
 }

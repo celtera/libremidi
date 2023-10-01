@@ -16,6 +16,8 @@ struct backend
   static const constexpr auto API = libremidi::API::COREMIDI_UMP;
   static const constexpr auto name = "core_ump";
   static const constexpr auto display_name = "CoreMIDI UMP";
+
+  static constexpr inline bool available() noexcept { return true; /* todo? */ }
 };
 }
 #if TARGET_OS_IPHONE

@@ -16,5 +16,7 @@ struct winuwp_backend
   static const constexpr auto API = libremidi::API::WINDOWS_UWP;
   static const constexpr auto name = "winuwp";
   static const constexpr auto display_name = "Windows UWP";
+
+  static constexpr inline bool available() noexcept { return true; }
 };
 } // namespace libremidi

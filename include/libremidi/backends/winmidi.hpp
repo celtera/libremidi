@@ -16,5 +16,7 @@ struct backend
   static const constexpr auto API = libremidi::API::WINDOWS_MIDI_SERVICES;
   static const constexpr auto name = "winmidi";
   static const constexpr auto display_name = "Windows MIDI Services";
+
+  static constexpr inline bool available() noexcept { return true; }
 };
 } // namespace libremidi
