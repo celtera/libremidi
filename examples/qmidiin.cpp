@@ -12,6 +12,7 @@
 #include <libremidi/libremidi.hpp>
 
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>

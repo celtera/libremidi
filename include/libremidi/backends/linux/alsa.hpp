@@ -336,7 +336,6 @@ struct libasound
       LIBREMIDI_SYMBOL_INIT(seq, queue_tempo_set_ppq);
       LIBREMIDI_SYMBOL_INIT(seq, queue_tempo_set_tempo);
       LIBREMIDI_SYMBOL_INIT(seq, queue_tempo_sizeof);
-      LIBREMIDI_SYMBOL_INIT(seq, set_client_midi_version);
       LIBREMIDI_SYMBOL_INIT(seq, set_client_name);
       LIBREMIDI_SYMBOL_INIT(seq, set_port_info);
       LIBREMIDI_SYMBOL_INIT(seq, set_queue_tempo);
@@ -394,7 +393,7 @@ struct libasound
     LIBREMIDI_SYMBOL_DEF(seq, queue_tempo_set_ppq);
     LIBREMIDI_SYMBOL_DEF(seq, queue_tempo_set_tempo);
     LIBREMIDI_SYMBOL_DEF(seq, queue_tempo_sizeof);
-    LIBREMIDI_SYMBOL_DEF(seq, set_client_midi_version);
+
     LIBREMIDI_SYMBOL_DEF(seq, set_client_name);
     LIBREMIDI_SYMBOL_DEF(seq, set_port_info);
     LIBREMIDI_SYMBOL_DEF(seq, set_queue_tempo);
@@ -411,11 +410,14 @@ struct libasound
           available = false;
           return;
         }
+        LIBREMIDI_SYMBOL_INIT(seq, set_client_midi_version);
         LIBREMIDI_SYMBOL_INIT(seq_ump, event_input);
         LIBREMIDI_SYMBOL_INIT(seq_ump, event_output);
       }
 
       bool available{true};
+
+      LIBREMIDI_SYMBOL_DEF(seq, set_client_midi_version);
       LIBREMIDI_SYMBOL_DEF(seq_ump, event_input);
       LIBREMIDI_SYMBOL_DEF(seq_ump, event_output);
     } ump;
