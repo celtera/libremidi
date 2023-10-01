@@ -3,10 +3,11 @@
 #include <libremidi/backends/alsa_raw/helpers.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
-#include <alsa/asoundlib.h>
+#if 0
+  #include <alsa/asoundlib.h>
 
-#include <atomic>
-#include <thread>
+  #include <atomic>
+  #include <thread>
 
 namespace libremidi::alsa_raw_ump
 {
@@ -185,4 +186,6 @@ public:
 
   snd_ump_t* midiport_{};
 };
+
 }
+#endif

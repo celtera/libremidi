@@ -50,8 +50,6 @@ public:
       thread.join();
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_RAW; }
-
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
     std::vector<libremidi::input_port> ret;
@@ -218,7 +216,8 @@ private:
   #include <libremidi/backends/dummy.hpp>
 namespace libremidi::alsa_raw
 {
-struct observer_impl : observer_dummy
+template <typename Enumerator>
+struct observer_impl_base : observer_dummy
 {
   explicit observer_impl(observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
       : observer_dummy{dummy_configuration{}, dummy_configuration{}}
@@ -227,3 +226,12 @@ struct observer_impl : observer_dummy
 };
 }
 #endif
+
+namespace libremidi::alsa_raw
+{
+struct observer_impl : observer_impl_base<alsa_raw::midi1_enumerator>
+{
+  using alsa_raw::observer_impl_base<midi1_enumerator>::observer_impl_base;
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_RAW; }
+};
+}
