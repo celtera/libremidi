@@ -4,6 +4,7 @@
 #include <libremidi/detail/observer.hpp>
 
 #include <CoreMIDI/CoreMIDI.h>
+
 #include <bit>
 
 namespace libremidi

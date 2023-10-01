@@ -15,10 +15,7 @@ public:
   ~observer_dummy() { }
   libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }
   std::vector<libremidi::input_port> get_input_ports() const noexcept override { return {}; }
-  std::vector<libremidi::output_port> get_output_ports() const noexcept override
-  {
-    return {};
-  }
+  std::vector<libremidi::output_port> get_output_ports() const noexcept override { return {}; }
 };
 
 class midi_in_dummy final

@@ -5,5 +5,5 @@
   // Catch 2 v2
   #include <catch2/catch.hpp>
 #endif
-#include <iostream>
 #include <fstream>
+#include <iostream>

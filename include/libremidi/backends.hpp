@@ -12,8 +12,8 @@
 #endif
 
 #if defined(LIBREMIDI_ALSA)
-  #include <libremidi/backends/alsa_seq.hpp>
   #include <libremidi/backends/alsa_raw.hpp>
+  #include <libremidi/backends/alsa_seq.hpp>
   #if __has_include(<alsa/ump.h>)
     #include <libremidi/backends/alsa_raw_ump.hpp>
   #endif
@@ -38,7 +38,6 @@
     #include <libremidi/backends/winmidi.hpp>
   #endif
 #endif
-
 
 #if defined(LIBREMIDI_EMSCRIPTEN)
   #include <libremidi/backends/emscripten.hpp>

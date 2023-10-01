@@ -1,4 +1,5 @@
 #pragma once
+// clang-format off
 #define NOMINMAX 1
 #define WIN32_LEAN_AND_MEAN 1
 #include <libremidi/detail/midi_api.hpp>
@@ -13,6 +14,7 @@
 #include <winrt/Windows.Devices.Enumeration.h>
 
 #include <winrt/Microsoft.Devices.Midi2.h>
+// clang-format on
 
 namespace libremidi::winmidi
 {

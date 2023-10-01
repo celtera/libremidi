@@ -71,7 +71,7 @@ public:
 
     OSStatus result = MIDIInputPortCreateWithProtocol(
         this->client, toCFString(portName).get(), kMIDIProtocol_2_0, &port,
-        ^ (const MIDIEventList *evtlist, void * __nullable srcConnRefCon) {
+        ^(const MIDIEventList* evtlist, void* __nullable srcConnRefCon) {
             this->midiInputCallback(evtlist, srcConnRefCon);
         });
 
@@ -105,7 +105,7 @@ public:
     MIDIEndpointRef endpoint;
     OSStatus result = MIDIDestinationCreateWithProtocol(
         this->client, toCFString(portName).get(), kMIDIProtocol_2_0, &endpoint,
-        ^ (const MIDIEventList *evtlist, void * __nullable srcConnRefCon) {
+        ^(const MIDIEventList* evtlist, void* __nullable srcConnRefCon) {
             this->midiInputCallback(evtlist, srcConnRefCon);
         });
 
@@ -138,11 +138,9 @@ public:
     }
   }
 
-  void set_timestamp(const MIDIEventPacket& packet, libremidi::ump& msg) noexcept
-  {
-  }
+  void set_timestamp(const MIDIEventPacket& packet, libremidi::ump& msg) noexcept { }
 
-  void midiInputCallback(const MIDIEventList* list,  void* /*srcRef*/)
+  void midiInputCallback(const MIDIEventList* list, void* /*srcRef*/)
   {
     unsigned short nBytes{};
 
@@ -159,7 +157,7 @@ public:
       libremidi::ump msg;
       coremidi_data::set_timestamp(*this, packet->timeStamp, msg.timestamp);
 
-      if(packet->wordCount <= 4)
+      if (packet->wordCount <= 4)
       {
         std::copy_n(packet->words, packet->wordCount, msg.bytes);
         configuration.on_message(std::move(msg));

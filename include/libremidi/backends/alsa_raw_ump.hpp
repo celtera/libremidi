@@ -9,7 +9,7 @@ struct backend
 {
   using midi_in = midi_in_impl;
   using midi_out = midi_out_dummy;
-  using midi_observer = alsa_raw::observer_impl;
+  using midi_observer = alsa_raw::observer_impl_base<alsa_raw_ump::midi2_enumerator>;
   using midi_in_configuration = alsa_raw_ump::input_configuration;
   using midi_out_configuration = dummy_configuration;
   using midi_observer_configuration = alsa_raw_observer_configuration;

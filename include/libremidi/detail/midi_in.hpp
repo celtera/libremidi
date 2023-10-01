@@ -19,7 +19,8 @@ public:
   [[nodiscard]] virtual bool open_port(const input_port& pt, std::string_view local_port_name) = 0;
 };
 
-namespace midi1 {
+namespace midi1
+{
 class in_api : public midi_in_api
 {
   friend struct midi_stream_decoder;
@@ -33,7 +34,8 @@ public:
 };
 }
 
-namespace midi2 {
+namespace midi2
+{
 class in_api : public midi_in_api
 {
 public:

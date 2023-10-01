@@ -25,10 +25,7 @@ public:
     winrt_init();
   }
 
-  ~midi_in_winuwp() override
-  {
-    close_port();
-  }
+  ~midi_in_winuwp() override { close_port(); }
 
   bool open_virtual_port(std::string_view) override
   {

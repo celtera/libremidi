@@ -39,7 +39,10 @@ public:
     warning(configuration, "midi_out_winmidi: set_port_name unsupported");
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MIDI_SERVICES; }
+  libremidi::API get_current_api() const noexcept override
+  {
+    return libremidi::API::WINDOWS_MIDI_SERVICES;
+  }
 
   bool open_port(const output_port& port, std::string_view) override
   {
@@ -50,7 +53,7 @@ public:
 
     port_ = get(MidiOutPort::FromIdAsync(id));
     return bool(port_);
-  #endif
+#endif
     return true;
   }
 
@@ -62,7 +65,7 @@ public:
       port_.Close();
       port_ = {};
     }
-  #endif
+#endif
   }
 
   void send_ump(const uint32_t* message, size_t size) override
@@ -76,13 +79,13 @@ public:
     rb.WriteBytes(
         winrt::array_view<const uint8_t>{(const uint8_t*)message, (const uint8_t*)message + size});
     port_.SendBuffer(rb.DetachBuffer());
-  #endif
+#endif
   }
 
 private:
 #if 0
 winrt::Windows::Devices::Midi2::IMidiOutPort port_{nullptr};
-  #endif
+#endif
 };
 
 }

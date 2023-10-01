@@ -36,7 +36,8 @@ public:
   }
 };
 
-namespace midi1 {
+namespace midi1
+{
 class out_api : public midi_out_api
 {
   friend struct midi_stream_decoder;
@@ -54,7 +55,8 @@ public:
 };
 }
 
-namespace midi2 {
+namespace midi2
+{
 class out_api : public midi_out_api
 {
   friend struct midi_stream_decoder;
@@ -83,7 +85,6 @@ public:
   }
 };
 }
-
 
 template <typename T, typename Arg>
 std::unique_ptr<midi_out_api> make(libremidi::output_configuration&& conf, Arg&& arg)

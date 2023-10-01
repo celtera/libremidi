@@ -46,16 +46,14 @@ public:
     warning(configuration, "alsa_raw_ump::ump: set_port_name unsupported");
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::ALSA_RAW_UMP;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_RAW_UMP; }
 
   // Must be a string such as: "hw:2,4,1"
   [[nodiscard]] int do_init_port(const char* portname)
   {
-    constexpr int mode = SND_RAWMIDI_NONBLOCK;
-    if (int err = snd_ump_open(&midiport_, nullptr, portname, mode); err < 0)
+    constexpr int mode = 0;
+    SND_RAWMIDI_NONBLOCK;
+    if (int err = snd_ump_open(&midiport_, 0, portname, mode); err < 0)
     {
       error<driver_error>(
           this->configuration, "alsa_raw_ump::ump::open_port: cannot open device.");
@@ -212,9 +210,9 @@ public:
     midiport_ = nullptr;
   }
 
-  alsa_raw_helpers::enumerator get_device_enumerator() const noexcept
+  midi2_enumerator get_device_enumerator() const noexcept
   {
-    alsa_raw_helpers::enumerator device_list;
+    midi2_enumerator device_list;
     device_list.error_callback
         = [this](std::string_view text) { this->error<driver_error>(this->configuration, text); };
     return device_list;

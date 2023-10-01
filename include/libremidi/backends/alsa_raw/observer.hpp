@@ -13,7 +13,8 @@
 
 namespace libremidi::alsa_raw
 {
-class observer_impl : public observer_api
+template <typename Enumerator>
+class observer_impl_base : public observer_api
 {
 public:
   struct
@@ -22,25 +23,26 @@ public:
   {
   } configuration;
 
-  explicit observer_impl(observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
+  explicit observer_impl_base(
+      observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     if (!configuration.has_callbacks())
       return;
 
-    fds[0] = udev;
+    fds[0] = this->udev;
     fds[1] = termination_event;
     fds[2] = timer_fd;
 
     // Set-up initial state
     if (configuration.notify_in_constructor)
-      check_devices();
+      this->check_devices();
 
     // Start thread
-    thread = std::thread{[this] { run(); }};
+    thread = std::thread{[this] { this->run(); }};
   }
 
-  ~observer_impl()
+  ~observer_impl_base()
   {
     termination_event.notify();
 
@@ -53,7 +55,7 @@ public:
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
     std::vector<libremidi::input_port> ret;
-    alsa_raw_helpers::enumerator new_devs;
+    Enumerator new_devs;
 
     new_devs.enumerate_cards();
     for (auto& d : new_devs.inputs)
@@ -66,7 +68,7 @@ public:
   std::vector<libremidi::output_port> get_output_ports() const noexcept override
   {
     std::vector<libremidi::output_port> ret;
-    alsa_raw_helpers::enumerator new_devs;
+    Enumerator new_devs;
 
     new_devs.enumerate_cards();
     for (auto& d : new_devs.outputs)
@@ -132,7 +134,7 @@ private:
   }
 
   template <bool Input>
-  auto to_port_info(alsa_raw_helpers::alsa_raw_port_info p) const noexcept
+  auto to_port_info(alsa_raw::alsa_raw_port_info p) const noexcept
       -> std::conditional_t<Input, input_port, output_port>
   {
     return {
@@ -146,7 +148,7 @@ private:
 
   void check_devices()
   {
-    alsa_raw_helpers::enumerator new_devs;
+    Enumerator new_devs;
 
     new_devs.enumerate_cards();
 
@@ -207,7 +209,7 @@ private:
   timerfd_timer timer_fd{};
   int timer_check_counts = 0;
   std::thread thread;
-  alsa_raw_helpers::enumerator current_devices;
+  Enumerator current_devices;
 
   pollfd fds[3]{};
 };

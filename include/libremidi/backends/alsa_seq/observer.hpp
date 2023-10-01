@@ -90,11 +90,11 @@ public:
 
     const auto tp = snd_seq_port_info_get_type(pinfo);
     bool ok = false;
-    if((tp & SND_SEQ_PORT_TYPE_HARDWARE) && this->configuration.track_hardware)
+    if ((tp & SND_SEQ_PORT_TYPE_HARDWARE) && this->configuration.track_hardware)
       ok = true;
-    else if((tp & SND_SEQ_PORT_TYPE_SOFTWARE) && this->configuration.track_virtual)
+    else if ((tp & SND_SEQ_PORT_TYPE_SOFTWARE) && this->configuration.track_virtual)
       ok = true;
-    if(!ok)
+    if (!ok)
       return {};
 
     if (auto name = snd_seq_client_info_get_name(cinfo))
@@ -136,10 +136,7 @@ public:
         });
   }
 
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::ALSA_SEQ;
-  }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_SEQ; }
 
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {

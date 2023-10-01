@@ -6,6 +6,7 @@
 #include <CoreServices/CoreServices.h>
 
 #include <cmath>
+
 #include <bit>
 
 #if TARGET_OS_IPHONE
@@ -220,7 +221,8 @@ locate_object(auto& self, const port_information& info, MIDIObjectType requested
   if (type != requested_type || object == 0)
   {
     self.template error<invalid_parameter_error>(
-        self.configuration, "coremidi::locate_object: invalid object: " + info.port_name + " : " + std::to_string(object));
+        self.configuration, "coremidi::locate_object: invalid object: " + info.port_name + " : "
+                                + std::to_string(object));
     return 0;
   }
 
@@ -282,7 +284,7 @@ struct coremidi_data
         }
         else
         {
-          if constexpr(requires { self.continueSysex; })
+          if constexpr (requires { self.continueSysex; })
           {
             if (self.continueSysex)
               return;
@@ -296,7 +298,7 @@ struct coremidi_data
       }
       case timestamp_mode::Absolute:
       case timestamp_mode::SystemMonotonic:
-        if constexpr(requires { self.continueSysex; })
+        if constexpr (requires { self.continueSysex; })
         {
           if (self.continueSysex)
             return;
@@ -305,7 +307,6 @@ struct coremidi_data
         break;
     }
   }
-
 };
 
 }

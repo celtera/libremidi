@@ -10,8 +10,7 @@ struct ump
   alignas(4) uint32_t bytes[4] = {};
   int64_t timestamp{};
 
-  constexpr operator std::span<const uint32_t>() const noexcept {
-    return {bytes, size()}; }
+  constexpr operator std::span<const uint32_t>() const noexcept { return {bytes, size()}; }
 
   constexpr ump() noexcept = default;
   constexpr ~ump() = default;

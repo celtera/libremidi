@@ -22,9 +22,11 @@ public:
 
   MidiSession session;
 
-  explicit observer_impl(libremidi::observer_configuration&& conf, winmidi::observer_configuration&& apiconf)
+  explicit observer_impl(
+      libremidi::observer_configuration&& conf, winmidi::observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-      , session{MidiSession::CreateNewSession(L"libremidi session", MidiSessionSettings::Default())}
+      , session{
+            MidiSession::CreateNewSession(L"libremidi session", MidiSessionSettings::Default())}
   {
     if (!configuration.has_callbacks())
       return;
@@ -39,7 +41,7 @@ public:
           configuration.output_added(p);
     }
 
-/*
+    /*
     evTokenOnInputAdded_
         = internalInPortObserver_.PortAdded([this](const port_info& p) { on_input_added(p); });
     evTokenOnInputRemoved_
@@ -61,7 +63,10 @@ public:
     // internalOutPortObserver_.PortRemoved(evTokenOnOutputRemoved_);
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MIDI_SERVICES; }
+  libremidi::API get_current_api() const noexcept override
+  {
+    return libremidi::API::WINDOWS_MIDI_SERVICES;
+  }
 
   template <bool Input>
   auto to_port_info(const DeviceInformation& p) const noexcept
@@ -82,7 +87,7 @@ public:
 
     auto deviceSelector = MidiEndpointConnection::GetDeviceSelector();
     auto endpointDevices = DeviceInformation::FindAllAsync(deviceSelector).get();
-    for(const auto& selectedEndpointInformation : endpointDevices)
+    for (const auto& selectedEndpointInformation : endpointDevices)
     {
       // FIXME if(has input...)
       ret.emplace_back(to_port_info(selectedEndpointInformation));
@@ -97,7 +102,7 @@ public:
 
     auto deviceSelector = MidiEndpointConnection::GetDeviceSelector();
     auto endpointDevices = DeviceInformation::FindAllAsync(deviceSelector).get();
-    for(const auto& selectedEndpointInformation : endpointDevices)
+    for (const auto& selectedEndpointInformation : endpointDevices)
     {
       // FIXME if(has output...)
       ret.emplace_back(to_port_info(selectedEndpointInformation));

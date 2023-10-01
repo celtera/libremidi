@@ -1,8 +1,8 @@
 #pragma once
 #include <libremidi/backends/coremidi_ump/config.hpp>
 #include <libremidi/backends/coremidi_ump/helpers.hpp>
-#include <libremidi/detail/midi_out.hpp>
 #include <libremidi/cmidi2.hpp>
+#include <libremidi/detail/midi_out.hpp>
 
 namespace libremidi::coremidi_ump
 {
@@ -18,7 +18,8 @@ public:
   {
   } configuration;
 
-  midi_out_impl(libremidi::output_configuration&& conf, coremidi_ump::output_configuration&& apiconf)
+  midi_out_impl(
+      libremidi::output_configuration&& conf, coremidi_ump::output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     if (auto result = init_client(configuration); result != noErr)
@@ -96,7 +97,8 @@ public:
     }
 
     // Create a virtual MIDI output source.
-    OSStatus result = MIDISourceCreateWithProtocol(this->client, toCFString(portName).get(), kMIDIProtocol_2_0, &this->endpoint);
+    OSStatus result = MIDISourceCreateWithProtocol(
+        this->client, toCFString(portName).get(), kMIDIProtocol_2_0, &this->endpoint);
 
     if (result != noErr)
     {
@@ -127,14 +129,14 @@ public:
 
   void send_ump(const uint32_t* ump, size_t size) override
   {
-    if(size >= 65535 / sizeof(uint32_t))
+    if (size >= 65535 / sizeof(uint32_t))
     {
       // FIXME break it up in multiple umps...
       return;
     }
 
     MIDIEventList eventList = {};
-    MIDIEventPacket *packet = MIDIEventListInit(&eventList, kMIDIProtocol_2_0);
+    MIDIEventPacket* packet = MIDIEventListInit(&eventList, kMIDIProtocol_2_0);
     MIDITimeStamp ts = AudioGetCurrentHostTime();
     const auto sz = cmidi2_ump_get_num_bytes(ump[0]) / 4;
 

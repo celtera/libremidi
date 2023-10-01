@@ -18,15 +18,13 @@ public:
   {
   } configuration;
 
-  explicit midi_in_impl(libremidi::ump_input_configuration&& conf, winmidi::input_configuration&& apiconf)
+  explicit midi_in_impl(
+      libremidi::ump_input_configuration&& conf, winmidi::input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
   }
 
-  ~midi_in_impl() override
-  {
-    close_port();
-  }
+  ~midi_in_impl() override { close_port(); }
 
   bool open_virtual_port(std::string_view) override
   {
@@ -42,7 +40,10 @@ public:
     warning(configuration, "midi_in_winmidi: set_port_name unsupported");
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MIDI_SERVICES; }
+  libremidi::API get_current_api() const noexcept override
+  {
+    return libremidi::API::WINDOWS_MIDI_SERVICES;
+  }
 
   bool open_port(const input_port& port, std::string_view) override
   {
@@ -84,10 +85,10 @@ public:
       port_.Close();
       port_ = nullptr;
     }
-  #endif
+#endif
   }
 
 private:
- // winrt::Microsoft::Devices::Midi2::IMidiInPort port_{nullptr};
+  // winrt::Microsoft::Devices::Midi2::IMidiInPort port_{nullptr};
 };
 }

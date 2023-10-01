@@ -7,8 +7,8 @@
 
 #include <alsa/asoundlib.h>
 
-#if SND_LIB_VERSION >= ((1<<16) | (2<<8) | 6)
-#define LIBREMIDI_ALSA_SUPPORTS_TREAD 1
+#if SND_LIB_VERSION >= ((1 << 16) | (2 << 8) | 6)
+  #define LIBREMIDI_ALSA_SUPPORTS_TREAD 1
 #endif
 #include <atomic>
 #include <thread>
@@ -210,9 +210,9 @@ public:
     midiport_ = nullptr;
   }
 
-  alsa_raw_helpers::enumerator get_device_enumerator() const noexcept
+  alsa_raw::midi1_enumerator get_device_enumerator() const noexcept
   {
-    alsa_raw_helpers::enumerator device_list;
+    alsa_raw::midi1_enumerator device_list;
     device_list.error_callback
         = [this](std::string_view text) { this->error<driver_error>(this->configuration, text); };
     return device_list;
