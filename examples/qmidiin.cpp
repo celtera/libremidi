@@ -80,7 +80,9 @@ struct basic_queue
 };
 
 // Example of how to get back the old queue-based API
-struct queued_midi_in : libremidi::midi_in
+struct queued_midi_in
+    : basic_queue
+    , libremidi::midi_in
 {
   explicit queued_midi_in(
       unsigned int queueSizeLimit, libremidi::input_configuration conf, auto&&... args)
@@ -100,6 +102,8 @@ struct queued_midi_in : libremidi::midi_in
   */
   message get_message()
   {
+    auto& queue = static_cast<basic_queue&>(*this);
+
     message m;
     if (queue.pop(m))
     {
@@ -108,12 +112,17 @@ struct queued_midi_in : libremidi::midi_in
     return {};
   }
 
-  bool get_message(message& m) { return queue.pop(m); }
+  bool get_message(message& m)
+  {
+    auto& queue = static_cast<basic_queue&>(*this);
+    return queue.pop(m);
+  }
 
 private:
   libremidi::input_configuration&
   set_queue_callback(unsigned int queueSizeLimit, libremidi::input_configuration& conf)
   {
+    auto& queue = static_cast<basic_queue&>(*this);
     // Allocate the MIDI queue.
     queue.ringSize = queueSizeLimit;
     if (queue.ringSize > 0)
@@ -124,6 +133,9 @@ private:
     conf.on_message = [this](libremidi::message m) {
       // As long as we haven't reached our queue size limit, push the
       // message.
+
+      auto& queue = static_cast<basic_queue&>(*this);
+      assert(queue.ring);
       if (!queue.push(std::move(m)))
       {
 #if defined(__LIBREMIDI_DEBUG__)
@@ -133,8 +145,6 @@ private:
     };
     return conf;
   }
-
-  basic_queue queue{};
 };
 }
 
@@ -189,7 +199,14 @@ try
   std::cout << "Reading MIDI from port " << ports[port].display_name << " ... quit with Ctrl-C.\n";
   while (!done)
   {
-    std::cout << midiin.get_message() << std::endl;
+    for (;;)
+    {
+      auto msg = midiin.get_message();
+      if (msg.empty())
+        break;
+      std::cout << msg << std::endl;
+    }
+
     std::this_thread::sleep_for(10ms);
   }
 
