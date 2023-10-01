@@ -24,6 +24,7 @@ enum class API
 
   // MIDI 2.0 APIs
   ALSA_RAW_UMP,          /*!< Raw ALSA API for MIDI 2.0 */
+  ALSA_SEQ_UMP,          /*!< Linux ALSA Sequencer API for MIDI 2.0 */
   COREMIDI_UMP,          /*!< macOS CoreMidi API for MIDI 2.0. Requires macOS 11+ */
   WINDOWS_MIDI_SERVICES, /*!< Windows API for MIDI 2.0. Requires Windows 11 */
 
@@ -87,7 +88,7 @@ inline constexpr libremidi::API default_api() noexcept
 #elif defined(_WIN32)
   return API::WINDOWS_MIDI_SERVICES;
 #elif defined(__linux__)
-  return API::ALSA_RAW_UMP;
+  return API::ALSA_SEQ_UMP;
 #elif defined(__emscripten__)
   return API::DUMMY;
 #else

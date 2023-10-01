@@ -20,6 +20,8 @@ struct port_info
   bool isInput{};
   bool isOutput{};
 };
+
+template <typename ConfigurationImpl>
 class observer_impl
     : public observer_api
     , public alsa_data
@@ -27,12 +29,11 @@ class observer_impl
 public:
   struct
       : libremidi::observer_configuration
-      , alsa_seq::observer_configuration
+      , ConfigurationImpl
   {
   } configuration;
 
-  explicit observer_impl(
-      libremidi::observer_configuration&& conf, alsa_seq::observer_configuration&& apiconf)
+  explicit observer_impl(libremidi::observer_configuration&& conf, ConfigurationImpl&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     using namespace std::literals;
@@ -50,11 +51,12 @@ public:
 
     // Create the port to listen on the server events
     {
+      constexpr int midi2_cap
+          = ConfigurationImpl::midi_version == 2 ? SND_SEQ_PORT_CAP_UMP_ENDPOINT : 0;
+      constexpr int caps = SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_WRITE
+                           | SND_SEQ_PORT_CAP_SUBS_READ | SND_SEQ_PORT_CAP_SUBS_WRITE | midi2_cap;
       int err = alsa_data::create_port(
-          *this, "libremidi-observe",
-          SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_READ
-              | SND_SEQ_PORT_CAP_SUBS_WRITE,
-          SND_SEQ_PORT_TYPE_APPLICATION, false);
+          *this, "libremidi-observe", caps, SND_SEQ_PORT_TYPE_APPLICATION, false);
       if (err < 0)
       {
         throw driver_error("observer: ALSA error creating port.");
@@ -241,17 +243,17 @@ private:
   std::map<std::pair<int, int>, port_info> knownClients_;
 };
 
-class observer_threaded : public observer_impl
+template <typename ConfigurationImpl>
+class observer_threaded : public observer_impl<ConfigurationImpl>
 {
 public:
-  observer_threaded(
-      libremidi::observer_configuration&& conf, alsa_seq::observer_configuration&& apiconf)
-      : observer_impl{std::move(conf), std::move(apiconf)}
+  observer_threaded(libremidi::observer_configuration&& conf, ConfigurationImpl&& apiconf)
+      : observer_impl<ConfigurationImpl>{std::move(conf), std::move(apiconf)}
   {
     // Create relevant descriptors
-    const auto N = snd_seq_poll_descriptors_count(seq, POLLIN);
+    const auto N = snd_seq_poll_descriptors_count(this->seq, POLLIN);
     descriptors_.resize(N + 1);
-    snd_seq_poll_descriptors(seq, descriptors_.data(), N, POLLIN);
+    snd_seq_poll_descriptors(this->seq, descriptors_.data(), N, POLLIN);
     descriptors_.back() = this->termination_event;
 
     // Start the listening thread
@@ -265,13 +267,12 @@ public:
           if (descriptors_.back().revents & POLLIN)
             break;
 
-          // Otherwise handle ALSA events
           snd_seq_event_t* ev{};
           libremidi::unique_handle<snd_seq_event_t, snd_seq_free_event> handle;
-          while (snd_seq_event_input(seq, &ev) >= 0)
+          while (snd_seq_event_input(this->seq, &ev) >= 0)
           {
             handle.reset(ev);
-            handle_event(*ev);
+            this->handle_event(*ev);
           }
         }
       }
@@ -291,33 +292,36 @@ public:
   std::vector<pollfd> descriptors_;
 };
 
-class observer_manual : public observer_impl
+template <typename ConfigurationImpl>
+class observer_manual : public observer_impl<ConfigurationImpl>
 {
 public:
-  observer_manual(
-      libremidi::observer_configuration&& conf, alsa_seq::observer_configuration&& apiconf)
-      : observer_impl{std::move(conf), std::move(apiconf)}
+  observer_manual(libremidi::observer_configuration&& conf, ConfigurationImpl&& apiconf)
+      : observer_impl<ConfigurationImpl>{std::move(conf), std::move(apiconf)}
   {
-    configuration.manual_poll(
-        poll_parameters{.addr = this->vaddr, .callback = [this](const snd_seq_event_t& v) {
-                          handle_event(v);
+    this->configuration.manual_poll(
+        poll_parameters{.addr = this->vaddr, .callback = [this](const auto& v) {
+                          this->handle_event(v);
                           return 0;
                         }});
   }
 
-  ~observer_manual() { configuration.stop_poll(this->vaddr); }
+  ~observer_manual() { this->configuration.stop_poll(this->vaddr); }
 };
 }
 
 namespace libremidi
 {
 template <>
-inline std::unique_ptr<observer_api> make<alsa_seq::observer_impl>(
+inline std::unique_ptr<observer_api>
+make<alsa_seq::observer_impl<alsa_seq::observer_configuration>>(
     libremidi::observer_configuration&& conf, libremidi::alsa_seq::observer_configuration&& api)
 {
   if (api.manual_poll)
-    return std::make_unique<alsa_seq::observer_manual>(std::move(conf), std::move(api));
+    return std::make_unique<alsa_seq::observer_manual<alsa_seq::observer_configuration>>(
+        std::move(conf), std::move(api));
   else
-    return std::make_unique<alsa_seq::observer_threaded>(std::move(conf), std::move(api));
+    return std::make_unique<alsa_seq::observer_threaded<alsa_seq::observer_configuration>>(
+        std::move(conf), std::move(api));
 }
 }

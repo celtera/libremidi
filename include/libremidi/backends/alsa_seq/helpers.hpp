@@ -145,6 +145,18 @@ struct alsa_data
       if (!configuration.client_name.empty())
         snd_seq_set_client_name(seq, configuration.client_name.data());
 
+#if __has_include(<alsa/ump.h>)
+      switch (configuration.midi_version)
+      {
+        case 1:
+          snd_seq_set_client_midi_version(seq, SND_SEQ_CLIENT_LEGACY_MIDI);
+          break;
+        case 2:
+          snd_seq_set_client_midi_version(seq, SND_SEQ_CLIENT_UMP_MIDI_2_0);
+          break;
+      }
+#endif
+
       return 0;
     }
   }

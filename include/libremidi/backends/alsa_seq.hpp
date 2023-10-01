@@ -21,9 +21,10 @@ namespace libremidi::alsa_seq
 
 struct backend
 {
-  using midi_in = midi_in_impl;
-  using midi_out = midi_out_impl;
-  using midi_observer = observer_impl;
+  using midi_in
+      = alsa_seq::midi_in_impl<libremidi::input_configuration, alsa_seq::input_configuration>;
+  using midi_out = alsa_seq::midi_out_impl;
+  using midi_observer = alsa_seq::observer_impl<alsa_seq::observer_configuration>;
   using midi_in_configuration = alsa_seq::input_configuration;
   using midi_out_configuration = alsa_seq::output_configuration;
   using midi_observer_configuration = alsa_seq::observer_configuration;

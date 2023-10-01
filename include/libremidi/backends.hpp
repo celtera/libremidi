@@ -16,6 +16,7 @@
   #include <libremidi/backends/alsa_seq.hpp>
   #if __has_include(<alsa/ump.h>)
     #include <libremidi/backends/alsa_raw_ump.hpp>
+    #include <libremidi/backends/alsa_seq_ump.hpp>
   #endif
 #endif
 
@@ -110,7 +111,7 @@ static constexpr auto available_backends = make_tl(
     0
 #if defined(LIBREMIDI_ALSA) && __has_include(<alsa/ump.h>)
     ,
-    alsa_raw_ump::backend{}
+    alsa_seq_ump::backend{}, alsa_raw_ump::backend{}
 #endif
 #if defined(LIBREMIDI_COREMIDI)
     ,

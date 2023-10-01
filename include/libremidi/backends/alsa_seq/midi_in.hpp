@@ -6,15 +6,20 @@
 
 namespace libremidi::alsa_seq
 {
+template <typename ConfigurationImpl>
+using midi_in_base
+    = std::conditional_t<ConfigurationImpl::midi_version == 1, midi1::in_api, midi2::in_api>;
+
+template <typename ConfigurationBase, typename ConfigurationImpl>
 class midi_in_impl
-    : public midi1::in_api
+    : public midi_in_base<ConfigurationImpl>
     , protected alsa_data
     , public error_handler
 {
 public:
   struct
-      : libremidi::input_configuration
-      , alsa_seq::input_configuration
+      : ConfigurationBase
+      , ConfigurationImpl
   {
   } configuration;
 
@@ -32,9 +37,8 @@ public:
     return true;
   }
 
-  explicit midi_in_impl(
-      libremidi::input_configuration&& conf, alsa_seq::input_configuration&& apiconf)
-      : midi1::in_api{}
+  explicit midi_in_impl(ConfigurationBase&& conf, ConfigurationImpl&& apiconf)
+      : midi_in_base<ConfigurationImpl>{}
       , configuration{std::move(conf), std::move(apiconf)}
   {
     if (init_client(configuration) < 0)
@@ -181,7 +185,7 @@ public:
   void set_port_name(std::string_view portName) override { alsa_data::set_port_name(portName); }
 
 protected:
-  void set_timestamp(const snd_seq_event_t& ev, libremidi::message& msg) noexcept
+  void set_timestamp(const auto& ev, auto& msg) noexcept
   {
     static constexpr int64_t nanos = 1e9;
     switch (configuration.timestamps)
@@ -196,14 +200,14 @@ protected:
 
         last_time = ev.time.time;
 
-        if (firstMessage == true)
+        if (this->firstMessage == true)
         {
-          firstMessage = false;
-          message.timestamp = 0;
+          this->firstMessage = false;
+          msg.timestamp = 0;
         }
         else
         {
-          message.timestamp = time;
+          msg.timestamp = time;
         }
         return;
       }
@@ -223,8 +227,8 @@ protected:
 
   int process_event(const snd_seq_event_t& ev)
   {
-    if (!continueSysex)
-      message.bytes.clear();
+    if (!this->continueSysex)
+      this->message.bytes.clear();
 
     // Filter the message types before any decoding
     switch (ev.type)
@@ -266,15 +270,16 @@ protected:
       // we'll watch for this and concatenate sysex chunks into a
       // single sysex message if necessary.
       assert(avail < buf_space);
-      if (!continueSysex)
-        message.bytes.assign(buf, buf + avail);
+      if (!this->continueSysex)
+        this->message.bytes.assign(buf, buf + avail);
       else
-        message.bytes.insert(message.bytes.end(), buf, buf + avail);
+        this->message.bytes.insert(this->message.bytes.end(), buf, buf + avail);
 
-      continueSysex = ((ev.type == SND_SEQ_EVENT_SYSEX) && (message.bytes.back() != 0xF7));
-      if (!continueSysex)
+      this->continueSysex
+          = ((ev.type == SND_SEQ_EVENT_SYSEX) && (this->message.bytes.back() != 0xF7));
+      if (!this->continueSysex)
       {
-        set_timestamp(ev, message);
+        set_timestamp(ev, this->message);
       }
       else
       {
@@ -286,12 +291,12 @@ protected:
       }
     }
 
-    if (message.bytes.size() == 0 || continueSysex)
+    if (this->message.bytes.size() == 0 || this->continueSysex)
       return 0;
 
     // Finally the message is ready
-    configuration.on_message(std::move(message));
-    message.clear();
+    configuration.on_message(std::move(this->message));
+    this->message.clear();
     return 0;
   }
 
@@ -309,22 +314,75 @@ protected:
     return result;
   }
 
+#if __has_include(<alsa/ump.h>)
+  int process_ump_event(const snd_seq_ump_event_t& ev)
+  {
+    // Filter the message types before any decoding
+    switch (ev.type)
+    {
+      case SND_SEQ_EVENT_PORT_SUBSCRIBED:
+      case SND_SEQ_EVENT_PORT_UNSUBSCRIBED:
+        return 0;
+
+      case SND_SEQ_EVENT_QFRAME: // MIDI time code
+      case SND_SEQ_EVENT_TICK:   // 0xF9 ... MIDI timing tick
+      case SND_SEQ_EVENT_CLOCK:  // 0xF8 ... MIDI timing (clock) tick
+        if (configuration.ignore_timing)
+          return 0;
+        break;
+
+      case SND_SEQ_EVENT_SENSING: // Active sensing
+        if (configuration.ignore_sensing)
+          return 0;
+        break;
+
+      case SND_SEQ_EVENT_SYSEX: {
+        if (configuration.ignore_sysex)
+          return 0;
+        break;
+      }
+    }
+
+    // MIDI 2 : no decoder, we can just send the UMP data directly, yay
+    libremidi::ump ump;
+    std::memcpy(ump.bytes, ev.ump, sizeof(ev.ump));
+    set_timestamp(ev, ump);
+    configuration.on_message(std::move(ump));
+    return 0;
+  }
+
+  int process_ump_events()
+  {
+    snd_seq_ump_event_t* ev{};
+    unique_handle<snd_seq_event_t, snd_seq_free_event> handle;
+    int result = 0;
+    while ((result = snd_seq_ump_event_input(seq, &ev)) > 0)
+    {
+      handle.reset((snd_seq_event_t*)ev);
+      if (int err = process_ump_event(*ev); err < 0)
+        return err;
+    }
+    return result;
+  }
+#endif
+
   int queue_id{}; // an input queue is needed to get timestamped events
   snd_seq_real_time_t last_time{};
 
+  // Only needed for midi 1
   std::vector<unsigned char> decoding_buffer = std::vector<unsigned char>(32);
 };
 
-class midi_in_alsa_threaded : public midi_in_impl
+template <typename ConfigurationBase, typename ConfigurationImpl>
+class midi_in_alsa_threaded : public midi_in_impl<ConfigurationBase, ConfigurationImpl>
 {
 public:
-  midi_in_alsa_threaded(
-      libremidi::input_configuration&& conf, alsa_seq::input_configuration&& apiconf)
-      : midi_in_impl{std::move(conf), std::move(apiconf)}
+  midi_in_alsa_threaded(ConfigurationBase&& conf, ConfigurationImpl&& apiconf)
+      : midi_in_impl<ConfigurationBase, ConfigurationImpl>{std::move(conf), std::move(apiconf)}
   {
     if (this->termination_event < 0)
     {
-      error<driver_error>(
+      this->template error<driver_error>(
           this->configuration, "midi_in_alsa::initialize: error creating eventfd.");
     }
   }
@@ -334,7 +392,7 @@ public:
 private:
   bool open_port(const input_port& pt, std::string_view local_port_name) override
   {
-    if (int err = init_port(to_address(pt), local_port_name); err < 0)
+    if (int err = this->init_port(this->to_address(pt), local_port_name); err < 0)
       return false;
 
     if (!start_thread())
@@ -345,17 +403,17 @@ private:
 
   bool open_virtual_port(std::string_view portName) override
   {
-    if (int err = init_virtual_port(portName); err < 0)
+    if (int err = this->init_virtual_port(portName); err < 0)
       return false;
 
-    if (!start_thread())
+    if (!this->start_thread())
       return false;
     return true;
   }
 
   void close_port() override
   {
-    midi_in_impl::close_port();
+    midi_in_impl<ConfigurationBase, ConfigurationImpl>::close_port();
 
     stop_thread();
   }
@@ -369,9 +427,9 @@ private:
     catch (const std::system_error& e)
     {
       using namespace std::literals;
-      unsubscribe();
+      this->unsubscribe();
 
-      error<thread_error>(
+      this->template error<thread_error>(
           this->configuration,
           "midi_in_alsa::start_thread: error starting MIDI input thread: "s + e.what());
       return false;
@@ -412,7 +470,18 @@ private:
         continue;
       }
 
-      int res = this->process_events();
+      int res{};
+      if constexpr (ConfigurationImpl::midi_version == 1)
+      {
+        res = this->process_events();
+      }
+#if __has_include(<alsa/ump.h>)
+      else if constexpr (ConfigurationImpl::midi_version == 2)
+      {
+        res = this->process_ump_events();
+      }
+#endif
+
       (void)res;
 #if defined(__LIBREMIDI_DEBUG__)
       if (res < 0)
@@ -425,12 +494,12 @@ private:
   eventfd_notifier termination_event{};
 };
 
-class midi_in_alsa_manual : public midi_in_impl
+template <typename ConfigurationBase, typename ConfigurationImpl>
+class midi_in_alsa_manual : public midi_in_impl<ConfigurationBase, ConfigurationImpl>
 {
 public:
-  midi_in_alsa_manual(
-      libremidi::input_configuration&& conf, alsa_seq::input_configuration&& apiconf)
-      : midi_in_impl{std::move(conf), std::move(apiconf)}
+  midi_in_alsa_manual(ConfigurationBase&& conf, ConfigurationImpl&& apiconf)
+      : midi_in_impl<ConfigurationBase, ConfigurationImpl>{std::move(conf), std::move(apiconf)}
   {
     assert(this->configuration.manual_poll);
     assert(this->configuration.stop_poll);
@@ -438,10 +507,16 @@ public:
 
   [[nodiscard]] int init_callback()
   {
-    configuration.manual_poll(
-        poll_parameters{.addr = this->vaddr, .callback = [this](const snd_seq_event_t& ev) {
-                          return process_event(ev);
-                        }});
+    using poll_params = typename ConfigurationImpl::poll_parameters_type;
+    this->configuration.manual_poll(
+        poll_params{.addr = this->vaddr, .callback = [this](const auto& ev) {
+                      if constexpr (ConfigurationImpl::midi_version == 1)
+                        return this->process_event(ev);
+#if __has_include(<alsa/ump.h>)
+                      else
+                        return this->process_ump_event(ev);
+#endif
+                    }});
     return 0;
   }
 
@@ -449,7 +524,7 @@ public:
 
   bool open_port(const input_port& pt, std::string_view local_port_name) override
   {
-    if (int err = init_port(to_address(pt), local_port_name); err < 0)
+    if (int err = this->init_port(this->to_address(pt), local_port_name); err < 0)
       return false;
 
     if (int err = init_callback(); err < 0)
@@ -459,7 +534,7 @@ public:
 
   bool open_virtual_port(std::string_view name) override
   {
-    if (int err = init_virtual_port(name); err < 0)
+    if (int err = this->init_virtual_port(name); err < 0)
       return false;
 
     if (int err = init_callback(); err < 0)
@@ -469,9 +544,9 @@ public:
 
   void close_port() override
   {
-    configuration.stop_poll(this->vaddr);
+    this->configuration.stop_poll(this->vaddr);
 
-    midi_in_impl::close_port();
+    midi_in_impl<ConfigurationBase, ConfigurationImpl>::close_port();
   }
 };
 }
@@ -479,12 +554,17 @@ public:
 namespace libremidi
 {
 template <>
-inline std::unique_ptr<midi_in_api> make<alsa_seq::midi_in_impl>(
+inline std::unique_ptr<midi_in_api>
+make<alsa_seq::midi_in_impl<libremidi::input_configuration, alsa_seq::input_configuration>>(
     libremidi::input_configuration&& conf, libremidi::alsa_seq::input_configuration&& api)
 {
   if (api.manual_poll)
-    return std::make_unique<alsa_seq::midi_in_alsa_manual>(std::move(conf), std::move(api));
+    return std::make_unique<alsa_seq::midi_in_alsa_manual<
+        libremidi::input_configuration, alsa_seq::input_configuration>>(
+        std::move(conf), std::move(api));
   else
-    return std::make_unique<alsa_seq::midi_in_alsa_threaded>(std::move(conf), std::move(api));
+    return std::make_unique<alsa_seq::midi_in_alsa_threaded<
+        libremidi::input_configuration, alsa_seq::input_configuration>>(
+        std::move(conf), std::move(api));
 }
 }

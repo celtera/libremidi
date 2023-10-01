@@ -47,7 +47,7 @@ try
           .on_message
           = [&](const libremidi::ump& message) {
     std::cout << message << std::endl;
-    if(midiout.is_port_connected())
+    if (midiout.is_port_connected())
       midiout.send_ump(message);
           }
       },
