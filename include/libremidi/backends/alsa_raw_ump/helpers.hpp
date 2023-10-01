@@ -22,7 +22,7 @@ struct midi2_enumerator : alsa_raw::enumerator
     int device = -1;
     do
     {
-      const int status = snd_ctl_ump_next_device(ctl, &device);
+      const int status = snd.ctl.ump.next_device(ctl, &device);
       if (device == -1)
         return;
 
@@ -31,7 +31,7 @@ struct midi2_enumerator : alsa_raw::enumerator
         error(
             "alsa_raw_ump::midi2_enumerator::enumerate_devices: "
             "cannot determine device number: ",
-            snd_strerror(status));
+            snd.strerror(status));
         break;
       }
 
@@ -48,18 +48,18 @@ struct midi2_enumerator : alsa_raw::enumerator
   {
     snd_ump_endpoint_info_t* info{};
     snd_ump_endpoint_info_alloca(&info);
-    snd_ctl_ump_endpoint_info(ctl, info);
+    snd.ctl.ump.endpoint_info(ctl, info);
 
-    fprintf(stderr, "UMP endpoint: %s", snd_ump_endpoint_info_get_name(info));
+    fprintf(stderr, "UMP endpoint: %s", snd.ump.endpoint_info_get_name(info));
   }
 
   void enumerate_blocks(snd_ctl_t* ctl, int card, int device)
   {
     snd_ump_block_info_t* info{};
     snd_ump_block_info_alloca(&info);
-    snd_ctl_ump_block_info(ctl, info);
+    snd.ctl.ump.block_info(ctl, info);
 
-    fprintf(stderr, "UMP block: %s", snd_ump_block_info_get_name(info));
+    fprintf(stderr, "UMP block: %s", snd.ump.block_info_get_name(info));
   }
 };
 

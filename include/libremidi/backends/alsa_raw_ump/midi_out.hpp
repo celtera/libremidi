@@ -22,9 +22,12 @@ public:
   {
   } configuration;
 
+  const libasound& snd = libasound::instance();
+
   midi_out_impl(output_configuration&& conf, alsa_raw_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
+    assert(snd.ump.available);
   }
 
   ~midi_out_impl() override
@@ -52,7 +55,7 @@ public:
   int connect_port(const char* portname)
   {
     constexpr int mode = SND_UMP_SYNC;
-    int status = snd_ump_open(NULL, &midiport_, portname, mode);
+    int status = snd.ump.open(NULL, &midiport_, portname, mode);
     if (status < 0)
     {
       error<driver_error>(
@@ -70,7 +73,7 @@ public:
   void close_port() override
   {
     if (midiport_)
-      snd_ump_close(midiport_);
+      snd.ump.close(midiport_);
     midiport_ = nullptr;
   }
 
@@ -94,7 +97,7 @@ public:
 
   bool write(const uint32_t* message, size_t size)
   {
-    if (snd_ump_write(midiport_, message, size) < 0)
+    if (snd.ump.write(midiport_, message, size) < 0)
     {
       error<driver_error>(
           this->configuration, "midi_out_alsa_raw::send_message: cannot write message.");
@@ -109,7 +112,7 @@ public:
     snd_rawmidi_params_t* param;
     snd_rawmidi_params_alloca(&param);
 
-    auto rawmidi = snd_ump_rawmidi(midiport_);
+    auto rawmidi = snd.ump.rawmidi(midiport_);
     snd_rawmidi_params_current(rawmidi, param);
 
     std::size_t buffer_size = snd_rawmidi_params_get_buffer_size(param);
@@ -121,7 +124,7 @@ public:
     snd_rawmidi_status_t* st{};
     snd_rawmidi_status_alloca(&st);
 
-    auto rawmidi = snd_ump_rawmidi(midiport_);
+    auto rawmidi = snd.ump.rawmidi(midiport_);
     snd_rawmidi_status(rawmidi, st);
 
     return snd_rawmidi_status_get_avail(st);

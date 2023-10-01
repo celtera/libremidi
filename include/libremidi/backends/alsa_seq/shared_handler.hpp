@@ -14,6 +14,7 @@ namespace libremidi::alsa_seq
 
 struct shared_handler : public libremidi::shared_context
 {
+  const libasound& snd = libasound::instance();
   struct equals_addr
   {
     constexpr bool operator()(const snd_seq_addr_t& lhs, const snd_seq_addr_t& rhs) noexcept
@@ -24,7 +25,7 @@ struct shared_handler : public libremidi::shared_context
 
   explicit shared_handler(std::string_view v)
   {
-    if (int err = snd_seq_open(&client, "default", SND_SEQ_OPEN_DUPLEX, SND_SEQ_NONBLOCK); err < 0)
+    if (int err = snd.seq.open(&client, "default", SND_SEQ_OPEN_DUPLEX, SND_SEQ_NONBLOCK); err < 0)
     {
       client = nullptr;
       // fixme throw?
@@ -32,13 +33,13 @@ struct shared_handler : public libremidi::shared_context
     }
 
     if (!v.empty())
-      snd_seq_set_client_name(client, v.data());
+      snd.seq.set_client_name(client, v.data());
 
     // Last descriptor is the eventfd one
-    int fds_size = snd_seq_poll_descriptors_count(client, POLLIN);
+    int fds_size = snd.seq.poll_descriptors_count(client, POLLIN);
     fds.reserve(fds_size + 2);
     fds.resize(fds_size);
-    snd_seq_poll_descriptors(client, fds.data(), fds_size, POLLIN);
+    snd.seq.poll_descriptors(client, fds.data(), fds_size, POLLIN);
     fds.push_back(termination_event);
     fds.push_back(queue_event);
   }
@@ -151,9 +152,9 @@ struct shared_handler : public libremidi::shared_context
         {
           // Read alsa event
           snd_seq_event_t* ev{};
-          libremidi::unique_handle<snd_seq_event_t, snd_seq_free_event> handle;
+          event_handle handle{snd};
           int result = 0;
-          while ((result = snd_seq_event_input(client, &ev)) > 0)
+          while ((result = snd.seq.event_input(client, &ev)) > 0)
           {
             handle.reset(ev);
 
@@ -170,7 +171,7 @@ struct shared_handler : public libremidi::shared_context
     }
   }
 
-  ~shared_handler() { snd_seq_close(client); }
+  ~shared_handler() { snd.seq.close(client); }
 
   enum event_type
   {

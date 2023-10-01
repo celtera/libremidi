@@ -39,9 +39,9 @@
 
   if(LIBREMIDI_HAS_ALSA)
     add_executable(poll_share examples/poll_share.cpp)
-    target_link_libraries(poll_share PRIVATE libremidi)
+    target_link_libraries(poll_share PRIVATE libremidi ${ALSA_LIBRARIES})
     add_executable(alsa_share examples/alsa_share.cpp)
-    target_link_libraries(alsa_share PRIVATE libremidi)
+    target_link_libraries(alsa_share PRIVATE libremidi ${ALSA_LIBRARIES})
   endif()
 
   if(LIBREMIDI_HAS_JACK)

@@ -23,11 +23,14 @@ public:
   {
   } configuration;
 
+  const libasound& snd = libasound::instance();
+
   explicit midi_in_impl(
       libremidi::ump_input_configuration&& conf, alsa_raw_ump::input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     fds_.reserve(4);
+    assert(snd.ump.available);
   }
 
   ~midi_in_impl() override { }
@@ -53,7 +56,7 @@ public:
   {
     constexpr int mode = 0;
     SND_RAWMIDI_NONBLOCK;
-    if (int err = snd_ump_open(&midiport_, 0, portname, mode); err < 0)
+    if (int err = snd.ump.open(&midiport_, 0, portname, mode); err < 0)
     {
       error<driver_error>(
           this->configuration, "alsa_raw_ump::ump::open_port: cannot open device.");
@@ -63,34 +66,34 @@ public:
     snd_rawmidi_params_t* params{};
     snd_rawmidi_params_alloca(&params);
 
-    auto rawmidi = snd_ump_rawmidi(midiport_);
+    auto rawmidi = snd.ump.rawmidi(midiport_);
 
-    if (int err = snd_ump_rawmidi_params_current(midiport_, params); err < 0)
+    if (int err = snd.ump.rawmidi_params_current(midiport_, params); err < 0)
       return err;
-    if (int err = snd_rawmidi_params_set_no_active_sensing(rawmidi, params, 1); err < 0)
+    if (int err = snd.rawmidi.params_set_no_active_sensing(rawmidi, params, 1); err < 0)
       return err;
 
     if (configuration.timestamps == timestamp_mode::NoTimestamp)
     {
-      if (int err = snd_rawmidi_params_set_read_mode(rawmidi, params, SND_RAWMIDI_READ_STANDARD);
+      if (int err = snd.rawmidi.params_set_read_mode(rawmidi, params, SND_RAWMIDI_READ_STANDARD);
           err < 0)
         return err;
-      if (int err = snd_rawmidi_params_set_clock_type(rawmidi, params, SND_RAWMIDI_CLOCK_NONE);
+      if (int err = snd.rawmidi.params_set_clock_type(rawmidi, params, SND_RAWMIDI_CLOCK_NONE);
           err < 0)
         return err;
     }
     else
     {
-      if (int err = snd_rawmidi_params_set_read_mode(rawmidi, params, SND_RAWMIDI_READ_TSTAMP);
+      if (int err = snd.rawmidi.params_set_read_mode(rawmidi, params, SND_RAWMIDI_READ_TSTAMP);
           err < 0)
         return err;
       if (int err
-          = snd_rawmidi_params_set_clock_type(rawmidi, params, SND_RAWMIDI_CLOCK_MONOTONIC);
+          = snd.rawmidi.params_set_clock_type(rawmidi, params, SND_RAWMIDI_CLOCK_MONOTONIC);
           err < 0)
         return err;
     }
 
-    if (int err = snd_ump_rawmidi_params(midiport_, params); err < 0)
+    if (int err = snd.ump.rawmidi_params(midiport_, params); err < 0)
       return err;
 
     return init_pollfd();
@@ -103,12 +106,12 @@ public:
 
   [[nodiscard]] int init_pollfd()
   {
-    int num_fds = snd_ump_poll_descriptors_count(this->midiport_);
+    int num_fds = snd.ump.poll_descriptors_count(this->midiport_);
 
     this->fds_.clear();
     this->fds_.resize(num_fds);
 
-    return snd_ump_poll_descriptors(this->midiport_, fds_.data(), num_fds);
+    return snd.ump.poll_descriptors(this->midiport_, fds_.data(), num_fds);
   }
 
   int do_read_events(auto parse_func, std::span<pollfd> fds)
@@ -121,7 +124,7 @@ public:
     else
     {
       unsigned short res{};
-      int err = snd_ump_poll_descriptors_revents(this->midiport_, fds.data(), fds.size(), &res);
+      int err = snd.ump.poll_descriptors_revents(this->midiport_, fds.data(), fds.size(), &res);
       if (err < 0)
         return err;
 
@@ -144,7 +147,7 @@ public:
     unsigned char bytes[nbytes];
 
     int err = 0;
-    while ((err = snd_ump_read(this->midiport_, bytes, nbytes)) > 0)
+    while ((err = snd.ump.read(this->midiport_, bytes, nbytes)) > 0)
     {
       std::cerr << "We read: " << nbytes << "bytes !!!!";
       return 1;
@@ -191,7 +194,7 @@ public:
     struct timespec ts;
 
     int err = 0;
-    while ((err = snd_ump_tread(this->midiport_, &ts, bytes, nbytes)) > 0)
+    while ((err = snd.ump.tread(this->midiport_, &ts, bytes, nbytes)) > 0)
     {
       // err is the amount of bytes read
       int64_t ns{};
@@ -206,7 +209,7 @@ public:
   void close_port() override
   {
     if (midiport_)
-      snd_ump_close(midiport_);
+      snd.ump.close(midiport_);
     midiport_ = nullptr;
   }
 

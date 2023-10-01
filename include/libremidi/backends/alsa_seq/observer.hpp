@@ -71,7 +71,7 @@ public:
     // Connect the ALSA server events to our port
     {
       int err
-          = snd_seq_connect_from(seq, vport, SND_SEQ_CLIENT_SYSTEM, SND_SEQ_PORT_SYSTEM_ANNOUNCE);
+          = snd.seq.connect_from(seq, vport, SND_SEQ_CLIENT_SYSTEM, SND_SEQ_PORT_SYSTEM_ANNOUNCE);
       if (err < 0)
       {
         throw driver_error("observer_alsa: snd_seq_connect_from failed");
@@ -87,15 +87,15 @@ public:
 
     snd_seq_client_info_t* cinfo;
     snd_seq_client_info_alloca(&cinfo);
-    if (int err = snd_seq_get_any_client_info(seq, client, cinfo); err < 0)
+    if (int err = snd.seq.get_any_client_info(seq, client, cinfo); err < 0)
       return std::nullopt;
 
     snd_seq_port_info_t* pinfo;
     snd_seq_port_info_alloca(&pinfo);
-    if (int err = snd_seq_get_any_port_info(seq, client, port, pinfo); err < 0)
+    if (int err = snd.seq.get_any_port_info(seq, client, port, pinfo); err < 0)
       return std::nullopt;
 
-    const auto tp = snd_seq_port_info_get_type(pinfo);
+    const auto tp = snd.seq.port_info_get_type(pinfo);
     bool ok = false;
     if ((tp & SND_SEQ_PORT_TYPE_HARDWARE) && this->configuration.track_hardware)
       ok = true;
@@ -104,13 +104,13 @@ public:
     if (!ok)
       return {};
 
-    if (auto name = snd_seq_client_info_get_name(cinfo))
+    if (auto name = snd.seq.client_info_get_name(cinfo))
       p.client_name = name;
 
-    if (auto name = snd_seq_port_info_get_name(pinfo))
+    if (auto name = snd.seq.port_info_get_name(pinfo))
       p.port_name = name;
 
-    auto cap = snd_seq_port_info_get_capability(pinfo);
+    auto cap = snd.seq.port_info_get_capability(pinfo);
     // FIXME isn't it missing SND_SEQ_PORT_CAP_SUBS_READ / WRITE??
     p.isInput = (cap & SND_SEQ_PORT_CAP_DUPLEX) | (cap & SND_SEQ_PORT_CAP_READ);
     p.isOutput = (cap & SND_SEQ_PORT_CAP_DUPLEX) | (cap & SND_SEQ_PORT_CAP_WRITE);
@@ -136,9 +136,9 @@ public:
   void init_all_ports()
   {
     alsa_seq::for_all_ports(
-        this->seq, [this](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
-          int clt = snd_seq_client_info_get_client(&client);
-          int pt = snd_seq_port_info_get_port(&port);
+        snd, this->seq, [this](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
+          int clt = snd.seq.client_info_get_client(&client);
+          int pt = snd.seq.port_info_get_port(&port);
           register_port(clt, pt);
         });
   }
@@ -149,9 +149,9 @@ public:
   {
     std::vector<libremidi::input_port> ret;
     alsa_seq::for_all_ports(
-        this->seq, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
-          int clt = snd_seq_client_info_get_client(&client);
-          int pt = snd_seq_port_info_get_port(&port);
+        snd, this->seq, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
+          int clt = snd.seq.client_info_get_client(&client);
+          int pt = snd.seq.port_info_get_port(&port);
           if (auto p = get_info(clt, pt))
             if (p->isInput)
               ret.push_back(to_port_info<true>(*p));
@@ -163,9 +163,9 @@ public:
   {
     std::vector<libremidi::output_port> ret;
     alsa_seq::for_all_ports(
-        this->seq, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
-          int clt = snd_seq_client_info_get_client(&client);
-          int pt = snd_seq_port_info_get_port(&port);
+        snd, this->seq, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
+          int clt = snd.seq.client_info_get_client(&client);
+          int pt = snd.seq.port_info_get_port(&port);
           if (auto p = get_info(clt, pt))
             if (p->isOutput)
               ret.push_back(to_port_info<false>(*p));
@@ -179,7 +179,7 @@ public:
     if (!pp)
       return;
     auto& p = *pp;
-    if (p.client == snd_seq_client_id(seq))
+    if (p.client == snd.seq.client_id(seq))
       return;
 
     knownClients_[{p.client, p.port}] = p;
@@ -237,10 +237,10 @@ public:
     if (seq)
     {
       if (vport)
-        snd_seq_delete_port(seq, vport);
+        snd.seq.delete_port(seq, vport);
 
       if (!configuration.context)
-        snd_seq_close(seq);
+        snd.seq.close(seq);
     }
   }
 
@@ -256,13 +256,15 @@ public:
       : observer_impl<ConfigurationImpl>{std::move(conf), std::move(apiconf)}
   {
     // Create relevant descriptors
-    const auto N = snd_seq_poll_descriptors_count(this->seq, POLLIN);
+    auto& snd = alsa_data::snd;
+    const auto N = snd.seq.poll_descriptors_count(this->seq, POLLIN);
     descriptors_.resize(N + 1);
-    snd_seq_poll_descriptors(this->seq, descriptors_.data(), N, POLLIN);
+    snd.seq.poll_descriptors(this->seq, descriptors_.data(), N, POLLIN);
     descriptors_.back() = this->termination_event;
 
     // Start the listening thread
     thread = std::thread{[this] {
+      auto& snd = alsa_data::snd;
       for (;;)
       {
         int err = poll(descriptors_.data(), descriptors_.size(), -1);
@@ -273,8 +275,8 @@ public:
             break;
 
           snd_seq_event_t* ev{};
-          libremidi::unique_handle<snd_seq_event_t, snd_seq_free_event> handle;
-          while (snd_seq_event_input(this->seq, &ev) >= 0)
+          event_handle handle{snd};
+          while (snd.seq.event_input(this->seq, &ev) >= 0)
           {
             handle.reset(ev);
             this->handle_event(*ev);

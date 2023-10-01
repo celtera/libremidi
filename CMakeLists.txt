@@ -77,6 +77,10 @@ else()
     include/libremidi/backends/alsa_raw_ump/midi_out.hpp
     include/libremidi/backends/alsa_raw_ump/observer.hpp
 
+    include/libremidi/backends/alsa_seq_ump/config.hpp
+    include/libremidi/backends/alsa_seq_ump/helpers.hpp
+    include/libremidi/backends/alsa_seq_ump/midi_out.hpp
+
     include/libremidi/backends/coremidi/config.hpp
     include/libremidi/backends/coremidi/helpers.hpp
     include/libremidi/backends/coremidi/midi_in.hpp
@@ -96,7 +100,9 @@ else()
     include/libremidi/backends/jack/observer.hpp
     include/libremidi/backends/jack/shared_handler.hpp
 
+    include/libremidi/backends/linux/alsa.hpp
     include/libremidi/backends/linux/helpers.hpp
+    include/libremidi/backends/linux/udev.hpp
 
     include/libremidi/backends/emscripten/config.hpp
     include/libremidi/backends/emscripten/helpers.hpp
@@ -287,7 +293,6 @@ elseif(UNIX AND NOT APPLE)
       set(LIBREMIDI_HAS_ALSA 1)
 
       target_compile_definitions(libremidi ${_public} LIBREMIDI_ALSA)
-      target_link_libraries(libremidi ${_public} ${ALSA_LIBRARIES})
 
       if(NOT LIBREMIDI_NO_UDEV)
         find_path(UDEV_INCLUDE_DIR libudev.h)

@@ -53,27 +53,27 @@ public:
     // Create the input queue
     if (require_timestamps())
     {
-      this->queue_id = snd_seq_alloc_queue(seq);
+      this->queue_id = snd.seq.alloc_queue(seq);
       // Set arbitrary tempo (mm=100) and resolution (240)
       snd_seq_queue_tempo_t* qtempo{};
       snd_seq_queue_tempo_alloca(&qtempo);
-      snd_seq_queue_tempo_set_tempo(qtempo, 600000);
-      snd_seq_queue_tempo_set_ppq(qtempo, 240);
-      snd_seq_set_queue_tempo(this->seq, this->queue_id, qtempo);
-      snd_seq_drain_output(this->seq);
+      snd.seq.queue_tempo_set_tempo(qtempo, 600000);
+      snd.seq.queue_tempo_set_ppq(qtempo, 240);
+      snd.seq.set_queue_tempo(this->seq, this->queue_id, qtempo);
+      snd.seq.drain_output(this->seq);
     }
 
     // Create the event -> midi encoder
     {
-      int result = snd_midi_event_new(0, &coder);
+      int result = snd.midi.event_new(0, &coder);
       if (result < 0)
       {
         error<driver_error>(
             this->configuration, "midi_in_alsa::initialize: error during snd_midi_event_new.");
         return;
       }
-      snd_midi_event_init(coder);
-      snd_midi_event_no_status(coder, 1);
+      snd.midi.event_init(coder);
+      snd.midi.event_no_status(coder, 1);
     }
   }
 
@@ -81,16 +81,16 @@ public:
   {
     // Cleanup.
     if (this->vport >= 0)
-      snd_seq_delete_port(this->seq, this->vport);
+      snd.seq.delete_port(this->seq, this->vport);
 
     if (require_timestamps())
-      snd_seq_free_queue(this->seq, this->queue_id);
+      snd.seq.free_queue(this->seq, this->queue_id);
 
-    snd_midi_event_free(coder);
+    snd.midi.event_free(coder);
 
     // Close if we do not have an user-provided client object
     if (!configuration.context)
-      snd_seq_close(this->seq);
+      snd.seq.close(this->seq);
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_SEQ; }
@@ -107,8 +107,8 @@ public:
   {
     if (require_timestamps())
     {
-      snd_seq_start_queue(this->seq, this->queue_id, nullptr);
-      snd_seq_drain_output(this->seq);
+      snd.seq.control_queue(this->seq, this->queue_id, SND_SEQ_EVENT_START, 0, nullptr);
+      snd.seq.drain_output(this->seq);
     }
   }
 
@@ -116,15 +116,15 @@ public:
   {
     if (require_timestamps())
     {
-      snd_seq_stop_queue(this->seq, this->queue_id, nullptr);
-      snd_seq_drain_output(this->seq);
+      snd.seq.control_queue(this->seq, this->queue_id, SND_SEQ_EVENT_STOP, 0, nullptr);
+      snd.seq.drain_output(this->seq);
     }
   }
 
   int connect_port(snd_seq_addr_t sender)
   {
     snd_seq_addr_t receiver{};
-    receiver.client = snd_seq_client_id(this->seq);
+    receiver.client = snd.seq.client_id(this->seq);
     receiver.port = this->vport;
 
     return create_connection(*this, sender, receiver, false);
@@ -261,7 +261,7 @@ protected:
     // Decode the message
     auto buf = decoding_buffer.data();
     auto buf_space = decoding_buffer.size();
-    const uint64_t avail = snd_midi_event_decode(coder, buf, buf_space, &ev);
+    const uint64_t avail = snd.midi.event_decode(coder, buf, buf_space, &ev);
     if (avail > 0)
     {
       // The ALSA sequencer has a maximum buffer size for MIDI sysex
@@ -303,9 +303,9 @@ protected:
   int process_events()
   {
     snd_seq_event_t* ev{};
-    unique_handle<snd_seq_event_t, snd_seq_free_event> handle;
+    event_handle handle{snd};
     int result = 0;
-    while ((result = snd_seq_event_input(seq, &ev)) > 0)
+    while ((result = snd.seq.event_input(seq, &ev)) > 0)
     {
       handle.reset(ev);
       if (int err = process_event(*ev); err < 0)
@@ -354,9 +354,9 @@ protected:
   int process_ump_events()
   {
     snd_seq_ump_event_t* ev{};
-    unique_handle<snd_seq_event_t, snd_seq_free_event> handle;
+    event_handle handle{snd};
     int result = 0;
-    while ((result = snd_seq_ump_event_input(seq, &ev)) > 0)
+    while ((result = snd.seq.ump.event_input(seq, &ev)) > 0)
     {
       handle.reset((snd_seq_event_t*)ev);
       if (int err = process_ump_event(*ev); err < 0)
@@ -449,14 +449,14 @@ private:
 
   void thread_handler()
   {
-    int poll_fd_count = snd_seq_poll_descriptors_count(this->seq, POLLIN) + 1;
+    int poll_fd_count = alsa_data::snd.seq.poll_descriptors_count(this->seq, POLLIN) + 1;
     auto poll_fds = (struct pollfd*)alloca(poll_fd_count * sizeof(struct pollfd));
     poll_fds[0] = this->termination_event;
-    snd_seq_poll_descriptors(this->seq, poll_fds + 1, poll_fd_count - 1, POLLIN);
+    alsa_data::snd.seq.poll_descriptors(this->seq, poll_fds + 1, poll_fd_count - 1, POLLIN);
 
     for (;;)
     {
-      if (snd_seq_event_input_pending(this->seq, 1) == 0)
+      if (alsa_data::snd.seq.event_input_pending(this->seq, 1) == 0)
       {
         // No data pending
         if (poll(poll_fds, poll_fd_count, -1) >= 0)
@@ -485,7 +485,8 @@ private:
       (void)res;
 #if defined(__LIBREMIDI_DEBUG__)
       if (res < 0)
-        std::cerr << "midi_in_alsa::thread_handler: MIDI input error: " << strerror(res) << "\n";
+        std::cerr << "midi_in_alsa::thread_handler: MIDI input error: " << snd.strerror(res)
+                  << "\n";
 #endif
     }
   }

@@ -23,6 +23,7 @@ public:
       libremidi::output_configuration&& conf, alsa_seq_ump::output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
+    assert(snd.seq.ump.available);
     if (init_client(configuration) < 0)
     {
       error<driver_error>(
@@ -32,7 +33,7 @@ public:
       return;
     }
 
-    if (snd_midi_event_new(this->bufferSize, &this->coder) < 0)
+    if (snd.midi.event_new(this->bufferSize, &this->coder) < 0)
     {
       error<driver_error>(
           this->configuration,
@@ -40,7 +41,7 @@ public:
           "parser.");
       return;
     }
-    snd_midi_event_init(this->coder);
+    snd.midi.event_init(this->coder);
   }
 
   ~midi_out_impl() override
@@ -50,12 +51,12 @@ public:
 
     // Cleanup.
     if (this->vport >= 0)
-      snd_seq_delete_port(this->seq, this->vport);
+      snd.seq.delete_port(this->seq, this->vport);
     if (this->coder)
-      snd_midi_event_free(this->coder);
+      snd.midi.event_free(this->coder);
 
     if (!configuration.context)
-      snd_seq_close(this->seq);
+      snd.seq.close(this->seq);
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_SEQ; }
@@ -89,7 +90,7 @@ public:
     }
 
     snd_seq_addr_t source{
-        .client = (unsigned char)snd_seq_client_id(this->seq), .port = (unsigned char)this->vport};
+        .client = (unsigned char)snd.seq.client_id(this->seq), .port = (unsigned char)this->vport};
     if (int err = create_connection(*this, source, *sink, true); err < 0)
     {
       error<driver_error>(
@@ -130,14 +131,14 @@ public:
 
     std::memcpy(ev.ump, message, size * sizeof(uint32_t));
 
-    int result = snd_seq_ump_event_output(this->seq, &ev);
+    int result = snd.seq.ump.event_output(this->seq, &ev);
     if (result < 0)
     {
       warning(
           this->configuration, "midi_out_alsa::send_message: error sending MIDI message to port.");
       return;
     }
-    snd_seq_drain_output(this->seq);
+    snd.seq.drain_output(this->seq);
   }
 
 private:

@@ -23,6 +23,8 @@ public:
   {
   } configuration;
 
+  const libasound& snd = libasound::instance();
+
   explicit observer_impl_base(
       observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
@@ -150,7 +152,7 @@ private:
 
     new_devs.enumerate_cards();
 
-    for (auto& in_prev : current_devices.inputs)
+    for (auto& in_prev : current_inputs)
     {
       if (auto it = std::find(new_devs.inputs.begin(), new_devs.inputs.end(), in_prev);
           it == new_devs.inputs.end())
@@ -164,9 +166,8 @@ private:
 
     for (auto& in_next : new_devs.inputs)
     {
-      if (auto it
-          = std::find(current_devices.inputs.begin(), current_devices.inputs.end(), in_next);
-          it == current_devices.inputs.end())
+      if (auto it = std::find(current_inputs.begin(), current_inputs.end(), in_next);
+          it == current_inputs.end())
       {
         if (auto& cb = this->configuration.input_added)
         {
@@ -175,7 +176,7 @@ private:
       }
     }
 
-    for (auto& out_prev : current_devices.outputs)
+    for (auto& out_prev : current_outputs)
     {
       if (auto it = std::find(new_devs.outputs.begin(), new_devs.outputs.end(), out_prev);
           it == new_devs.outputs.end())
@@ -189,9 +190,8 @@ private:
 
     for (auto& out_next : new_devs.outputs)
     {
-      if (auto it
-          = std::find(current_devices.outputs.begin(), current_devices.outputs.end(), out_next);
-          it == current_devices.outputs.end())
+      if (auto it = std::find(current_outputs.begin(), current_outputs.end(), out_next);
+          it == current_outputs.end())
       {
         if (auto& cb = this->configuration.output_added)
         {
@@ -199,7 +199,8 @@ private:
         }
       }
     }
-    current_devices = new_devs;
+    current_inputs = std::move(new_devs.inputs);
+    current_outputs = std::move(new_devs.outputs);
   }
 
   udev_helper udev{};
@@ -207,7 +208,8 @@ private:
   timerfd_timer timer_fd{};
   int timer_check_counts = 0;
   std::thread thread;
-  Enumerator current_devices;
+  std::vector<alsa_raw_port_info> current_inputs;
+  std::vector<alsa_raw_port_info> current_outputs;
 
   pollfd fds[3]{};
 };

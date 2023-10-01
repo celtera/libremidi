@@ -26,6 +26,8 @@ public:
   {
   } configuration;
 
+  const libasound& snd = libasound::instance();
+
   explicit midi_in_impl(input_configuration&& conf, alsa_raw_input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
@@ -54,7 +56,7 @@ public:
   [[nodiscard]] int do_init_port(const char* portname)
   {
     constexpr int mode = SND_RAWMIDI_NONBLOCK;
-    if (int err = snd_rawmidi_open(&midiport_, nullptr, portname, mode); err < 0)
+    if (int err = snd.rawmidi.open(&midiport_, nullptr, portname, mode); err < 0)
     {
       error<driver_error>(this->configuration, "midi_in_alsa_raw::open_port: cannot open device.");
       return err;
@@ -63,33 +65,33 @@ public:
     snd_rawmidi_params_t* params{};
     snd_rawmidi_params_alloca(&params);
 
-    if (int err = snd_rawmidi_params_current(midiport_, params); err < 0)
+    if (int err = snd.rawmidi.params_current(midiport_, params); err < 0)
       return err;
-    if (int err = snd_rawmidi_params_set_no_active_sensing(midiport_, params, 1); err < 0)
+    if (int err = snd.rawmidi.params_set_no_active_sensing(midiport_, params, 1); err < 0)
       return err;
 #if LIBREMIDI_ALSA_SUPPORTS_TREAD
     if (configuration.timestamps == timestamp_mode::NoTimestamp)
     {
-      if (int err = snd_rawmidi_params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_STANDARD);
+      if (int err = snd.rawmidi.params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_STANDARD);
           err < 0)
         return err;
-      if (int err = snd_rawmidi_params_set_clock_type(midiport_, params, SND_RAWMIDI_CLOCK_NONE);
+      if (int err = snd.rawmidi.params_set_clock_type(midiport_, params, SND_RAWMIDI_CLOCK_NONE);
           err < 0)
         return err;
     }
     else
     {
-      if (int err = snd_rawmidi_params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_TSTAMP);
+      if (int err = snd.rawmidi.params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_TSTAMP);
           err < 0)
         return err;
       if (int err
-          = snd_rawmidi_params_set_clock_type(midiport_, params, SND_RAWMIDI_CLOCK_MONOTONIC);
+          = snd.rawmidi.params_set_clock_type(midiport_, params, SND_RAWMIDI_CLOCK_MONOTONIC);
           err < 0)
         return err;
     }
 #endif
 
-    if (int err = snd_rawmidi_params(midiport_, params); err < 0)
+    if (int err = snd.rawmidi.params(midiport_, params); err < 0)
       return err;
 
     return init_pollfd();
@@ -102,12 +104,12 @@ public:
 
   [[nodiscard]] int init_pollfd()
   {
-    int num_fds = snd_rawmidi_poll_descriptors_count(this->midiport_);
+    int num_fds = snd.rawmidi.poll_descriptors_count(this->midiport_);
 
     this->fds_.clear();
     this->fds_.resize(num_fds);
 
-    return snd_rawmidi_poll_descriptors(this->midiport_, fds_.data(), num_fds);
+    return snd.rawmidi.poll_descriptors(this->midiport_, fds_.data(), num_fds);
   }
 
   int do_read_events(auto parse_func, std::span<pollfd> fds)
@@ -121,7 +123,7 @@ public:
     {
       unsigned short res{};
       int err
-          = snd_rawmidi_poll_descriptors_revents(this->midiport_, fds.data(), fds.size(), &res);
+          = snd.rawmidi.poll_descriptors_revents(this->midiport_, fds.data(), fds.size(), &res);
       if (err < 0)
         return err;
 
@@ -144,7 +146,7 @@ public:
     unsigned char bytes[nbytes];
 
     int err = 0;
-    while ((err = snd_rawmidi_read(this->midiport_, bytes, nbytes)) > 0)
+    while ((err = snd.rawmidi.read(this->midiport_, bytes, nbytes)) > 0)
     {
       // err is the amount of bytes read
       decoder_.add_bytes(bytes, err);
@@ -190,7 +192,7 @@ public:
     struct timespec ts;
 
     int err = 0;
-    while ((err = snd_rawmidi_tread(this->midiport_, &ts, bytes, nbytes)) > 0)
+    while ((err = snd.rawmidi.tread(this->midiport_, &ts, bytes, nbytes)) > 0)
     {
       // err is the amount of bytes read
       int64_t ns{};
@@ -206,7 +208,7 @@ public:
   void close_port() override
   {
     if (midiport_)
-      snd_rawmidi_close(midiport_);
+      snd.rawmidi.close(midiport_);
     midiport_ = nullptr;
   }
 

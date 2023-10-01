@@ -21,6 +21,8 @@ public:
   {
   } configuration;
 
+  const libasound& snd = libasound::instance();
+
   midi_out_impl(output_configuration&& conf, alsa_raw_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
@@ -51,7 +53,7 @@ public:
   int connect_port(const char* portname)
   {
     constexpr int mode = SND_RAWMIDI_SYNC;
-    int status = snd_rawmidi_open(NULL, &midiport_, portname, mode);
+    int status = snd.rawmidi.open(NULL, &midiport_, portname, mode);
     if (status < 0)
     {
       error<driver_error>(
@@ -69,7 +71,7 @@ public:
   void close_port() override
   {
     if (midiport_)
-      snd_rawmidi_close(midiport_);
+      snd.rawmidi.close(midiport_);
     midiport_ = nullptr;
   }
 
@@ -93,7 +95,7 @@ public:
 
   bool write(const unsigned char* message, size_t size)
   {
-    if (snd_rawmidi_write(midiport_, message, size) < 0)
+    if (snd.rawmidi.write(midiport_, message, size) < 0)
     {
       error<driver_error>(
           this->configuration, "midi_out_alsa_raw::send_message: cannot write message.");
@@ -107,9 +109,9 @@ public:
   {
     snd_rawmidi_params_t* param;
     snd_rawmidi_params_alloca(&param);
-    snd_rawmidi_params_current(midiport_, param);
+    snd.rawmidi.params_current(midiport_, param);
 
-    std::size_t buffer_size = snd_rawmidi_params_get_buffer_size(param);
+    std::size_t buffer_size = snd.rawmidi.params_get_buffer_size(param);
     return std::min(buffer_size, (std::size_t)configuration.chunking->size);
   }
 
@@ -117,9 +119,9 @@ public:
   {
     snd_rawmidi_status_t* st{};
     snd_rawmidi_status_alloca(&st);
-    snd_rawmidi_status(midiport_, st);
+    snd.rawmidi.status(midiport_, st);
 
-    return snd_rawmidi_status_get_avail(st);
+    return snd.rawmidi.status_get_avail(st);
   }
 
   // inspired from ALSA amidi.c source code

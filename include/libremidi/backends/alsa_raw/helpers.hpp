@@ -1,8 +1,7 @@
 #pragma once
+#include <libremidi/backends/linux/alsa.hpp>
 #include <libremidi/config.hpp>
 #include <libremidi/detail/observer.hpp>
-
-#include <alsa/asoundlib.h>
 
 #include <chrono>
 #include <functional>
@@ -69,6 +68,7 @@ struct alsa_raw_port_info
 struct enumerator;
 struct snd_ctl_wrapper
 {
+  const libasound& snd;
   snd_ctl_t* ctl{};
   inline snd_ctl_wrapper(enumerator& self, const char* name);
 
@@ -76,7 +76,7 @@ struct snd_ctl_wrapper
   {
     if (ctl)
     {
-      snd_ctl_close(ctl);
+      snd.ctl.close(ctl);
     }
   }
 
@@ -86,6 +86,7 @@ struct snd_ctl_wrapper
 };
 struct enumerator
 {
+  const libasound& snd = libasound::instance();
   std::vector<alsa_raw_port_info> inputs;
   std::vector<alsa_raw_port_info> outputs;
 
@@ -129,11 +130,11 @@ struct enumerator
     snd_rawmidi_info_t* info;
 
     snd_rawmidi_info_alloca(&info);
-    snd_rawmidi_info_set_device(info, device);
-    snd_rawmidi_info_set_subdevice(info, sub);
-    snd_rawmidi_info_set_stream(info, stream);
+    snd.rawmidi.info_set_device(info, device);
+    snd.rawmidi.info_set_subdevice(info, sub);
+    snd.rawmidi.info_set_stream(info, stream);
 
-    const int status = snd_ctl_rawmidi_info(ctl, info);
+    const int status = snd.ctl.rawmidi.info(ctl, info);
     if (status == 0)
     {
       return 1;
@@ -142,7 +143,7 @@ struct enumerator
     {
       error(
           "alsa_raw_helpers::enumerator::is: cannot get rawmidi information:", card, device, sub,
-          snd_strerror(status));
+          snd.strerror(status));
       return status;
     }
     else
@@ -161,10 +162,10 @@ struct enumerator
     return is(SND_RAWMIDI_STREAM_OUTPUT, ctl, card, device, sub);
   }
 
-  static std::string get_card_name(int card)
+  std::string get_card_name(int card)
   {
     char* card_name{};
-    snd_card_get_name(card, &card_name);
+    snd.card.get_name(card, &card_name);
 
     std::string str = card_name;
     free(card_name);
@@ -188,13 +189,13 @@ struct enumerator
   {
     int card = -1;
 
-    int status = snd_card_next(&card);
+    int status = snd.card.next(&card);
     if (status < 0)
     {
       error(
           "alsa_raw_helpers::enumerator::enumerate_cards: "
           "cannot determine card number: ",
-          snd_strerror(status));
+          snd.strerror(status));
       return;
     }
 
@@ -210,12 +211,12 @@ struct enumerator
     {
       enumerate_devices(card);
 
-      if ((status = snd_card_next(&card)) < 0)
+      if ((status = snd.card.next(&card)) < 0)
       {
         error(
             "alsa_raw_helpers::enumerator::enumerate_cards: "
             "cannot determine card number: ",
-            snd_strerror(status));
+            snd.strerror(status));
         break;
       }
     }
@@ -225,14 +226,15 @@ struct enumerator
 };
 
 inline snd_ctl_wrapper::snd_ctl_wrapper(enumerator& self, const char* name)
+    : snd{self.snd}
 {
-  int status = snd_ctl_open(&ctl, name, 0);
+  int status = snd.ctl.open(&ctl, name, 0);
   if (status < 0)
   {
     self.error(
         "alsa_raw_helpers::enumerator::snd_ctl_wrapper: "
         "cannot open control for card",
-        name, snd_strerror(status));
+        name, snd.strerror(status));
   }
 }
 
@@ -253,7 +255,7 @@ struct midi1_enumerator : enumerator
     int device = -1;
     do
     {
-      const int status = snd_ctl_rawmidi_next_device(ctl, &device);
+      const int status = snd.ctl.rawmidi.next_device(ctl, &device);
       if (device == -1)
         return;
 
@@ -262,7 +264,7 @@ struct midi1_enumerator : enumerator
         error(
             "alsa_raw_helpers::enumerator::enumerate_devices: "
             "cannot determine device number: ",
-            snd_strerror(status));
+            snd.strerror(status));
         break;
       }
 
@@ -276,34 +278,34 @@ struct midi1_enumerator : enumerator
   {
     snd_rawmidi_info_t* info;
     snd_rawmidi_info_alloca(&info);
-    snd_rawmidi_info_set_device(info, device);
+    snd.rawmidi.info_set_device(info, device);
 
-    snd_rawmidi_info_set_stream(info, SND_RAWMIDI_STREAM_INPUT);
-    snd_ctl_rawmidi_info(ctl, info);
-    const int subs_in = snd_rawmidi_info_get_subdevices_count(info);
+    snd.rawmidi.info_set_stream(info, SND_RAWMIDI_STREAM_INPUT);
+    snd.ctl.rawmidi.info(ctl, info);
+    const int subs_in = snd.rawmidi.info_get_subdevices_count(info);
 
-    snd_rawmidi_info_set_stream(info, SND_RAWMIDI_STREAM_OUTPUT);
-    snd_ctl_rawmidi_info(ctl, info);
-    const int subs_out = snd_rawmidi_info_get_subdevices_count(info);
+    snd.rawmidi.info_set_stream(info, SND_RAWMIDI_STREAM_OUTPUT);
+    snd.ctl.rawmidi.info(ctl, info);
+    const int subs_out = snd.rawmidi.info_get_subdevices_count(info);
 
     alsa_raw_port_info d;
     d.card = card;
     d.dev = device;
     d.card_name = get_card_name(card);
-    d.device_name = snd_rawmidi_info_get_name(info);
+    d.device_name = snd.rawmidi.info_get_name(info);
 
     auto read_subdevice_info = [&](int sub) {
-      snd_rawmidi_info_set_subdevice(info, sub);
-      snd_ctl_rawmidi_info(ctl, info);
+      snd.rawmidi.info_set_subdevice(info, sub);
+      snd.ctl.rawmidi.info(ctl, info);
 
       d.device = device_identifier(card, device, sub);
-      d.subdevice_name = snd_rawmidi_info_get_subdevice_name(info);
+      d.subdevice_name = snd.rawmidi.info_get_subdevice_name(info);
       d.sub = sub;
     };
 
     if (subs_in > 0)
     {
-      snd_rawmidi_info_set_stream(info, SND_RAWMIDI_STREAM_INPUT);
+      snd.rawmidi.info_set_stream(info, SND_RAWMIDI_STREAM_INPUT);
       for (int sub = 0; sub < subs_in; sub++)
       {
         read_subdevice_info(sub);
@@ -313,7 +315,7 @@ struct midi1_enumerator : enumerator
 
     if (subs_out > 0)
     {
-      snd_rawmidi_info_set_stream(info, SND_RAWMIDI_STREAM_OUTPUT);
+      snd.rawmidi.info_set_stream(info, SND_RAWMIDI_STREAM_OUTPUT);
       for (int sub = 0; sub < subs_out; sub++)
       {
         read_subdevice_info(sub);
