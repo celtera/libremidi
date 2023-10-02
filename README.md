@@ -13,11 +13,21 @@ Additionnally, for MIDI 2 parsing support we use [cmidi2](https://github.com/ats
 
 ## Changelog 
 
+### Since v4.2
+* More robust MIDI 2.0 support.
+  * On macOS through CoreMIDI (input / output, requires macOS 11+).
+  * On Linux through ALSA sequencer API (input / output, requires kernel 6.5+ and latest libasound).
+  * The API can be used through MIDI 1 or MIDI 2 affordances, e. g. one can send UMP packets to a MIDI 1 API, they will get converted automatically.
+  * More backends to come, in particular with the new [Windows MIDI Services](https://github.com/microsoft/MIDI) started [here](https://github.com/jcelerier/libremidi/tree/master/include/libremidi/backends/winmidi)!
+  * Sysex handling on MIDI 2.0 is the responsibility of the user of the library, which simplifies the design immensely and allows the library to be used in stricter real-time contexts (as an UMP message has a fixed size, unlike MIDI 1 sysex which required potentially unbounded dynamic allocations with the previous design).
+  * See [midi_echo.cpp](https://github.com/jcelerier/libremidi/blob/master/examples/midi2_echo.cpp) for a complete example.
+* Linux: libasound and udev are now entirely loaded at run-time through `dlopen`. This is necessary for making apps that will run on older Linux versions which do not have the ALSA UMP APIs yet.
+  Note that to make an app which supports MIDI 2 on recent Linuxes and still runs on older ones, you will need to use the latest ALSA library headers as part of your build on an older distribution, by building [alsa-lib](https://github.com/alsa-project/alsa-lib) yourself (as the old distributions with an old glibc that you want to build against to make compatible software of course also ship an old `libasound` which won't have the UMP API...).
+
 ### Since v4
-* Experimental MIDI 2.0 support. For now only for CoreMIDI (input / output) and ALSA raw (input, with kernel 6.5+). 
-  * More backends to come!
-* A neat configuration system which enables to pass options to the underlying backends
-* Possibility to share the contexts across inputs and outputs to avoid creating multiple clients in e.g. JACK
+* Experimental MIDI 2.0 support.
+* A neat configuration system which enables to pass options to the underlying backends.
+* Possibility to share the contexts across inputs and outputs to avoid creating multiple clients in e.g. JACK.
 * Hotplug support for all the backends!
 * Reworked port opening API which now uses handles instead of port indices to increase robustness in the face of disconnection / reconnection of MIDI devices.
 * Integer timestamps everywhere, and in nanoseconds. Additionnally, it is now possible to choose different timestamping methods (e.g. relative, absolute monotonic clock...).
