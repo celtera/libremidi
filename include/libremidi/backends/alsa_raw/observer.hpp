@@ -94,12 +94,12 @@ private:
       // Check udev
       if (fds[0].revents & POLLIN)
       {
-        udev_device* dev = udev_monitor_receive_device(udev.monitor);
+        udev_device* dev = udev.udev.monitor_receive_device(udev.monitor);
         if (!dev)
           continue;
 
-        std::string_view act = udev_device_get_action(dev);
-        std::string_view ss = udev_device_get_subsystem(dev);
+        std::string_view act = udev.udev.device_get_action(dev);
+        std::string_view ss = udev.udev.device_get_subsystem(dev);
         if (!act.empty() && ss == "snd_seq")
         {
           if (act == "add" || act == "remove")
@@ -110,7 +110,7 @@ private:
           }
         }
 
-        udev_device_unref(dev);
+        udev.udev.device_unref(dev);
 
         fds[0].revents = 0;
       }

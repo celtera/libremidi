@@ -101,6 +101,7 @@ else()
     include/libremidi/backends/jack/shared_handler.hpp
 
     include/libremidi/backends/linux/alsa.hpp
+    include/libremidi/backends/linux/dylib_loader.hpp
     include/libremidi/backends/linux/helpers.hpp
     include/libremidi/backends/linux/udev.hpp
 
@@ -296,11 +297,9 @@ elseif(UNIX AND NOT APPLE)
 
       if(NOT LIBREMIDI_NO_UDEV)
         find_path(UDEV_INCLUDE_DIR libudev.h)
-        find_library(UDEV_LIBRARY udev)
-        if(UDEV_INCLUDE_DIR AND UDEV_LIBRARY)
+        if(UDEV_INCLUDE_DIR)
           target_compile_definitions(libremidi ${_public} LIBREMIDI_HAS_UDEV)
           target_include_directories(libremidi ${_public} ${UDEV_INCLUDE_DIR})
-          target_link_libraries(libremidi ${_public} ${UDEV_LIBRARY})
         endif()
       endif()
     endif()

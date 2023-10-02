@@ -1,77 +1,16 @@
 #pragma once
 
-#if __has_include(<dlfcn.h>)
-  #include <alsa/asoundlib.h>
+#include <libremidi/backends/linux/dylib_loader.hpp>
 
-  #include <dlfcn.h>
-
-  #include <cassert>
+#include <alsa/asoundlib.h>
 
 namespace libremidi
 {
-class dylib_loader
-{
-public:
-  explicit dylib_loader(const char* const so)
-  {
-    impl = dlopen(so, RTLD_LAZY | RTLD_LOCAL | RTLD_NODELETE);
-  }
-
-  dylib_loader(const dylib_loader&) noexcept = delete;
-  dylib_loader& operator=(const dylib_loader&) noexcept = delete;
-  dylib_loader(dylib_loader&& other) noexcept
-  {
-    impl = other.impl;
-    other.impl = nullptr;
-  }
-
-  dylib_loader& operator=(dylib_loader&& other) noexcept
-  {
-    impl = other.impl;
-    other.impl = nullptr;
-    return *this;
-  }
-
-  ~dylib_loader()
-  {
-    if (impl)
-    {
-      dlclose(impl);
-    }
-  }
-
-  template <typename T>
-  T symbol(const char* const sym) const noexcept
-  {
-    assert(impl);
-    return reinterpret_cast<T>(dlsym(impl, sym));
-  }
-
-  operator bool() const noexcept { return bool(impl); }
-
-private:
-  void* impl{};
-};
 
 struct libasound
 {
   // Useful one-liner:
-  // nm -A * | grep ' snd_' | grep -v '@' | cut -f 2 -d 'U' | sort | uniq  | sed 's/ snd_//' | sed 's/_/, /' | awk ' { print "LIBREMIDI_SYMBOL_DEF("$1 " " $2 ");" }'
-
-  #define LIBREMIDI_SYMBOL_NAME_S(prefix, name) "snd_" #prefix "_" #name
-  #define LIBREMIDI_SYMBOL_NAME(prefix, name) snd_##prefix##_##name
-  #define LIBREMIDI_SYMBOL_DEF(prefix, name) \
-    decltype(&::LIBREMIDI_SYMBOL_NAME(prefix, name)) name{};
-  #define LIBREMIDI_SYMBOL_INIT(prefix, name)                                  \
-    {                                                                          \
-      name = library.symbol<decltype(&::LIBREMIDI_SYMBOL_NAME(prefix, name))>( \
-          LIBREMIDI_SYMBOL_NAME_S(prefix, name));                              \
-      if (!name)                                                               \
-      {                                                                        \
-        available = false;                                                     \
-        return;                                                                \
-      }                                                                        \
-    }
+  // nm -A * | grep ' snd_' | grep -v '@' | cut -f 2 -d 'U' | sort | uniq  | sed 's/ snd_//' | sed 's/_/, /' | awk ' { print "LIBREMIDI_SYMBOL_DEF(snd_"$1 " " $2 ");" }'
 
   explicit libasound()
       : library{"libasound.so.2"}
@@ -107,13 +46,13 @@ struct libasound
         return;
       }
 
-      LIBREMIDI_SYMBOL_INIT(card, get_name);
-      LIBREMIDI_SYMBOL_INIT(card, next);
+      LIBREMIDI_SYMBOL_INIT(snd_card, get_name);
+      LIBREMIDI_SYMBOL_INIT(snd_card, next);
     }
     bool available{true};
 
-    LIBREMIDI_SYMBOL_DEF(card, get_name);
-    LIBREMIDI_SYMBOL_DEF(card, next);
+    LIBREMIDI_SYMBOL_DEF(snd_card, get_name);
+    LIBREMIDI_SYMBOL_DEF(snd_card, next);
   } card{library};
 
   struct ctl_t
@@ -130,13 +69,13 @@ struct libasound
         return;
       }
 
-      LIBREMIDI_SYMBOL_INIT(ctl, close);
-      LIBREMIDI_SYMBOL_INIT(ctl, open);
+      LIBREMIDI_SYMBOL_INIT(snd_ctl, close);
+      LIBREMIDI_SYMBOL_INIT(snd_ctl, open);
     }
     bool available{true};
 
-    LIBREMIDI_SYMBOL_DEF(ctl, close);
-    LIBREMIDI_SYMBOL_DEF(ctl, open);
+    LIBREMIDI_SYMBOL_DEF(snd_ctl, close);
+    LIBREMIDI_SYMBOL_DEF(snd_ctl, open);
 
     struct rawmidi_t
     {
@@ -148,12 +87,12 @@ struct libasound
           return;
         }
 
-        LIBREMIDI_SYMBOL_INIT(ctl_rawmidi, info);
-        LIBREMIDI_SYMBOL_INIT(ctl_rawmidi, next_device);
+        LIBREMIDI_SYMBOL_INIT(snd_ctl_rawmidi, info);
+        LIBREMIDI_SYMBOL_INIT(snd_ctl_rawmidi, next_device);
       }
       bool available{true};
-      LIBREMIDI_SYMBOL_DEF(ctl_rawmidi, info);
-      LIBREMIDI_SYMBOL_DEF(ctl_rawmidi, next_device);
+      LIBREMIDI_SYMBOL_DEF(snd_ctl_rawmidi, info);
+      LIBREMIDI_SYMBOL_DEF(snd_ctl_rawmidi, next_device);
     } rawmidi;
 
   #if __has_include(<alsa/ump.h>)
@@ -167,14 +106,14 @@ struct libasound
           return;
         }
 
-        LIBREMIDI_SYMBOL_INIT(ctl_ump, block_info);
-        LIBREMIDI_SYMBOL_INIT(ctl_ump, endpoint_info);
-        LIBREMIDI_SYMBOL_INIT(ctl_ump, next_device);
+        LIBREMIDI_SYMBOL_INIT(snd_ctl_ump, block_info);
+        LIBREMIDI_SYMBOL_INIT(snd_ctl_ump, endpoint_info);
+        LIBREMIDI_SYMBOL_INIT(snd_ctl_ump, next_device);
       }
       bool available{true};
-      LIBREMIDI_SYMBOL_DEF(ctl_ump, block_info);
-      LIBREMIDI_SYMBOL_DEF(ctl_ump, endpoint_info);
-      LIBREMIDI_SYMBOL_DEF(ctl_ump, next_device);
+      LIBREMIDI_SYMBOL_DEF(snd_ctl_ump, block_info);
+      LIBREMIDI_SYMBOL_DEF(snd_ctl_ump, endpoint_info);
+      LIBREMIDI_SYMBOL_DEF(snd_ctl_ump, next_device);
     } ump;
   #endif
   } ctl{library};
@@ -189,23 +128,23 @@ struct libasound
         return;
       }
 
-      LIBREMIDI_SYMBOL_INIT(midi, event_decode);
-      LIBREMIDI_SYMBOL_INIT(midi, event_encode);
-      LIBREMIDI_SYMBOL_INIT(midi, event_free);
-      LIBREMIDI_SYMBOL_INIT(midi, event_init);
-      LIBREMIDI_SYMBOL_INIT(midi, event_new);
-      LIBREMIDI_SYMBOL_INIT(midi, event_no_status);
-      LIBREMIDI_SYMBOL_INIT(midi, event_resize_buffer);
+      LIBREMIDI_SYMBOL_INIT(snd_midi, event_decode);
+      LIBREMIDI_SYMBOL_INIT(snd_midi, event_encode);
+      LIBREMIDI_SYMBOL_INIT(snd_midi, event_free);
+      LIBREMIDI_SYMBOL_INIT(snd_midi, event_init);
+      LIBREMIDI_SYMBOL_INIT(snd_midi, event_new);
+      LIBREMIDI_SYMBOL_INIT(snd_midi, event_no_status);
+      LIBREMIDI_SYMBOL_INIT(snd_midi, event_resize_buffer);
     }
 
     bool available{true};
-    LIBREMIDI_SYMBOL_DEF(midi, event_decode);
-    LIBREMIDI_SYMBOL_DEF(midi, event_encode);
-    LIBREMIDI_SYMBOL_DEF(midi, event_free);
-    LIBREMIDI_SYMBOL_DEF(midi, event_init);
-    LIBREMIDI_SYMBOL_DEF(midi, event_new);
-    LIBREMIDI_SYMBOL_DEF(midi, event_no_status);
-    LIBREMIDI_SYMBOL_DEF(midi, event_resize_buffer);
+    LIBREMIDI_SYMBOL_DEF(snd_midi, event_decode);
+    LIBREMIDI_SYMBOL_DEF(snd_midi, event_encode);
+    LIBREMIDI_SYMBOL_DEF(snd_midi, event_free);
+    LIBREMIDI_SYMBOL_DEF(snd_midi, event_init);
+    LIBREMIDI_SYMBOL_DEF(snd_midi, event_new);
+    LIBREMIDI_SYMBOL_DEF(snd_midi, event_no_status);
+    LIBREMIDI_SYMBOL_DEF(snd_midi, event_resize_buffer);
   } midi{library};
 
   #if __has_include(<alsa/rawmidi.h>)
@@ -218,59 +157,59 @@ struct libasound
         available = false;
         return;
       }
-      LIBREMIDI_SYMBOL_INIT(rawmidi, close);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, info_get_name);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, info_get_subdevice_name);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, info_get_subdevices_count);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, info_set_device);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, info_set_stream);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, info_set_subdevice);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, info_sizeof);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, open);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, params);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, params_current);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, params_get_buffer_size);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, params_set_clock_type);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, params_set_no_active_sensing);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, params_set_read_mode);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, params_sizeof);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, poll_descriptors);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, poll_descriptors_count);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, poll_descriptors_revents);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, read);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, status);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, status_get_avail);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, status_sizeof);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, tread);
-      LIBREMIDI_SYMBOL_INIT(rawmidi, write);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, close);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, info_get_name);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, info_get_subdevice_name);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, info_get_subdevices_count);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, info_set_device);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, info_set_stream);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, info_set_subdevice);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, info_sizeof);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, open);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, params);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, params_current);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, params_get_buffer_size);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, params_set_clock_type);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, params_set_no_active_sensing);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, params_set_read_mode);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, params_sizeof);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, poll_descriptors);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, poll_descriptors_count);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, poll_descriptors_revents);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, read);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, status);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, status_get_avail);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, status_sizeof);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, tread);
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, write);
     }
 
     bool available{true};
-    LIBREMIDI_SYMBOL_DEF(rawmidi, close);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, info_get_name);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, info_get_subdevice_name);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, info_get_subdevices_count);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, info_set_device);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, info_set_stream);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, info_set_subdevice);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, info_sizeof);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, open);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, params);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, params_current);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, params_get_buffer_size);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, params_set_clock_type);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, params_set_no_active_sensing);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, params_set_read_mode);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, params_sizeof);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, poll_descriptors);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, poll_descriptors_count);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, poll_descriptors_revents);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, read);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, status);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, status_get_avail);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, status_sizeof);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, tread);
-    LIBREMIDI_SYMBOL_DEF(rawmidi, write);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, close);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, info_get_name);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, info_get_subdevice_name);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, info_get_subdevices_count);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, info_set_device);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, info_set_stream);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, info_set_subdevice);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, info_sizeof);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, open);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, params);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, params_current);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, params_get_buffer_size);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, params_set_clock_type);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, params_set_no_active_sensing);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, params_set_read_mode);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, params_sizeof);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, poll_descriptors);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, poll_descriptors_count);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, poll_descriptors_revents);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, read);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, status);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, status_get_avail);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, status_sizeof);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, tread);
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, write);
   } rawmidi{library};
   #endif
 
@@ -287,118 +226,118 @@ struct libasound
         return;
       }
 
-      LIBREMIDI_SYMBOL_INIT(seq, alloc_queue);
-      LIBREMIDI_SYMBOL_INIT(seq, client_id);
-      LIBREMIDI_SYMBOL_INIT(seq, client_info_get_client);
-      LIBREMIDI_SYMBOL_INIT(seq, client_info_get_name);
-      LIBREMIDI_SYMBOL_INIT(seq, client_info_set_client);
-      LIBREMIDI_SYMBOL_INIT(seq, client_info_sizeof);
-      LIBREMIDI_SYMBOL_INIT(seq, close);
-      LIBREMIDI_SYMBOL_INIT(seq, connect_from);
-      LIBREMIDI_SYMBOL_INIT(seq, control_queue);
-      LIBREMIDI_SYMBOL_INIT(seq, create_port);
-      LIBREMIDI_SYMBOL_INIT(seq, delete_port);
-      LIBREMIDI_SYMBOL_INIT(seq, drain_output);
-      LIBREMIDI_SYMBOL_INIT(seq, event_input);
-      LIBREMIDI_SYMBOL_INIT(seq, event_input_pending);
-      LIBREMIDI_SYMBOL_INIT(seq, event_output);
-      LIBREMIDI_SYMBOL_INIT(seq, free_event);
-      LIBREMIDI_SYMBOL_INIT(seq, free_queue);
-      LIBREMIDI_SYMBOL_INIT(seq, get_any_client_info);
-      LIBREMIDI_SYMBOL_INIT(seq, get_any_port_info);
-      LIBREMIDI_SYMBOL_INIT(seq, get_port_info);
-      LIBREMIDI_SYMBOL_INIT(seq, open);
-      LIBREMIDI_SYMBOL_INIT(seq, poll_descriptors);
-      LIBREMIDI_SYMBOL_INIT(seq, poll_descriptors_count);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_get_addr);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_get_capability);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_get_name);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_get_port);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_get_type);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_set_capability);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_set_client);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_set_midi_channels);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_set_name);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_set_port);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_set_timestamping);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_set_timestamp_queue);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_set_timestamp_real);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_set_type);
-      LIBREMIDI_SYMBOL_INIT(seq, port_info_sizeof);
-      LIBREMIDI_SYMBOL_INIT(seq, port_subscribe_free);
-      LIBREMIDI_SYMBOL_INIT(seq, port_subscribe_malloc);
-      LIBREMIDI_SYMBOL_INIT(seq, port_subscribe_set_dest);
-      LIBREMIDI_SYMBOL_INIT(seq, port_subscribe_set_sender);
-      LIBREMIDI_SYMBOL_INIT(seq, port_subscribe_set_time_real);
-      LIBREMIDI_SYMBOL_INIT(seq, port_subscribe_set_time_update);
-      LIBREMIDI_SYMBOL_INIT(seq, query_next_client);
-      LIBREMIDI_SYMBOL_INIT(seq, query_next_port);
-      LIBREMIDI_SYMBOL_INIT(seq, queue_tempo_set_ppq);
-      LIBREMIDI_SYMBOL_INIT(seq, queue_tempo_set_tempo);
-      LIBREMIDI_SYMBOL_INIT(seq, queue_tempo_sizeof);
-      LIBREMIDI_SYMBOL_INIT(seq, set_client_name);
-      LIBREMIDI_SYMBOL_INIT(seq, set_port_info);
-      LIBREMIDI_SYMBOL_INIT(seq, set_queue_tempo);
-      LIBREMIDI_SYMBOL_INIT(seq, subscribe_port);
-      LIBREMIDI_SYMBOL_INIT(seq, unsubscribe_port);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, alloc_queue);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, client_id);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, client_info_get_client);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, client_info_get_name);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, client_info_set_client);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, client_info_sizeof);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, close);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, connect_from);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, control_queue);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, create_port);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, delete_port);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, drain_output);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, event_input);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, event_input_pending);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, event_output);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, free_event);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, free_queue);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, get_any_client_info);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, get_any_port_info);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, get_port_info);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, open);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, poll_descriptors);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, poll_descriptors_count);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_get_addr);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_get_capability);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_get_name);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_get_port);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_get_type);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_set_capability);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_set_client);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_set_midi_channels);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_set_name);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_set_port);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_set_timestamping);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_set_timestamp_queue);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_set_timestamp_real);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_set_type);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_sizeof);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_subscribe_free);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_subscribe_malloc);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_subscribe_set_dest);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_subscribe_set_sender);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_subscribe_set_time_real);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_subscribe_set_time_update);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, query_next_client);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, query_next_port);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, queue_tempo_set_ppq);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, queue_tempo_set_tempo);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, queue_tempo_sizeof);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, set_client_name);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, set_port_info);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, set_queue_tempo);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, subscribe_port);
+      LIBREMIDI_SYMBOL_INIT(snd_seq, unsubscribe_port);
     }
 
     bool available{true};
-    LIBREMIDI_SYMBOL_DEF(seq, alloc_queue);
-    LIBREMIDI_SYMBOL_DEF(seq, client_id);
-    LIBREMIDI_SYMBOL_DEF(seq, client_info_get_client);
-    LIBREMIDI_SYMBOL_DEF(seq, client_info_get_name);
-    LIBREMIDI_SYMBOL_DEF(seq, client_info_set_client);
-    LIBREMIDI_SYMBOL_DEF(seq, client_info_sizeof);
-    LIBREMIDI_SYMBOL_DEF(seq, close);
-    LIBREMIDI_SYMBOL_DEF(seq, connect_from);
-    LIBREMIDI_SYMBOL_DEF(seq, control_queue);
-    LIBREMIDI_SYMBOL_DEF(seq, create_port);
-    LIBREMIDI_SYMBOL_DEF(seq, delete_port);
-    LIBREMIDI_SYMBOL_DEF(seq, drain_output);
-    LIBREMIDI_SYMBOL_DEF(seq, event_input);
-    LIBREMIDI_SYMBOL_DEF(seq, event_input_pending);
-    LIBREMIDI_SYMBOL_DEF(seq, event_output);
-    LIBREMIDI_SYMBOL_DEF(seq, free_event);
-    LIBREMIDI_SYMBOL_DEF(seq, free_queue);
-    LIBREMIDI_SYMBOL_DEF(seq, get_any_client_info);
-    LIBREMIDI_SYMBOL_DEF(seq, get_any_port_info);
-    LIBREMIDI_SYMBOL_DEF(seq, get_port_info);
-    LIBREMIDI_SYMBOL_DEF(seq, open);
-    LIBREMIDI_SYMBOL_DEF(seq, poll_descriptors);
-    LIBREMIDI_SYMBOL_DEF(seq, poll_descriptors_count);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_get_addr);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_get_capability);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_get_name);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_get_port);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_get_type);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_set_capability);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_set_client);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_set_midi_channels);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_set_name);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_set_port);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_set_timestamping);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_set_timestamp_queue);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_set_timestamp_real);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_set_type);
-    LIBREMIDI_SYMBOL_DEF(seq, port_info_sizeof);
-    LIBREMIDI_SYMBOL_DEF(seq, port_subscribe_free);
-    LIBREMIDI_SYMBOL_DEF(seq, port_subscribe_malloc);
-    LIBREMIDI_SYMBOL_DEF(seq, port_subscribe_set_dest);
-    LIBREMIDI_SYMBOL_DEF(seq, port_subscribe_set_sender);
-    LIBREMIDI_SYMBOL_DEF(seq, port_subscribe_set_time_real);
-    LIBREMIDI_SYMBOL_DEF(seq, port_subscribe_set_time_update);
-    LIBREMIDI_SYMBOL_DEF(seq, query_next_client);
-    LIBREMIDI_SYMBOL_DEF(seq, query_next_port);
-    LIBREMIDI_SYMBOL_DEF(seq, queue_tempo_set_ppq);
-    LIBREMIDI_SYMBOL_DEF(seq, queue_tempo_set_tempo);
-    LIBREMIDI_SYMBOL_DEF(seq, queue_tempo_sizeof);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, alloc_queue);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, client_id);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, client_info_get_client);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, client_info_get_name);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, client_info_set_client);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, client_info_sizeof);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, close);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, connect_from);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, control_queue);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, create_port);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, delete_port);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, drain_output);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, event_input);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, event_input_pending);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, event_output);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, free_event);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, free_queue);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, get_any_client_info);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, get_any_port_info);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, get_port_info);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, open);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, poll_descriptors);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, poll_descriptors_count);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_get_addr);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_get_capability);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_get_name);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_get_port);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_get_type);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_set_capability);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_set_client);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_set_midi_channels);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_set_name);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_set_port);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_set_timestamping);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_set_timestamp_queue);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_set_timestamp_real);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_set_type);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_info_sizeof);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_subscribe_free);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_subscribe_malloc);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_subscribe_set_dest);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_subscribe_set_sender);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_subscribe_set_time_real);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, port_subscribe_set_time_update);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, query_next_client);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, query_next_port);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, queue_tempo_set_ppq);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, queue_tempo_set_tempo);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, queue_tempo_sizeof);
 
-    LIBREMIDI_SYMBOL_DEF(seq, set_client_name);
-    LIBREMIDI_SYMBOL_DEF(seq, set_port_info);
-    LIBREMIDI_SYMBOL_DEF(seq, set_queue_tempo);
-    LIBREMIDI_SYMBOL_DEF(seq, subscribe_port);
-    LIBREMIDI_SYMBOL_DEF(seq, unsubscribe_port);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, set_client_name);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, set_port_info);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, set_queue_tempo);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, subscribe_port);
+    LIBREMIDI_SYMBOL_DEF(snd_seq, unsubscribe_port);
 
   #if __has_include(<alsa/ump.h>)
     struct ump_t
@@ -410,16 +349,16 @@ struct libasound
           available = false;
           return;
         }
-        LIBREMIDI_SYMBOL_INIT(seq, set_client_midi_version);
-        LIBREMIDI_SYMBOL_INIT(seq_ump, event_input);
-        LIBREMIDI_SYMBOL_INIT(seq_ump, event_output);
+        LIBREMIDI_SYMBOL_INIT(snd_seq, set_client_midi_version);
+        LIBREMIDI_SYMBOL_INIT(snd_seq_ump, event_input);
+        LIBREMIDI_SYMBOL_INIT(snd_seq_ump, event_output);
       }
 
       bool available{true};
 
-      LIBREMIDI_SYMBOL_DEF(seq, set_client_midi_version);
-      LIBREMIDI_SYMBOL_DEF(seq_ump, event_input);
-      LIBREMIDI_SYMBOL_DEF(seq_ump, event_output);
+      LIBREMIDI_SYMBOL_DEF(snd_seq, set_client_midi_version);
+      LIBREMIDI_SYMBOL_DEF(snd_seq_ump, event_input);
+      LIBREMIDI_SYMBOL_DEF(snd_seq_ump, event_output);
     } ump;
   #endif
   } seq{library};
@@ -435,37 +374,37 @@ struct libasound
         return;
       }
 
-      LIBREMIDI_SYMBOL_INIT(ump, block_info_get_name);
-      LIBREMIDI_SYMBOL_INIT(ump, block_info_sizeof);
-      LIBREMIDI_SYMBOL_INIT(ump, close);
-      LIBREMIDI_SYMBOL_INIT(ump, endpoint_info_get_name);
-      LIBREMIDI_SYMBOL_INIT(ump, endpoint_info_sizeof);
-      LIBREMIDI_SYMBOL_INIT(ump, open);
-      LIBREMIDI_SYMBOL_INIT(ump, poll_descriptors);
-      LIBREMIDI_SYMBOL_INIT(ump, poll_descriptors_count);
-      LIBREMIDI_SYMBOL_INIT(ump, poll_descriptors_revents);
-      LIBREMIDI_SYMBOL_INIT(ump, rawmidi);
-      LIBREMIDI_SYMBOL_INIT(ump, rawmidi_params);
-      LIBREMIDI_SYMBOL_INIT(ump, rawmidi_params_current);
-      LIBREMIDI_SYMBOL_INIT(ump, read);
-      LIBREMIDI_SYMBOL_INIT(ump, tread);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, block_info_get_name);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, block_info_sizeof);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, close);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, endpoint_info_get_name);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, endpoint_info_sizeof);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, open);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, poll_descriptors);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, poll_descriptors_count);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, poll_descriptors_revents);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, rawmidi);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, rawmidi_params);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, rawmidi_params_current);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, read);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, tread);
     }
 
     bool available{true};
-    LIBREMIDI_SYMBOL_DEF(ump, block_info_get_name);
-    LIBREMIDI_SYMBOL_DEF(ump, block_info_sizeof);
-    LIBREMIDI_SYMBOL_DEF(ump, close);
-    LIBREMIDI_SYMBOL_DEF(ump, endpoint_info_get_name);
-    LIBREMIDI_SYMBOL_DEF(ump, endpoint_info_sizeof);
-    LIBREMIDI_SYMBOL_DEF(ump, open);
-    LIBREMIDI_SYMBOL_DEF(ump, poll_descriptors);
-    LIBREMIDI_SYMBOL_DEF(ump, poll_descriptors_count);
-    LIBREMIDI_SYMBOL_DEF(ump, poll_descriptors_revents);
-    LIBREMIDI_SYMBOL_DEF(ump, rawmidi);
-    LIBREMIDI_SYMBOL_DEF(ump, rawmidi_params);
-    LIBREMIDI_SYMBOL_DEF(ump, rawmidi_params_current);
-    LIBREMIDI_SYMBOL_DEF(ump, read);
-    LIBREMIDI_SYMBOL_DEF(ump, tread);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, block_info_get_name);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, block_info_sizeof);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, close);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, endpoint_info_get_name);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, endpoint_info_sizeof);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, open);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, poll_descriptors);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, poll_descriptors_count);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, poll_descriptors_revents);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, rawmidi);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, rawmidi_params);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, rawmidi_params_current);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, read);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, tread);
   } ump{library};
   #endif
 };
@@ -503,4 +442,3 @@ struct libasound
     #define snd_ump_endpoint_info_alloca(ptr) snd_dylib_alloca(ptr, ump, endpoint_info)
   #endif
 }
-#endif
