@@ -135,6 +135,7 @@ else()
     include/libremidi/backends/winuwp/observer.hpp
 
     include/libremidi/backends/alsa_seq.hpp
+    include/libremidi/backends/alsa_seq_ump.hpp
     include/libremidi/backends/alsa_raw.hpp
     include/libremidi/backends/alsa_raw_ump.hpp
     include/libremidi/backends/coremidi.hpp
