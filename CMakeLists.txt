@@ -265,10 +265,10 @@ elseif(WIN32)
     set(WINSDK_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots;KitsRoot10]")
     find_path(CPPWINRT_PATH "winrt/base.h"
         PATHS
-            ${WINSDK_PATH}
+            "${WINSDK_PATH}"
         PATH_SUFFIXES
-            ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt
-            Include/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt)
+            "${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt"
+            "Include/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt")
     if(CPPWINRT_PATH)
       message(STATUS "libremidi: using WinUWP")
       set(LIBREMIDI_HAS_WINUWP 1)
@@ -295,12 +295,13 @@ elseif(UNIX AND NOT APPLE)
       set(LIBREMIDI_HAS_ALSA 1)
 
       target_compile_definitions(libremidi ${_public} LIBREMIDI_ALSA)
+      target_include_directories(libremidi ${_public} "${ALSA_INCLUDE_DIR}")
 
       if(NOT LIBREMIDI_NO_UDEV)
         find_path(UDEV_INCLUDE_DIR libudev.h)
         if(UDEV_INCLUDE_DIR)
           target_compile_definitions(libremidi ${_public} LIBREMIDI_HAS_UDEV)
-          target_include_directories(libremidi ${_public} ${UDEV_INCLUDE_DIR})
+          target_include_directories(libremidi ${_public} "${UDEV_INCLUDE_DIR}")
         endif()
       endif()
     endif()
@@ -309,7 +310,7 @@ endif()
 
 ## JACK support ##
 if(NOT LIBREMIDI_NO_JACK)
-  find_path(WEAKJACK_PATH weakjack/weak_libjack.h HINTS ${WEAKJACK_FOLDER})
+  find_path(WEAKJACK_PATH weakjack/weak_libjack.h HINTS "${WEAKJACK_FOLDER}")
   find_path(JACK_PATH jack/jack.h)
   if(WEAKJACK_PATH AND JACK_PATH)
     message(STATUS "libremidi: using WeakJACK")
