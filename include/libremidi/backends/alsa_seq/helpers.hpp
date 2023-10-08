@@ -5,6 +5,7 @@
 
 #include <sys/time.h>
 
+#include <cstring>
 #include <optional>
 #include <string>
 
