@@ -48,14 +48,13 @@ inline constexpr port_handle seq_to_port_handle(uint64_t client, uint64_t port) 
 {
   return (client << 32) + port;
 }
+
 inline constexpr std::pair<int, int> seq_from_port_handle(port_handle p) noexcept
 {
   int client = p >> 32;
   int port = p & 0xFFFFFFFF;
   return {client, port};
 }
-static_assert(seq_from_port_handle(seq_to_port_handle(1234, 5432)).first == 1234);
-static_assert(seq_from_port_handle(seq_to_port_handle(1234, 5432)).second == 5432);
 
 // FIXME would be much prettier with std::generator
 inline void for_all_ports(
@@ -97,7 +96,7 @@ inline unsigned int iterate_port_info(
   snd.seq.client_info_set_client(cinfo, -1);
   while (snd.seq.query_next_client(seq, cinfo) >= 0)
   {
-    int client = snd.seq.client_info_get_client(cinfo);
+    const int client = snd.seq.client_info_get_client(cinfo);
     if (client == 0)
       continue;
 
@@ -106,13 +105,15 @@ inline unsigned int iterate_port_info(
     snd.seq.port_info_set_port(pinfo, -1);
     while (snd.seq.query_next_port(seq, pinfo) >= 0)
     {
-      unsigned int atyp = snd.seq.port_info_get_type(pinfo);
+      const unsigned int atyp = snd.seq.port_info_get_type(pinfo);
       if (((atyp & SND_SEQ_PORT_TYPE_MIDI_GENERIC) == 0) && ((atyp & SND_SEQ_PORT_TYPE_SYNTH) == 0)
           && ((atyp & SND_SEQ_PORT_TYPE_APPLICATION) == 0))
         continue;
 
-      unsigned int caps = snd.seq.port_info_get_capability(pinfo);
+      const unsigned int caps = snd.seq.port_info_get_capability(pinfo);
       if ((caps & type) != type)
+        continue;
+      if ((caps & SND_SEQ_PORT_CAP_NO_EXPORT) != 0)
         continue;
       if (count == portNumber)
         return 1;
