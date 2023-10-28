@@ -1,9 +1,9 @@
 if(NOT LIBREMIDI_HEADER_ONLY)
   install(TARGETS libremidi
           EXPORT libremidi-targets
-          ARCHIVE DESTINATION lib/static
-          RUNTIME DESTINATION bin
-          LIBRARY DESTINATION lib
+          ARCHIVE
+          RUNTIME
+          LIBRARY
   )
 else()
   install(TARGETS libremidi

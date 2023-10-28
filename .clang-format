@@ -89,7 +89,6 @@ WhitespaceSensitiveMacros:
   - get_js_string
 
 
-SortIncludes: true
 IncludeCategories:
   - Regex:           '^"'
     Priority:        1

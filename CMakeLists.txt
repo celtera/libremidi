@@ -12,6 +12,7 @@ include(CMakeDependentOption)
 include(CheckSymbolExists)
 include(CheckCXXSourceCompiles)
 include(CheckIncludeFileCXX)
+include(GNUInstallDirs)
 
 ### Options ###
 option(LIBREMIDI_HEADER_ONLY "Header-only mode" OFF)
