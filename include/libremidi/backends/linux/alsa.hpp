@@ -4,6 +4,14 @@
 
 #include <alsa/asoundlib.h>
 
+#if __has_include(<alsa/rawmidi.h>) && SND_LIB_VERSION >= SND_LIB_VER(1,2,6)
+  #define LIBREMIDI_ALSA_HAS_RAMWIDI 1
+#endif
+
+#if __has_include(<alsa/ump.h>) && SND_LIB_VERSION >= SND_LIB_VER(1,2,10)
+  #define LIBREMIDI_ALSA_HAS_UMP 1
+#endif
+
 namespace libremidi
 {
 
@@ -59,9 +67,9 @@ struct libasound
   {
     explicit ctl_t(const dylib_loader& library)
         : rawmidi{library}
-  #if __has_include(<alsa/ump.h>)
+#if LIBREMIDI_ALSA_HAS_UMP
         , ump{library}
-  #endif
+#endif
     {
       if (!library)
       {
@@ -95,7 +103,7 @@ struct libasound
       LIBREMIDI_SYMBOL_DEF(snd_ctl_rawmidi, next_device);
     } rawmidi;
 
-  #if __has_include(<alsa/ump.h>)
+#if LIBREMIDI_ALSA_HAS_UMP
     struct ump_t
     {
       explicit ump_t(const dylib_loader& library)
@@ -147,7 +155,7 @@ struct libasound
     LIBREMIDI_SYMBOL_DEF(snd_midi, event_resize_buffer);
   } midi{library};
 
-  #if __has_include(<alsa/rawmidi.h>)
+#if LIBREMIDI_ALSA_HAS_RAMWIDI
   struct rawmidi_t
   {
     explicit rawmidi_t(const dylib_loader& library)
@@ -216,9 +224,9 @@ struct libasound
   struct seq_t
   {
     explicit seq_t(const dylib_loader& library)
-  #if __has_include(<alsa/ump.h>)
+#if LIBREMIDI_ALSA_HAS_UMP
         : ump{library}
-  #endif
+#endif
     {
       if (!library)
       {
@@ -339,7 +347,7 @@ struct libasound
     LIBREMIDI_SYMBOL_DEF(snd_seq, subscribe_port);
     LIBREMIDI_SYMBOL_DEF(snd_seq, unsubscribe_port);
 
-  #if __has_include(<alsa/ump.h>)
+#if LIBREMIDI_ALSA_HAS_UMP
     struct ump_t
     {
       explicit ump_t(const dylib_loader& library)
@@ -363,7 +371,7 @@ struct libasound
   #endif
   } seq{library};
 
-  #if __has_include(<alsa/ump.h>)
+#if LIBREMIDI_ALSA_HAS_UMP
   struct ump_t
   {
     explicit ump_t(const dylib_loader& library)
@@ -435,10 +443,10 @@ struct libasound
   #undef snd_seq_queue_tempo_alloca
   #define snd_seq_queue_tempo_alloca(ptr) snd_dylib_alloca(ptr, seq, queue_tempo)
 
-  #if __has_include(<alsa/ump.h>)
-    #undef snd_ump_block_info_alloca
-    #define snd_ump_block_info_alloca(ptr) snd_dylib_alloca(ptr, ump, block_info)
-    #undef snd_ump_endpoint_info_alloca
-    #define snd_ump_endpoint_info_alloca(ptr) snd_dylib_alloca(ptr, ump, endpoint_info)
-  #endif
+#if LIBREMIDI_ALSA_HAS_UMP
+  #undef snd_ump_block_info_alloca
+  #define snd_ump_block_info_alloca(ptr) snd_dylib_alloca(ptr, ump, block_info)
+  #undef snd_ump_endpoint_info_alloca
+  #define snd_ump_endpoint_info_alloca(ptr) snd_dylib_alloca(ptr, ump, endpoint_info)
+#endif
 }

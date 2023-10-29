@@ -12,9 +12,14 @@
 #endif
 
 #if defined(LIBREMIDI_ALSA)
-  #include <libremidi/backends/alsa_raw.hpp>
   #include <libremidi/backends/alsa_seq.hpp>
-  #if __has_include(<alsa/ump.h>)
+  #include <libremidi/backends/linux/alsa.hpp>
+
+  #if LIBREMIDI_ALSA_HAS_RAMWIDI
+    #include <libremidi/backends/alsa_raw.hpp>
+  #endif
+
+  #if LIBREMIDI_ALSA_HAS_UMP
     #include <libremidi/backends/alsa_raw_ump.hpp>
     #include <libremidi/backends/alsa_seq_ump.hpp>
   #endif
@@ -62,7 +67,11 @@ static constexpr auto available_backends = make_tl(
     0
 #if defined(LIBREMIDI_ALSA)
     ,
-    alsa_seq::backend{}, alsa_raw::backend{}
+    alsa_seq::backend{}
+  #if LIBREMIDI_ALSA_HAS_RAMWIDI
+    ,
+    alsa_raw::backend{}
+  #endif
 #endif
 #if defined(LIBREMIDI_COREMIDI)
     ,
@@ -110,7 +119,7 @@ namespace midi2
 {
 static constexpr auto available_backends = make_tl(
     0
-#if defined(LIBREMIDI_ALSA) && __has_include(<alsa/ump.h>)
+#if defined(LIBREMIDI_ALSA) && LIBREMIDI_ALSA_HAS_UMP
     ,
     alsa_seq_ump::backend{}, alsa_raw_ump::backend{}
 #endif
