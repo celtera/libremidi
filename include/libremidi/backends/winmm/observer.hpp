@@ -165,7 +165,7 @@ protected:
 };
 }
 
-#if __has_include(<stop_token>)
+#if __has_include(<stop_token>) && __cpp_lib_jthread >= 201911L
   #include <stop_token>
 namespace libremidi::winmm
 {
@@ -189,8 +189,6 @@ public:
       }
     });
   }
-
-  ~observer_threaded() { thread.get_stop_source().request_stop(); }
 
 private:
   std::jthread thread;
