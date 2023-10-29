@@ -4,12 +4,15 @@
 
 #include <alsa/asoundlib.h>
 
-#if __has_include(<alsa/rawmidi.h>) && SND_LIB_VERSION >= SND_LIB_VER(1,2,6)
-  #define LIBREMIDI_ALSA_HAS_RAMWIDI 1
-#endif
+#if defined(SND_LIB_VERSION)
+  #if __has_include(<alsa/rawmidi.h>) && SND_LIB_VERSION >= ((1 << 16) | (2 << 8) | 6)
+    #define LIBREMIDI_ALSA_HAS_RAMWIDI 1
+    #define LIBREMIDI_ALSA_HAS_RAWMIDI_TREAD 1
+  #endif
 
-#if __has_include(<alsa/ump.h>) && SND_LIB_VERSION >= SND_LIB_VER(1,2,10)
-  #define LIBREMIDI_ALSA_HAS_UMP 1
+  #if __has_include(<alsa/ump.h>) && SND_LIB_VERSION >= ((1 << 16) | (2 << 8) | 10)
+    #define LIBREMIDI_ALSA_HAS_UMP 1
+  #endif
 #endif
 
 namespace libremidi
