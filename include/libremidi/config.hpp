@@ -20,7 +20,7 @@
   #define LIBREMIDI_EXPORT
 #endif
 
-#define LIBREMIDI_VERSION "4.2.3"
+#define LIBREMIDI_VERSION "4.2.4"
 
 #if defined(LIBREMIDI_USE_BOOST)
   #if !__has_include(<boost/container/small_vector.hpp>)
