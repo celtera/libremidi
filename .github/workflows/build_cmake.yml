@@ -34,13 +34,13 @@ jobs:
         - {
             name: "Ubuntu (clang, libstdc++)",
             os: ubuntu-latest,
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
             test_target: "test"
           }
         - {
             name: "Ubuntu (clang, libc++)",
             os: ubuntu-latest,
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-stdlib=libc++ -Werror=return-type'",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_CXX_FLAGS='-stdlib=libc++ -Werror=return-type'",
             test_target: "test"
           }
         - {
@@ -73,6 +73,7 @@ jobs:
         git submodule update --init --recursive
 
         if [ "$RUNNER_OS" == "Linux" ]; then
+          bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
           sudo apt update
           sudo apt install cmake libboost-dev libasound-dev libjack-jackd2-dev clang libc++-dev
         elif [ "$RUNNER_OS" == "Windows" ]; then
