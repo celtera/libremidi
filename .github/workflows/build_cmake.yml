@@ -73,7 +73,7 @@ jobs:
         git submodule update --init --recursive
 
         if [ "$RUNNER_OS" == "Linux" ]; then
-          bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+          sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
           sudo apt update
           sudo apt install cmake libboost-dev libasound-dev libjack-jackd2-dev clang libc++-dev
         elif [ "$RUNNER_OS" == "Windows" ]; then
