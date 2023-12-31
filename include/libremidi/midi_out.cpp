@@ -13,7 +13,7 @@ namespace libremidi
 LIBREMIDI_INLINE auto make_midi_out(auto base_conf, std::any api_conf)
 {
   std::unique_ptr<midi_out_api> ptr;
-  auto from_api = [&]<typename T>(T& backend) mutable {
+  auto from_api = [&]<typename T>(T& /*backend*/) mutable {
     if (auto conf = std::any_cast<typename T::midi_out_configuration>(&api_conf))
     {
       ptr = libremidi::make<typename T::midi_out>(std::move(base_conf), std::move(*conf));
@@ -26,7 +26,7 @@ LIBREMIDI_INLINE auto make_midi_out(auto base_conf, std::any api_conf)
   return ptr;
 }
 
-LIBREMIDI_INLINE midi_out::midi_out(output_configuration base_conf) noexcept
+LIBREMIDI_INLINE midi_out::midi_out(const output_configuration& base_conf) noexcept
 {
   for (const auto& api : available_apis())
   {

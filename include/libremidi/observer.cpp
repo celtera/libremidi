@@ -10,7 +10,7 @@ namespace libremidi
 LIBREMIDI_INLINE auto make_observer(auto base_conf, std::any api_conf)
 {
   std::unique_ptr<observer_api> ptr;
-  auto from_api = [&]<typename T>(T& backend) mutable {
+  auto from_api = [&]<typename T>(T& /*backend*/) mutable {
     if (auto conf = std::any_cast<typename T::midi_observer_configuration>(&api_conf))
     {
       ptr = libremidi::make<typename T::midi_observer>(std::move(base_conf), std::move(*conf));
@@ -23,7 +23,7 @@ LIBREMIDI_INLINE auto make_observer(auto base_conf, std::any api_conf)
   return ptr;
 }
 
-LIBREMIDI_INLINE observer::observer(observer_configuration base_conf) noexcept
+LIBREMIDI_INLINE observer::observer(const observer_configuration& base_conf) noexcept
 {
   for (const auto& api : available_apis())
   {

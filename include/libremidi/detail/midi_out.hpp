@@ -24,13 +24,13 @@ public:
   virtual int64_t current_time() const noexcept { return 0; }
 
   virtual void send_message(const unsigned char* message, size_t size) = 0;
-  virtual void schedule_message(int64_t ts, const unsigned char* message, size_t size)
+  virtual void schedule_message([[maybe_unused]] int64_t ts, const unsigned char* message, size_t size)
   {
     return send_message(message, size);
   }
 
   virtual void send_ump(const uint32_t* message, size_t size) = 0;
-  virtual void schedule_ump(int64_t ts, const uint32_t* ump, size_t size)
+  virtual void schedule_ump([[maybe_unused]] int64_t ts, const uint32_t* ump, size_t size)
   {
     return send_ump(ump, size);
   }
@@ -45,7 +45,7 @@ class out_api : public midi_out_api
 public:
   using midi_out_api::midi_out_api;
 
-  void send_ump(const uint32_t* message, size_t size)
+  void send_ump(const uint32_t* message, [[maybe_unused]] size_t size)
   {
     uint8_t midi[65536];
     int n = cmidi2_convert_single_ump_to_midi1(midi, sizeof(midi), (uint32_t*)message);

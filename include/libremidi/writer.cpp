@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <numeric>
 #include <ostream>
 #include <string>
+#include <utility>
 
 namespace libremidi
 {
@@ -47,7 +48,7 @@ static LIBREMIDI_INLINE std::ostream& write_uint16_be(std::ostream& out, uint16_
   return out;
 }
 
-static LIBREMIDI_INLINE std::ostream& write_int16_be(std::ostream& out, int16_t value)
+[[maybe_unused]] static LIBREMIDI_INLINE std::ostream& write_int16_be(std::ostream& out, int16_t value)
 {
   union
   {
@@ -75,7 +76,7 @@ static LIBREMIDI_INLINE std::ostream& write_uint32_be(std::ostream& out, uint32_
   return out;
 }
 
-static LIBREMIDI_INLINE std::ostream& write_int32_be(std::ostream& out, int32_t value)
+[[maybe_unused]] static LIBREMIDI_INLINE std::ostream& write_int32_be(std::ostream& out, int32_t value)
 {
   union
   {
@@ -90,7 +91,7 @@ static LIBREMIDI_INLINE std::ostream& write_int32_be(std::ostream& out, int32_t 
   return out;
 }
 
-static LIBREMIDI_INLINE std::ostream& write_float_be(std::ostream& out, float value)
+[[maybe_unused]] static LIBREMIDI_INLINE std::ostream& write_float_be(std::ostream& out, float value)
 {
   union
   {
@@ -105,7 +106,7 @@ static LIBREMIDI_INLINE std::ostream& write_float_be(std::ostream& out, float va
   return out;
 }
 
-static LIBREMIDI_INLINE std::ostream& write_double_be(std::ostream& out, double value)
+[[maybe_unused]] static LIBREMIDI_INLINE std::ostream& write_double_be(std::ostream& out, double value)
 {
   union
   {
@@ -131,11 +132,11 @@ static LIBREMIDI_INLINE void write_variable_length(uint32_t aValue, std::vector<
 {
   uint8_t bytes[5] = {0};
 
-  bytes[0] = (uint8_t)(((uint32_t)aValue >> 28) & 0x7F); // most significant 5 bits
-  bytes[1] = (uint8_t)(((uint32_t)aValue >> 21) & 0x7F); // next largest 7 bits
-  bytes[2] = (uint8_t)(((uint32_t)aValue >> 14) & 0x7F);
-  bytes[3] = (uint8_t)(((uint32_t)aValue >> 7) & 0x7F);
-  bytes[4] = (uint8_t)(((uint32_t)aValue) & 0x7F); // least significant 7 bits
+  bytes[0] = static_cast<uint8_t>((aValue >> 28) & 0x7F); // most significant 5 bits
+  bytes[1] = static_cast<uint8_t>((aValue >> 21) & 0x7F); // next largest 7 bits
+  bytes[2] = static_cast<uint8_t>((aValue >> 14) & 0x7F);
+  bytes[3] = static_cast<uint8_t>((aValue >> 7) & 0x7F);
+  bytes[4] = static_cast<uint8_t>((aValue) & 0x7F); // least significant 7 bits
 
   int start = 0;
   while (start < 5 && bytes[start] == 0)
@@ -159,25 +160,25 @@ add_event_track_count_check(std::vector<midi_track>& tracks, int track)
         "Refusing to add an event to track " + std::to_string(track)
         + " ; change add_event_track_count_check in libremidi writer.cpp to increase the limit.");
 
-  while (tracks.size() < track + 1)
-    tracks.push_back({});
+  while (tracks.size() < static_cast<std::size_t>(track + 1)) // NOLINT(*-misplaced-widening-cast)
+    tracks.emplace_back();
 }
 }
 
 LIBREMIDI_INLINE
-void writer::add_event(int tick, int track, message m)
+void writer::add_event(const int tick, const int track, const message& m)
 {
   util::add_event_track_count_check(tracks, track);
 
-  tracks[track].push_back({tick, track, m});
+  tracks[static_cast<std::size_t>(track)].push_back({tick, track, m});
 }
 
 LIBREMIDI_INLINE
-void writer::add_event(int track, track_event m)
+void writer::add_event(int track, const track_event& m)
 {
   util::add_event_track_count_check(tracks, track);
 
-  tracks[track].push_back(m);
+  tracks[static_cast<std::size_t>(track)].push_back(m);
 }
 
 LIBREMIDI_INLINE
@@ -187,7 +188,7 @@ void writer::add_track()
 }
 
 LIBREMIDI_INLINE
-void writer::write(std::ostream& out)
+void writer::write(std::ostream& out) const
 {
   // MIDI File Header
   out << 'M';
@@ -217,7 +218,7 @@ void writer::write(std::ostream& out)
       if (msg.get_meta_event_type() == meta_event_type::END_OF_TRACK)
         continue;
 
-      util::write_variable_length(event.tick, trackRawData);
+      util::write_variable_length(static_cast<uint32_t>(event.tick), trackRawData);
 
       if ((msg.get_message_type() == message_type::SYSTEM_EXCLUSIVE)
           || (event.m.get_message_type() == message_type::EOX))
@@ -261,7 +262,7 @@ void writer::write(std::ostream& out)
     out << 'r';
     out << 'k';
     util::write_uint32_be(out, static_cast<uint32_t>(trackRawData.size()));
-    out.write((char*)trackRawData.data(), trackRawData.size());
+    out.write(reinterpret_cast<char*>(trackRawData.data()), static_cast<std::streamsize>(trackRawData.size()));
   }
 }
 }
