@@ -80,7 +80,7 @@ public:
   //! * api_conf can be an instance of observer_configuration,
   //!   such as jack_observer_configuration, winmm_observer_configuration, etc...
   //! * if no callbacks are passed, no secondary thread will be created unless absolutely necessary
-  explicit observer(observer_configuration conf = {}) noexcept;
+  explicit observer(const observer_configuration &conf = {}) noexcept;
   explicit observer(observer_configuration conf, std::any api_conf);
   observer(const observer&) = delete;
   observer(observer&& other) noexcept;
@@ -91,8 +91,8 @@ public:
   [[nodiscard]] libremidi::API get_current_api() const noexcept;
 
   //! Return identifiers for the available MIDI ports
-  std::vector<libremidi::input_port> get_input_ports() const noexcept;
-  std::vector<libremidi::output_port> get_output_ports() const noexcept;
+  [[nodiscard]] std::vector<libremidi::input_port> get_input_ports() const noexcept;
+  [[nodiscard]] std::vector<libremidi::output_port> get_output_ports() const noexcept;
 
 private:
   std::unique_ptr<class observer_api> impl_;
@@ -103,7 +103,7 @@ class LIBREMIDI_EXPORT midi_in
 {
 public:
   //! Construct a midi_in object with the default MIDI 1 back-end for the platform
-  explicit midi_in(input_configuration conf) noexcept;
+  explicit midi_in(const input_configuration& conf) noexcept;
 
   //! Construct a midi_in object with a configuration object for a specific MIDI 1 back-end
   //! see configuration.hpp for the available configuration types.
@@ -158,7 +158,7 @@ class LIBREMIDI_EXPORT midi_out
 {
 public:
   //! Construct a midi_out object with the default back-end for the platform
-  explicit midi_out(output_configuration conf = {}) noexcept;
+  explicit midi_out(const output_configuration& conf = {}) noexcept;
 
   //! Construct a midi_out object with a configuration object for a specific back-end
   //! see configuration.hpp for the available configuration types.

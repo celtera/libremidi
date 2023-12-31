@@ -61,7 +61,7 @@ namespace util
 {
 struct no_validator
 {
-  static inline bool validate_track(const midi_track& track) { return true; }
+  static inline bool validate_track([[maybe_unused]] const midi_track& track) { return true; }
 };
 
 struct validator
@@ -108,9 +108,10 @@ struct read_unchecked
 {
   // Read a MIDI-style variable-length integer (big-endian value in groups of 7 bits,
   // with top bit set to signify that another byte follows).
-  static inline void ensure_size(const uint8_t* begin, const uint8_t* end, int64_t needed) { }
+  static inline void ensure_size([[maybe_unused]] const uint8_t* begin, [[maybe_unused]] const uint8_t* end,
+      [[maybe_unused]] int64_t needed) { }
 
-  static inline uint32_t read_variable_length(uint8_t const*& data, uint8_t const* end)
+  static inline uint32_t read_variable_length(uint8_t const*& data, [[maybe_unused]] uint8_t const* end)
   {
     uint32_t result = 0;
     while (true)
@@ -129,34 +130,40 @@ struct read_unchecked
   }
 
   static inline void
-  read_bytes(midi_bytes& buffer, uint8_t const*& data, const uint8_t* end, int num)
+  read_bytes(midi_bytes& buffer, uint8_t const*& data, [[maybe_unused]] const uint8_t* end, const std::size_t num)
   {
     buffer.reserve(buffer.size() + num);
-    for (int i = 0; i < num; ++i)
-      buffer.push_back(uint8_t(*data++));
+    for (std::size_t i = 0; i < num; ++i)
+      buffer.push_back(*data++);
   }
 
-  static inline uint16_t read_uint16_be(uint8_t const*& data, const uint8_t* end)
+  static inline void
+  read_bytes(midi_bytes& buffer, uint8_t const*& data, [[maybe_unused]] const uint8_t* end, const int num)
   {
-    uint16_t result = int(*data++) << 8;
-    result += int(*data++);
+    read_bytes(buffer, data, end, static_cast<std::size_t>(num));
+  }
+
+  static inline uint16_t read_uint16_be(uint8_t const*& data, [[maybe_unused]] const uint8_t* end)
+  {
+    uint16_t result = *data++ << 8u;
+    result += *data++;
     return result;
   }
 
-  static inline uint32_t read_uint24_be(uint8_t const*& data, const uint8_t* end)
+  static inline uint32_t read_uint24_be(uint8_t const*& data, [[maybe_unused]] const uint8_t* end)
   {
-    uint32_t result = int(*data++) << 16;
-    result += int(*data++) << 8;
-    result += int(*data++);
+    uint32_t result = *data++ << 16u;
+    result += static_cast<uint32_t>(*data++ << 8u);
+    result += *data++;
     return result;
   }
 
-  static inline uint32_t read_uint32_be(uint8_t const*& data, const uint8_t* end)
+  static inline uint32_t read_uint32_be(uint8_t const*& data, [[maybe_unused]] const uint8_t* end)
   {
-    uint32_t result = int(*data++) << 24;
-    result += int(*data++) << 16;
-    result += int(*data++) << 8;
-    result += int(*data++);
+    uint32_t result = *data++ << 24u;
+    result += static_cast<uint32_t>(*data++ << 16u);
+    result += static_cast<uint32_t>(*data++ << 8u);
+    result += *data++;
     return result;
   }
 };
@@ -166,15 +173,15 @@ struct read_checked
 {
   // Read a MIDI-style variable-length integer (big-endian value in groups of 7 bits,
   // with top bit set to signify that another byte follows).
-  static inline void ensure_size(const uint8_t* begin, const uint8_t* end, int64_t needed)
+  static inline void ensure_size(const uint8_t* begin, const uint8_t* end, const std::size_t needed)
   {
-    if (int64_t available = (end - begin); available < needed)
+    if (const auto available = static_cast<std::size_t>(end - begin); available < needed)
       throw std::runtime_error("MIDI reader: not enough data to process");
   }
 
-  static inline uint32_t read_variable_length(uint8_t const*& data, uint8_t const* end)
+  static inline std::size_t read_variable_length(uint8_t const*& data, uint8_t const* end)
   {
-    uint32_t result = 0;
+    std::size_t result = 0;
     while (true)
     {
       ensure_size(data, end, 1);
@@ -192,7 +199,7 @@ struct read_checked
   }
 
   static inline void
-  read_bytes(midi_bytes& buffer, uint8_t const*& data, uint8_t const* end, int num)
+  read_bytes(midi_bytes& buffer, uint8_t const*& data, uint8_t const* end, const std::size_t num)
   {
     ensure_size(data, end, num);
     read_unchecked::read_bytes(buffer, data, end, num);
@@ -236,21 +243,21 @@ track_event parse_event(
     message_type lastEventTypeByte)
 {
   byte_reader::ensure_size(dataStart, dataEnd, 1);
-  message_type type = (message_type)*dataStart++;
+  auto type = static_cast<message_type>(*dataStart++);
 
   track_event event{tick, track, message{}};
 
-  if (((uint8_t)type & 0xF0) == 0xF0)
+  if ((static_cast<uint8_t>(type) & 0xF0) == 0xF0)
   {
     // Meta event
-    if ((uint8_t)type == 0xFF)
+    if (static_cast<uint8_t>(type) == 0xFF)
     {
       byte_reader::ensure_size(dataStart, dataEnd, 1);
-      meta_event_type subtype = (meta_event_type)*dataStart++;
+      auto subtype = static_cast<meta_event_type>(*dataStart++);
 
       event.m.bytes.reserve(3);
-      event.m.bytes.push_back((uint8_t)type);
-      event.m.bytes.push_back((uint8_t)subtype);
+      event.m.bytes.push_back(static_cast<uint8_t>(type));
+      event.m.bytes.push_back(static_cast<uint8_t>(subtype));
 
       uint32_t length = 0;
       // Here we read the meta-event length manually, as this way we can also put it into
@@ -262,7 +269,7 @@ track_event parse_event(
         event.m.bytes.push_back(b);
         if (b & 0x80)
         {
-          uint8_t byte = (b & 0x7F);
+          const uint8_t byte = (b & 0x7F);
 
           length += byte;
           length <<= 7;
@@ -340,6 +347,8 @@ track_event parse_event(
             case 3: // 30
               max = 30;
               break;
+            default:
+              break;
           }
 
           if (h >= 24 || b[4] >= 60 || b[5] >= 60 || b[6] >= max || b[7] >= 100)
@@ -356,7 +365,7 @@ track_event parse_event(
           if (length != 2)
             throw std::invalid_argument("Expected length for KEY_SIGNATURE event is 2");
           byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
-          int8_t k = event.m[3];
+          auto k = static_cast<int8_t>(event.m[3]);
           if (k < -7 || k > 7)
             throw std::invalid_argument("Invalid KEY_SIGNATURE");
           if (event.m[4] > 1)
@@ -390,15 +399,15 @@ track_event parse_event(
 
     else if (type == message_type::SYSTEM_EXCLUSIVE)
     {
-      int length = byte_reader::read_variable_length(dataStart, dataEnd);
-      event.m.bytes = {(uint8_t)type};
+      const auto length = byte_reader::read_variable_length(dataStart, dataEnd);
+      event.m.bytes = {static_cast<uint8_t>(type)};
       byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
       return event;
     }
 
     else if (type == message_type::EOX)
     {
-      int length = byte_reader::read_variable_length(dataStart, dataEnd);
+      const auto length = byte_reader::read_variable_length(dataStart, dataEnd);
       byte_reader::read_bytes(event.m.bytes, dataStart, dataEnd, length);
       return event;
     }
@@ -414,20 +423,20 @@ track_event parse_event(
     event.m.bytes.clear();
 
     // Running status...
-    if (((uint8_t)type & 0x80) == 0)
+    if ((static_cast<uint8_t>(type) & 0x80) == 0)
     {
       // Reuse lastEventTypeByte as the event type.
       // eventTypeByte is actually the first parameter
-      event.m.bytes.push_back((uint8_t)lastEventTypeByte);
-      event.m.bytes.push_back((uint8_t)type);
+      event.m.bytes.push_back(static_cast<uint8_t>(lastEventTypeByte));
+      event.m.bytes.push_back(static_cast<uint8_t>(type));
       type = lastEventTypeByte;
     }
     else
     {
-      event.m.bytes.push_back((uint8_t)type);
+      event.m.bytes.push_back(static_cast<uint8_t>(type));
 
       byte_reader::ensure_size(dataStart, dataEnd, 1);
-      event.m.bytes.push_back((uint8_t)*dataStart++);
+      event.m.bytes.push_back(static_cast<uint8_t>(*dataStart++));
       lastEventTypeByte = type;
     }
 
@@ -437,23 +446,11 @@ track_event parse_event(
       throw std::invalid_argument("MIDI message has arguments > 127");
     };
 
-    switch (message_type((uint8_t)type & 0xF0))
+    switch (static_cast<message_type>(static_cast<uint8_t>(type) & 0xF0))
     {
       case message_type::NOTE_OFF:
-        byte_reader::ensure_size(dataStart, dataEnd, 1);
-        event.m.bytes.push_back(*dataStart++);
-        validate(event.m.bytes);
-        return event;
       case message_type::NOTE_ON:
-        byte_reader::ensure_size(dataStart, dataEnd, 1);
-        event.m.bytes.push_back(*dataStart++);
-        validate(event.m.bytes);
-        return event;
       case message_type::POLY_PRESSURE:
-        byte_reader::ensure_size(dataStart, dataEnd, 1);
-        event.m.bytes.push_back(*dataStart++);
-        validate(event.m.bytes);
-        return event;
       case message_type::CONTROL_CHANGE:
         byte_reader::ensure_size(dataStart, dataEnd, 1);
         event.m.bytes.push_back(*dataStart++);
@@ -548,10 +545,10 @@ try
 
   const uint8_t* const dataEnd = dataPtr + size;
 
-  int headerId = read_checked::read_uint32_be(dataPtr, dataEnd);
-  int headerLength = read_checked::read_uint32_be(dataPtr, dataEnd);
+  uint32_t headerId = read_checked::read_uint32_be(dataPtr, dataEnd);
+  uint32_t headerLength = read_checked::read_uint32_be(dataPtr, dataEnd);
 
-  if (headerId != str_to_headerid("MThd") || headerLength != 6)
+  if (static_cast<int>(headerId) != str_to_headerid("MThd") || headerLength != 6)
   {
 #if defined(__LIBREMIDI_DEBUG__)
     std::cerr << "libremidi::reader: couldn't parse header" << std::endl;
@@ -619,13 +616,13 @@ try
 
     const uint8_t* const trackEnd = dataPtr + headerLength;
 
-    message_type runningEvent = message_type::INVALID;
+    auto runningEvent = message_type::INVALID;
 
-    int tickCount = 0;
+    std::size_t tickCount = 0;
 
     while (dataPtr < trackEnd)
     {
-      auto tick = read_checked::read_variable_length(dataPtr, trackEnd);
+      const auto tick = read_checked::read_variable_length(dataPtr, trackEnd);
       if (useAbsoluteTicks)
       {
         tickCount += tick;
@@ -637,12 +634,12 @@ try
 
       try
       {
-        track_event ev = parse_event(tickCount, i, dataPtr, trackEnd, runningEvent);
+        track_event ev = parse_event(static_cast<int>(tickCount), i, dataPtr, trackEnd, runningEvent);
         if (!ev.m.empty())
         {
           if (!ev.m.is_meta_event())
           {
-            runningEvent = message_type(ev.m.bytes[0]);
+            runningEvent = static_cast<message_type>(ev.m.bytes[0]);
           }
         }
         else
