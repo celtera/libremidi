@@ -55,11 +55,9 @@ public:
 
   parse_result parse(const uint8_t* data, std::size_t size) noexcept;
   parse_result parse(const std::vector<uint8_t>& buffer) noexcept;
-#if defined(LIBREMIDI_HAS_SPAN)
   parse_result parse(std::span<uint8_t> buffer) noexcept;
-#endif
 
-  double get_end_time() const noexcept;
+  [[nodiscard]] double get_end_time() const noexcept;
 
   float ticksPerBeat{}; // precision (number of ticks distinguishable per second)
   float startingTempo{};

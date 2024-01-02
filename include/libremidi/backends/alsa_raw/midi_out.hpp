@@ -133,7 +133,7 @@ public:
     const std::size_t chunk_size = std::min(get_chunk_size(), size);
 
     // Send the first buffer
-    int len = chunk_size;
+    std::size_t len = chunk_size;
 
     if (!write(data, len))
       return;
@@ -156,10 +156,10 @@ public:
         return;
 
       // Write more data
-      int len = end - data;
+      len = end - data;
 
       // Maybe until the end of the sysex
-      if (auto sysex_end = (unsigned char*)memchr(data, 0xf7, len))
+      if (const auto sysex_end = static_cast<const unsigned char*>(memchr(data, 0xf7, len)))
         len = sysex_end - data + 1;
 
       if (len > chunk_size)
