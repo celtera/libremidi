@@ -70,19 +70,19 @@ LIBREMIDI_INLINE midi_out& midi_out::operator=(midi_out&& other) noexcept
 }
 
 LIBREMIDI_INLINE
-void midi_out::set_port_name(std::string_view portName)
+void midi_out::set_port_name(std::string_view portName) const
 {
   impl_->set_port_name(portName);
 }
 
 LIBREMIDI_INLINE
-libremidi::API midi_out::get_current_api() noexcept
+libremidi::API midi_out::get_current_api() const noexcept
 {
   return impl_->get_current_api();
 }
 
 LIBREMIDI_INLINE
-void midi_out::open_port(const output_port& port, std::string_view portName)
+void midi_out::open_port(const output_port& port, std::string_view portName) const
 {
   if (impl_->is_port_open())
     return;
@@ -95,7 +95,7 @@ void midi_out::open_port(const output_port& port, std::string_view portName)
 }
 
 LIBREMIDI_INLINE
-void midi_out::open_virtual_port(std::string_view portName)
+void midi_out::open_virtual_port(std::string_view portName) const
 {
   if (impl_->is_port_open())
     return;
@@ -107,7 +107,7 @@ void midi_out::open_virtual_port(std::string_view portName)
 }
 
 LIBREMIDI_INLINE
-void midi_out::close_port()
+void midi_out::close_port() const
 {
   impl_->close_port();
   impl_->connected_ = false;
@@ -127,87 +127,87 @@ bool midi_out::is_port_connected() const noexcept
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_message(const libremidi::message& message)
+void midi_out::send_message(const libremidi::message& message) const
 {
   send_message(message.bytes.data(), message.bytes.size());
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_message(std::span<const unsigned char> message)
+void midi_out::send_message(std::span<const unsigned char> message) const
 {
   send_message(message.data(), message.size());
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_message(unsigned char b0)
+void midi_out::send_message(unsigned char b0) const
 {
   send_message(&b0, 1);
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_message(unsigned char b0, unsigned char b1)
+void midi_out::send_message(unsigned char b0, unsigned char b1) const
 {
   send_message(std::to_array({b0, b1}));
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_message(unsigned char b0, unsigned char b1, unsigned char b2)
+void midi_out::send_message(unsigned char b0, unsigned char b1, unsigned char b2) const
 {
   send_message(std::to_array({b0, b1, b2}));
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_message(const unsigned char* message, size_t size)
+void midi_out::send_message(const unsigned char* message, size_t size) const
 {
 #if defined(LIBREMIDI_ASSERTIONS)
   assert(size > 0);
 #endif
 
-  (static_cast<midi_out_api*>(impl_.get()))->send_message(message, size);
+  impl_->send_message(message, size);
 }
 
 LIBREMIDI_INLINE
-    void midi_out::send_ump(const uint32_t* message, size_t size)
+    void midi_out::send_ump(const uint32_t* message, size_t size) const
 {
 #if defined(LIBREMIDI_ASSERTIONS)
   assert(size > 0);
   assert(size <= 4);
 #endif
 
-  (static_cast<midi_out_api*>(impl_.get()))->send_ump(message, size);
+  impl_->send_ump(message, size);
 }
 LIBREMIDI_INLINE
-    void midi_out::send_ump(const libremidi::ump& message)
+    void midi_out::send_ump(const libremidi::ump& message) const
 {
   send_ump(message.bytes, message.size());
 }
 
 LIBREMIDI_INLINE
-    void midi_out::send_ump(std::span<const uint32_t> message)
+    void midi_out::send_ump(std::span<const uint32_t> message) const
 {
   send_ump(message.data(), message.size());
 }
 
 LIBREMIDI_INLINE
-    void midi_out::send_ump(uint32_t b0)
+    void midi_out::send_ump(uint32_t b0) const
 {
   send_ump(&b0, 1);
 }
 
 LIBREMIDI_INLINE
-    void midi_out::send_ump(uint32_t b0, uint32_t b1)
+    void midi_out::send_ump(uint32_t b0, uint32_t b1) const
 {
   send_ump(std::to_array({b0, b1}));
 }
 
 LIBREMIDI_INLINE
-    void midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2)
+    void midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2) const
 {
   send_ump(std::to_array({b0, b1, b2}));
 }
 
 LIBREMIDI_INLINE
-    void midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b3)
+    void midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b3) const
 {
   send_ump(std::to_array({b0, b1, b2, b3}));
 }

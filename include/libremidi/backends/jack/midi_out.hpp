@@ -37,28 +37,28 @@ public:
       jack_ringbuffer_free(ringbuffer);
   }
 
-  void write(const unsigned char* data, int32_t sz) noexcept
+  void write(const unsigned char* data, int32_t sz) const noexcept
   {
-    if (sz + size_sz > ringbuffer_space)
+    if (static_cast<int32_t>(sz + size_sz) > ringbuffer_space)
       return;
 
-    while (jack_ringbuffer_write_space(ringbuffer) < size_sz + sz)
+    while (jack_ringbuffer_write_space(ringbuffer) < sz + size_sz)
       sched_yield();
 
-    jack_ringbuffer_write(ringbuffer, (char*)&sz, size_sz);
-    jack_ringbuffer_write(ringbuffer, (const char*)data, sz);
+    jack_ringbuffer_write(ringbuffer, reinterpret_cast<char*>(&sz), size_sz);
+    jack_ringbuffer_write(ringbuffer, reinterpret_cast<const char*>(data), sz);
   }
 
-  void read(void* jack_events) noexcept
+  void read(void* jack_events) const noexcept
   {
     int32_t sz;
-    while (jack_ringbuffer_peek(ringbuffer, (char*)&sz, size_sz) == size_sz
+    while (jack_ringbuffer_peek(ringbuffer, reinterpret_cast<char*>(&sz), size_sz) == size_sz
            && jack_ringbuffer_read_space(ringbuffer) >= size_sz + sz)
     {
       jack_ringbuffer_read_advance(ringbuffer, size_sz);
 
       if (auto midi = jack_midi_event_reserve(jack_events, 0, sz))
-        jack_ringbuffer_read(ringbuffer, (char*)midi, sz);
+        jack_ringbuffer_read(ringbuffer, reinterpret_cast<char*>(midi), sz);
       else
         jack_ringbuffer_read_advance(ringbuffer, sz);
     }

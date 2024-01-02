@@ -32,6 +32,7 @@ option(LIBREMIDI_FIND_BOOST "Actively look for Boost" OFF)
 option(LIBREMIDI_EXAMPLES "Enable examples" OFF)
 option(LIBREMIDI_TESTS "Enable tests" OFF)
 option(LIBREMIDI_CI "To be enabled only in CI, some tests cannot run there" OFF)
+option(LIBREMIDI_NO_WARNINGS "Disables warnings from library compilation" OFF)
 
 ### C++ features ###
 if(NOT CMAKE_CXX_STANDARD)
@@ -182,22 +183,24 @@ else()
   )
 endif()
 
-if(MSVC)
-	set(WARNING_FLAGS
-			/W4
-	)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-	set(WARNING_FLAGS
-			-Werror    # Turns all warnings into errors
-			-Wall   # Enable most warning messages.
-			-Wextra # Print extra (possibly unwanted) warnings.
-			#-Wpedantic # Issue warnings needed for strict compliance to the standard.
-	)
-else()
-	message(WARNING "CMake flags for compiler aren't set for compiler ${CMAKE_CXX_COMPILER_ID}")
-endif()
+if(NOT LIBREMIDI_NO_WARNINGS)
+	if(MSVC)
+		set(WARNING_FLAGS
+				/W4
+		)
+	elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+		set(WARNING_FLAGS
+				-Werror    # Turns all warnings into errors
+				-Wall   # Enable most warning messages.
+				-Wextra # Print extra (possibly unwanted) warnings.
+				#-Wpedantic # Issue warnings needed for strict compliance to the standard.
+		)
+	else()
+		message(WARNING "CMake flags for compiler aren't set for compiler ${CMAKE_CXX_COMPILER_ID}")
+	endif()
 
-target_compile_options(libremidi PUBLIC ${WARNING_FLAGS})
+	target_compile_options(libremidi PRIVATE ${WARNING_FLAGS})
+endif ()
 
 add_library(libremidi::libremidi ALIAS libremidi)
 

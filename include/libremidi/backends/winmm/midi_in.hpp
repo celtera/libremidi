@@ -64,7 +64,7 @@ public:
   bool do_open(unsigned int portNumber)
   {
     MMRESULT result = midiInOpen(
-        &this->inHandle, portNumber, reinterpret_cast<DWORD_PTR>(&midiInputCallback), reinterpret_cast<DWORD_PTR>(this),
+        &this->inHandle, portNumber, std::bit_cast<DWORD_PTR>(&midiInputCallback), std::bit_cast<DWORD_PTR>(this),
         CALLBACK_FUNCTION);
     if (result != MMSYSERR_NOERROR)
     {
@@ -78,7 +78,7 @@ public:
     this->sysexBuffer.resize(bufferCount);
     for (std::size_t i = 0; i < bufferCount; ++i)
     {
-      this->sysexBuffer[i] = reinterpret_cast<MIDIHDR*>(new char[sizeof(MIDIHDR)]);
+      this->sysexBuffer[i] = new MIDIHDR;
       this->sysexBuffer[i]->lpData = new char[configuration.sysex_buffer_size];
       this->sysexBuffer[i]->dwBufferLength = static_cast<DWORD>(configuration.sysex_buffer_size);
       this->sysexBuffer[i]->dwUser = i; // We use the dwUser parameter as buffer indicator

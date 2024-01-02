@@ -1,6 +1,7 @@
 
 #ifndef CMIDI2_H_INCLUDED
 #define CMIDI2_H_INCLUDED
+#pragma GCC system_header // Todo: remove before commit
 
 #include <stdbool.h>
 #include <stdint.h>

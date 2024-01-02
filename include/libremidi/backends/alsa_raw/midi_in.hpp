@@ -7,7 +7,6 @@
 
 #include <alsa/asoundlib.h>
 
-#include <atomic>
 #include <thread>
 
 namespace libremidi::alsa_raw
@@ -53,7 +52,7 @@ public:
   [[nodiscard]] int do_init_port(const char* portname)
   {
     constexpr int mode = SND_RAWMIDI_NONBLOCK;
-    if (int err = snd.rawmidi.open(&midiport_, nullptr, portname, mode); err < 0)
+    if (const int err = snd.rawmidi.open(&midiport_, nullptr, portname, mode); err < 0)
     {
       error<driver_error>(this->configuration, "midi_in_alsa_raw::open_port: cannot open device.");
       return err;
@@ -62,33 +61,33 @@ public:
     snd_rawmidi_params_t* params{};
     snd_rawmidi_params_alloca(&params);
 
-    if (int err = snd.rawmidi.params_current(midiport_, params); err < 0)
+    if (const int err = snd.rawmidi.params_current(midiport_, params); err < 0)
       return err;
-    if (int err = snd.rawmidi.params_set_no_active_sensing(midiport_, params, 1); err < 0)
+    if (const int err = snd.rawmidi.params_set_no_active_sensing(midiport_, params, 1); err < 0)
       return err;
 #if LIBREMIDI_ALSA_HAS_RAWMIDI_TREAD
     if (configuration.timestamps == timestamp_mode::NoTimestamp)
     {
-      if (int err = snd.rawmidi.params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_STANDARD);
+      if (const int err = snd.rawmidi.params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_STANDARD);
           err < 0)
         return err;
-      if (int err = snd.rawmidi.params_set_clock_type(midiport_, params, SND_RAWMIDI_CLOCK_NONE);
+      if (const int err = snd.rawmidi.params_set_clock_type(midiport_, params, SND_RAWMIDI_CLOCK_NONE);
           err < 0)
         return err;
     }
     else
     {
-      if (int err = snd.rawmidi.params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_TSTAMP);
+      if (const int err = snd.rawmidi.params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_TSTAMP);
           err < 0)
         return err;
-      if (int err
+      if (const int err
           = snd.rawmidi.params_set_clock_type(midiport_, params, SND_RAWMIDI_CLOCK_MONOTONIC);
           err < 0)
         return err;
     }
 #endif
 
-    if (int err = snd.rawmidi.params(midiport_, params); err < 0)
+    if (const int err = snd.rawmidi.params(midiport_, params); err < 0)
       return err;
 
     return init_pollfd();
@@ -101,7 +100,7 @@ public:
 
   [[nodiscard]] int init_pollfd()
   {
-    int num_fds = snd.rawmidi.poll_descriptors_count(this->midiport_);
+    const int num_fds = snd.rawmidi.poll_descriptors_count(this->midiport_);
 
     this->fds_.clear();
     this->fds_.resize(num_fds);
@@ -119,7 +118,7 @@ public:
     else
     {
       unsigned short res{};
-      int err
+      const int err
           = snd.rawmidi.poll_descriptors_revents(this->midiport_, fds.data(), fds.size(), &res);
       if (err < 0)
         return err;
@@ -160,7 +159,7 @@ public:
       case timestamp_mode::NoTimestamp:
         break;
       case timestamp_mode::Relative: {
-        auto t = int64_t(ts.tv_sec) * nanos + int64_t(ts.tv_nsec);
+        const auto t = static_cast<int64_t>(ts.tv_sec) * nanos + static_cast<int64_t>(ts.tv_nsec);
         if (firstMessage == true)
         {
           firstMessage = false;
@@ -177,13 +176,15 @@ public:
       case timestamp_mode::SystemMonotonic:
         res = int64_t(ts.tv_sec) * nanos + int64_t(ts.tv_nsec);
         break;
+      default:
+        break;
     }
   }
 
 #if LIBREMIDI_ALSA_HAS_RAWMIDI_TREAD
   int read_input_buffer_with_timestamps()
   {
-    static const constexpr int nbytes = 1024;
+    static constexpr int nbytes = 1024;
 
     unsigned char bytes[nbytes];
     struct timespec ts;
@@ -236,10 +237,10 @@ public:
     }
   }
 
-  ~midi_in_alsa_raw_threaded()
+  ~midi_in_alsa_raw_threaded() override
   {
     // Close a connection if it exists.
-    this->close_port();
+    this->midi_in_alsa_raw_threaded::close_port();
   }
 
 private:
@@ -292,9 +293,9 @@ private:
     return true;
   }
 
-  bool open_port(const input_port& port, std::string_view name) override
+  bool open_port(const input_port& port, std::string_view /*name*/) override
   {
-    if (int err = midi_in_impl::init_port(port); err < 0)
+    if (const int err = midi_in_impl::init_port(port); err < 0)
       return false;
     if (!start_thread())
       return false;
@@ -347,7 +348,7 @@ private:
     }
   }
 
-  bool open_port(const input_port& p, std::string_view name) override
+  bool open_port(const input_port& p, std::string_view /*name*/) override
   {
     if (midi_in_impl::init_port(p) < 0)
       return false;
