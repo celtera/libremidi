@@ -222,7 +222,8 @@ template <typename Enumerator>
 struct observer_impl_base : observer_dummy
 {
   explicit observer_impl_base(
-      observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
+      [[maybe_unused]] observer_configuration&& conf,
+      [[maybe_unused]] alsa_raw_observer_configuration&& apiconf)
       : observer_dummy{dummy_configuration{}, dummy_configuration{}}
   {
   }
