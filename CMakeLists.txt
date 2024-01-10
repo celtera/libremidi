@@ -39,7 +39,6 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 check_cxx_source_compiles("#include <thread>\nint main() { std::jthread t; }" HAS_STD_JTHREAD)
 
-
 ### Main library ###
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -176,6 +175,11 @@ else()
   )
   set(_public PUBLIC)
   set(_private PRIVATE)
+
+  set_target_properties(libremidi PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION}
+  )
 endif()
 
 add_library(libremidi::libremidi ALIAS libremidi)
