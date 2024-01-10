@@ -19,7 +19,7 @@ TEST_CASE("poly aftertouch", "[midi_in]")
 
   libremidi::midi_out midi_out{
       {}, libremidi::jack_output_configuration{.client_name = "libremidi-test-out"}};
-  midi_out.open_virtual_port();
+  midi_out.open_virtual_port("port");
 
   libremidi::midi_in midi{
       libremidi::input_configuration{
@@ -29,15 +29,17 @@ TEST_CASE("poly aftertouch", "[midi_in]")
     queue.push_back(std::move(msg));
           }},
       libremidi::jack_input_configuration{.client_name = "libremidi-test"}};
-  midi.open_virtual_port();
+  midi.open_virtual_port("port");
 
   jack_options_t opt = JackNullOption;
   jack_status_t status;
   auto jack_client = jack_client_open("libremidi-tester", opt, &status);
-  jack_activate(jack_client);
+  int ret = jack_activate(jack_client);
+  REQUIRE(ret == 0);
 
-  jack_connect(
-      jack_client, "libremidi-test-out:libremidi Output", "libremidi-test:libremidi Input");
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  ret = jack_connect(jack_client, "libremidi-test-out:port", "libremidi-test:port");
+  REQUIRE(ret == 0);
 
   // Flush potentially initial messages
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
