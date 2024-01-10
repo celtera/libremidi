@@ -15,7 +15,7 @@ LIBREMIDI_INLINE auto make_midi_in(auto base_conf, std::any api_conf, auto backe
 
   assert(base_conf.on_message);
 
-  auto from_api = [&]<typename T>(T& backend) mutable {
+  auto from_api = [&]<typename T>(T& /*backend*/) mutable {
     if (auto conf = std::any_cast<typename T::midi_in_configuration>(&api_conf))
     {
       ptr = libremidi::make<typename T::midi_in>(std::move(base_conf), std::move(*conf));
@@ -27,7 +27,7 @@ LIBREMIDI_INLINE auto make_midi_in(auto base_conf, std::any api_conf, auto backe
   return ptr;
 }
 
-LIBREMIDI_INLINE midi_in::midi_in(input_configuration base_conf) noexcept
+LIBREMIDI_INLINE midi_in::midi_in(const input_configuration& base_conf) noexcept
 {
   for (const auto& api : available_apis())
   {

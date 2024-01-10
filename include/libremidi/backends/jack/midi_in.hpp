@@ -72,7 +72,7 @@ public:
   }
 
   void set_timestamp(
-      jack_nframes_t frame, jack_nframes_t start_frames, jack_time_t abs_usec,
+      jack_nframes_t frame, jack_nframes_t start_frames, jack_time_t /*abs_usec*/,
       libremidi::message& msg) noexcept
   {
     switch (configuration.timestamps)

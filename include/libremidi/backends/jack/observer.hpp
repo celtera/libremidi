@@ -185,8 +185,8 @@ public:
 
     jack_set_port_rename_callback(
         this->client,
-        +[](jack_port_id_t p, const char* old_name, const char* new_name, void* arg) {
-          auto& self = *(observer_jack*)arg;
+        +[](jack_port_id_t p, const char* /*old_name*/, const char* /*new_name*/, void* arg) {
+          const auto& self = *static_cast<observer_jack*>(arg);
 
           auto port = jack_port_by_id(self.client, p);
           if (!port)

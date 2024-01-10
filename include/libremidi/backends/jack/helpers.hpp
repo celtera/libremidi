@@ -4,7 +4,7 @@
   #include <weakjack/weak_libjack.h>
 #elif __has_include(<weak_libjack.h>)
   #include <weak_libjack.h>
-#elif __has_include(<jack/jack.h>)
+#elif __has_include(<jack/jack.h> )
   #include <jack/jack.h>
   #include <jack/midiport.h>
   #include <jack/ringbuffer.h>
@@ -39,7 +39,7 @@ struct jack_client
     }
     else
     {
-      auto short_name = jack_port_short_name(port);
+      const auto short_name = jack_port_short_name(port);
       if (short_name && strlen(short_name) > 0)
         return short_name;
       return jack_port_name(port);
@@ -51,7 +51,7 @@ struct jack_client
       -> std::conditional_t<Input, input_port, output_port>
   {
     return {{
-        .client = std::uintptr_t(client),
+        .client = reinterpret_cast<std::uintptr_t>(client),
         .port = 0,
         .manufacturer = "",
         .device_name = "",
@@ -61,7 +61,8 @@ struct jack_client
   }
 
   template <bool Input>
-  static auto get_ports(jack_client_t* client, const char* pattern, JackPortFlags flags) noexcept
+  static auto
+  get_ports(jack_client_t* client, const char* pattern, const JackPortFlags flags) noexcept
       -> std::vector<std::conditional_t<Input, input_port, output_port>>
   {
     std::vector<std::conditional_t<Input, input_port, output_port>> ret;
@@ -214,7 +215,8 @@ struct jack_helpers : jack_client
     if (portName.empty())
       portName = flags & JackPortIsInput ? "i" : "o";
 
-    if (self.configuration.client_name.size() + portName.size() + 1 + 1 >= jack_port_name_size())
+    if (self.configuration.client_name.size() + portName.size() + 2u
+        >= static_cast<size_t>(jack_port_name_size()))
     {
       self.template error<invalid_use_error>(
           self.configuration, "JACK: port name length limit exceeded");

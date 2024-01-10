@@ -222,7 +222,7 @@ struct alsa_data
   }
 
   [[nodiscard]] int create_port(
-      auto& self, std::string_view portName, unsigned int caps, unsigned int type,
+      auto& /*self*/, std::string_view portName, unsigned int caps, unsigned int type,
       std::optional<int> queue)
   {
     if (this->vport < 0)

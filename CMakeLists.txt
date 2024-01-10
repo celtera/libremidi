@@ -31,7 +31,9 @@ option(LIBREMIDI_SLIM_MESSAGE "Use a fixed-size message format" 0)
 option(LIBREMIDI_FIND_BOOST "Actively look for Boost" OFF)
 option(LIBREMIDI_EXAMPLES "Enable examples" OFF)
 option(LIBREMIDI_TESTS "Enable tests" OFF)
-option(LIBREMIDI_CI "To be enabled only in CI, some tests cannot run there" OFF)
+option(LIBREMIDI_CI "To be enabled only in CI, some tests cannot run there. Also enables -Werror." OFF)
+
+cmake_dependent_option(LIBREMIDI_NO_WARNINGS "Disables warnings from library compilation" OFF "NOT LIBREMIDI_HEADER_ONLY" ON)
 
 ### C++ features ###
 if(NOT CMAKE_CXX_STANDARD)
@@ -181,6 +183,20 @@ else()
     SOVERSION ${PROJECT_VERSION}
   )
 endif()
+
+if(NOT LIBREMIDI_NO_WARNINGS)
+  if(MSVC)
+    target_compile_options(libremidi PRIVATE
+        /W4
+        /wd4068 # pragma GCC unrecognized
+        /wd4251 # DLL linkage and a public member does not have dll linkage
+        /wd4275 # DLL linkage when inheriting from std::runtime_error
+        # Too many... $<$<BOOL:${LIBREMIDI_CI}>:/WX>
+    )
+  else()
+    target_compile_options(libremidi PRIVATE -Wall -Wextra $<$<BOOL:${LIBREMIDI_CI}>:-Werror>)
+  endif()
+endif ()
 
 add_library(libremidi::libremidi ALIAS libremidi)
 

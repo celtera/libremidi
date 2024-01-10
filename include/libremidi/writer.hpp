@@ -37,12 +37,12 @@ public:
   int ticksPerQuarterNote{120};
   std::vector<midi_track> tracks;
 
-  void add_event(int tick, int track, message m);
-  void add_event(int track, track_event m);
+  void add_event(int tick, int track, const message& m);
+  void add_event(int track, const track_event& m);
 
   void add_track();
 
-  void write(std::ostream& out);
+  void write(std::ostream& out) const;
 };
 }
 

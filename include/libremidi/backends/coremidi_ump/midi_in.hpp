@@ -138,7 +138,11 @@ public:
     }
   }
 
-  void set_timestamp(const MIDIEventPacket& packet, libremidi::ump& msg) noexcept { }
+  void set_timestamp(
+      [[maybe_unused]] const MIDIEventPacket& packet,
+      [[maybe_unused]] libremidi::ump& msg) noexcept
+  {
+  }
 
   void midiInputCallback(const MIDIEventList* list, void* /*srcRef*/)
   {

@@ -95,8 +95,8 @@ struct message
 
   auto clear() noexcept { bytes.clear(); }
 
-  auto& operator[](int i) const noexcept { return bytes[i]; }
-  auto& operator[](int i) noexcept { return bytes[i]; }
+  auto& operator[](midi_bytes::size_type i) const noexcept { return bytes[i]; }
+  auto& operator[](midi_bytes::size_type i) noexcept { return bytes[i]; }
 
   auto& front() const { return bytes.front(); }
   auto& back() const { return bytes.back(); }
@@ -138,18 +138,18 @@ struct message
   {
     if (!is_meta_event())
       return meta_event_type::UNKNOWN;
-    return (meta_event_type)bytes[1];
+    return static_cast<meta_event_type>(bytes[1]);
   }
 
   message_type get_message_type() const noexcept
   {
-    if (bytes[0] >= uint8_t(message_type::SYSTEM_EXCLUSIVE))
+    if (bytes[0] >= static_cast<uint8_t>(message_type::SYSTEM_EXCLUSIVE))
     {
-      return (message_type)(bytes[0] & 0xFF);
+      return static_cast<message_type>(bytes[0] & 0xFF);
     }
     else
     {
-      return (message_type)(bytes[0] & 0xF0);
+      return static_cast<message_type>(bytes[0] & 0xF0);
     }
   }
 
@@ -169,12 +169,12 @@ struct channel_events
       channel = 0;
     else if (channel > 15)
       channel = 15;
-    return channel;
+    return static_cast<uint8_t>(channel);
   }
 
   static uint8_t make_command(const message_type type, const int channel) noexcept
   {
-    return (uint8_t)((uint8_t)type | clamp_channel(channel));
+    return static_cast<uint8_t>(static_cast<uint8_t>(type) | clamp_channel(channel));
   }
 
   static message note_on(uint8_t channel, uint8_t note, uint8_t velocity) noexcept
@@ -200,8 +200,8 @@ struct channel_events
   static message pitch_bend(uint8_t channel, int value) noexcept
   {
     return {
-        make_command(message_type::PITCH_BEND, channel), (unsigned char)(value & 0x7F),
-        (uint8_t)((value >> 7) & 0x7F)};
+        make_command(message_type::PITCH_BEND, channel), static_cast<unsigned char>(value & 0x7F),
+        static_cast<uint8_t>((value >> 7) & 0x7F)};
   }
 
   static message pitch_bend(uint8_t channel, uint8_t lsb, uint8_t msb) noexcept
@@ -226,12 +226,18 @@ struct meta_events
 
   static message channel(int channel) noexcept
   {
-    return {0xff, 0x20, 0x01, (uint8_t)std::clamp(0, 0xff, channel - 1)};
+    return {0xff, 0x20, 0x01, static_cast<uint8_t>(std::clamp(0, 0xff, channel - 1))};
   }
 
   static message tempo(int mpqn) noexcept
   {
-    return {0xff, 81, 3, (uint8_t)(mpqn >> 16), (uint8_t)(mpqn >> 8), (uint8_t)mpqn};
+    return {
+        0xff,
+        81,
+        3,
+        static_cast<uint8_t>(mpqn >> 16),
+        static_cast<uint8_t>(mpqn >> 8),
+        static_cast<uint8_t>(mpqn)};
   }
 
   static message time_signature(int numerator, int denominator)
@@ -245,7 +251,8 @@ struct meta_events
       ++powTwo;
     }
 
-    return {0xff, 0x58, 0x04, (uint8_t)numerator, (uint8_t)powTwo, 1, 96};
+    return {0xff, 0x58, 0x04, static_cast<uint8_t>(numerator), static_cast<uint8_t>(powTwo),
+            1,    96};
   }
 
   // Where key index goes from -7 (7 flats, C♭ Major) to +7 (7 sharps, C♯
@@ -256,12 +263,16 @@ struct meta_events
     if (keyIndex < -7 || keyIndex > 7)
       throw std::range_error("meta_events::key_signature: out of range");
 #endif
-    return {0xff, 0x59, 0x02, (uint8_t)keyIndex, isMinor ? (uint8_t)1 : (uint8_t)0};
+    return {
+        0xff, 0x59, 0x02, static_cast<uint8_t>(keyIndex),
+        isMinor ? static_cast<uint8_t>(1) : static_cast<uint8_t>(0)};
   }
 
   static message song_position(int positionInBeats) noexcept
   {
-    return {0xf2, (uint8_t)(positionInBeats & 127), (uint8_t)((positionInBeats >> 7) & 127)};
+    return {
+        0xf2, static_cast<uint8_t>(positionInBeats & 127),
+        static_cast<uint8_t>((positionInBeats >> 7) & 127)};
   }
 };
 

@@ -88,7 +88,7 @@ protected:
 
     if (portRemovedFunc)
     {
-      for (const auto port : prevList)
+      for (const auto& port : prevList)
       {
         auto iter
             = std::ranges::find(currList, port.display_name, &port_information::display_name);
@@ -231,7 +231,7 @@ public:
 
 private:
   std::thread thread;
-  std::atomic_flag stop_flag{ATOMIC_FLAG_INIT};
+  std::atomic_flag stop_flag = ATOMIC_FLAG_INIT;
   std::binary_semaphore sema;
 };
 }

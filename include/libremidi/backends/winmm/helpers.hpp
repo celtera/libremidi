@@ -35,8 +35,8 @@ inline std::string ConvertToUTF8(const TCHAR* str)
   int length = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, nullptr, 0, nullptr, nullptr);
   if (length)
   {
-    u8str.assign(length - 1, 0);
-    length = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, &u8str[0], length, nullptr, nullptr);
+    u8str.assign(static_cast<std::string::size_type>(length - 1), 0);
+    /*length =*/WideCharToMultiByte(CP_UTF8, 0, wstr, -1, &u8str[0], length, nullptr, nullptr);
   }
   return u8str;
 }

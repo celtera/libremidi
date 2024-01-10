@@ -17,7 +17,7 @@ struct client_configuration
   //! Set a callback function to be invoked for incoming MIDI messages.
   //! Mandatory!
   std::function<void(const libremidi::input_port&, message&&)> on_message
-      = [](const libremidi::input_port& port, libremidi::message&&) {};
+      = [](const libremidi::input_port& /*port*/, libremidi::message&&) {};
 
   //! Observation callbacks for when ports are added or removed
   input_port_callback input_added;

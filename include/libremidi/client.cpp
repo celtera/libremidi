@@ -4,16 +4,17 @@
 #include <libremidi/backends.hpp>
 #include <libremidi/shared_context.hpp>
 
-#if LIBREMIDI_ALSA
+#ifdef LIBREMIDI_ALSA
   #include <libremidi/backends/alsa_seq/shared_handler.hpp>
 #endif
-#if LIBREMIDI_JACK
+#ifdef LIBREMIDI_JACK
   #include <libremidi/backends/jack/shared_handler.hpp>
 #endif
 namespace libremidi
 {
 LIBREMIDI_INLINE
-shared_configurations create_shared_context(libremidi::API api, std::string_view client_name)
+shared_configurations
+create_shared_context(const libremidi::API api, [[maybe_unused]] std::string_view client_name)
 {
   switch (api)
   {

@@ -64,8 +64,8 @@ public:
   bool do_open(unsigned int portNumber)
   {
     MMRESULT result = midiInOpen(
-        &this->inHandle, portNumber, (DWORD_PTR)&midiInputCallback, (DWORD_PTR)this,
-        CALLBACK_FUNCTION);
+        &this->inHandle, portNumber, std::bit_cast<DWORD_PTR>(&midiInputCallback),
+        std::bit_cast<DWORD_PTR>(this), CALLBACK_FUNCTION);
     if (result != MMSYSERR_NOERROR)
     {
       error<driver_error>(
@@ -74,12 +74,13 @@ public:
     }
 
     // Allocate and init the sysex buffers.
-    this->sysexBuffer.resize(configuration.sysex_buffer_count);
-    for (int i = 0; i < configuration.sysex_buffer_count; ++i)
+    const auto bufferCount = static_cast<std::size_t>(configuration.sysex_buffer_count);
+    this->sysexBuffer.resize(bufferCount);
+    for (std::size_t i = 0; i < bufferCount; ++i)
     {
-      this->sysexBuffer[i] = (MIDIHDR*)new char[sizeof(MIDIHDR)];
+      this->sysexBuffer[i] = new MIDIHDR;
       this->sysexBuffer[i]->lpData = new char[configuration.sysex_buffer_size];
-      this->sysexBuffer[i]->dwBufferLength = configuration.sysex_buffer_size;
+      this->sysexBuffer[i]->dwBufferLength = static_cast<DWORD>(configuration.sysex_buffer_size);
       this->sysexBuffer[i]->dwUser = i; // We use the dwUser parameter as buffer indicator
       this->sysexBuffer[i]->dwFlags = 0;
 
@@ -152,9 +153,9 @@ public:
       midiInReset(this->inHandle);
       midiInStop(this->inHandle);
 
-      for (int i = 0; i < configuration.sysex_buffer_count; ++i)
+      for (std::size_t i = 0; i < static_cast<std::size_t>(configuration.sysex_buffer_count); ++i)
       {
-        int res{};
+        MMRESULT res{};
 
         int wait_count = 5;
         while (
@@ -181,7 +182,7 @@ public:
       }
 
       midiInClose(this->inHandle);
-      this->inHandle = 0;
+      this->inHandle = nullptr;
       LeaveCriticalSection(&(this->_mutex));
     }
   }
@@ -206,12 +207,12 @@ private:
         }
         else
         {
-          message.timestamp = time;
+          message.timestamp = static_cast<int64_t>(time);
         }
         return;
       }
       case timestamp_mode::Absolute: {
-        msg.timestamp = ts * 1'000'000;
+        msg.timestamp = static_cast<int64_t>(ts * 1'000'000);
         break;
       }
       case timestamp_mode::SystemMonotonic: {
@@ -221,6 +222,8 @@ private:
                   .count();
         break;
       }
+      default:
+        break;
     }
   }
   static void CALLBACK midiInputCallback(
@@ -230,7 +233,7 @@ private:
     if (inputStatus != MIM_DATA && inputStatus != MIM_LONGDATA && inputStatus != MIM_LONGERROR)
       return;
 
-    auto& self = *(midi_in_winmm*)instancePtr;
+    auto& self = *reinterpret_cast<midi_in_winmm*>(instancePtr);
 
     auto& message = self.message;
 
@@ -240,7 +243,7 @@ private:
     { // Channel or system message
 
       // Make sure the first byte is a status byte.
-      unsigned char status = (unsigned char)(midiMessage & 0x000000FF);
+      const auto status = static_cast<unsigned char>(midiMessage & 0x000000FF);
       if (!(status & 0x80))
         return;
 
@@ -275,12 +278,12 @@ private:
       }
 
       // Copy bytes to our MIDI message.
-      unsigned char* ptr = (unsigned char*)&midiMessage;
+      const auto* ptr = reinterpret_cast<unsigned char*>(&midiMessage);
       message.bytes.assign(ptr, ptr + nBytes);
     }
     else
     { // Sysex message ( MIM_LONGDATA or MIM_LONGERROR )
-      MIDIHDR* sysex = (MIDIHDR*)midiMessage;
+      const auto* sysex = reinterpret_cast<MIDIHDR*>(midiMessage);
       if (!self.configuration.ignore_sysex && inputStatus != MIM_LONGERROR)
       {
         // Sysex message and we're not ignoring it

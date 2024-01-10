@@ -146,7 +146,7 @@ struct shared_handler : public libremidi::shared_context
       }
 
       // Look for who's ready
-      for (int i = 0; i < fds.size() - 2; i++)
+      for (int i = 0, N = fds.size() - 2; i < N; i++)
       {
         if (fds[i].revents & POLLIN)
         {
