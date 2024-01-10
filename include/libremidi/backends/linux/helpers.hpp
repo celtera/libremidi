@@ -35,7 +35,7 @@ struct eventfd_notifier
   }
 
   operator int() const noexcept { return fd; }
-  operator pollfd() const noexcept { return {.fd = fd, .events = POLLIN}; }
+  operator pollfd() const noexcept { return {.fd = fd, .events = POLLIN, .revents = 0}; }
   int fd{-1};
 };
 
@@ -71,7 +71,7 @@ struct timerfd_timer
   }
 
   operator int() const noexcept { return fd; }
-  operator pollfd() const noexcept { return {.fd = fd, .events = POLLIN}; }
+  operator pollfd() const noexcept { return {.fd = fd, .events = POLLIN, .revents = 0}; }
   int fd{-1};
 };
 }

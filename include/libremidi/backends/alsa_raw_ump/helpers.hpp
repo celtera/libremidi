@@ -44,7 +44,7 @@ struct midi2_enumerator : alsa_raw::enumerator
     } while (device >= 0);
   }
 
-  void enumerate_endpoints(snd_ctl_t* ctl, int card, int device)
+  void enumerate_endpoints(snd_ctl_t* ctl, [[maybe_unused]] int card, [[maybe_unused]] int device)
   {
     snd_ump_endpoint_info_t* info{};
     snd_ump_endpoint_info_alloca(&info);
@@ -53,7 +53,7 @@ struct midi2_enumerator : alsa_raw::enumerator
     fprintf(stderr, "UMP endpoint: %s", snd.ump.endpoint_info_get_name(info));
   }
 
-  void enumerate_blocks(snd_ctl_t* ctl, int card, int device)
+  void enumerate_blocks(snd_ctl_t* ctl, [[maybe_unused]] int card, [[maybe_unused]] int device)
   {
     snd_ump_block_info_t* info{};
     snd_ump_block_info_alloca(&info);

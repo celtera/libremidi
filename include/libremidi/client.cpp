@@ -13,7 +13,8 @@
 namespace libremidi
 {
 LIBREMIDI_INLINE
-shared_configurations create_shared_context(const libremidi::API api, std::string_view /*client_name*/)
+shared_configurations
+create_shared_context(const libremidi::API api, [[maybe_unused]] std::string_view client_name)
 {
   switch (api)
   {

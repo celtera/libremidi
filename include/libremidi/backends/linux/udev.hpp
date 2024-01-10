@@ -81,7 +81,7 @@ struct udev_helper
 
   operator pollfd() const noexcept
   {
-    return {.fd = udev.monitor_get_fd(monitor), .events = POLLIN};
+    return {.fd = udev.monitor_get_fd(monitor), .events = POLLIN, .revents = 0};
   }
 
   const libudev& udev = libudev::instance();

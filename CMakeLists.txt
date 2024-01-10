@@ -32,7 +32,8 @@ option(LIBREMIDI_FIND_BOOST "Actively look for Boost" OFF)
 option(LIBREMIDI_EXAMPLES "Enable examples" OFF)
 option(LIBREMIDI_TESTS "Enable tests" OFF)
 option(LIBREMIDI_CI "To be enabled only in CI, some tests cannot run there" OFF)
-option(LIBREMIDI_NO_WARNINGS "Disables warnings from library compilation" OFF)
+
+cmake_dependent_option(LIBREMIDI_NO_WARNINGS "Disables warnings from library compilation" OFF "NOT LIBREMIDI_HEADER_ONLY" ON)
 
 ### C++ features ###
 if(NOT CMAKE_CXX_STANDARD)

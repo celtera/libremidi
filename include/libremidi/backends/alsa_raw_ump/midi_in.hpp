@@ -297,7 +297,7 @@ private:
     return true;
   }
 
-  bool open_port(const input_port& port, std::string_view name) override
+  bool open_port(const input_port& port, [[maybe_unused]] std::string_view name) override
   {
     if (int err = midi_in_impl::init_port(port); err < 0)
       return false;
@@ -352,7 +352,7 @@ private:
     }
   }
 
-  bool open_port(const input_port& p, std::string_view name) override
+  bool open_port(const input_port& p, [[maybe_unused]] std::string_view name) override
   {
     if (midi_in_impl::init_port(p) < 0)
       return false;

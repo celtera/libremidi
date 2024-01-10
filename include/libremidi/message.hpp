@@ -95,11 +95,8 @@ struct message
 
   auto clear() noexcept { bytes.clear(); }
 
-  auto& operator[](int i) const noexcept { return bytes[static_cast<unsigned int>(i)]; }
-  auto& operator[](int i) noexcept { return bytes[static_cast<unsigned int>(i)]; }
-
-  auto& operator[](std::size_t i) const noexcept { return bytes[i]; }
-  auto& operator[](std::size_t i) noexcept { return bytes[i]; }
+  auto& operator[](midi_bytes::size_type i) const noexcept { return bytes[i]; }
+  auto& operator[](midi_bytes::size_type i) noexcept { return bytes[i]; }
 
   auto& front() const { return bytes.front(); }
   auto& back() const { return bytes.back(); }
