@@ -68,16 +68,19 @@ public:
 #if LIBREMIDI_ALSA_HAS_RAWMIDI_TREAD
     if (configuration.timestamps == timestamp_mode::NoTimestamp)
     {
-      if (const int err = snd.rawmidi.params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_STANDARD);
+      if (const int err
+          = snd.rawmidi.params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_STANDARD);
           err < 0)
         return err;
-      if (const int err = snd.rawmidi.params_set_clock_type(midiport_, params, SND_RAWMIDI_CLOCK_NONE);
+      if (const int err
+          = snd.rawmidi.params_set_clock_type(midiport_, params, SND_RAWMIDI_CLOCK_NONE);
           err < 0)
         return err;
     }
     else
     {
-      if (const int err = snd.rawmidi.params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_TSTAMP);
+      if (const int err
+          = snd.rawmidi.params_set_read_mode(midiport_, params, SND_RAWMIDI_READ_TSTAMP);
           err < 0)
         return err;
       if (const int err

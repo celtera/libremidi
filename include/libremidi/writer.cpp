@@ -48,7 +48,8 @@ static LIBREMIDI_INLINE std::ostream& write_uint16_be(std::ostream& out, uint16_
   return out;
 }
 
-[[maybe_unused]] static LIBREMIDI_INLINE std::ostream& write_int16_be(std::ostream& out, int16_t value)
+[[maybe_unused]] static LIBREMIDI_INLINE std::ostream&
+write_int16_be(std::ostream& out, int16_t value)
 {
   union
   {
@@ -76,7 +77,8 @@ static LIBREMIDI_INLINE std::ostream& write_uint32_be(std::ostream& out, uint32_
   return out;
 }
 
-[[maybe_unused]] static LIBREMIDI_INLINE std::ostream& write_int32_be(std::ostream& out, int32_t value)
+[[maybe_unused]] static LIBREMIDI_INLINE std::ostream&
+write_int32_be(std::ostream& out, int32_t value)
 {
   union
   {
@@ -91,7 +93,8 @@ static LIBREMIDI_INLINE std::ostream& write_uint32_be(std::ostream& out, uint32_
   return out;
 }
 
-[[maybe_unused]] static LIBREMIDI_INLINE std::ostream& write_float_be(std::ostream& out, float value)
+[[maybe_unused]] static LIBREMIDI_INLINE std::ostream&
+write_float_be(std::ostream& out, float value)
 {
   union
   {
@@ -106,7 +109,8 @@ static LIBREMIDI_INLINE std::ostream& write_uint32_be(std::ostream& out, uint32_
   return out;
 }
 
-[[maybe_unused]] static LIBREMIDI_INLINE std::ostream& write_double_be(std::ostream& out, double value)
+[[maybe_unused]] static LIBREMIDI_INLINE std::ostream&
+write_double_be(std::ostream& out, double value)
 {
   union
   {
@@ -136,7 +140,7 @@ static LIBREMIDI_INLINE void write_variable_length(uint32_t aValue, std::vector<
   bytes[1] = static_cast<uint8_t>((aValue >> 21) & 0x7F); // next largest 7 bits
   bytes[2] = static_cast<uint8_t>((aValue >> 14) & 0x7F);
   bytes[3] = static_cast<uint8_t>((aValue >> 7) & 0x7F);
-  bytes[4] = static_cast<uint8_t>((aValue) & 0x7F); // least significant 7 bits
+  bytes[4] = static_cast<uint8_t>((aValue)&0x7F); // least significant 7 bits
 
   int start = 0;
   while (start < 5 && bytes[start] == 0)
@@ -262,7 +266,9 @@ void writer::write(std::ostream& out) const
     out << 'r';
     out << 'k';
     util::write_uint32_be(out, static_cast<uint32_t>(trackRawData.size()));
-    out.write(reinterpret_cast<char*>(trackRawData.data()), static_cast<std::streamsize>(trackRawData.size()));
+    out.write(
+        reinterpret_cast<char*>(trackRawData.data()),
+        static_cast<std::streamsize>(trackRawData.size()));
   }
 }
 }

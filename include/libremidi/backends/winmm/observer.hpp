@@ -88,7 +88,7 @@ protected:
 
     if (portRemovedFunc)
     {
-      for (const auto &port : prevList)
+      for (const auto& port : prevList)
       {
         auto iter
             = std::ranges::find(currList, port.display_name, &port_information::display_name);

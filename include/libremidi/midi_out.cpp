@@ -167,7 +167,7 @@ void midi_out::send_message(const unsigned char* message, size_t size) const
 }
 
 LIBREMIDI_INLINE
-    void midi_out::send_ump(const uint32_t* message, size_t size) const
+void midi_out::send_ump(const uint32_t* message, size_t size) const
 {
 #if defined(LIBREMIDI_ASSERTIONS)
   assert(size > 0);
@@ -177,40 +177,39 @@ LIBREMIDI_INLINE
   impl_->send_ump(message, size);
 }
 LIBREMIDI_INLINE
-    void midi_out::send_ump(const libremidi::ump& message) const
+void midi_out::send_ump(const libremidi::ump& message) const
 {
   send_ump(message.bytes, message.size());
 }
 
 LIBREMIDI_INLINE
-    void midi_out::send_ump(std::span<const uint32_t> message) const
+void midi_out::send_ump(std::span<const uint32_t> message) const
 {
   send_ump(message.data(), message.size());
 }
 
 LIBREMIDI_INLINE
-    void midi_out::send_ump(uint32_t b0) const
+void midi_out::send_ump(uint32_t b0) const
 {
   send_ump(&b0, 1);
 }
 
 LIBREMIDI_INLINE
-    void midi_out::send_ump(uint32_t b0, uint32_t b1) const
+void midi_out::send_ump(uint32_t b0, uint32_t b1) const
 {
   send_ump(std::to_array({b0, b1}));
 }
 
 LIBREMIDI_INLINE
-    void midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2) const
+void midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2) const
 {
   send_ump(std::to_array({b0, b1, b2}));
 }
 
 LIBREMIDI_INLINE
-    void midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b3) const
+void midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b3) const
 {
   send_ump(std::to_array({b0, b1, b2, b3}));
 }
-
 
 }

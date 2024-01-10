@@ -18,7 +18,8 @@ public:
   midi_out_api& operator=(const midi_out_api&) = delete;
   midi_out_api& operator=(midi_out_api&&) = delete;
 
-  [[nodiscard]] virtual bool open_port(const output_port& pt, std::string_view local_port_name) = 0;
+  [[nodiscard]] virtual bool open_port(const output_port& pt, std::string_view local_port_name)
+      = 0;
 
   [[nodiscard]] virtual int64_t current_time() const noexcept { return 0; }
 

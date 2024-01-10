@@ -231,7 +231,13 @@ struct meta_events
 
   static message tempo(int mpqn) noexcept
   {
-    return {0xff, 81, 3, static_cast<uint8_t>(mpqn >> 16), static_cast<uint8_t>(mpqn >> 8), static_cast<uint8_t>(mpqn)};
+    return {
+        0xff,
+        81,
+        3,
+        static_cast<uint8_t>(mpqn >> 16),
+        static_cast<uint8_t>(mpqn >> 8),
+        static_cast<uint8_t>(mpqn)};
   }
 
   static message time_signature(int numerator, int denominator)
@@ -245,7 +251,8 @@ struct meta_events
       ++powTwo;
     }
 
-    return {0xff, 0x58, 0x04, static_cast<uint8_t>(numerator), static_cast<uint8_t>(powTwo), 1, 96};
+    return {0xff, 0x58, 0x04, static_cast<uint8_t>(numerator), static_cast<uint8_t>(powTwo),
+            1,    96};
   }
 
   // Where key index goes from -7 (7 flats, C♭ Major) to +7 (7 sharps, C♯
@@ -256,12 +263,16 @@ struct meta_events
     if (keyIndex < -7 || keyIndex > 7)
       throw std::range_error("meta_events::key_signature: out of range");
 #endif
-    return {0xff, 0x59, 0x02, static_cast<uint8_t>(keyIndex), isMinor ? static_cast<uint8_t>(1) : static_cast<uint8_t>(0)};
+    return {
+        0xff, 0x59, 0x02, static_cast<uint8_t>(keyIndex),
+        isMinor ? static_cast<uint8_t>(1) : static_cast<uint8_t>(0)};
   }
 
   static message song_position(int positionInBeats) noexcept
   {
-    return {0xf2, static_cast<uint8_t>(positionInBeats & 127), static_cast<uint8_t>((positionInBeats >> 7) & 127)};
+    return {
+        0xf2, static_cast<uint8_t>(positionInBeats & 127),
+        static_cast<uint8_t>((positionInBeats >> 7) & 127)};
   }
 };
 

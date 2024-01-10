@@ -80,7 +80,7 @@ public:
   //! * api_conf can be an instance of observer_configuration,
   //!   such as jack_observer_configuration, winmm_observer_configuration, etc...
   //! * if no callbacks are passed, no secondary thread will be created unless absolutely necessary
-  explicit observer(const observer_configuration &conf = {}) noexcept;
+  explicit observer(const observer_configuration& conf = {}) noexcept;
   explicit observer(observer_configuration conf, std::any api_conf);
   observer(const observer&) = delete;
   observer(observer&& other) noexcept;
@@ -175,7 +175,8 @@ public:
   [[nodiscard]] libremidi::API get_current_api() const noexcept;
 
   //! Open a MIDI output connection.
-  void open_port(const output_port& pt, std::string_view local_port_name = "libremidi input") const;
+  void
+  open_port(const output_port& pt, std::string_view local_port_name = "libremidi input") const;
 
   //! Close an open MIDI connection (if one exists).
   void close_port() const;

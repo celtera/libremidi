@@ -64,8 +64,8 @@ public:
   bool do_open(unsigned int portNumber)
   {
     MMRESULT result = midiInOpen(
-        &this->inHandle, portNumber, std::bit_cast<DWORD_PTR>(&midiInputCallback), std::bit_cast<DWORD_PTR>(this),
-        CALLBACK_FUNCTION);
+        &this->inHandle, portNumber, std::bit_cast<DWORD_PTR>(&midiInputCallback),
+        std::bit_cast<DWORD_PTR>(this), CALLBACK_FUNCTION);
     if (result != MMSYSERR_NOERROR)
     {
       error<driver_error>(

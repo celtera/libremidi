@@ -126,7 +126,7 @@ struct libasound
       LIBREMIDI_SYMBOL_DEF(snd_ctl_ump, endpoint_info);
       LIBREMIDI_SYMBOL_DEF(snd_ctl_ump, next_device);
     } ump;
-  #endif
+#endif
   } ctl{library};
 
   struct midi_t
@@ -222,7 +222,7 @@ struct libasound
     LIBREMIDI_SYMBOL_DEF(snd_rawmidi, tread);
     LIBREMIDI_SYMBOL_DEF(snd_rawmidi, write);
   } rawmidi{library};
-  #endif
+#endif
 
   struct seq_t
   {
@@ -371,7 +371,7 @@ struct libasound
       LIBREMIDI_SYMBOL_DEF(snd_seq_ump, event_input);
       LIBREMIDI_SYMBOL_DEF(snd_seq_ump, event_output);
     } ump;
-  #endif
+#endif
   } seq{library};
 
 #if LIBREMIDI_ALSA_HAS_UMP
@@ -417,34 +417,34 @@ struct libasound
     LIBREMIDI_SYMBOL_DEF(snd_ump, read);
     LIBREMIDI_SYMBOL_DEF(snd_ump, tread);
   } ump{library};
-  #endif
+#endif
 };
 
-  #undef snd_dylib_alloca
-  #define snd_dylib_alloca(ptr, access, type)                                \
-    {                                                                        \
-      *ptr = (snd_##access##_##type##_t*)alloca(snd.access.type##_sizeof()); \
-      memset(*ptr, 0, snd.access.type##_sizeof());                           \
-    }
-  #define snd_dylib_alloca2(ptr, access1, access2, type)                                         \
-    {                                                                                            \
-      *ptr = (snd_##access1##_access2##_##type##_t*)alloca(snd.access1.access2.type##_sizeof()); \
-      memset(*ptr, 0, snd.access1.access2.type##_sizeof());                                      \
-    }
+#undef snd_dylib_alloca
+#define snd_dylib_alloca(ptr, access, type)                                \
+  {                                                                        \
+    *ptr = (snd_##access##_##type##_t*)alloca(snd.access.type##_sizeof()); \
+    memset(*ptr, 0, snd.access.type##_sizeof());                           \
+  }
+#define snd_dylib_alloca2(ptr, access1, access2, type)                                         \
+  {                                                                                            \
+    *ptr = (snd_##access1##_access2##_##type##_t*)alloca(snd.access1.access2.type##_sizeof()); \
+    memset(*ptr, 0, snd.access1.access2.type##_sizeof());                                      \
+  }
 
-  #undef snd_rawmidi_info_alloca
-  #define snd_rawmidi_info_alloca(ptr) snd_dylib_alloca(ptr, rawmidi, info)
-  #undef snd_rawmidi_params_alloca
-  #define snd_rawmidi_params_alloca(ptr) snd_dylib_alloca(ptr, rawmidi, params)
-  #undef snd_rawmidi_status_alloca
-  #define snd_rawmidi_status_alloca(ptr) snd_dylib_alloca(ptr, rawmidi, status)
+#undef snd_rawmidi_info_alloca
+#define snd_rawmidi_info_alloca(ptr) snd_dylib_alloca(ptr, rawmidi, info)
+#undef snd_rawmidi_params_alloca
+#define snd_rawmidi_params_alloca(ptr) snd_dylib_alloca(ptr, rawmidi, params)
+#undef snd_rawmidi_status_alloca
+#define snd_rawmidi_status_alloca(ptr) snd_dylib_alloca(ptr, rawmidi, status)
 
-  #undef snd_seq_client_info_alloca
-  #define snd_seq_client_info_alloca(ptr) snd_dylib_alloca(ptr, seq, client_info)
-  #undef snd_seq_port_info_alloca
-  #define snd_seq_port_info_alloca(ptr) snd_dylib_alloca(ptr, seq, port_info)
-  #undef snd_seq_queue_tempo_alloca
-  #define snd_seq_queue_tempo_alloca(ptr) snd_dylib_alloca(ptr, seq, queue_tempo)
+#undef snd_seq_client_info_alloca
+#define snd_seq_client_info_alloca(ptr) snd_dylib_alloca(ptr, seq, client_info)
+#undef snd_seq_port_info_alloca
+#define snd_seq_port_info_alloca(ptr) snd_dylib_alloca(ptr, seq, port_info)
+#undef snd_seq_queue_tempo_alloca
+#define snd_seq_queue_tempo_alloca(ptr) snd_dylib_alloca(ptr, seq, queue_tempo)
 
 #if LIBREMIDI_ALSA_HAS_UMP
   #undef snd_ump_block_info_alloca

@@ -61,7 +61,8 @@ struct jack_client
   }
 
   template <bool Input>
-  static auto get_ports(jack_client_t* client, const char* pattern, const JackPortFlags flags) noexcept
+  static auto
+  get_ports(jack_client_t* client, const char* pattern, const JackPortFlags flags) noexcept
       -> std::vector<std::conditional_t<Input, input_port, output_port>>
   {
     std::vector<std::conditional_t<Input, input_port, output_port>> ret;
@@ -214,7 +215,8 @@ struct jack_helpers : jack_client
     if (portName.empty())
       portName = flags & JackPortIsInput ? "i" : "o";
 
-    if (self.configuration.client_name.size() + portName.size() + 2u >= static_cast<size_t>(jack_port_name_size()))
+    if (self.configuration.client_name.size() + portName.size() + 2u
+        >= static_cast<size_t>(jack_port_name_size()))
     {
       self.template error<invalid_use_error>(
           self.configuration, "JACK: port name length limit exceeded");

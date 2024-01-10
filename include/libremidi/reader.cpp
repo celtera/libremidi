@@ -108,10 +108,14 @@ struct read_unchecked
 {
   // Read a MIDI-style variable-length integer (big-endian value in groups of 7 bits,
   // with top bit set to signify that another byte follows).
-  static inline void ensure_size([[maybe_unused]] const uint8_t* begin, [[maybe_unused]] const uint8_t* end,
-      [[maybe_unused]] int64_t needed) { }
+  static inline void ensure_size(
+      [[maybe_unused]] const uint8_t* begin, [[maybe_unused]] const uint8_t* end,
+      [[maybe_unused]] int64_t needed)
+  {
+  }
 
-  static inline uint32_t read_variable_length(uint8_t const*& data, [[maybe_unused]] uint8_t const* end)
+  static inline uint32_t
+  read_variable_length(uint8_t const*& data, [[maybe_unused]] uint8_t const* end)
   {
     uint32_t result = 0;
     while (true)
@@ -129,16 +133,17 @@ struct read_unchecked
     }
   }
 
-  static inline void
-  read_bytes(midi_bytes& buffer, uint8_t const*& data, [[maybe_unused]] const uint8_t* end, const std::size_t num)
+  static inline void read_bytes(
+      midi_bytes& buffer, uint8_t const*& data, [[maybe_unused]] const uint8_t* end,
+      const std::size_t num)
   {
     buffer.reserve(buffer.size() + num);
     for (std::size_t i = 0; i < num; ++i)
       buffer.push_back(*data++);
   }
 
-  static inline void
-  read_bytes(midi_bytes& buffer, uint8_t const*& data, [[maybe_unused]] const uint8_t* end, const int num)
+  static inline void read_bytes(
+      midi_bytes& buffer, uint8_t const*& data, [[maybe_unused]] const uint8_t* end, const int num)
   {
     read_bytes(buffer, data, end, static_cast<std::size_t>(num));
   }
@@ -173,7 +178,8 @@ struct read_checked
 {
   // Read a MIDI-style variable-length integer (big-endian value in groups of 7 bits,
   // with top bit set to signify that another byte follows).
-  static inline void ensure_size(const uint8_t* begin, const uint8_t* end, const std::size_t needed)
+  static inline void
+  ensure_size(const uint8_t* begin, const uint8_t* end, const std::size_t needed)
   {
     if (const auto available = static_cast<std::size_t>(end - begin); available < needed)
       throw std::runtime_error("MIDI reader: not enough data to process");
@@ -634,7 +640,8 @@ try
 
       try
       {
-        track_event ev = parse_event(static_cast<int>(tickCount), i, dataPtr, trackEnd, runningEvent);
+        track_event ev
+            = parse_event(static_cast<int>(tickCount), i, dataPtr, trackEnd, runningEvent);
         if (!ev.m.empty())
         {
           if (!ev.m.is_meta_event())

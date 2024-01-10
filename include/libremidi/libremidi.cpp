@@ -164,19 +164,19 @@ std::any observer_default_configuration()
 namespace midi2
 {
 LIBREMIDI_INLINE
-    std::any in_default_configuration()
+std::any in_default_configuration()
 {
   return midi_in_configuration_for(default_api());
 }
 
 LIBREMIDI_INLINE
-    std::any out_default_configuration()
+std::any out_default_configuration()
 {
   return midi_out_configuration_for(default_api());
 }
 
 LIBREMIDI_INLINE
-    std::any observer_default_configuration()
+std::any observer_default_configuration()
 {
   return observer_configuration_for(default_api());
 }
