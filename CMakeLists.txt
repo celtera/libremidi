@@ -215,7 +215,7 @@ else()
     message(STATUS "libremidi: Using boost::small_vector for libremidi::message")
   elseif(Boost_INCLUDE_DIR)
     target_compile_definitions(libremidi ${_public} LIBREMIDI_USE_BOOST)
-    target_include_directories(libremidi ${_public} $<BUILD_INTERFACE:${Boost_INCLUDE_DIR}>)
+    target_include_directories(libremidi SYSTEM ${_public} $<BUILD_INTERFACE:${Boost_INCLUDE_DIR}>)
     message(STATUS "libremidi: Using boost::small_vector for libremidi::message")
   else()
     message(STATUS "libremidi: Using std::vector for libremidi::message")
@@ -231,10 +231,20 @@ target_compile_features(libremidi ${_public} cxx_std_20)
 find_package(Threads)
 target_link_libraries(libremidi ${_public} ${CMAKE_THREAD_LIBS_INIT})
 
-target_include_directories(libremidi ${_public}
+#includes for downstream, prevents warnings from showing up
+target_include_directories(libremidi SYSTEM ${_public}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
+
+if(NOT LIBREMIDI_HEADER_ONLY)
+	#includes for building this project, which will warn.
+	#system includes always go after normal includes so warnings still work even with both target_include_directories active
+	target_include_directories(libremidi PRIVATE
+			$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+			$<INSTALL_INTERFACE:include>
+	)
+endif()
 
 if(EMSCRIPTEN)
   message(STATUS "libremidi: using Emscripten MIDI")
@@ -294,7 +304,7 @@ elseif(WIN32)
       message(STATUS "libremidi: using WinUWP")
       set(LIBREMIDI_HAS_WINUWP 1)
 
-      target_include_directories(libremidi ${_public} "${CPPWINRT_PATH}")
+      target_include_directories(libremidi SYSTEM ${_public} "${CPPWINRT_PATH}")
       target_compile_definitions(libremidi ${_public} LIBREMIDI_WINUWP)
       target_link_libraries(libremidi INTERFACE RuntimeObject)
       # We don't need /ZW option here (support for C++/CX)' as we use C++/WinRT
@@ -316,13 +326,13 @@ elseif(UNIX AND NOT APPLE)
       set(LIBREMIDI_HAS_ALSA 1)
 
       target_compile_definitions(libremidi ${_public} LIBREMIDI_ALSA)
-      target_include_directories(libremidi ${_public} "${ALSA_INCLUDE_DIR}")
+      target_include_directories(libremidi SYSTEM ${_public} "${ALSA_INCLUDE_DIR}")
 
       if(NOT LIBREMIDI_NO_UDEV)
         find_path(UDEV_INCLUDE_DIR libudev.h)
         if(UDEV_INCLUDE_DIR)
           target_compile_definitions(libremidi ${_public} LIBREMIDI_HAS_UDEV)
-          target_include_directories(libremidi ${_public} "${UDEV_INCLUDE_DIR}")
+          target_include_directories(libremidi SYSTEM ${_public} "${UDEV_INCLUDE_DIR}")
         endif()
       endif()
     else()
@@ -349,7 +359,7 @@ if(NOT LIBREMIDI_NO_JACK)
     set(LIBREMIDI_HAS_JACK 1)
     set(LIBREMIDI_HAS_WEAKJACK 1)
 
-    target_include_directories(libremidi ${_public} $<BUILD_INTERFACE:${WEAKJACK_PATH}> $<BUILD_INTERFACE:${JACK_PATH}>)
+    target_include_directories(libremidi SYSTEM ${_public} $<BUILD_INTERFACE:${WEAKJACK_PATH}> $<BUILD_INTERFACE:${JACK_PATH}>)
   elseif(JACK_PATH)
     find_library(JACK_LIBRARIES jack)
     if(JACK_LIBRARIES)
@@ -357,7 +367,7 @@ if(NOT LIBREMIDI_NO_JACK)
       set(LIBREMIDI_HAS_JACK 1)
       
       target_link_libraries(libremidi ${_public} ${JACK_LIBRARIES})
-      target_include_directories(libremidi ${_public} $<BUILD_INTERFACE:${JACK_PATH}>)
+      target_include_directories(libremidi SYSTEM ${_public} $<BUILD_INTERFACE:${JACK_PATH}>)
     endif()
   endif()
 
