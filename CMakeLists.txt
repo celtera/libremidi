@@ -238,12 +238,12 @@ target_include_directories(libremidi SYSTEM ${_public}
 )
 
 if(NOT LIBREMIDI_HEADER_ONLY)
-	#includes for building this project, which will warn.
-	#system includes always go after normal includes so warnings still work even with both target_include_directories active
-	target_include_directories(libremidi PRIVATE
-			$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-			$<INSTALL_INTERFACE:include>
-	)
+  #includes for building this project, which will warn.
+  #system includes always go after normal includes so warnings still work even with both target_include_directories active
+  target_include_directories(libremidi PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
 endif()
 
 if(EMSCRIPTEN)
