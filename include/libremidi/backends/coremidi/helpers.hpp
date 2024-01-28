@@ -305,6 +305,16 @@ struct coremidi_data
         }
         msg = time_in_nanos(packet);
         break;
+
+      case timestamp_mode::Custom: {
+        if constexpr (requires { self.continueSysex; })
+        {
+          if (self.continueSysex)
+            return;
+        }
+        msg = self.configuration.get_timestamp(time_in_nanos(packet));
+        break;
+      }
     }
   }
 };

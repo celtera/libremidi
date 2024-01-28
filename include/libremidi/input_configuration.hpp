@@ -33,15 +33,25 @@ enum timestamp_mode
 
   //! For APIs which are based on audio process cycles such as JACK, timestamps will be in frames since
   //! the beginning of the current cycle's audio buffer
-  AudioFrame
+  AudioFrame,
+
+  //! Will call the custom timestamping function provided by the user in the input configuration.
+  Custom
 };
 
 using message_callback = std::function<void(message&& message)>;
+using timestamp_callback = std::function<int64_t(int64_t)>;
 struct input_configuration
 {
   //! Set a callback function to be invoked for incoming MIDI messages.
   //! Mandatory!
   message_callback on_message;
+
+  //! Set a custom callback function to be invoked for timestamping MIDI messages.
+  //! Input: the API provided timestamp in nanoseconds, if available, for reference.
+  //! (e.g. the same as "Absolute").
+  //! Mandatory if timestamps == timestamp_mode::Custom, unused otherwise.
+  timestamp_callback get_timestamp;
 
   //! Set an error callback function to be invoked when an error has occured.
   /*!
@@ -64,6 +74,7 @@ struct input_configuration
   uint32_t ignore_timing : 1 = true;
   uint32_t ignore_sensing : 1 = true;
 
+  //! Timestamp mode. See @libremidi::timestamp_mode
   uint32_t timestamps : 3 = timestamp_mode::Absolute;
 };
 
@@ -72,6 +83,12 @@ struct ump_input_configuration
 {
   //! Set a callback function to be invoked for incoming UMP messages.
   ump_callback on_message;
+
+  //! Set a custom callback function to be invoked for timestamping MIDI messages.
+  //! Input: the API provided timestamp in nanoseconds, if available, for reference.
+  //! (e.g. the same as "Absolute").
+  //! Mandatory if timestamps == timestamp_mode::Custom, unused otherwise.
+  timestamp_callback get_timestamp;
 
   //! Set an error callback function to be invoked when an error has occured.
   /*!

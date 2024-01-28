@@ -7,6 +7,7 @@
 
 #include <alsa/asoundlib.h>
 
+#include <chrono>
 #include <thread>
 
 namespace libremidi::alsa_raw
@@ -148,21 +149,31 @@ public:
     while ((err = snd.rawmidi.read(this->midiport_, bytes, nbytes)) > 0)
     {
       // err is the amount of bytes read
-      decoder_.add_bytes(bytes, err);
+      int64_t ns = 0;
+      set_timestamp({}, ns);
+      decoder_.add_bytes(bytes, err, ns);
     }
     return err;
   }
 
-  void set_timestamp(const struct timespec& ts, int64_t& res)
+  void set_timestamp(struct timespec ts, int64_t& res)
   {
     static constexpr int64_t nanos = 1e9;
+
+    const auto get_ts =
+#if LIBREMIDI_ALSA_HAS_RAWMIDI_TREAD
+        [=] { return static_cast<int64_t>(ts.tv_sec) * nanos + static_cast<int64_t>(ts.tv_nsec); }
+#else
+        [=] { return absolute_timestamp(); }
+#endif
+    ;
     switch (configuration.timestamps)
     {
       // Unneeded here
       case timestamp_mode::NoTimestamp:
         break;
       case timestamp_mode::Relative: {
-        const auto t = static_cast<int64_t>(ts.tv_sec) * nanos + static_cast<int64_t>(ts.tv_nsec);
+        const auto t = get_ts();
         if (firstMessage == true)
         {
           firstMessage = false;
@@ -175,11 +186,14 @@ public:
         last_time = t;
         break;
       }
+
       case timestamp_mode::Absolute:
       case timestamp_mode::SystemMonotonic:
-        res = int64_t(ts.tv_sec) * nanos + int64_t(ts.tv_nsec);
+        res = get_ts();
         break;
-      default:
+
+      case timestamp_mode::Custom:
+        res = configuration.get_timestamp(get_ts());
         break;
     }
   }
@@ -211,6 +225,17 @@ public:
     if (midiport_)
       snd.rawmidi.close(midiport_);
     midiport_ = nullptr;
+  }
+
+  int64_t absolute_timestamp() const noexcept final override
+  {
+#if LIBREMIDI_ALSA_HAS_RAWMIDI_TREAD
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+               std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+#else
+    return 0;
+#endif
   }
 
   alsa_raw::midi1_enumerator get_device_enumerator() const noexcept

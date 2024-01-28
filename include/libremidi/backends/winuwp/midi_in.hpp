@@ -67,6 +67,7 @@ public:
     auto begin = msg.RawData().data();
     auto end = begin + msg.RawData().Length();
 
+    // FIXME proper timestamp handling
     auto t = msg.Timestamp().count();
     this->configuration.on_message(libremidi::message{{begin, end}, t});
   }

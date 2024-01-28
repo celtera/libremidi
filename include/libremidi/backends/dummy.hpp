@@ -37,6 +37,7 @@ public:
   void close_port() override { }
   void set_client_name(std::string_view /*clientName*/) override { }
   void set_port_name(std::string_view /*portName*/) override { }
+  int64_t absolute_timestamp() const noexcept override { return 0; }
 };
 
 class midi_out_dummy final
@@ -55,6 +56,7 @@ public:
     return true;
   }
   bool open_virtual_port(std::string_view /*portName*/) override { return true; }
+
   void close_port() override { }
   void set_client_name(std::string_view /*clientName*/) override { }
   void set_port_name(std::string_view /*portName*/) override { }

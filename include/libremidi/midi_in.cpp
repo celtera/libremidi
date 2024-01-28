@@ -155,4 +155,10 @@ bool midi_in::is_port_connected() const noexcept
 {
   return impl_->is_port_connected();
 }
+
+LIBREMIDI_INLINE
+int64_t midi_in::absolute_timestamp() const noexcept
+{
+  return impl_->absolute_timestamp();
+}
 }

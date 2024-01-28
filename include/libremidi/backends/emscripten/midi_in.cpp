@@ -2,6 +2,8 @@
   #include <libremidi/backends/emscripten/midi_access.hpp>
   #include <libremidi/backends/emscripten/midi_in.hpp>
 
+  #include <chrono>
+
 namespace libremidi
 {
 LIBREMIDI_INLINE midi_in_emscripten::midi_in_emscripten(
@@ -90,7 +92,17 @@ LIBREMIDI_INLINE void midi_in_emscripten::set_timestamp(double ts, libremidi::me
     case timestamp_mode::SystemMonotonic:
       m.timestamp = ts * 1e6;
       break;
+    case timestamp_mode::Custom:
+      m.timestamp = configuration.get_timestamp(ts * 1e6);
+      break;
   }
+}
+
+LIBREMIDI_INLINE int64_t midi_in_emscripten::absolute_timestamp() const noexcept override
+{
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
 }
 
 LIBREMIDI_INLINE void midi_in_emscripten::on_input(libremidi::message msg)

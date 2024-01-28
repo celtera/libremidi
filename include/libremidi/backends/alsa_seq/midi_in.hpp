@@ -32,6 +32,7 @@ public:
         return false;
       case timestamp_mode::Absolute:
       case timestamp_mode::Relative:
+      case timestamp_mode::Custom:
         return true;
     }
     return true;
@@ -108,6 +109,7 @@ public:
     if (require_timestamps())
     {
       snd.seq.control_queue(this->seq, this->queue_id, SND_SEQ_EVENT_START, 0, nullptr);
+      this->queue_creation_time = std::chrono::steady_clock::now();
       snd.seq.drain_output(this->seq);
     }
   }
@@ -194,8 +196,10 @@ protected:
         msg.timestamp = 0;
         return;
       case timestamp_mode::Relative: {
-        const auto t1 = int64_t(ev.time.time.tv_sec) * nanos + int64_t(ev.time.time.tv_nsec);
-        const auto t0 = int64_t(last_time.tv_sec) * nanos + int64_t(last_time.tv_nsec);
+        const auto t1 = static_cast<int64_t>(ev.time.time.tv_sec) * nanos
+                        + static_cast<int64_t>(ev.time.time.tv_nsec);
+        const auto t0 = static_cast<int64_t>(last_time.tv_sec) * nanos
+                        + static_cast<int64_t>(last_time.tv_nsec);
         const auto time = t1 - t0;
 
         last_time = ev.time.time;
@@ -215,6 +219,11 @@ protected:
         msg.timestamp = ev.time.time.tv_sec * nanos + ev.time.time.tv_nsec;
         break;
       }
+      case timestamp_mode::Custom: {
+        msg.timestamp
+            = configuration.get_timestamp(ev.time.time.tv_sec * nanos + ev.time.time.tv_nsec);
+        break;
+      }
       case timestamp_mode::SystemMonotonic: {
         namespace clk = std::chrono;
         msg.timestamp
@@ -223,6 +232,13 @@ protected:
         break;
       }
     }
+  }
+
+  int64_t absolute_timestamp() const noexcept override
+  {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+               std::chrono::steady_clock::now() - this->queue_creation_time)
+        .count();
   }
 
   int process_event(const snd_seq_event_t& ev)
@@ -371,6 +387,7 @@ protected:
 
   // Only needed for midi 1
   std::vector<unsigned char> decoding_buffer = std::vector<unsigned char>(32);
+  std::chrono::steady_clock::time_point queue_creation_time;
 };
 
 template <typename ConfigurationBase, typename ConfigurationImpl>

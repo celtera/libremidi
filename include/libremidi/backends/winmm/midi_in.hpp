@@ -111,6 +111,7 @@ public:
     }
 
     result = midiInStart(this->inHandle);
+    midi_start_timestamp = std::chrono::steady_clock::now();
     if (result != MMSYSERR_NOERROR)
     {
       midiInClose(this->inHandle);
@@ -222,10 +223,19 @@ private:
                   .count();
         break;
       }
-      default:
+      case timestamp_mode::Custom:
+        msg.timestamp = configuration.get_timestamp(static_cast<int64_t>(ts * 1'000'000));
         break;
     }
   }
+
+  int64_t absolute_timestamp() const noexcept override
+  {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+               std::chrono::steady_clock::now() - midi_start_timestamp)
+        .count();
+  }
+
   static void CALLBACK midiInputCallback(
       HMIDIIN /*hmin*/, UINT inputStatus, DWORD_PTR instancePtr, DWORD_PTR midiMessage,
       DWORD_PTR timestamp)
@@ -332,6 +342,7 @@ private:
   // [Patrice] see
   // https://groups.google.com/forum/#!topic/mididev/6OUjHutMpEo
   CRITICAL_SECTION _mutex;
+  std::chrono::steady_clock::time_point midi_start_timestamp;
 };
 
 }

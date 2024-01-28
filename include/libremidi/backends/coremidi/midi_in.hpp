@@ -130,6 +130,11 @@ public:
     }
   }
 
+  int64_t absolute_timestamp() const noexcept override
+  {
+    return coremidi_data::time_in_nanos(AudioGetCurrentHostTime());
+  }
+
   static void midiInputCallback(const MIDIPacketList* list, void* procRef, void* /*srcRef*/)
   {
     auto& self = *(midi_in_core*)procRef;

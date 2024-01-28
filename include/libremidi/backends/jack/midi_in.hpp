@@ -111,7 +111,17 @@ public:
       case timestamp_mode::AudioFrame:
         msg.timestamp = frame;
         break;
+
+      case timestamp_mode::Custom:
+        msg.timestamp = configuration.get_timestamp(
+            1000 * jack_frames_to_time(client, frame + start_frames));
+        break;
     }
+  }
+
+  int64_t absolute_timestamp() const noexcept override
+  {
+    return 1000 * jack_frames_to_time(client, jack_frame_time(client));
   }
 
   int process(jack_nframes_t nframes)
@@ -119,10 +129,10 @@ public:
     void* buff = jack_port_get_buffer(this->port, nframes);
 
     // Timing
-    jack_nframes_t current_frames;
-    jack_time_t current_usecs; // roughly CLOCK_MONOTONIC
-    jack_time_t next_usecs;
-    float period_usecs;
+    jack_nframes_t current_frames{};
+    jack_time_t current_usecs{}; // roughly CLOCK_MONOTONIC
+    jack_time_t next_usecs{};
+    float period_usecs{};
     jack_get_cycle_times(
         this->client, &current_frames, &current_usecs, &next_usecs, &period_usecs);
 

@@ -157,7 +157,7 @@ public:
     return err;
   }
 
-  void set_timestamp(const struct timespec& ts, int64_t& res)
+  void set_timestamp(struct timespec ts, int64_t& res)
   {
     static constexpr int64_t nanos = 1e9;
     switch (configuration.timestamps)
@@ -166,7 +166,7 @@ public:
       case timestamp_mode::NoTimestamp:
         break;
       case timestamp_mode::Relative: {
-        auto t = int64_t(ts.tv_sec) * nanos + int64_t(ts.tv_nsec);
+        const auto t = static_cast<int64_t>(ts.tv_sec) * nanos + static_cast<int64_t>(ts.tv_nsec);
         if (firstMessage == true)
         {
           firstMessage = false;
@@ -181,7 +181,11 @@ public:
       }
       case timestamp_mode::Absolute:
       case timestamp_mode::SystemMonotonic:
-        res = int64_t(ts.tv_sec) * nanos + int64_t(ts.tv_nsec);
+        res = static_cast<int64_t>(ts.tv_sec) * nanos + static_cast<int64_t>(ts.tv_nsec);
+        break;
+      case timestamp_mode::Custom:
+        res = configuration.get_timestamp(
+            static_cast<int64_t>(ts.tv_sec) * nanos + static_cast<int64_t>(ts.tv_nsec));
         break;
     }
   }
@@ -211,6 +215,13 @@ public:
     if (midiport_)
       snd.ump.close(midiport_);
     midiport_ = nullptr;
+  }
+
+  int64_t absolute_timestamp() const noexcept override
+  {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+               std::chrono::steady_clock::now().time_since_epoch())
+        .count();
   }
 
   midi2_enumerator get_device_enumerator() const noexcept

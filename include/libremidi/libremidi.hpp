@@ -149,6 +149,9 @@ public:
   //! Never true for virtual ports.
   [[nodiscard]] bool is_port_connected() const noexcept;
 
+  //! Returns the current timestamp for absolute ticks.
+  int64_t absolute_timestamp() const noexcept;
+
 private:
   std::unique_ptr<class midi_in_api> impl_;
 };
