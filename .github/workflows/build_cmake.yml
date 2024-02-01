@@ -32,9 +32,9 @@ jobs:
             test_target: "test"
           }
         - {
-            name: "Ubuntu (clang-17, libstdc++)",
+            name: "Ubuntu (clang-18, libstdc++)",
             os: ubuntu-latest,
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
             test_target: "test"
           }
         - {
