@@ -118,6 +118,7 @@ public:
             = [this, port](libremidi::message&& m) {
       configuration.on_message(port, std::move(m));
             },
+            .get_timestamp = {},
 
             .on_error = configuration.on_error,
             .on_warning = configuration.on_warning,
