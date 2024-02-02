@@ -52,6 +52,9 @@ public:
     port_ = get(MidiInPort::FromIdAsync(id));
     if (!port_)
       return false;
+
+    midi_start_timestamp = std::chrono::steady_clock::now();
+
     port_.MessageReceived(
         [=](const winrt::Windows::Devices::Midi::IMidiInPort& inputPort,
             const winrt::Windows::Devices::Midi::MidiMessageReceivedEventArgs& args) {
@@ -81,7 +84,15 @@ public:
     }
   }
 
+  int64_t absolute_timestamp() const noexcept override
+  {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+               std::chrono::steady_clock::now() - midi_start_timestamp)
+        .count();
+  }
+
 private:
   winrt::Windows::Devices::Midi::IMidiInPort port_{nullptr};
+  std::chrono::steady_clock::time_point midi_start_timestamp;
 };
 }
