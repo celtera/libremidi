@@ -53,7 +53,8 @@ public:
         ret != 0)
     {
       error<invalid_parameter_error>(
-          configuration, "JACK: could not connect to port: " + port.port_name);
+          configuration, "JACK: could not connect to port: " + port.port_name + " -> "
+                             + jack_port_name(this->port));
       return false;
     }
     return true;

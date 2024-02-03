@@ -207,7 +207,16 @@ public:
     return get_ports<false>(this->client, nullptr, JackPortIsInput);
   }
 
-  ~observer_jack() { }
+  ~observer_jack()
+  {
+    if (client && !configuration.context)
+    {
+      // If we own the client, deactivate it
+      jack_deactivate(this->client);
+      jack_client_close(this->client);
+      this->client = nullptr;
+    }
+  }
 
   std::unordered_set<std::string> seen_input_ports;
   std::unordered_set<std::string> seen_output_ports;
