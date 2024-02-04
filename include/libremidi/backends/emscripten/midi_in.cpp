@@ -98,7 +98,7 @@ LIBREMIDI_INLINE void midi_in_emscripten::set_timestamp(double ts, libremidi::me
   }
 }
 
-LIBREMIDI_INLINE int64_t midi_in_emscripten::absolute_timestamp() const noexcept override
+LIBREMIDI_INLINE int64_t midi_in_emscripten::absolute_timestamp() const noexcept
 {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(
              std::chrono::steady_clock::now().time_since_epoch())
