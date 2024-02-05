@@ -122,7 +122,7 @@ public:
     snd_seq_ump_event_t ev;
 
     // this doesn't clear entirely the ump field but we set it afterwards anyways
-    snd_seq_ev_clear(&ev);
+    memset(&ev, 0, sizeof(snd_seq_ump_event_t));
     snd_seq_ev_set_ump(&ev);
     snd_seq_ev_set_source(&ev, this->vport);
     snd_seq_ev_set_subs(&ev);
