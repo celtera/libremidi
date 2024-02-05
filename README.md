@@ -13,6 +13,17 @@ Additionnally, for MIDI 2 parsing support we use [cmidi2](https://github.com/ats
 
 ## Changelog 
 
+### Since v4.3
+* Improvements to timing handling.
+  * Added a `Custom` timestamping mechanism which allows the user to provide a 
+    custom callback to run timestamping as close as possible to the event's reception.
+  * Added `midi_in::absolute_timestamp()` to get the origin timestamp for driver-provided ticks as accurately as possible.
+    * e.g. in practice this is taking the time just near the ALSA queue creation or WinMM MIDI open.
+  * Bugfixes in JACK
+  * Many warning fixes - thanks @lilggamegenius for the extensive work!
+  * Fix MIDI dump example - thanks @chdiesch!
+  * Add SOVERSION to dynamic library
+
 ### Since v4.2
 * More robust MIDI 2.0 support.
   * On macOS through CoreMIDI (input / output, requires macOS 11+).
