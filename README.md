@@ -2,6 +2,8 @@
 
 [![Build status](https://github.com/jcelerier/libremidi/workflows/Build/badge.svg)](https://github.com/jcelerier/libremidi/actions)
 
+[![Packaging status](https://repology.org/badge/vertical-allrepos/libremidi.svg?columns=3&header=libremidi)](https://repology.org/project/libremidi/versions)
+
 libremidi is a cross-platform C++20 library for real-time and MIDI file input and output.
 
 This is a fork / rewrite based on two libraries: 
