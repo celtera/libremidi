@@ -12,6 +12,7 @@ include(CMakeDependentOption)
 include(CheckSymbolExists)
 include(CheckCXXSourceCompiles)
 include(CheckIncludeFileCXX)
+include(FetchContent)
 include(GNUInstallDirs)
 
 ### Options ###
