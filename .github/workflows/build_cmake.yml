@@ -55,6 +55,12 @@ jobs:
             cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type",
             test_target: "test"
           }
+        - {
+            name: "iOS",
+            os: macos-13,
+            cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DCMAKE_SYSTEM_NAME=iOS",
+            test_target: "test"
+          }
     steps:
     - uses: actions/checkout@v3
 
@@ -106,7 +112,7 @@ jobs:
         cmake --build build --config Debug --target install
 
     - name: Test
-      if: matrix.config.name != 'Tarball'
+      if: matrix.config.name != 'Tarball' && matrix.config.name != 'iOS'
       run: |
         # Not available on GH actions...
         # if [ "$RUNNER_OS" == "Linux" ]; then
