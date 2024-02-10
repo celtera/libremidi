@@ -137,7 +137,7 @@ public:
 
     MIDIEventList eventList = {};
     MIDIEventPacket* packet = MIDIEventListInit(&eventList, kMIDIProtocol_2_0);
-    MIDITimeStamp ts = AudioGetCurrentHostTime();
+    MIDITimeStamp ts = LIBREMIDI_AUDIO_GET_CURRENT_HOST_TIME();
     const auto sz = cmidi2_ump_get_num_bytes(ump[0]) / 4;
 
     // And send to an explicit destination port if we're connected.

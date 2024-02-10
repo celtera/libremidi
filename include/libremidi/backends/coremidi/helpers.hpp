@@ -12,9 +12,10 @@
 #if TARGET_OS_IPHONE
   #include <CoreAudio/CoreAudioTypes.h>
   #include <mach/mach_time.h>
-  #define AudioGetCurrentHostTime mach_absolute_time
+  #define LIBREMIDI_AUDIO_GET_CURRENT_HOST_TIME mach_absolute_time
 #else
   #include <CoreAudio/HostTime.h>
+  #define LIBREMIDI_AUDIO_GET_CURRENT_HOST_TIME AudioGetCurrentHostTime
 #endif
 
 namespace libremidi

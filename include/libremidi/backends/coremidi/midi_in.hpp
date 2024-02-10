@@ -132,7 +132,7 @@ public:
 
   int64_t absolute_timestamp() const noexcept override
   {
-    return coremidi_data::time_in_nanos(AudioGetCurrentHostTime());
+    return coremidi_data::time_in_nanos(LIBREMIDI_AUDIO_GET_CURRENT_HOST_TIME());
   }
 
   static void midiInputCallback(const MIDIPacketList* list, void* procRef, void* /*srcRef*/)
