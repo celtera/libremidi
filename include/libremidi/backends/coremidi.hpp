@@ -20,7 +20,3 @@ struct core_backend
   static constexpr inline bool available() noexcept { return true; }
 };
 }
-
-#if TARGET_OS_IPHONE
-  #undef AudioGetCurrentHostTime
-#endif

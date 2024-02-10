@@ -132,7 +132,7 @@ public:
   {
     MIDIEventList* eventList = reinterpret_cast<MIDIEventList*>(m_eventListBuffer);
     MIDIEventPacket* packet = MIDIEventListInit(eventList, kMIDIProtocol_2_0);
-    const MIDITimeStamp ts = AudioGetCurrentHostTime();
+    const MIDITimeStamp ts = LIBREMIDI_AUDIO_GET_CURRENT_HOST_TIME();
 
     auto write_fun = [ts, &packet, &eventList](const uint32_t* ump, int bytes) {
       packet = MIDIEventListAdd(eventList, event_list_max_size, packet, ts, bytes / 4, ump);
