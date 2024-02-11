@@ -68,6 +68,11 @@ jobs:
             cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_XCODE_EFFECTIVE_PLATFORMS=-iphoneos",
             test_target: "test"
           }
+
+        exclude:
+          - config.name: "iOS"
+            boost: 1
+
     steps:
     - uses: actions/checkout@v4
 
@@ -198,8 +203,14 @@ jobs:
         apt-get install -qq --force-yes \
           build-essential binutils gcc g++ \
           clang libc++-dev \
-          cmake \
-          libboost-dev libasound-dev libjack-jackd2-dev
+          libboost-dev libasound-dev libjack-jackd2-dev \
+          libudev-dev
+
+        if [[ "${{matrix.config.distro}}" == 'bullseye' ]]; then
+          apt-get install -qq --force-yes cmake/bullseye-backports
+        else
+          apt-get install -qq --force-yes cmake
+        fi
 
     - name: Configure
       run: |

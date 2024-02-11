@@ -1,13 +1,12 @@
 #pragma once
+#include <libremidi/backends/alsa_raw/config.hpp>
+#include <libremidi/backends/alsa_raw/helpers.hpp>
+#include <libremidi/backends/dummy.hpp>
+
 #if LIBREMIDI_HAS_UDEV
-  #include <libremidi/backends/alsa_raw/config.hpp>
-  #include <libremidi/backends/alsa_raw/helpers.hpp>
-  #include <libremidi/backends/dummy.hpp>
   #include <libremidi/backends/linux/helpers.hpp>
   #include <libremidi/backends/linux/udev.hpp>
   #include <libremidi/detail/observer.hpp>
-
-  #include <poll.h>
 
   #include <stdexcept>
 
