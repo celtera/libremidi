@@ -1,3 +1,9 @@
+if(NOT LIBREMIDI_HAS_STD_SEMAPHORE)
+  message(STATUS "libremidi: std::binary_semaphore not available, skipping JACK backend")
+  set(LIBREMIDI_HAS_JACK 0)
+  return()
+endif()
+
 find_path(WEAKJACK_PATH weakjack/weak_libjack.h HINTS "${WEAKJACK_FOLDER}")
 find_path(JACK_PATH jack/jack.h)
 

@@ -106,7 +106,9 @@ endif()
 
 target_compile_features(libremidi ${_public} cxx_std_20)
 
-target_link_libraries(libremidi ${_public} ${CMAKE_THREAD_LIBS_INIT})
+if(CMAKE_THREAD_LIBS_INIT)
+  target_link_libraries(libremidi ${_public} ${CMAKE_THREAD_LIBS_INIT})
+endif()
 
 target_include_directories(libremidi ${_public}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
