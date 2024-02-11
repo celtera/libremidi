@@ -64,7 +64,7 @@ jobs:
         - {
             name: "iOS",
             os: macos-13,
-            generator: "-GXCode",
+            generator: "-GXcode",
             cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_XCODE_EFFECTIVE_PLATFORMS=-iphoneos",
             test_target: "test"
           }
@@ -179,6 +179,11 @@ jobs:
         distro: [bullseye, bookworm, trixie]
 
     steps:
+    - name: Add backports repo if necessary
+      if: matrix.config.distro == 'bullseye'
+      run: |
+        echo "deb http://ftp.debian.org/debian/ ${{ matrix.distro }}-backports main non-free contrib" > /etc/apt/sources.list.d/${{ matrix.distro }}-backports.list
+
     - name: Install git
       run: |
         apt-get update -qq
@@ -214,6 +219,6 @@ jobs:
 
     - name: Test
       run: |
-        cmake --build build --config Debug --target ${{ matrix.config.test_target }}
+        cmake --build build --config Debug --target test
 
 
