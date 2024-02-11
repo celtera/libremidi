@@ -83,8 +83,6 @@ jobs:
     - name: Install dependencies
       if: matrix.config.name != 'Tarball'
       run:  |
-        git submodule update --init --recursive
-
         if [ "$RUNNER_OS" == "Linux" ]; then
           sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
           sudo apt update
@@ -190,8 +188,6 @@ jobs:
 
     - name: Install dependencies
       run:  |
-        git submodule update --init --recursive
-
         bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         apt-get update -qq
         apt-get install -qq --force-yes \
