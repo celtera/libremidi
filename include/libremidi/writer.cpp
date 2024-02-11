@@ -188,7 +188,7 @@ void writer::add_event(int track, const track_event& m)
 LIBREMIDI_INLINE
 void writer::add_track()
 {
-  util::add_event_track_count_check(tracks, tracks.size() + 1);
+  util::add_event_track_count_check(tracks, static_cast<int>(tracks.size() + 1));
 }
 
 LIBREMIDI_INLINE
