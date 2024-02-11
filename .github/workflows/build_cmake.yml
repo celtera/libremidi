@@ -44,6 +44,12 @@ jobs:
             test_target: "test"
           }
         - {
+            name: "Debian Bookworm",
+            os: ubuntu-latest,
+            cmakeflags: "",
+            test_target: "test"
+          }
+        - {
             name: 'Tarball',
             os: ubuntu-latest,
             cmakeflags: "",
@@ -62,7 +68,7 @@ jobs:
             test_target: "test"
           }
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Get latest release version number
       id: get_version
@@ -132,7 +138,7 @@ jobs:
         boost: [0, 1]
         header_only: [0, 1]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - uses: vmactions/freebsd-vm@v1
       with:
@@ -159,4 +165,57 @@ jobs:
           cmake --build build
           cmake --build build --target install
           cmake --build build --target test
+
+  build_debian:
+    name: Debian ${{ matrix.distro }}
+    runs-on: ubuntu-latest
+    container:
+      image: debian:${{ matrix.distro }}
+    strategy:
+      fail-fast: false
+      matrix:
+        boost: [0, 1]
+        header_only: [0, 1]
+        distro: [bullseye, bookworm, trixie]
+
+    steps:
+    - name: Install git
+      run: |
+        apt-get update -qq
+        apt-get install -qq --force-yes git
+
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run:  |
+        git submodule update --init --recursive
+
+        bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+        apt-get update -qq
+        apt-get install -qq --force-yes \
+          build-essential binutils gcc g++ \
+          clang libc++-dev \
+          cmake \
+          libboost-dev libasound-dev libjack-jackd2-dev
+
+    - name: Configure
+      run: |
+        cmake -S . -B build \
+          -DLIBREMIDI_FIND_BOOST=${{ matrix.boost }} \
+          -DLIBREMIDI_HEADER_ONLY=${{ matrix.header_only }} \
+          -DLIBREMIDI_EXAMPLES=1 \
+          -DLIBREMIDI_TESTS=1 \
+          -DLIBREMIDI_CI=1 \
+          -DCMAKE_CTEST_ARGUMENTS="--rerun-failed;--output-on-failure" \
+          -DCMAKE_INSTALL_PREFIX=install
+
+    - name: Build
+      run: |
+        cmake --build build --config Debug
+        cmake --build build --config Debug --target install
+
+    - name: Test
+      run: |
+        cmake --build build --config Debug --target ${{ matrix.config.test_target }}
+
 
