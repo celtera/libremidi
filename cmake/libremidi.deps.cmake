@@ -1,0 +1,25 @@
+### C++ features ###
+check_cxx_source_compiles("#include <thread>\nint main() { std::jthread t; }" LIBREMIDI_HAS_STD_JTHREAD)
+
+### Dependencies ###
+find_package(Threads)
+
+# ni-midi2
+if(LIBREMIDI_NI_MIDI2 AND NOT TARGET ni::midi2)
+  FetchContent_Declare(
+      ni-midi2
+      GIT_REPOSITORY https://github.com/midi2-dev/ni-midi2
+      GIT_TAG        main
+  )
+
+  FetchContent_MakeAvailable(ni-midi2)
+endif()
+
+# boost
+if(LIBREMIDI_NO_BOOST AND LIBREMIDI_FIND_BOOST)
+  message(FATAL_ERROR "LIBREMIDI_NO_BOOST and LIBREMIDI_FIND_BOOST are incompatible")
+endif()
+
+if(LIBREMIDI_FIND_BOOST)
+  find_package(Boost REQUIRED)
+endif()
