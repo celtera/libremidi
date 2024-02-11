@@ -1,10 +1,26 @@
+macro(setup_example _example)
+  target_link_libraries(${_example} PRIVATE libremidi)
+  set_target_properties(${_example}
+    PROPERTIES
+      MACOSX_BUNDLE FALSE
+      MACOSX_BUNDLE_INFO_STRING "${_example}"
+      MACOSX_BUNDLE_GUI_IDENTIFIER "dev.celtera.libremidi"
+      MACOSX_BUNDLE_LONG_VERSION_STRING "${PROJECT_VERSION}"
+      MACOSX_BUNDLE_BUNDLE_NAME "${_example}"
+      MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+      MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+      MACOSX_BUNDLE_COPYRIGHT "https://celtera.dev"
+  )
+endmacro()
+
 macro(add_example _example)
   add_executable(${_example} examples/${_example}.cpp)
-  target_link_libraries(${_example} PRIVATE libremidi)
+  setup_example(${_example})
 endmacro()
+
 macro(add_backend_example _example)
     add_executable(${_example} examples/backends/${_example}.cpp)
-    target_link_libraries(${_example} PRIVATE libremidi)
+    setup_example(${_example})
 endmacro()
 
 add_example(midiobserve)
