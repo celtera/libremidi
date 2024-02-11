@@ -204,11 +204,11 @@ private:
         if (firstMessage == true)
         {
           firstMessage = false;
-          message.timestamp = 0;
+          msg.timestamp = 0;
         }
         else
         {
-          message.timestamp = static_cast<int64_t>(time);
+          msg.timestamp = static_cast<int64_t>(time);
         }
         return;
       }
@@ -244,10 +244,6 @@ private:
       return;
 
     auto& self = *reinterpret_cast<midi_in_winmm*>(instancePtr);
-
-    auto& message = self.message;
-
-    self.set_timestamp(timestamp, message);
 
     if (inputStatus == MIM_DATA)
     { // Channel or system message
@@ -289,16 +285,42 @@ private:
 
       // Copy bytes to our MIDI message.
       const auto* ptr = reinterpret_cast<unsigned char*>(&midiMessage);
-      message.bytes.assign(ptr, ptr + nBytes);
+
+      self.set_timestamp(timestamp, self.basic_message);
+      self.basic_message.bytes.assign(ptr, ptr + nBytes);
+      self.configuration.on_message(std::move(self.basic_message));
+      // Save the time of the last non-filtered message
+      self.last_time = timestamp;
+
+      return;
     }
     else
-    { // Sysex message ( MIM_LONGDATA or MIM_LONGERROR )
+    {
+      // Sysex message ( MIM_LONGDATA or MIM_LONGERROR )
       const auto* sysex = reinterpret_cast<MIDIHDR*>(midiMessage);
-      if (!self.configuration.ignore_sysex && inputStatus != MIM_LONGERROR)
+      bool can_send_message = false;
+      if(inputStatus == MIM_LONGERROR)
       {
-        // Sysex message and we're not ignoring it
-        message.bytes.insert(
-            message.bytes.end(), sysex->lpData, sysex->lpData + sysex->dwBytesRecorded);
+        self.sysex_message.bytes.clear();
+      }
+      else if (!self.configuration.ignore_sysex)
+      {
+        if(sysex->dwBytesRecorded > 0)
+        {
+          const unsigned char first_byte = sysex->lpData[0];
+          const unsigned char last_byte = sysex->lpData[sysex->dwBytesRecorded - 1];
+          if(first_byte == 0xF0) {
+            // Starting a new sysex
+            self.sysex_message.bytes.clear();
+          }
+          if(last_byte == 0xF7) {
+            // The sysex is finished
+            can_send_message = true;
+          }
+
+          self.sysex_message.bytes.insert(
+              self.sysex_message.bytes.end(), sysex->lpData, sysex->lpData + sysex->dwBytesRecorded);
+        }
       }
 
       // The WinMM API requires that the sysex buffer be requeued after
@@ -317,22 +339,27 @@ private:
             = midiInAddBuffer(self.inHandle, self.sysexBuffer[sysex->dwUser], sizeof(MIDIHDR));
         LeaveCriticalSection(&(self._mutex));
         if (result != MMSYSERR_NOERROR)
-
+        {
 #if defined(__LIBREMIDI_DEBUG__)
           std::cerr << "\nmidi_in::midiInputCallback: error sending sysex to "
                        "Midi device!!\n\n";
 #endif
-        if (self.configuration.ignore_sysex)
           return;
+        }
+        if (can_send_message)
+        {
+          self.set_timestamp(timestamp, self.sysex_message);
+          self.configuration.on_message(std::move(self.sysex_message));
+          self.sysex_message.clear();
+          // Save the time of the last non-filtered message
+          self.last_time = timestamp;
+        }
       }
       else
+      {
         return;
+      }
     }
-
-    // Save the time of the last non-filtered message
-    self.last_time = timestamp;
-
-    self.configuration.on_message(std::move(message));
   }
 
   HMIDIIN inHandle; // Handle to Midi Input Device
@@ -343,6 +370,9 @@ private:
   // https://groups.google.com/forum/#!topic/mididev/6OUjHutMpEo
   CRITICAL_SECTION _mutex;
   std::chrono::steady_clock::time_point midi_start_timestamp;
+
+  libremidi::message basic_message;
+  libremidi::message sysex_message;
 };
 
 }
