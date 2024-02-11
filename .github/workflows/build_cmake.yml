@@ -24,49 +24,63 @@ jobs:
             os: windows-latest,
             generator: "",
             cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_82_0",
-            test_target: "RUN_TESTS"
+            test_target: "RUN_TESTS",
+            tests: 1,
+            examples: 1
           }
         - {
             name: "Ubuntu (gcc)",
             os: ubuntu-latest,
             generator: "",
             cmakeflags: "-DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_PEDANTIC=1 -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SANITIZE_VECTOR=1'",
-            test_target: "test"
+            test_target: "test",
+            tests: 1,
+            examples: 1
           }
         - {
             name: "Ubuntu (clang-18, libstdc++)",
             os: ubuntu-latest,
             generator: "",
             cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
-            test_target: "test"
+            test_target: "test",
+            tests: 1,
+            examples: 1
           }
         - {
             name: "Ubuntu (clang, libc++)",
             os: ubuntu-latest,
             generator: "",
             cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-stdlib=libc++ -Werror=return-type'",
-            test_target: "test"
+            test_target: "test",
+            tests: 1,
+            examples: 1
           }
         - {
             name: 'Tarball',
             os: ubuntu-latest,
             generator: "",
             cmakeflags: "",
-            test_target: "test"
+            test_target: "test",
+            tests: 1,
+            examples: 1
           }
         - {
             name: "macOS",
             os: macos-13,
             generator: "",
             cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type",
-            test_target: "test"
+            test_target: "test",
+            tests: 1,
+            examples: 1
           }
         - {
             name: "iOS",
             os: macos-13,
             generator: "-GXcode",
             cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_XCODE_EFFECTIVE_PLATFORMS=-iphoneos",
-            test_target: "test"
+            test_target: "test",
+            tests: 0,
+            examples: 0
           }
 
         exclude:
@@ -110,8 +124,8 @@ jobs:
           ${{ matrix.config.cmakeflags }} \
           -DLIBREMIDI_FIND_BOOST=${{ matrix.boost }} \
           -DLIBREMIDI_HEADER_ONLY=${{ matrix.header_only }} \
-          -DLIBREMIDI_EXAMPLES=1 \
-          -DLIBREMIDI_TESTS=1 \
+          -DLIBREMIDI_EXAMPLES=${{ matrix.config.examples }}  \
+          -DLIBREMIDI_TESTS=${{ matrix.config.tests }} \
           -DLIBREMIDI_CI=1 \
           -DCMAKE_CTEST_ARGUMENTS="--rerun-failed;--output-on-failure" \
           -DCMAKE_INSTALL_PREFIX=install
@@ -185,7 +199,7 @@ jobs:
 
     steps:
     - name: Add backports repo if necessary
-      if: matrix.config.distro == 'bullseye'
+      if: matrix.distro == 'bullseye'
       run: |
         echo "deb http://ftp.debian.org/debian/ ${{ matrix.distro }}-backports main non-free contrib" > /etc/apt/sources.list.d/${{ matrix.distro }}-backports.list
 
@@ -207,7 +221,7 @@ jobs:
           libboost-dev libasound-dev libjack-jackd2-dev \
           libudev-dev
 
-        if [[ "${{matrix.config.distro}}" == 'bullseye' ]]; then
+        if [[ "${{matrix.distro}}" == 'bullseye' ]]; then
           apt-get install -qq --force-yes cmake/bullseye-backports
         else
           apt-get install -qq --force-yes cmake
