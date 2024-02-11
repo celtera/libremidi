@@ -10,7 +10,7 @@ if(ALSA_FOUND AND LIBREMIDI_HAS_EVENTFD AND LIBREMIDI_HAS_TIMERFD)
 
   set(CMAKE_REQUIRED_INCLUDES "${ALSA_INCLUDE_DIR}")
   set(CMAKE_REQUIRED_LIBRARIES "asound")
-  check_symbol_exists("snd_rawmidi_read" "alsa/asoundlib.h" LIBREMIDI_HAS_ALSA_RAWMIDI)
+  check_symbol_exists("snd_rawmidi_tread" "alsa/asoundlib.h" LIBREMIDI_HAS_ALSA_RAWMIDI)
   check_symbol_exists("snd_ump_open" "alsa/asoundlib.h" LIBREMIDI_HAS_ALSA_UMP)
   unset(CMAKE_REQUIRED_INCLUDES)
   unset(CMAKE_REQUIRED_LIBRARIES)
