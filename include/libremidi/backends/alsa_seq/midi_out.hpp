@@ -169,6 +169,6 @@ public:
   }
 
 private:
-  unsigned int bufferSize{32};
+  uint64_t bufferSize{32};
 };
 }

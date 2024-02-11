@@ -114,7 +114,7 @@ public:
     return snd.ump.poll_descriptors(this->midiport_, fds_.data(), num_fds);
   }
 
-  int do_read_events(auto parse_func, std::span<pollfd> fds)
+  ssize_t do_read_events(auto parse_func, std::span<pollfd> fds)
   {
     // Read events
     if (fds.empty())
@@ -124,7 +124,8 @@ public:
     else
     {
       unsigned short res{};
-      int err = snd.ump.poll_descriptors_revents(this->midiport_, fds.data(), fds.size(), &res);
+      ssize_t err = snd.ump.poll_descriptors_revents(
+          this->midiport_, fds.data(), static_cast<unsigned int>(fds.size()), &res);
       if (err < 0)
         return err;
 
@@ -140,13 +141,13 @@ public:
     return 0;
   }
 
-  int read_input_buffer()
+  ssize_t read_input_buffer()
   {
     static const constexpr int nbytes = 1024;
 
     unsigned char bytes[nbytes];
 
-    int err = 0;
+    ssize_t err = 0;
     while ((err = snd.ump.read(this->midiport_, bytes, nbytes)) > 0)
     {
       std::cerr << "We read: " << nbytes << "bytes !!!!";
@@ -190,14 +191,14 @@ public:
     }
   }
 
-  int read_input_buffer_with_timestamps()
+  ssize_t read_input_buffer_with_timestamps()
   {
     static const constexpr int nbytes = 1024;
 
     unsigned char bytes[nbytes];
     struct timespec ts;
 
-    int err = 0;
+    ssize_t err = 0;
     while ((err = snd.ump.tread(this->midiport_, &ts, bytes, nbytes)) > 0)
     {
       // err is the amount of bytes read
@@ -266,7 +267,7 @@ private:
     for (;;)
     {
       // Poll
-      int err = poll(fds_.data(), fds_.size(), -1);
+      ssize_t err = poll(fds_.data(), fds_.size(), -1);
       if (err == -EAGAIN)
         continue;
       else if (err < 0)

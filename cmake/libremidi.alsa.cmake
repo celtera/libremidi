@@ -19,6 +19,7 @@ if(ALSA_FOUND AND LIBREMIDI_HAS_EVENTFD AND LIBREMIDI_HAS_TIMERFD)
   message(STATUS "libremidi: ALSA UMP: ${LIBREMIDI_HAS_ALSA_UMP}")
   target_compile_definitions(libremidi ${_public} LIBREMIDI_ALSA)
   target_include_directories(libremidi ${_public} "${ALSA_INCLUDE_DIR}")
+  target_link_libraries(libremidi ${_public} "${CMAKE_DL_LIBS}")
 
   if(NOT LIBREMIDI_NO_UDEV)
     find_path(UDEV_INCLUDE_DIR libudev.h)

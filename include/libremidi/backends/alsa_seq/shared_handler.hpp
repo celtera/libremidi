@@ -90,7 +90,7 @@ struct shared_handler : public libremidi::shared_context
     };
   }
 
-  int index_of_address(snd_seq_addr_t addr)
+  int64_t index_of_address(snd_seq_addr_t addr)
   {
     auto it = std::find_if(addresses.begin(), addresses.end(), [=](snd_seq_addr_t other) {
       return equals_addr{}(addr, other);
@@ -146,7 +146,7 @@ struct shared_handler : public libremidi::shared_context
       }
 
       // Look for who's ready
-      for (int i = 0, N = fds.size() - 2; i < N; i++)
+      for (int64_t i = 0, N = std::ssize(fds) - 2; i < N; i++)
       {
         if (fds[i].revents & POLLIN)
         {

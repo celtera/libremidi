@@ -25,7 +25,7 @@ struct midi_stream_decoder
     for (std::size_t i = 0; i < sz; i++)
       bytes.push_back(data[i]);
 
-    int read = 0;
+    int64_t read = 0;
     unsigned char* begin = bytes.data();
     unsigned char* end = bytes.data() + bytes.size();
     while ((read = parse(begin, end)) && read > 0)
@@ -41,9 +41,9 @@ struct midi_stream_decoder
       bytes.erase(bytes.begin(), bytes.begin() + (begin - bytes.data()));
   }
 
-  int parse(unsigned char* bytes, unsigned char* end)
+  int64_t parse(unsigned char* bytes, unsigned char* end)
   {
-    int sz = end - bytes;
+    int64_t sz = end - bytes;
     if (sz == 0)
       return 0;
 

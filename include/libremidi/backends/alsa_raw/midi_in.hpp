@@ -112,7 +112,7 @@ public:
     return snd.rawmidi.poll_descriptors(this->midiport_, fds_.data(), num_fds);
   }
 
-  int do_read_events(auto parse_func, std::span<pollfd> fds)
+  ssize_t do_read_events(auto parse_func, std::span<pollfd> fds)
   {
     // Read events
     if (fds.empty())
@@ -122,8 +122,8 @@ public:
     else
     {
       unsigned short res{};
-      const int err
-          = snd.rawmidi.poll_descriptors_revents(this->midiport_, fds.data(), fds.size(), &res);
+      const int err = snd.rawmidi.poll_descriptors_revents(
+          this->midiport_, fds.data(), static_cast<unsigned int>(fds.size()), &res);
       if (err < 0)
         return err;
 
@@ -139,13 +139,13 @@ public:
     return 0;
   }
 
-  int read_input_buffer()
+  ssize_t read_input_buffer()
   {
     static const constexpr int nbytes = 1024;
 
     unsigned char bytes[nbytes];
 
-    int err = 0;
+    ssize_t err = 0;
     while ((err = snd.rawmidi.read(this->midiport_, bytes, nbytes)) > 0)
     {
       // err is the amount of bytes read
@@ -199,14 +199,14 @@ public:
   }
 
 #if LIBREMIDI_ALSA_HAS_RAWMIDI_TREAD
-  int read_input_buffer_with_timestamps()
+  ssize_t read_input_buffer_with_timestamps()
   {
     static constexpr int nbytes = 1024;
 
     unsigned char bytes[nbytes];
     struct timespec ts;
 
-    int err = 0;
+    ssize_t err = 0;
     while ((err = snd.rawmidi.tread(this->midiport_, &ts, bytes, nbytes)) > 0)
     {
       // err is the amount of bytes read
@@ -217,7 +217,7 @@ public:
     return err;
   }
 #else
-  int read_input_buffer_with_timestamps() { return read_input_buffer(); }
+  ssize_t read_input_buffer_with_timestamps() { return read_input_buffer(); }
 #endif
 
   void close_port() override
@@ -271,7 +271,7 @@ private:
     for (;;)
     {
       // Poll
-      int err = poll(fds_.data(), fds_.size(), -1);
+      ssize_t err = poll(fds_.data(), fds_.size(), -1);
       if (err == -EAGAIN)
         continue;
       else if (err < 0)
@@ -287,7 +287,7 @@ private:
     }
   }
 
-  [[nodiscard]] int start_thread()
+  [[nodiscard]] ssize_t start_thread()
   {
     try
     {

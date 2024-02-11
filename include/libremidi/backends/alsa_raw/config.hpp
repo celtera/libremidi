@@ -43,9 +43,9 @@ struct LIBREMIDI_EXPORT chunking_parameters
    * Arguments are: the time that must be waited, the bytes currently written.
    * Return false if you want to abort the transfer, and true otherwise.
    */
-  std::function<bool(std::chrono::microseconds, int)> wait = chunking_parameters::default_wait;
+  std::function<bool(std::chrono::microseconds, int64_t)> wait = chunking_parameters::default_wait;
 
-  static bool default_wait(std::chrono::microseconds time_to_wait, int /*written_bytes*/)
+  static bool default_wait(std::chrono::microseconds time_to_wait, int64_t /*written_bytes*/)
   {
     std::this_thread::sleep_for(time_to_wait);
     return true;
@@ -55,7 +55,7 @@ struct LIBREMIDI_EXPORT chunking_parameters
 struct manual_poll_parameters
 {
   std::span<poll_descriptors> fds;
-  std::function<int(std::span<poll_descriptors> fds)> callback;
+  std::function<int64_t(std::span<poll_descriptors> fds)> callback;
 };
 
 struct alsa_raw_input_configuration

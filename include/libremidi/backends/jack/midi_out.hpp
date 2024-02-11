@@ -25,10 +25,10 @@ public:
     return *this;
   }
 
-  explicit jack_queue(int sz) noexcept
+  explicit jack_queue(int64_t sz) noexcept
   {
     ringbuffer = jack_ringbuffer_create(sz);
-    ringbuffer_space = (int)jack_ringbuffer_write_space(ringbuffer);
+    ringbuffer_space = jack_ringbuffer_write_space(ringbuffer);
   }
 
   ~jack_queue() noexcept
@@ -37,9 +37,9 @@ public:
       jack_ringbuffer_free(ringbuffer);
   }
 
-  void write(const unsigned char* data, int32_t sz) const noexcept
+  void write(const unsigned char* data, int64_t sz) const noexcept
   {
-    if (static_cast<int32_t>(sz + size_sz) > ringbuffer_space)
+    if (static_cast<std::size_t>(sz + size_sz) > ringbuffer_space)
       return;
 
     while (jack_ringbuffer_write_space(ringbuffer) < sz + size_sz)
@@ -65,7 +65,7 @@ public:
   }
 
   jack_ringbuffer_t* ringbuffer{};
-  int32_t ringbuffer_space{}; // actual writable size, usually 1 less than ringbuffer
+  std::size_t ringbuffer_space{}; // actual writable size, usually 1 less than ringbuffer
 };
 
 class midi_out_jack
@@ -145,7 +145,7 @@ public:
       jack_client_close(this->client);
   }
 
-  void send_message(const unsigned char* message, size_t size) override
+  void send_message(const unsigned char* message, std::size_t size) override
   {
     queue.write(message, size);
   }
@@ -205,7 +205,7 @@ public:
     switch (configuration.timestamps)
     {
       case timestamp_mode::AudioFrame:
-        return user;
+        return static_cast<int>(user);
 
       default:
         // TODO
