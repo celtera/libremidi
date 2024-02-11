@@ -6,6 +6,7 @@
 
 #include <alsa/asoundlib.h>
 
+#include <bitset>
 #include <map>
 
 namespace libremidi::alsa_seq
@@ -96,7 +97,7 @@ public:
       return std::nullopt;
 
     const auto tp = snd.seq.port_info_get_type(pinfo);
-    bool ok = false;
+    bool ok = this->configuration.track_any;
     if ((tp & SND_SEQ_PORT_TYPE_HARDWARE) && this->configuration.track_hardware)
       ok = true;
     else if ((tp & SND_SEQ_PORT_TYPE_SOFTWARE) && this->configuration.track_virtual)
@@ -143,7 +144,13 @@ public:
         });
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_SEQ; }
+  libremidi::API get_current_api() const noexcept override
+  {
+    if constexpr (ConfigurationImpl::midi_version == 1)
+      return libremidi::API::ALSA_SEQ;
+    else
+      return libremidi::API::ALSA_SEQ_UMP;
+  }
 
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {

@@ -70,6 +70,9 @@ struct observer_configuration
   // Observe software (virtual) ports if the API provides it
   uint32_t track_virtual : 1 = false;
 
+  // Observe any port - some systems have other weird port types than hw / sw, this covers them
+  uint32_t track_any : 1 = false;
+
   // Notify of the existing ports in the observer constructor
   uint32_t notify_in_constructor : 1 = true;
 

@@ -175,7 +175,6 @@ public:
       warning(configuration, "midi_out_jack_direct: " + std::to_string((int)jack_status_t{}));
 
     buffer_size = jack_get_buffer_size(this->client);
-    std::cerr << buffer_size << std::endl;
   }
 
   ~midi_out_jack_direct() override

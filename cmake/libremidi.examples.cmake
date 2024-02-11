@@ -1,60 +1,58 @@
+macro(add_example _example)
+  add_executable(${_example} examples/${_example}.cpp)
+  target_link_libraries(${_example} PRIVATE libremidi)
+endmacro()
+macro(add_backend_example _example)
+    add_executable(${_example} examples/backends/${_example}.cpp)
+    target_link_libraries(${_example} PRIVATE libremidi)
+endmacro()
 
-add_executable(midiobserve examples/midiobserve.cpp)
-target_link_libraries(midiobserve PRIVATE libremidi)
+add_example(midiobserve)
+add_example(echo)
+add_example(cmidiin)
+add_example(midiclock_in)
+add_example(midiclock_out)
+add_example(midiout)
+add_example(client)
+add_example(midiprobe)
+add_example(qmidiin)
+add_example(sysextest)
+add_example(midi2_echo)
 
-add_executable(echo examples/echo.cpp)
-target_link_libraries(echo PRIVATE libremidi)
-
-add_executable(cmidiin examples/cmidiin.cpp)
-target_link_libraries(cmidiin PRIVATE libremidi)
-
-add_executable(midiclock_in examples/midiclock_in.cpp)
-target_link_libraries(midiclock_in PRIVATE libremidi)
-
-add_executable(midiclock_out examples/midiclock_out.cpp)
-target_link_libraries(midiclock_out PRIVATE libremidi)
-
-add_executable(midiout examples/midiout.cpp)
-target_link_libraries(midiout PRIVATE libremidi)
-
-if(HAS_STD_JTHREAD)
-    add_executable(multithread_midiout examples/multithread_midiout.cpp)
-    target_link_libraries(multithread_midiout PRIVATE libremidi)
+if(LIBREMIDI_NI_MIDI2)
+  add_example(midi2_interop)
 endif()
 
-add_executable(midiclient examples/client.cpp)
-target_link_libraries(midiclient PRIVATE libremidi)
-
-add_executable(midiprobe examples/midiprobe.cpp)
-target_link_libraries(midiprobe PRIVATE libremidi)
-
-add_executable(qmidiin examples/qmidiin.cpp)
-target_link_libraries(qmidiin PRIVATE libremidi)
-
-add_executable(sysextest examples/sysextest.cpp)
-target_link_libraries(sysextest PRIVATE libremidi)
-
-add_executable(midi2_echo examples/midi2_echo.cpp)
-target_link_libraries(midi2_echo PRIVATE libremidi)
+if(HAS_STD_JTHREAD)
+  add_example(multithread_midiout)
+endif()
 
 if(LIBREMIDI_HAS_ALSA)
-    add_executable(poll_share examples/poll_share.cpp)
-    target_link_libraries(poll_share PRIVATE libremidi ${ALSA_LIBRARIES})
-    add_executable(alsa_share examples/alsa_share.cpp)
-    target_link_libraries(alsa_share PRIVATE libremidi ${ALSA_LIBRARIES})
+  add_example(poll_share)
+  target_link_libraries(poll_share PRIVATE ${ALSA_LIBRARIES})
+
+  add_example(alsa_share)
+  target_link_libraries(alsa_share PRIVATE ${ALSA_LIBRARIES})
+
+  add_backend_example(midi1_in_alsa_rawmidi)
+  add_backend_example(midi1_in_alsa_seq)
+  add_backend_example(midi1_out_alsa_rawmidi)
+  add_backend_example(midi1_out_alsa_seq)
+  add_backend_example(midi2_in_alsa_rawmidi)
+  add_backend_example(midi2_in_alsa_seq)
+  add_backend_example(midi2_out_alsa_rawmidi)
+  add_backend_example(midi2_out_alsa_seq)
 endif()
 
 if(LIBREMIDI_HAS_JACK)
-    add_executable(jack_share examples/jack_share.cpp)
-    target_link_libraries(jack_share PRIVATE libremidi)
+    add_example(jack_share)
 endif()
 
 if(LIBREMIDI_HAS_COREMIDI)
-    add_executable(coremidi_share examples/coremidi_share.cpp)
-    target_link_libraries(coremidi_share PRIVATE libremidi)
+    add_example(coremidi_share)
 endif()
 
 if(LIBREMIDI_HAS_EMSCRIPTEN)
-    add_executable(emscripten_midiin examples/emscripten_midiin.cpp)
-    target_link_libraries(emscripten_midiin PRIVATE libremidi)
+    add_example(emscripten_midiin)
 endif()
+

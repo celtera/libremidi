@@ -3,6 +3,7 @@
 #include <libremidi/backends/alsa_seq_ump/config.hpp>
 #include <libremidi/backends/alsa_seq_ump/helpers.hpp>
 #include <libremidi/detail/midi_out.hpp>
+#include <libremidi/detail/ump_stream.hpp>
 
 namespace libremidi::alsa_seq_ump
 {
@@ -117,27 +118,30 @@ public:
 
   void set_port_name(std::string_view portName) override { alsa_data::set_port_name(portName); }
 
-  void send_ump(const unsigned int* message, std::size_t size) override
+  void send_ump(const uint32_t* ump_stream, std::size_t count) override
   {
     snd_seq_ump_event_t ev;
 
-    // this doesn't clear entirely the ump field but we set it afterwards anyways
     memset(&ev, 0, sizeof(snd_seq_ump_event_t));
     snd_seq_ev_set_ump(&ev);
     snd_seq_ev_set_source(&ev, this->vport);
     snd_seq_ev_set_subs(&ev);
-    // FIXME direct is set but snd_seq_event_output_direct is not used...
     snd_seq_ev_set_direct(&ev);
 
-    std::memcpy(ev.ump, message, size * sizeof(uint32_t));
+    auto write_func = [this, &ev](const uint32_t* ump, int64_t bytes) {
+      std::memcpy(ev.ump, ump, bytes);
+      const int result = snd.seq.ump.event_output_direct(this->seq, &ev);
+      if (result < 0)
+      {
+        warning(
+            this->configuration,
+            "midi_out_alsa::send_message: error sending MIDI message to port.");
+        return libremidi::segmentation_error::other;
+      }
+      return libremidi::segmentation_error::no_error;
+    };
+    segment_ump_stream(ump_stream, count, write_func, []() {});
 
-    int result = snd.seq.ump.event_output(this->seq, &ev);
-    if (result < 0)
-    {
-      warning(
-          this->configuration, "midi_out_alsa::send_message: error sending MIDI message to port.");
-      return;
-    }
     snd.seq.drain_output(this->seq);
   }
 

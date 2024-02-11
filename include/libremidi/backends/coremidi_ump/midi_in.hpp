@@ -168,7 +168,7 @@ public:
 
       if (packet->wordCount <= 4)
       {
-        std::copy_n(packet->words, packet->wordCount, msg.bytes);
+        std::copy_n(packet->words, packet->wordCount, msg.data);
         configuration.on_message(std::move(msg));
       }
       last_time = time_in_nanos(packet->timeStamp);

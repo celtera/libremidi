@@ -109,6 +109,7 @@ std::any midi_in_configuration_for(const libremidi::observer& obs)
 LIBREMIDI_INLINE
 std::any midi_out_configuration_for(const libremidi::observer& obs)
 {
+  // FIXME reuse context when meaningful, e.g. ALSA, JACK...
   return midi_out_configuration_for(obs.get_current_api());
 }
 

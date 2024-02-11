@@ -32,9 +32,21 @@ option(LIBREMIDI_SLIM_MESSAGE "Use a fixed-size message format" 0)
 option(LIBREMIDI_FIND_BOOST "Actively look for Boost" OFF)
 option(LIBREMIDI_EXAMPLES "Enable examples" OFF)
 option(LIBREMIDI_TESTS "Enable tests" OFF)
+option(LIBREMIDI_NI_MIDI2 "Enable compatibility with ni-midi2" OFF)
 option(LIBREMIDI_CI "To be enabled only in CI, some tests cannot run there. Also enables -Werror." OFF)
 
 cmake_dependent_option(LIBREMIDI_NO_WARNINGS "Disables warnings from library compilation" OFF "NOT LIBREMIDI_HEADER_ONLY" ON)
+
+### Dependencies ###
+if(LIBREMIDI_NI_MIDI2 AND NOT TARGET ni::midi2)
+FetchContent_Declare(
+    ni-midi2
+    GIT_REPOSITORY https://github.com/midi2-dev/ni-midi2
+    GIT_TAG        main
+)
+
+FetchContent_MakeAvailable(ni-midi2)
+endif()
 
 ### C++ features ###
 if(NOT CMAKE_CXX_STANDARD)
@@ -225,6 +237,11 @@ endif()
 
 if(NOT LIBREMIDI_NO_EXPORTS)
   target_compile_definitions(libremidi ${_private} LIBREMIDI_EXPORTS)
+endif()
+
+if(LIBREMIDI_NI_MIDI2)
+  target_compile_definitions(libremidi ${_public} LIBREMIDI_USE_NI_MIDI2)
+  target_link_libraries(libremidi ${_public} $<BUILD_INTERFACE:ni::midi2>)
 endif()
 
 target_compile_features(libremidi ${_public} cxx_std_20)

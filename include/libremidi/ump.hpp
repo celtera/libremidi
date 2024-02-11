@@ -3,33 +3,60 @@
 
 #include <span>
 
+#if LIBREMIDI_NI_MIDI2_COMPAT
+  #include <midi/universal_packet.h>
+#endif
+
 namespace libremidi
 {
 struct ump
 {
-  alignas(4) uint32_t bytes[4] = {};
+  alignas(4) uint32_t data[4] = {};
   int64_t timestamp{};
-
-  constexpr operator std::span<const uint32_t>() const noexcept { return {bytes, size()}; }
 
   constexpr ump() noexcept = default;
   constexpr ~ump() = default;
-  constexpr ump(uint32_t b0) noexcept
-      : bytes{b0}
+
+  explicit constexpr ump(uint32_t b0) noexcept
+      : data{b0, 0, 0, 0}
   {
   }
   constexpr ump(uint32_t b0, uint32_t b1) noexcept
-      : bytes{b0, b1}
+      : data{b0, b1, 0, 0}
   {
   }
   constexpr ump(uint32_t b0, uint32_t b1, uint32_t b2) noexcept
-      : bytes{b0, b1, b2}
+      : data{b0, b1, b2, 0}
   {
   }
   constexpr ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b3) noexcept
-      : bytes{b0, b1, b2, b3}
+      : data{b0, b1, b2, b3}
   {
   }
+
+  // Compatibility with ni-midi2:
+#if LIBREMIDI_NI_MIDI2_COMPAT
+  constexpr operator midi::universal_packet() const noexcept
+  {
+    return {data[0], data[1], data[2], data[3]};
+  }
+  explicit constexpr ump(midi::universal_packet b) noexcept
+      : data{b.data[0], b.data[1], b.data[2], b.data[3]}
+  {
+  }
+  constexpr ump& operator=(midi::universal_packet b) noexcept
+  {
+    data[0] = b.data[0];
+    data[1] = b.data[1];
+    data[2] = b.data[2];
+    data[3] = b.data[3];
+    return *this;
+  }
+#endif
+
+  // Compatibility with cmidi2:
+  operator uint32_t*() noexcept { return data; }
+  operator const uint32_t*() const noexcept { return data; }
 
   constexpr std::size_t size() const noexcept
   {
@@ -45,7 +72,7 @@ struct ump
       SYSEX8_MDS = 5,
     };
 
-    switch (((bytes[0] & 0xF0000000) >> 28) & 0xF)
+    switch (((data[0] & 0xF0000000) >> 28) & 0xF)
     {
       case UTILITY:
       case SYSTEM:
@@ -61,18 +88,24 @@ struct ump
     }
   }
 
-  constexpr void clear() noexcept { bytes[0] = 0; }
+  constexpr void clear() noexcept
+  {
+    data[0] = 0;
+    data[1] = 0;
+    data[2] = 0;
+    data[3] = 0;
+  }
 
-  constexpr auto& operator[](int i) const noexcept { return bytes[i]; }
-  constexpr auto& operator[](int i) noexcept { return bytes[i]; }
+  constexpr auto& operator[](int i) const noexcept { return data[i]; }
+  constexpr auto& operator[](int i) noexcept { return data[i]; }
 
-  constexpr auto begin() const noexcept { return bytes; }
-  constexpr auto end() const noexcept { return bytes + size(); }
-  constexpr auto begin() noexcept { return bytes; }
-  constexpr auto end() noexcept { return bytes + size(); }
-  constexpr auto cbegin() const noexcept { return bytes; }
-  constexpr auto cend() const noexcept { return bytes + size(); }
-  constexpr auto cbegin() noexcept { return bytes; }
-  constexpr auto cend() noexcept { return bytes + size(); }
+  constexpr auto begin() const noexcept { return data; }
+  constexpr auto end() const noexcept { return data + size(); }
+  constexpr auto begin() noexcept { return data; }
+  constexpr auto end() noexcept { return data + size(); }
+  constexpr auto cbegin() const noexcept { return data; }
+  constexpr auto cend() const noexcept { return data + size(); }
+  constexpr auto cbegin() noexcept { return data; }
+  constexpr auto cend() noexcept { return data + size(); }
 };
 }

@@ -361,7 +361,7 @@ protected:
 
     // MIDI 2 : no decoder, we can just send the UMP data directly, yay
     libremidi::ump ump;
-    std::memcpy(ump.bytes, ev.ump, sizeof(ev.ump));
+    std::memcpy(ump.data, ev.ump, sizeof(ev.ump));
     set_timestamp(ev, ump);
     configuration.on_message(std::move(ump));
     return 0;

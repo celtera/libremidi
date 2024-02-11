@@ -262,7 +262,7 @@ struct midi1_enumerator : enumerator
       if (status < 0)
       {
         error(
-            "alsa_raw_helpers::enumerator::enumerate_devices: "
+            "alsa_raw::midi1_enumerator::enumerate_devices: "
             "cannot determine device number: ",
             snd.strerror(status));
         break;

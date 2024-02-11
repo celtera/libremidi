@@ -172,14 +172,6 @@ public:
     }
   }
 
-  alsa_raw::midi1_enumerator get_device_enumerator() const noexcept
-  {
-    alsa_raw::midi1_enumerator device_list;
-    device_list.error_callback
-        = [this](std::string_view text) { this->error<driver_error>(this->configuration, text); };
-    return device_list;
-  }
-
   snd_rawmidi_t* midiport_{};
 };
 }

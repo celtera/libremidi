@@ -81,7 +81,14 @@ public:
     if (auto res = cmidi2_convert_midi1_to_ump(&context); res != CMIDI2_CONVERSION_RESULT_OK)
       return;
 
-    send_ump(context.ump, context.ump_proceeded_bytes);
+    for (int64_t pos = 0; pos < static_cast<int64_t>(context.ump_proceeded_bytes);)
+    {
+      auto bytes = cmidi2_ump_get_num_bytes(context.ump[0]);
+      send_ump(context.ump, 1);
+      auto uints = bytes / 4;
+      context.ump += uints;
+      pos += bytes;
+    }
   }
 };
 }

@@ -14,7 +14,6 @@ install(EXPORT libremidi-targets
         DESTINATION lib/cmake/libremidi)
 install(DIRECTORY include
         DESTINATION .)
-export(EXPORT libremidi-targets)
 
 include(CMakePackageConfigHelpers)
 

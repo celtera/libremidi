@@ -179,7 +179,7 @@ void midi_out::send_ump(const uint32_t* message, size_t size) const
 LIBREMIDI_INLINE
 void midi_out::send_ump(const libremidi::ump& message) const
 {
-  send_ump(message.bytes, message.size());
+  send_ump(message.data, message.size());
 }
 
 LIBREMIDI_INLINE

@@ -64,6 +64,10 @@
 #include <libremidi/observer_configuration.hpp>
 #include <libremidi/output_configuration.hpp>
 
+#if LIBREMIDI_NI_MIDI2_COMPAT
+  #include <midi/sysex.h>
+  #include <midi/universal_packet.h>
+#endif
 #include <any>
 #include <optional>
 
@@ -179,7 +183,7 @@ public:
 
   //! Open a MIDI output connection.
   void
-  open_port(const output_port& pt, std::string_view local_port_name = "libremidi input") const;
+  open_port(const output_port& pt, std::string_view local_port_name = "libremidi output") const;
 
   //! Close an open MIDI connection (if one exists).
   void close_port() const;
@@ -229,6 +233,19 @@ public:
   void send_ump(uint32_t b0, uint32_t b1) const;
   void send_ump(uint32_t b0, uint32_t b1, uint32_t b2) const;
   void send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b3) const;
+
+// Interop with ni-midi2
+#if LIBREMIDI_NI_MIDI2_COMPAT
+  void send_ump(const midi::universal_packet& pkt) const { send_ump(pkt.data, pkt.size()); }
+  void send_ump(const midi::sysex7& msg, int group = 0)
+  {
+    midi::send_sysex7(msg, group, [&](const midi::sysex7_packet& x) { send_ump(x.data); });
+  }
+  void send_ump(const midi::sysex8& msg, int stream, int group = 0)
+  {
+    midi::send_sysex8(msg, stream, group, [&](const midi::sysex8_packet& x) { send_ump(x.data); });
+  }
+#endif
 
   //! Try to schedule an UMP packet later in time if the underlying API supports it
   //! (currently not implemented anywhere)

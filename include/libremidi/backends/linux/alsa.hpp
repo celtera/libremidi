@@ -363,6 +363,7 @@ struct libasound
         LIBREMIDI_SYMBOL_INIT(snd_seq, set_client_midi_version);
         LIBREMIDI_SYMBOL_INIT(snd_seq_ump, event_input);
         LIBREMIDI_SYMBOL_INIT(snd_seq_ump, event_output);
+        LIBREMIDI_SYMBOL_INIT(snd_seq_ump, event_output_direct);
       }
 
       bool available{true};
@@ -370,6 +371,7 @@ struct libasound
       LIBREMIDI_SYMBOL_DEF(snd_seq, set_client_midi_version);
       LIBREMIDI_SYMBOL_DEF(snd_seq_ump, event_input);
       LIBREMIDI_SYMBOL_DEF(snd_seq_ump, event_output);
+      LIBREMIDI_SYMBOL_DEF(snd_seq_ump, event_output_direct);
     } ump;
 #endif
   } seq{library};
@@ -399,6 +401,7 @@ struct libasound
       LIBREMIDI_SYMBOL_INIT(snd_ump, rawmidi_params_current);
       LIBREMIDI_SYMBOL_INIT(snd_ump, read);
       LIBREMIDI_SYMBOL_INIT(snd_ump, tread);
+      LIBREMIDI_SYMBOL_INIT(snd_ump, write);
     }
 
     bool available{true};
@@ -416,6 +419,7 @@ struct libasound
     LIBREMIDI_SYMBOL_DEF(snd_ump, rawmidi_params_current);
     LIBREMIDI_SYMBOL_DEF(snd_ump, read);
     LIBREMIDI_SYMBOL_DEF(snd_ump, tread);
+    LIBREMIDI_SYMBOL_DEF(snd_ump, write);
   } ump{library};
 #endif
 };

@@ -20,7 +20,7 @@
   #define LIBREMIDI_EXPORT
 #endif
 
-#define LIBREMIDI_VERSION "4.2.4"
+#define LIBREMIDI_VERSION "4.3.0"
 
 #if defined(LIBREMIDI_USE_BOOST)
   #if !__has_include(<boost/container/small_vector.hpp>)
@@ -55,6 +55,10 @@ namespace libremidi
 {
 using midi_bytes = std::vector<unsigned char>;
 }
+#endif
+
+#if __has_include(<midi/universal_packet.h>) && defined(LIBREMIDI_USE_NI_MIDI2)
+  #define LIBREMIDI_NI_MIDI2_COMPAT 1
 #endif
 
 #if defined(LIBREMIDI_HEADER_ONLY)

@@ -3,6 +3,7 @@
 #include <libremidi/backends/coremidi_ump/helpers.hpp>
 #include <libremidi/cmidi2.hpp>
 #include <libremidi/detail/midi_out.hpp>
+#include <libremidi/detail/ump_stream.hpp>
 
 namespace libremidi::coremidi_ump
 {
@@ -127,25 +128,34 @@ public:
     }
   }
 
-  void send_ump(const uint32_t* ump, size_t size) override
+  void send_ump(const uint32_t* ump_stream, std::size_t count) override
   {
-    if (size >= 65535 / sizeof(uint32_t))
-    {
-      // FIXME break it up in multiple umps...
-      return;
-    }
+    MIDIEventList* eventList = reinterpret_cast<MIDIEventList*>(m_eventListBuffer);
+    MIDIEventPacket* packet = MIDIEventListInit(eventList, kMIDIProtocol_2_0);
+    const MIDITimeStamp ts = AudioGetCurrentHostTime();
 
-    MIDIEventList eventList = {};
-    MIDIEventPacket* packet = MIDIEventListInit(&eventList, kMIDIProtocol_2_0);
-    MIDITimeStamp ts = AudioGetCurrentHostTime();
-    const auto sz = cmidi2_ump_get_num_bytes(ump[0]) / 4;
+    auto write_fun = [ts, &packet, &eventList](const uint32_t* ump, int bytes) {
+      packet = MIDIEventListAdd(eventList, event_list_max_size, packet, ts, bytes / 4, ump);
+      if (packet)
+        return segmentation_error::no_error;
+      else
+        return segmentation_error::need_space;
+    };
 
-    // And send to an explicit destination port if we're connected.
-    packet = MIDIEventListAdd(&eventList, sizeof(MIDIEventList), packet, ts, sz, ump);
+    auto realloc_fun = [this, &packet, &eventList] {
+      push_event_list(eventList);
+      packet = MIDIEventListInit(eventList, kMIDIProtocol_2_0);
+    };
 
+    segment_ump_stream(ump_stream, count, write_fun, realloc_fun);
+    push_event_list(eventList);
+  }
+
+  void push_event_list(MIDIEventList* eventList)
+  {
     if (this->endpoint)
     {
-      auto result = MIDIReceivedEventList(this->endpoint, &eventList);
+      auto result = MIDIReceivedEventList(this->endpoint, eventList);
       if (result != noErr)
       {
         warning(
@@ -157,7 +167,7 @@ public:
 
     if (this->destinationId != 0)
     {
-      auto result = MIDISendEventList(this->port, this->destinationId, &eventList);
+      auto result = MIDISendEventList(this->port, this->destinationId, eventList);
       if (result != noErr)
       {
         warning(
@@ -168,5 +178,8 @@ public:
   }
 
   MIDIEndpointRef destinationId{};
+
+  static constexpr int event_list_max_size = 65535;
+  unsigned char m_eventListBuffer[sizeof(MIDIEventList) + event_list_max_size];
 };
 }
