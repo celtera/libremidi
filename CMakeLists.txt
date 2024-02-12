@@ -25,6 +25,7 @@ cmake_dependent_option(LIBREMIDI_NO_WINUWP "Disable UWP back-end" ON "WIN32" OFF
 cmake_dependent_option(LIBREMIDI_NO_ALSA "Disable ALSA back-end" OFF "UNIX; NOT APPLE" OFF)
 cmake_dependent_option(LIBREMIDI_NO_UDEV "Disable udev support for ALSA" OFF "UNIX; NOT APPLE" OFF)
 option(LIBREMIDI_NO_JACK "Disable JACK back-end" OFF)
+option(LIBREMIDI_NO_PIPEWIRE "Disable PipeWire back-end" OFF)
 
 option(LIBREMIDI_NO_EXPORTS "Disable dynamic symbol exporting" OFF)
 option(LIBREMIDI_NO_BOOST "Do not use Boost if available" OFF)
@@ -144,6 +145,10 @@ endif()
 
 if(NOT LIBREMIDI_NO_JACK)
   include(libremidi.jack)
+endif()
+
+if(NOT LIBREMIDI_NO_PIPEWIRE)
+  include(libremidi.pipewire)
 endif()
 
 ### Install ###

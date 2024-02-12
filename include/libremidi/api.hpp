@@ -21,6 +21,7 @@ enum class API
   WINDOWS_MM,  /*!< Microsoft Multimedia MIDI API. */
   WINDOWS_UWP, /*!< Microsoft WinRT MIDI API. */
   WEBMIDI,     /*!< Web MIDI API through Emscripten */
+  PIPEWIRE,    /*!< PipeWire */
 
   // MIDI 2.0 APIs
   ALSA_RAW_UMP,          /*!< Raw ALSA API for MIDI 2.0 */

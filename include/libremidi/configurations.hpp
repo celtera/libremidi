@@ -5,6 +5,7 @@
   #include <libremidi/backends/alsa_raw_ump/config.hpp>
   #include <libremidi/backends/alsa_seq/config.hpp>
   #include <libremidi/backends/alsa_seq_ump/config.hpp>
+  #include <libremidi/backends/pipewire/config.hpp>
 #endif
 
 #if defined(__APPLE__)

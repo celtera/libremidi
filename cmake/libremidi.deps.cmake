@@ -24,3 +24,15 @@ endif()
 if(LIBREMIDI_FIND_BOOST)
   find_package(Boost REQUIRED)
 endif()
+
+# readerwriterqueue
+
+if(NOT LIBREMIDI_NO_PIPEWIRE AND NOT TARGET readerwriterqueue)
+  FetchContent_Declare(
+      readerwriterqueue
+      GIT_REPOSITORY https://github.com/cameron314/readerwriterqueue
+      GIT_TAG        master
+  )
+
+  FetchContent_MakeAvailable(readerwriterqueue)
+endif()

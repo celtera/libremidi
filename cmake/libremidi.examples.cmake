@@ -59,6 +59,10 @@ if(LIBREMIDI_HAS_JACK)
     add_example(jack_share)
 endif()
 
+if(LIBREMIDI_HAS_PIPEWIRE)
+    add_backend_example(midi1_in_pipewire)
+endif()
+
 if(LIBREMIDI_HAS_COREMIDI)
     add_example(coremidi_share)
 endif()

@@ -41,9 +41,18 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/jack/observer.hpp
     include/libremidi/backends/jack/shared_handler.hpp
 
+    include/libremidi/backends/pipewire/config.hpp
+    include/libremidi/backends/pipewire/context.hpp
+    include/libremidi/backends/pipewire/helpers.hpp
+    include/libremidi/backends/pipewire/midi_out.hpp
+    include/libremidi/backends/pipewire/midi_in.hpp
+    include/libremidi/backends/pipewire/observer.hpp
+    include/libremidi/backends/pipewire/shared_handler.hpp
+
     include/libremidi/backends/linux/alsa.hpp
     include/libremidi/backends/linux/dylib_loader.hpp
     include/libremidi/backends/linux/helpers.hpp
+    include/libremidi/backends/linux/pipewire.hpp
     include/libremidi/backends/linux/udev.hpp
 
     include/libremidi/backends/emscripten/config.hpp
