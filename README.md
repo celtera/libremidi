@@ -95,10 +95,14 @@ Additionnally, for MIDI 2 parsing support we use [cmidi2](https://github.com/ats
 
 # They use this library
 
-* [ossia.io](https://ossia.io): libremidi is used for every MIDI operation.
+* [BlastThruReborn](https://github.com/Cacodemon345/BlastThruReborn)
+* [BraneEngineDx](https://github.com/MC-117/BraneEngineDx)
+* [chordcat](https://github.com/shriramters/chordcat)
+* [EraeTouchLite](https://github.com/TheTechnobear/EraeTouchLite)
+* [MIDIVisualizer](https://github.com/kosua20/MIDIVisualizer)
+* [ossia.io](https://ossia.io)
 * [obs-midi-mg](https://github.com/nhielost/obs-midi-mg)
 * [SceneSwitcher](https://github.com/WarmUpTill/SceneSwitcher)
-* [MIDIVisualizer](https://github.com/kosua20/MIDIVisualizer)
-* [zing](https://github.com/Rezonality/zing)
-* [EraeTouchLite](https://github.com/TheTechnobear/EraeTouchLite)
+* [Senos](https://github.com/RuiVarela/Senos)
 * [SynthMania](https://github.com/HyperLan-git/Synthmania)
+* [zing](https://github.com/Rezonality/zing)
