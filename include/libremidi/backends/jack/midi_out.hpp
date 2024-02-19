@@ -140,9 +140,6 @@ public:
     midi_out_jack::close_port();
 
     disconnect(*this);
-
-    if (this->client && !configuration.context)
-      jack_client_close(this->client);
   }
 
   void send_message(const unsigned char* message, std::size_t size) override
@@ -182,9 +179,6 @@ public:
     midi_out_jack::close_port();
 
     disconnect(*this);
-
-    if (this->client && !configuration.context)
-      jack_client_close(this->client);
   }
 
   int process(jack_nframes_t nframes)

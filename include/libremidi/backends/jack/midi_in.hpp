@@ -33,9 +33,6 @@ public:
     midi_in_jack::close_port();
 
     disconnect(*this);
-
-    if (this->client && !configuration.context)
-      jack_client_close(this->client);
   }
 
   void set_client_name(std::string_view) override

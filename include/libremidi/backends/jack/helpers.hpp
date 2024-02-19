@@ -207,6 +207,9 @@ struct jack_helpers : jack_client
         self.configuration.clear_process_func(this_instance);
       }
     }
+
+    if (this->client && !self.configuration.context)
+      jack_client_close(this->client);
   }
 
   bool create_local_port(const auto& self, std::string_view portName, JackPortFlags flags)
