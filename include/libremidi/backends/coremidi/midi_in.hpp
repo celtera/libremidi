@@ -164,7 +164,7 @@ public:
         continue;
       }
 
-      auto to_ns = [packet] { return time_in_nanos(packet); };
+      auto to_ns = [packet] { return time_in_nanos(packet->timeStamp); };
       self.m_processing.on_bytes_multi(
           {packet->data, packet->data + packet->length},
           self.m_processing.timestamp<timestamp_info>(to_ns, 0));

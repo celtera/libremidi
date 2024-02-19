@@ -3,11 +3,13 @@
 
 #if __has_include(<alsa/asoundlib.h>)
   #include <alsa/asoundlib.h>
-#else
-extern "C" {
-typedef struct snd_seq_ump_event_t snd_seq_ump_event_t;
-}
 #endif
+
+// Necessary for the versions of ALSA that did have UMP
+// through snd_seq_event, before snd_seq_ump_event existed.
+extern "C" {
+typedef struct snd_seq_ump_event snd_seq_ump_event_t;
+}
 
 namespace libremidi::alsa_seq_ump
 {

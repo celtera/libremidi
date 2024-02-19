@@ -3,6 +3,9 @@
 #include <libremidi/detail/midi_in.hpp>
 
 #include <chrono>
+#include <cstdint>
+#include <cinttypes>
+#include <span>
 
 namespace libremidi
 {
@@ -44,8 +47,8 @@ struct input_state_machine
   // MIDI events (CoreMIDI, ALSA Sequencer can work like this)
   void on_bytes_multi(std::span<const uint8_t> bytes, int64_t timestamp)
   {
-    int nBytes = bytes.size();
-    int iByte = 0;
+    int64_t nBytes = bytes.size();
+    int64_t iByte = 0;
 
     const bool finished_sysex = has_finished_sysex(bytes);
     switch (state)
@@ -56,7 +59,7 @@ struct input_state_machine
       case main: {
         while (iByte < nBytes)
         {
-          int size = 1;
+          int64_t size = 1;
           // We are expecting that the next byte in the packet is a status
           // byte.
           const auto status = bytes[iByte];

@@ -1,4 +1,5 @@
 #pragma once
+#include <libremidi/detail/memory.hpp>
 #include <libremidi/detail/midi_api.hpp>
 #include <libremidi/input_configuration.hpp>
 
