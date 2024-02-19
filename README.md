@@ -96,3 +96,8 @@ Additionnally, for MIDI 2 parsing support we use [cmidi2](https://github.com/ats
 # They use this library
 
 * [ossia.io](https://ossia.io): libremidi is used for every MIDI operation.
+* [obs-midi-mg](https://github.com/nhielost/obs-midi-mg)
+* [SceneSwitcher](https://github.com/WarmUpTill/SceneSwitcher)
+* [MIDIVisualizer](https://github.com/kosua20/MIDIVisualizer)
+* [zing](https://github.com/Rezonality/zing)
+* [EraeTouchLite](https://github.com/TheTechnobear/EraeTouchLite)
