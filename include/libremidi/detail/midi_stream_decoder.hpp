@@ -2,114 +2,310 @@
 
 #include <libremidi/detail/midi_in.hpp>
 
+#include <chrono>
+
 namespace libremidi
 {
-
-struct midi_stream_decoder
+static inline int64_t system_ns() noexcept
 {
-  uint8_t runningStatusType_{};
-  message_callback& callback;
-  std::vector<unsigned char> bytes;
-  message msg;
+  namespace clk = std::chrono;
+  return clk::duration_cast<clk::nanoseconds>(clk::steady_clock::now().time_since_epoch()).count();
+}
 
-  explicit midi_stream_decoder(message_callback& data)
-      : callback{data}
+struct timestamp_backend_info
+{
+  // The API provides some kind of timestamping
+  bool has_absolute_timestamps{};
+
+  // The provided timestamping is equivalent or more precise than
+  // e.g. clock_gettime(CLOCK_MONOTONIC)
+  bool absolute_is_monotonic{};
+
+  // The API can provide samples in a buffer cycle (only PipeWire and JACK so far)
+  bool has_samples{};
+};
+
+namespace midi1
+{
+struct input_state_machine
+{
+  const input_configuration& configuration;
+  explicit input_state_machine(const input_configuration& conf)
+      : configuration{conf}
   {
-    bytes.reserve(64);
   }
 
-  void add_bytes(unsigned char* data, std::size_t sz, int64_t nanos = 0)
+  bool has_finished_sysex(std::span<const uint8_t> bytes) const noexcept
   {
-    msg.timestamp = nanos;
-
-    for (std::size_t i = 0; i < sz; i++)
-      bytes.push_back(data[i]);
-
-    int64_t read = 0;
-    unsigned char* begin = bytes.data();
-    unsigned char* end = bytes.data() + bytes.size();
-    while ((read = parse(begin, end)) && read > 0)
-    {
-      begin += read;
-
-      callback(std::move(msg));
-      msg.clear();
-    }
-
-    // Remove the read bytes
-    if (begin != bytes.data())
-      bytes.erase(bytes.begin(), bytes.begin() + (begin - bytes.data()));
+    return (((bytes.front() == 0xF0) || (state == in_sysex)) && (bytes.back() == 0xF7));
   }
 
-  int64_t parse(unsigned char* bytes, unsigned char* end)
+  // Function to process a byte stream which may contain multiple successive
+  // MIDI events (CoreMIDI, ALSA Sequencer can work like this)
+  void on_bytes_multi(std::span<const uint8_t> bytes, int64_t timestamp)
   {
-    int64_t sz = end - bytes;
-    if (sz == 0)
-      return 0;
+    int nBytes = bytes.size();
+    int iByte = 0;
 
-    msg.bytes.clear();
-
-    if (((uint8_t)bytes[0] & 0xF) == 0xF)
+    const bool finished_sysex = has_finished_sysex(bytes);
+    switch (state)
     {
-      // TODO special message
-      return sz;
+      case in_sysex: {
+        return on_continue_sysex(bytes, finished_sysex);
+      }
+      case main: {
+        while (iByte < nBytes)
+        {
+          int size = 1;
+          // We are expecting that the next byte in the packet is a status
+          // byte.
+          const auto status = bytes[iByte];
+          if (!(status & 0x80))
+            break;
+
+          // Determine the number of bytes in the MIDI message.
+          if (status < 0xC0)
+            size = 3;
+          else if (status < 0xE0)
+            size = 2;
+          else if (status < 0xF0)
+            size = 3;
+          else if (status == 0xF0)
+          {
+            if (configuration.ignore_sysex)
+            {
+              size = 0;
+              iByte = nBytes;
+            }
+            else
+            {
+              size = nBytes - iByte;
+            }
+
+            if (bytes[nBytes - 1] != 0xF7)
+            {
+              // We know per CoreMIDI API there can't be anything else in this packet
+              state = in_sysex;
+              message.assign(bytes.begin(), bytes.begin() + size);
+              message.timestamp = timestamp;
+              return;
+            }
+          }
+          else if (status == 0xF1)
+          {
+            // A MIDI time code message
+            if (configuration.ignore_timing)
+            {
+              size = 0;
+              iByte += 2;
+            }
+            else
+            {
+              size = 2;
+            }
+          }
+          else if (status == 0xF2)
+            size = 3;
+          else if (status == 0xF3)
+            size = 2;
+          else if (status == 0xF8)
+          {
+            // A MIDI timing tick message
+            if (configuration.ignore_timing)
+            {
+              size = 0;
+              iByte += 1;
+            }
+            else
+            {
+              size = 1;
+            }
+          }
+          else if (status == 0xFE)
+          {
+            // A MIDI active sensing message
+            if (configuration.ignore_sensing)
+            {
+              size = 0;
+              iByte += 1;
+            }
+            else
+            {
+              size = 1;
+            }
+          }
+          else
+          {
+            // Remaining real-time messages
+            size = 1;
+          }
+
+          // Now process the actual bytes of the message
+          if (size > 0)
+          {
+            auto begin = bytes.begin() + iByte;
+            message.assign(begin, begin + size);
+            message.timestamp = timestamp;
+
+            this->configuration.on_message(std::move(message));
+            message.clear();
+
+            iByte += size;
+          }
+        }
+      }
     }
-    else if (((uint8_t)bytes[0] & 0xF8) == 0xF8)
-    {
-      // Clk messages
-      msg.bytes.reserve(1);
-      msg.bytes.push_back(*bytes++);
-      runningStatusType_ = msg.bytes[0];
+  }
 
-      return 1;
+  void on_continue_sysex(std::span<const uint8_t> bytes, bool finished_sysex)
+  {
+    if (finished_sysex)
+      state = main;
+
+    if (configuration.ignore_sysex)
+    {
+      return;
     }
     else
     {
-      if (sz <= 1)
-        return 0;
-
-      // Normal message
-      msg.bytes.reserve(3);
-
-      // Setup first two bytes
-      if (((uint8_t)bytes[0] & 0x80) == 0)
+      message.insert(message.end(), bytes.begin(), bytes.end());
+      if (finished_sysex)
       {
-        msg.bytes.push_back(runningStatusType_);
-        msg.bytes.push_back(*bytes++);
-      }
-      else
-      {
-        if (sz < 2)
-          return 0;
-
-        msg.bytes.push_back(*bytes++);
-        msg.bytes.push_back(*bytes++);
-        runningStatusType_ = msg.bytes[0];
-      }
-
-      switch (message_type((uint8_t)runningStatusType_ & 0xF0))
-      {
-        case message_type::NOTE_OFF:
-        case message_type::NOTE_ON:
-        case message_type::POLY_PRESSURE:
-        case message_type::CONTROL_CHANGE:
-        case message_type::PITCH_BEND:
-          if (sz < 3)
-            return 0;
-
-          msg.bytes.push_back(*bytes++);
-          return 3;
-
-        case message_type::PROGRAM_CHANGE:
-        case message_type::AFTERTOUCH:
-          return 2;
-
-        default:
-          // TODO
-          return sz;
+        this->configuration.on_message(std::move(message));
+        message.clear();
       }
     }
+    return;
   }
-};
 
+  void on_main(std::span<const uint8_t> bytes, int64_t timestamp, bool finished_sysex)
+  {
+    switch (bytes[0])
+    {
+      // SYSEX start
+      case 0xF0: {
+        if (!finished_sysex)
+          state = in_sysex;
+
+        if (!this->configuration.ignore_sysex)
+        {
+          message.assign(bytes.begin(), bytes.end());
+          message.timestamp = timestamp;
+          if (finished_sysex)
+          {
+            this->configuration.on_message(std::move(message));
+            message.clear();
+          }
+        }
+
+        return;
+      }
+
+      case 0xF1:
+      case 0xF8:
+        if (this->configuration.ignore_timing)
+          return;
+        break;
+
+      case 0xFE:
+        if (this->configuration.ignore_sensing)
+          return;
+        break;
+
+      default:
+        break;
+    }
+
+    message.assign(bytes.begin(), bytes.end());
+    message.timestamp = timestamp;
+
+    this->configuration.on_message(std::move(message));
+    message.clear();
+  }
+
+  // Function to process bytes corresponding to at most one midi event
+  // e.g. a midi channel event or a single sysex
+  void on_bytes(std::span<const uint8_t> bytes, int64_t timestamp)
+  {
+    if (bytes.empty())
+      return;
+
+    const bool finished_sysex = has_finished_sysex(bytes);
+    switch (state)
+    {
+      case in_sysex:
+        return on_continue_sysex(bytes, finished_sysex);
+
+      case main:
+        return on_main(bytes, timestamp, finished_sysex);
+    }
+  }
+
+  template <timestamp_backend_info info>
+  int64_t timestamp(auto to_ns, int64_t samples)
+  {
+    switch (configuration.timestamps)
+    {
+      default:
+      case timestamp_mode::NoTimestamp:
+        return 0;
+
+      case timestamp_mode::Relative: {
+        int64_t time_ns;
+
+        if constexpr (info.has_absolute_timestamps)
+          time_ns = to_ns();
+        else
+          time_ns = system_ns();
+
+        int64_t res;
+        if (first_message)
+        {
+          first_message = false;
+          res = 0;
+        }
+        else
+        {
+          res = time_ns - last_time_ns;
+        }
+
+        last_time_ns = time_ns;
+        return res;
+      }
+
+      case timestamp_mode::Absolute:
+        if constexpr (info.has_absolute_timestamps)
+          return to_ns();
+        else
+          return system_ns();
+
+      case timestamp_mode::SystemMonotonic:
+        if constexpr (info.absolute_is_monotonic)
+          return to_ns();
+        else
+          return system_ns();
+
+      case timestamp_mode::AudioFrame:
+        if constexpr (info.has_samples)
+          return samples;
+        else
+          return 0;
+
+      case timestamp_mode::Custom:
+        return configuration.get_timestamp(to_ns());
+    }
+  }
+
+  libremidi::message message;
+
+  int64_t last_time_ns = 0;
+  enum
+  {
+    main,
+    in_sysex
+  } state{main};
+
+  bool first_message = true;
+};
+}
 }

@@ -2,6 +2,7 @@
 #include <libremidi/backends/coremidi/config.hpp>
 #include <libremidi/backends/coremidi/helpers.hpp>
 #include <libremidi/detail/midi_in.hpp>
+#include <libremidi/detail/midi_stream_decoder.hpp>
 
 namespace libremidi
 {
@@ -130,20 +131,20 @@ public:
     }
   }
 
-  int64_t absolute_timestamp() const noexcept override
+  timestamp absolute_timestamp() const noexcept override
   {
     return coremidi_data::time_in_nanos(LIBREMIDI_AUDIO_GET_CURRENT_HOST_TIME());
   }
 
   static void midiInputCallback(const MIDIPacketList* list, void* procRef, void* /*srcRef*/)
   {
+    static constexpr timestamp_backend_info timestamp_info{
+        .has_absolute_timestamps = true,
+        .absolute_is_monotonic = false,
+        .has_samples = false,
+    };
+
     auto& self = *(midi_in_core*)procRef;
-
-    unsigned char status{};
-    unsigned short nBytes{}, iByte{}, size{};
-
-    bool& continueSysex = self.continueSysex;
-    auto& msg = self.message;
 
     const MIDIPacket* packet = &list->packet[0];
     for (unsigned int i = 0; i < list->numPackets; ++i)
@@ -157,125 +158,21 @@ public:
       // MIDIPacketLists, they must be handled by multiple calls to this
       // function.
 
-      nBytes = packet->length;
-      if (nBytes == 0)
+      if (packet->length == 0)
       {
         packet = MIDIPacketNext(packet);
         continue;
       }
 
-      // Calculate time stamp.
-      coremidi_data::set_timestamp(self, packet->timeStamp, msg.timestamp);
-
-      // Track whether any non-filtered messages were found in this
-      // packet for timestamp calculation
-      bool foundNonFiltered = false;
-
-      iByte = 0;
-      if (continueSysex)
-      {
-        // We have a continuing, segmented sysex message.
-        if (!self.configuration.ignore_sysex)
-        {
-          // If we're not ignoring sysex messages, copy the entire packet.
-          msg.bytes.insert(msg.bytes.end(), packet->data, packet->data + nBytes);
-        }
-        continueSysex = packet->data[nBytes - 1] != 0xF7;
-
-        if (!self.configuration.ignore_sysex && !continueSysex)
-        {
-          // If not a continuing sysex message, invoke the user callback
-          // function or queue the message.
-          self.configuration.on_message(std::move(msg));
-          msg.clear();
-        }
-      }
-      else
-      {
-        while (iByte < nBytes)
-        {
-          size = 0;
-          // We are expecting that the next byte in the packet is a status
-          // byte.
-          status = packet->data[iByte];
-          if (!(status & 0x80))
-            break;
-          // Determine the number of bytes in the MIDI message.
-          if (status < 0xC0)
-            size = 3;
-          else if (status < 0xE0)
-            size = 2;
-          else if (status < 0xF0)
-            size = 3;
-          else if (status == 0xF0)
-          {
-            // A MIDI sysex
-            if (self.configuration.ignore_sysex)
-            {
-              size = 0;
-              iByte = nBytes;
-            }
-            else
-              size = nBytes - iByte;
-            continueSysex = packet->data[nBytes - 1] != 0xF7;
-          }
-          else if (status == 0xF1)
-          {
-            // A MIDI time code message
-            if (self.configuration.ignore_timing)
-            {
-              size = 0;
-              iByte += 2;
-            }
-            else
-              size = 2;
-          }
-          else if (status == 0xF2)
-            size = 3;
-          else if (status == 0xF3)
-            size = 2;
-          else if (status == 0xF8 && (self.configuration.ignore_timing))
-          {
-            // A MIDI timing tick message and we're ignoring it.
-            size = 0;
-            iByte += 1;
-          }
-          else if (status == 0xFE && (self.configuration.ignore_sensing))
-          {
-            // A MIDI active sensing message and we're ignoring it.
-            size = 0;
-            iByte += 1;
-          }
-          else
-            size = 1;
-
-          // Copy the MIDI data to our vector.
-          if (size)
-          {
-            foundNonFiltered = true;
-            msg.bytes.assign(&packet->data[iByte], &packet->data[iByte + size]);
-            if (!continueSysex)
-            {
-              // If not a continuing sysex message, invoke the user callback
-              // function or queue the message.
-              self.configuration.on_message(std::move(msg));
-              msg.clear();
-            }
-            iByte += size;
-          }
-        }
-      }
-
-      // Save the time of the last non-filtered message
-      if (foundNonFiltered)
-      {
-        self.last_time = time_in_nanos(packet->timeStamp);
-      }
+      auto to_ns = [packet] { return time_in_nanos(packet); };
+      self.m_processing.on_bytes_multi(
+          {packet->data, packet->data + packet->length},
+          self.m_processing.timestamp<timestamp_info>(to_ns, 0));
 
       packet = MIDIPacketNext(packet);
     }
   }
 
-  unsigned long long last_time{};
+  midi1::input_state_machine m_processing{this->configuration};
 };
 }

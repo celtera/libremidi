@@ -87,6 +87,7 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/winmm.hpp
     include/libremidi/backends/winuwp.hpp
 
+    include/libremidi/detail/memory.hpp
     include/libremidi/detail/midi_api.hpp
     include/libremidi/detail/midi_in.hpp
     include/libremidi/detail/midi_out.hpp

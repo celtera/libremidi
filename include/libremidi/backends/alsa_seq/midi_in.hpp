@@ -3,12 +3,21 @@
 #include <libremidi/backends/alsa_seq/helpers.hpp>
 #include <libremidi/backends/linux/helpers.hpp>
 #include <libremidi/detail/midi_in.hpp>
+#include <libremidi/detail/midi_stream_decoder.hpp>
 
 namespace libremidi::alsa_seq
 {
+struct dummy_processing
+{
+  explicit dummy_processing(auto&&...) { }
+};
+
 template <typename ConfigurationImpl>
 using midi_in_base
     = std::conditional_t<ConfigurationImpl::midi_version == 1, midi1::in_api, midi2::in_api>;
+template <typename ConfigurationImpl>
+using midi_in_processing = std::conditional_t<
+    ConfigurationImpl::midi_version == 1, midi1::input_state_machine, dummy_processing>;
 
 template <typename ConfigurationBase, typename ConfigurationImpl>
 class midi_in_impl
@@ -22,6 +31,7 @@ public:
       , ConfigurationImpl
   {
   } configuration;
+  midi_in_processing<ConfigurationImpl> m_processing{this->configuration};
 
   bool require_timestamps() const noexcept
   {
@@ -29,6 +39,7 @@ public:
     {
       case timestamp_mode::NoTimestamp:
       case timestamp_mode::SystemMonotonic:
+      case timestamp_mode::AudioFrame:
         return false;
       case timestamp_mode::Absolute:
       case timestamp_mode::Relative:
@@ -226,15 +237,13 @@ protected:
       }
       case timestamp_mode::SystemMonotonic: {
         namespace clk = std::chrono;
-        msg.timestamp
-            = clk::duration_cast<clk::nanoseconds>(clk::steady_clock::now().time_since_epoch())
-                  .count();
+        msg.timestamp = system_ns();
         break;
       }
     }
   }
 
-  int64_t absolute_timestamp() const noexcept override
+  timestamp absolute_timestamp() const noexcept override
   {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(
                std::chrono::steady_clock::now() - this->queue_creation_time)
@@ -243,91 +252,69 @@ protected:
 
   int process_event(const snd_seq_event_t& ev)
   {
-    if (!this->continueSysex)
-      this->message.bytes.clear();
-
-    // Filter the message types before any decoding
-    switch (ev.type)
+    if constexpr (ConfigurationImpl::midi_version == 1)
     {
-      case SND_SEQ_EVENT_PORT_SUBSCRIBED:
-      case SND_SEQ_EVENT_PORT_UNSUBSCRIBED:
+      switch (ev.type)
+      {
+        case SND_SEQ_EVENT_PORT_SUBSCRIBED:
+        case SND_SEQ_EVENT_PORT_UNSUBSCRIBED:
+          return 0;
+        case SND_SEQ_EVENT_SYSEX: {
+          if (configuration.ignore_sysex)
+            return 0;
+          else if (ev.data.ext.len > decoding_buffer.size())
+            decoding_buffer.resize(ev.data.ext.len);
+          break;
+        }
+      }
+
+      static constexpr timestamp_backend_info timestamp_info{
+          .has_absolute_timestamps = true,
+          .absolute_is_monotonic = false,
+          .has_samples = false,
+      };
+
+      const auto to_ns = [ts = ev.time.time] {
+        return static_cast<int64_t>(ts.tv_sec) * 1'000'000'000 + static_cast<int64_t>(ts.tv_nsec);
+      };
+      auto buf = decoding_buffer.data();
+      auto buf_space = decoding_buffer.size();
+
+      // FIXME according to the doc snd_midi_event_decode can apparently return multiple events????
+      const auto avail = snd.midi.event_decode(coder, buf, buf_space, &ev);
+      if (avail > 0)
+      {
+        m_processing.on_bytes(
+            {buf, buf + avail}, m_processing.template timestamp<timestamp_info>(to_ns, 0));
         return 0;
-
-      case SND_SEQ_EVENT_QFRAME: // MIDI time code
-      case SND_SEQ_EVENT_TICK:   // 0xF9 ... MIDI timing tick
-      case SND_SEQ_EVENT_CLOCK:  // 0xF8 ... MIDI timing (clock) tick
-        if (configuration.ignore_timing)
-          return 0;
-        break;
-
-      case SND_SEQ_EVENT_SENSING: // Active sensing
-        if (configuration.ignore_sensing)
-          return 0;
-        break;
-
-      case SND_SEQ_EVENT_SYSEX: {
-        if (configuration.ignore_sysex)
-          return 0;
-        else if (ev.data.ext.len > decoding_buffer.size())
-          decoding_buffer.resize(ev.data.ext.len);
-        break;
-      }
-    }
-
-    // Decode the message
-    auto buf = decoding_buffer.data();
-    auto buf_space = decoding_buffer.size();
-    const uint64_t avail = snd.midi.event_decode(coder, buf, buf_space, &ev);
-    if (avail > 0)
-    {
-      // The ALSA sequencer has a maximum buffer size for MIDI sysex
-      // events of 256 bytes.  If a device sends sysex messages larger
-      // than this, they are segmented into 256 byte chunks.  So,
-      // we'll watch for this and concatenate sysex chunks into a
-      // single sysex message if necessary.
-      assert(avail < buf_space);
-      if (!this->continueSysex)
-        this->message.bytes.assign(buf, buf + avail);
-      else
-        this->message.bytes.insert(this->message.bytes.end(), buf, buf + avail);
-
-      this->continueSysex
-          = ((ev.type == SND_SEQ_EVENT_SYSEX) && (this->message.bytes.back() != 0xF7));
-      if (!this->continueSysex)
-      {
-        set_timestamp(ev, this->message);
       }
       else
       {
-#if defined(__LIBREMIDI_DEBUG__)
-        std::cerr << "\nmidi_in_alsa::alsaMidiHandler: event parsing error or "
-                     "not a MIDI event!\n\n";
-#endif
-        return -EINVAL;
+        return avail;
       }
     }
-
-    if (this->message.bytes.size() == 0 || this->continueSysex)
-      return 0;
-
-    // Finally the message is ready
-    configuration.on_message(std::move(this->message));
-    this->message.clear();
     return 0;
   }
 
   int process_events()
   {
-    snd_seq_event_t* ev{};
-    event_handle handle{snd};
-    int result = 0;
-    while ((result = snd.seq.event_input(seq, &ev)) > 0)
+    if constexpr (ConfigurationImpl::midi_version == 1)
     {
-      handle.reset(ev);
-      if (int err = process_event(*ev); err < 0)
-        return err;
+      snd_seq_event_t* ev{};
+      event_handle handle{snd};
+      int result = 0;
+      while ((result = snd.seq.event_input(seq, &ev)) > 0)
+      {
+        handle.reset(ev);
+        if (int err = process_event(*ev); err < 0)
+          return err;
+      }
+      return result;
     }
-    return result;
+    else
+    {
+      return 0;
+    }
   }
 
 #if __has_include(<alsa/ump.h>)
@@ -386,7 +373,7 @@ protected:
   snd_seq_real_time_t last_time{};
 
   // Only needed for midi 1
-  std::vector<unsigned char> decoding_buffer = std::vector<unsigned char>(32);
+  std::vector<unsigned char> decoding_buffer = std::vector<unsigned char>(4096);
   std::chrono::steady_clock::time_point queue_creation_time;
 };
 

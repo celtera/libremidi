@@ -3,6 +3,7 @@
 #include <libremidi/backends/winmm/helpers.hpp>
 #include <libremidi/backends/winmm/observer.hpp>
 #include <libremidi/detail/midi_in.hpp>
+#include <libremidi/detail/midi_stream_decoder.hpp>
 
 namespace libremidi
 {
@@ -189,51 +190,33 @@ public:
   }
 
 private:
-  void set_timestamp(DWORD_PTR ts, libremidi::message& msg) noexcept
-  {
-    switch (configuration.timestamps)
-    {
-      case timestamp_mode::NoTimestamp:
-        msg.timestamp = 0;
-        return;
-      case timestamp_mode::Relative: {
-        const auto time = ts * 1'000'000 - last_time;
-
-        last_time = ts * 1'000'000;
-
-        if (firstMessage == true)
-        {
-          firstMessage = false;
-          msg.timestamp = 0;
-        }
-        else
-        {
-          msg.timestamp = static_cast<int64_t>(time);
-        }
-        return;
-      }
-      case timestamp_mode::Absolute: {
-        msg.timestamp = static_cast<int64_t>(ts * 1'000'000);
-        break;
-      }
-      case timestamp_mode::SystemMonotonic: {
-        namespace clk = std::chrono;
-        msg.timestamp
-            = clk::duration_cast<clk::nanoseconds>(clk::steady_clock::now().time_since_epoch())
-                  .count();
-        break;
-      }
-      case timestamp_mode::Custom:
-        msg.timestamp = configuration.get_timestamp(static_cast<int64_t>(ts * 1'000'000));
-        break;
-    }
-  }
-
-  int64_t absolute_timestamp() const noexcept override
+  timestamp absolute_timestamp() const noexcept override
   {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(
                std::chrono::steady_clock::now() - midi_start_timestamp)
         .count();
+  }
+
+  static constexpr int bytes_for_message(uint8_t status)
+  {
+    if (status < 0xC0)
+      return 3;
+    else if (status < 0xE0)
+      return 2;
+    else if (status < 0xF0)
+      return 3;
+    else if (status == 0xF1)
+      return 2;
+    else if (status == 0xF2)
+      return 3;
+    else if (status == 0xF3)
+      return 2;
+    else if (status == 0xF8)
+      return 1;
+    else if (status == 0xFE)
+      return 1;
+    else
+      return 0;
   }
 
   static void CALLBACK midiInputCallback(
@@ -244,82 +227,46 @@ private:
       return;
 
     auto& self = *reinterpret_cast<midi_in_winmm*>(instancePtr);
+    static constexpr timestamp_backend_info timestamp_info{
+        .has_absolute_timestamps = true,
+        .absolute_is_monotonic = false,
+        .has_samples = false,
+    };
+
+    const auto to_ns = [timestamp] { return timestamp * 1'000'000; };
 
     if (inputStatus == MIM_DATA)
-    { // Channel or system message
+    {
+      // Channel or system message
+      uint8_t message[sizeof(DWORD_PTR)];
+      memcpy(message, &midiMessage, sizeof(DWORD_PTR));
 
       // Make sure the first byte is a status byte.
-      const auto status = static_cast<unsigned char>(midiMessage & 0x000000FF);
-      if (!(status & 0x80))
-        return;
-
-      // Determine the number of bytes in the MIDI message.
-      unsigned short nBytes = 1;
-      if (status < 0xC0)
-        nBytes = 3;
-      else if (status < 0xE0)
-        nBytes = 2;
-      else if (status < 0xF0)
-        nBytes = 3;
-      else if (status == 0xF1)
+      if (message[0] & 0x80)
       {
-        if (self.configuration.ignore_timing)
-          return;
-        else
-          nBytes = 2;
+        self.m_processing.on_bytes(
+            {message, message + bytes_for_message(message[0])},
+            self.m_processing.timestamp<timestamp_info>(to_ns, 0));
       }
-      else if (status == 0xF2)
-        nBytes = 3;
-      else if (status == 0xF3)
-        nBytes = 2;
-      else if (status == 0xF8 && (self.configuration.ignore_timing))
-      {
-        // A MIDI timing tick message and we're ignoring it.
-        return;
-      }
-      else if (status == 0xFE && (self.configuration.ignore_sensing))
-      {
-        // A MIDI active sensing message and we're ignoring it.
-        return;
-      }
-
-      // Copy bytes to our MIDI message.
-      const auto* ptr = reinterpret_cast<unsigned char*>(&midiMessage);
-
-      self.set_timestamp(timestamp, self.basic_message);
-      self.basic_message.bytes.assign(ptr, ptr + nBytes);
-      self.configuration.on_message(std::move(self.basic_message));
-      // Save the time of the last non-filtered message
-      self.last_time = timestamp;
-
-      return;
     }
     else
     {
       // Sysex message ( MIM_LONGDATA or MIM_LONGERROR )
       const auto* sysex = reinterpret_cast<MIDIHDR*>(midiMessage);
-      bool can_send_message = false;
       if(inputStatus == MIM_LONGERROR)
       {
-        self.sysex_message.bytes.clear();
+        self.m_processing.message.bytes.clear();
+        self.m_processing.state = self.m_processing.main;
       }
       else if (!self.configuration.ignore_sysex)
       {
         if(sysex->dwBytesRecorded > 0)
         {
-          const unsigned char first_byte = sysex->lpData[0];
-          const unsigned char last_byte = sysex->lpData[sysex->dwBytesRecorded - 1];
-          if(first_byte == 0xF0) {
-            // Starting a new sysex
-            self.sysex_message.bytes.clear();
-          }
-          if(last_byte == 0xF7) {
-            // The sysex is finished
-            can_send_message = true;
-          }
+          const auto sysex_bytes = reinterpret_cast<uint8_t*>(sysex->lpData);
 
-          self.sysex_message.bytes.insert(
-              self.sysex_message.bytes.end(), sysex->lpData, sysex->lpData + sysex->dwBytesRecorded);
+          self.m_processing.on_bytes(
+              {sysex_bytes, sysex_bytes + sysex->dwBytesRecorded},
+              self.m_processing.timestamp<timestamp_info>(to_ns, 0));
         }
       }
 
@@ -333,7 +280,6 @@ private:
       // one or two minutes.
       if (self.sysexBuffer[sysex->dwUser]->dwBytesRecorded > 0)
       {
-        // if ( sysex->dwBytesRecorded > 0 ) {
         EnterCriticalSection(&(self._mutex));
         MMRESULT result
             = midiInAddBuffer(self.inHandle, self.sysexBuffer[sysex->dwUser], sizeof(MIDIHDR));
@@ -344,35 +290,20 @@ private:
           std::cerr << "\nmidi_in::midiInputCallback: error sending sysex to "
                        "Midi device!!\n\n";
 #endif
-          return;
         }
-        if (can_send_message)
-        {
-          self.set_timestamp(timestamp, self.sysex_message);
-          self.configuration.on_message(std::move(self.sysex_message));
-          self.sysex_message.clear();
-          // Save the time of the last non-filtered message
-          self.last_time = timestamp;
-        }
-      }
-      else
-      {
-        return;
       }
     }
   }
 
   HMIDIIN inHandle; // Handle to Midi Input Device
 
-  DWORD last_time;
   std::vector<LPMIDIHDR> sysexBuffer;
   // [Patrice] see
   // https://groups.google.com/forum/#!topic/mididev/6OUjHutMpEo
   CRITICAL_SECTION _mutex;
   std::chrono::steady_clock::time_point midi_start_timestamp;
 
-  libremidi::message basic_message;
-  libremidi::message sysex_message;
+  midi1::input_state_machine m_processing{this->configuration};
 };
 
 }

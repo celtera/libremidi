@@ -17,7 +17,7 @@ public:
   midi_in_api& operator=(midi_in_api&&) = delete;
 
   [[nodiscard]] virtual bool open_port(const input_port& pt, std::string_view local_port_name) = 0;
-  [[nodiscard]] virtual int64_t absolute_timestamp() const noexcept = 0;
+  [[nodiscard]] virtual timestamp absolute_timestamp() const noexcept = 0;
 };
 
 namespace midi1

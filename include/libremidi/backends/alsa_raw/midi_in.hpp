@@ -142,77 +142,45 @@ public:
   ssize_t read_input_buffer()
   {
     static const constexpr int nbytes = 1024;
+    static constexpr timestamp_backend_info timestamp_info{
+        .has_absolute_timestamps = false,
+        .absolute_is_monotonic = false,
+        .has_samples = false,
+    };
 
     unsigned char bytes[nbytes];
 
     ssize_t err = 0;
+    // err is the amount of bytes read
     while ((err = snd.rawmidi.read(this->midiport_, bytes, nbytes)) > 0)
     {
-      // err is the amount of bytes read
-      int64_t ns = 0;
-      set_timestamp({}, ns);
-      decoder_.add_bytes(bytes, err, ns);
+      const auto to_ns = [this] { return absolute_timestamp(); };
+      decoder_.on_bytes({bytes, bytes + err}, decoder_.timestamp<timestamp_info>(to_ns, 0));
     }
     return err;
-  }
-
-  void set_timestamp(struct timespec ts, int64_t& res)
-  {
-    static constexpr int64_t nanos = 1e9;
-
-    const auto get_ts =
-#if LIBREMIDI_ALSA_HAS_RAWMIDI_TREAD
-        [=] { return static_cast<int64_t>(ts.tv_sec) * nanos + static_cast<int64_t>(ts.tv_nsec); }
-#else
-        [=] { return absolute_timestamp(); }
-#endif
-    ;
-    switch (configuration.timestamps)
-    {
-      // Unneeded here
-      case timestamp_mode::NoTimestamp:
-        break;
-      case timestamp_mode::Relative: {
-        const auto t = get_ts();
-        if (firstMessage == true)
-        {
-          firstMessage = false;
-          res = 0;
-        }
-        else
-        {
-          res = t - last_time;
-        }
-        last_time = t;
-        break;
-      }
-
-      case timestamp_mode::Absolute:
-      case timestamp_mode::SystemMonotonic:
-        res = get_ts();
-        break;
-
-      case timestamp_mode::Custom:
-        res = configuration.get_timestamp(get_ts());
-        break;
-    }
   }
 
 #if LIBREMIDI_ALSA_HAS_RAWMIDI_TREAD
   ssize_t read_input_buffer_with_timestamps()
   {
     static constexpr int nbytes = 1024;
+    static constexpr timestamp_backend_info timestamp_info{
+        .has_absolute_timestamps = true,
+        .absolute_is_monotonic = true,
+        .has_samples = false,
+    };
 
     unsigned char bytes[nbytes];
     struct timespec ts;
 
     ssize_t err = 0;
+    // err is the amount of bytes read
     while ((err = snd.rawmidi.tread(this->midiport_, &ts, bytes, nbytes)) > 0)
     {
-      // err is the amount of bytes read
-      int64_t ns{};
-      set_timestamp(ts, ns);
-      decoder_.add_bytes(bytes, err, ns);
+      const auto to_ns = [ts] {
+        return static_cast<int64_t>(ts.tv_sec) * 1'000'000'000 + static_cast<int64_t>(ts.tv_nsec);
+      };
+      decoder_.on_bytes({bytes, bytes + err}, decoder_.timestamp<timestamp_info>(to_ns, 0));
     }
     return err;
   }
@@ -227,21 +195,11 @@ public:
     midiport_ = nullptr;
   }
 
-  int64_t absolute_timestamp() const noexcept final override
-  {
-#if LIBREMIDI_ALSA_HAS_RAWMIDI_TREAD
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(
-               std::chrono::steady_clock::now().time_since_epoch())
-        .count();
-#else
-    return 0;
-#endif
-  }
+  timestamp absolute_timestamp() const noexcept final override { return system_ns(); }
 
   snd_rawmidi_t* midiport_{};
   std::vector<pollfd> fds_;
-  midi_stream_decoder decoder_{this->configuration.on_message};
-  int64_t last_time{};
+  midi1::input_state_machine decoder_{this->configuration};
 };
 
 class midi_in_alsa_raw_threaded : public midi_in_impl

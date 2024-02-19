@@ -1,6 +1,7 @@
 #include "utils.hpp"
 
 #include <libremidi/configurations.hpp>
+#include <libremidi/detail/memory.hpp>
 #include <libremidi/libremidi.hpp>
 
 #include <jack/jack.h>

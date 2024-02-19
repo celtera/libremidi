@@ -158,7 +158,7 @@ public:
     return err;
   }
 
-  void set_timestamp(struct timespec ts, int64_t& res)
+  void set_timestamp(struct timespec ts, timestamp& res)
   {
     static constexpr int64_t nanos = 1e9;
     switch (configuration.timestamps)
@@ -218,12 +218,7 @@ public:
     midiport_ = nullptr;
   }
 
-  int64_t absolute_timestamp() const noexcept override
-  {
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(
-               std::chrono::steady_clock::now().time_since_epoch())
-        .count();
-  }
+  timestamp absolute_timestamp() const noexcept override { return system_ns(); }
 
   midi2_enumerator get_device_enumerator() const noexcept
   {

@@ -39,8 +39,10 @@ enum timestamp_mode
   Custom
 };
 
+using timestamp = int64_t;
 using message_callback = std::function<void(message&& message)>;
-using timestamp_callback = std::function<int64_t(int64_t)>;
+using raw_callback = std::function<void(std::span<uint8_t>, timestamp)>;
+using timestamp_callback = std::function<timestamp(timestamp)>;
 struct input_configuration
 {
   //! Set a callback function to be invoked for incoming MIDI messages.

@@ -2,6 +2,7 @@
 #include <libremidi/backends/jack/config.hpp>
 #include <libremidi/backends/jack/helpers.hpp>
 #include <libremidi/detail/midi_in.hpp>
+#include <libremidi/detail/midi_stream_decoder.hpp>
 
 #include <chrono>
 
@@ -72,61 +73,18 @@ public:
     jack_port_rename(this->client, this->port, portName.data());
   }
 
-  void set_timestamp(
-      jack_nframes_t frame, jack_nframes_t start_frames, jack_time_t /*abs_usec*/,
-      libremidi::message& msg) noexcept
-  {
-    switch (configuration.timestamps)
-    {
-      case timestamp_mode::NoTimestamp:
-        msg.timestamp = 0;
-        return;
-      case timestamp_mode::Relative: {
-        // FIXME continueSysex logic like in core_midi?
-        // time_ns is roughly in CLOCK_MONOTONIC time frame (at least on linux)
-        const auto time_ns = 1000 * jack_frames_to_time(client, frame + start_frames);
-        if (firstMessage == true)
-        {
-          firstMessage = false;
-          msg.timestamp = 0;
-        }
-        else
-        {
-          msg.timestamp = time_ns - last_time;
-        }
-
-        last_time = time_ns;
-        return;
-      }
-      case timestamp_mode::Absolute: {
-        msg.timestamp = 1000 * jack_frames_to_time(client, frame + start_frames);
-        break;
-      }
-      case timestamp_mode::SystemMonotonic: {
-        namespace clk = std::chrono;
-        msg.timestamp
-            = clk::duration_cast<clk::nanoseconds>(clk::steady_clock::now().time_since_epoch())
-                  .count();
-        break;
-      }
-      case timestamp_mode::AudioFrame:
-        msg.timestamp = frame;
-        break;
-
-      case timestamp_mode::Custom:
-        msg.timestamp = configuration.get_timestamp(
-            1000 * jack_frames_to_time(client, frame + start_frames));
-        break;
-    }
-  }
-
-  int64_t absolute_timestamp() const noexcept override
+  timestamp absolute_timestamp() const noexcept override
   {
     return 1000 * jack_frames_to_time(client, jack_frame_time(client));
   }
 
   int process(jack_nframes_t nframes)
   {
+    static constexpr timestamp_backend_info timestamp_info{
+        .has_absolute_timestamps = true,
+        .absolute_is_monotonic = true,
+        .has_samples = true,
+    };
     void* buff = jack_port_get_buffer(this->port, nframes);
 
     // Timing
@@ -141,65 +99,19 @@ public:
     uint32_t evCount = jack_midi_get_event_count(buff);
     for (uint32_t j = 0; j < evCount; j++)
     {
-      auto& m = this->message;
-
       jack_midi_event_t event{};
       jack_midi_event_get(&event, buff, j);
-      this->set_timestamp(event.time, current_frames, current_usecs, m);
+      const auto to_ns
+          = [=, this] { return 1000 * jack_frames_to_time(client, current_frames + event.time); };
 
-      if (!this->continueSysex)
-        m.clear();
-
-      if (!((this->continueSysex || event.buffer[0] == 0xF0)
-            && (this->configuration.ignore_sysex)))
-      {
-        // Unless this is a (possibly continued) SysEx message and we're ignoring SysEx,
-        // copy the event buffer into the MIDI message struct.
-        m.bytes.insert(m.bytes.end(), event.buffer, event.buffer + event.size);
-      }
-
-      switch (event.buffer[0])
-      {
-        case 0xF0:
-          // Start of a SysEx message
-          this->continueSysex = event.buffer[event.size - 1] != 0xF7;
-          if (this->configuration.ignore_sysex)
-            continue;
-          break;
-        case 0xF1:
-        case 0xF8:
-          // MIDI Time Code or Timing Clock message
-          if (this->configuration.ignore_timing)
-            continue;
-          break;
-        case 0xFE:
-          // Active Sensing message
-          if (this->configuration.ignore_sensing)
-            continue;
-          break;
-        default:
-          if (this->continueSysex)
-          {
-            // Continuation of a SysEx message
-            this->continueSysex = event.buffer[event.size - 1] != 0xF7;
-            if (this->configuration.ignore_sysex)
-              continue;
-          }
-          // All other MIDI messages
-      }
-
-      if (!this->continueSysex)
-      {
-        // If not a continuation of a SysEx message,
-        // invoke the user callback function or queue the message.
-        this->configuration.on_message(std::move(m));
-        m.clear();
-      }
+      m_processing.on_bytes(
+          {event.buffer, event.buffer + event.size},
+          m_processing.timestamp<timestamp_info>(to_ns, event.time));
     }
 
     return 0;
   }
 
-  jack_time_t last_time{};
+  midi1::input_state_machine m_processing{this->configuration};
 };
 }

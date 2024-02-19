@@ -66,19 +66,3 @@ using midi_bytes = std::vector<unsigned char>;
 #else
   #define LIBREMIDI_INLINE
 #endif
-
-namespace libremidi
-{
-template <auto func>
-struct deleter
-{
-  template <typename U>
-  void operator()(U* x) noexcept(noexcept(func(x)))
-  {
-    func(x);
-  }
-};
-
-template <typename T, auto func>
-using unique_handle = std::unique_ptr<T, deleter<func>>;
-}

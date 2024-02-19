@@ -1,6 +1,7 @@
 #if defined(__EMSCRIPTEN__)
   #include <libremidi/backends/emscripten/midi_access.hpp>
   #include <libremidi/backends/emscripten/midi_in.hpp>
+  #include <libremidi/detail/midi_stream_decoder.hpp>
 
   #include <chrono>
 
@@ -100,9 +101,7 @@ LIBREMIDI_INLINE void midi_in_emscripten::set_timestamp(double ts, libremidi::me
 
 LIBREMIDI_INLINE int64_t midi_in_emscripten::absolute_timestamp() const noexcept
 {
-  return std::chrono::duration_cast<std::chrono::nanoseconds>(
-             std::chrono::steady_clock::now().time_since_epoch())
-      .count();
+  return system_ns();
 }
 
 LIBREMIDI_INLINE void midi_in_emscripten::on_input(libremidi::message msg)

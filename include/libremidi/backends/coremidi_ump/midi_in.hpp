@@ -144,7 +144,7 @@ public:
   {
   }
 
-  int64_t absolute_timestamp() const noexcept override
+  timestamp absolute_timestamp() const noexcept override
   {
     return coremidi_data::time_in_nanos(LIBREMIDI_AUDIO_GET_CURRENT_HOST_TIME());
   }

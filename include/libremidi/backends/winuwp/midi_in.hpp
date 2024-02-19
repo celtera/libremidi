@@ -3,6 +3,7 @@
 #include <libremidi/backends/winuwp/helpers.hpp>
 #include <libremidi/backends/winuwp/observer.hpp>
 #include <libremidi/detail/midi_in.hpp>
+#include <libremidi/detail/midi_stream_decoder.hpp>
 
 namespace libremidi
 {
@@ -66,13 +67,18 @@ public:
 
   void process_message(const winrt::Windows::Devices::Midi::IMidiMessage& msg)
   {
+    static constexpr timestamp_backend_info timestamp_info{
+        .has_absolute_timestamps = true,
+        .absolute_is_monotonic = false,
+        .has_samples = false,
+    };
+
     auto reader = DataReader::FromBuffer(msg.RawData());
     auto begin = msg.RawData().data();
     auto end = begin + msg.RawData().Length();
 
-    // FIXME proper timestamp handling
-    auto t = msg.Timestamp().count();
-    this->configuration.on_message(libremidi::message{{begin, end}, t});
+    const auto to_ns = [&msg] { return msg.Timestamp().count() * 1'000'000; };
+    m_processing.on_bytes({begin, end}, m_processing.timestamp<timestamp_info>(to_ns, 0));
   }
 
   void close_port() override
@@ -84,7 +90,7 @@ public:
     }
   }
 
-  int64_t absolute_timestamp() const noexcept override
+  timestamp absolute_timestamp() const noexcept override
   {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(
                std::chrono::steady_clock::now() - midi_start_timestamp)
@@ -94,5 +100,7 @@ public:
 private:
   winrt::Windows::Devices::Midi::IMidiInPort port_{nullptr};
   std::chrono::steady_clock::time_point midi_start_timestamp;
+
+  midi1::input_state_machine m_processing{this->configuration};
 };
 }

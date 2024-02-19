@@ -28,7 +28,7 @@ public:
 
   void set_client_name(std::string_view clientName) override;
   void set_port_name(std::string_view portName) override;
-  int64_t absolute_timestamp() const noexcept override;
+  timestamp absolute_timestamp() const noexcept override;
 
   void set_timestamp(double ts, libremidi::message& m);
   void on_input(libremidi::message msg);

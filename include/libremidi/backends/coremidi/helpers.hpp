@@ -266,7 +266,7 @@ struct coremidi_data
     }
   }
 
-  static void set_timestamp(auto& self, MIDITimeStamp packet, int64_t& msg) noexcept
+  static void set_timestamp(auto& self, MIDITimeStamp packet, timestamp& msg) noexcept
   {
     // packet.timeStamp is in mach_absolute_time units
     // We want a timestamp in nanoseconds
