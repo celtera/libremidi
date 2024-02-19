@@ -101,3 +101,4 @@ Additionnally, for MIDI 2 parsing support we use [cmidi2](https://github.com/ats
 * [MIDIVisualizer](https://github.com/kosua20/MIDIVisualizer)
 * [zing](https://github.com/Rezonality/zing)
 * [EraeTouchLite](https://github.com/TheTechnobear/EraeTouchLite)
+* [SynthMania](https://github.com/HyperLan-git/Synthmania)
