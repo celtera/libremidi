@@ -15,6 +15,19 @@ Additionnally, for MIDI 2 parsing support we use [cmidi2](https://github.com/ats
 
 ## Changelog 
 
+### Since v4.5
+* Input logic refactored across all backends.
+  * e.g. previously not backends had the same rules wrt timestamping, sysexes, etc. Now there is a single MIDI state machine which processes this.
+* Initial PipeWire support.
+
+### Since v4.4
+* iOS support restored (thanks @fwcd)
+* CI work: added Debian Bullseye, Bookworm, Trixie and make sure UMP code is being built.
+* Add compatibility with [ni-midi2](https://github.com/midi2-dev/ni-midi2): the libremidi::ump type will convert automatically from / to midi::universal_packet and it is possible to send directly some ni-midi2 data types through libremidi::midi_out.
+* Added an example of very basic MIDI-CI interoperation with MIDI2.0Workbench: https://github.com/jcelerier/libremidi/blob/master/examples/midi2_interop.cpp
+* Observer: add a `track_any` flag to track MIDI ports that are not reported as being hardware or software.
+* UMP: allow send_ump to handle UMP streams, not only single UMP packets.
+
 ### Since v4.3
 * Improvements to timing handling.
   * Added a `Custom` timestamping mechanism which allows the user to provide a 
