@@ -45,8 +45,9 @@ try
     return 0;
 
   std::cout << "\nReading MIDI input ... press <enter> to quit.\n";
-  char input;
-  std::cin.get(input);
+  int c;
+  while ((c = getchar()) != '\n' && c != EOF)
+    ;
 }
 catch (const libremidi::midi_exception& error)
 {

@@ -78,7 +78,7 @@ inline bool chooseMidiPort(libremidi::midi_in& libremidi)
   std::cout << "\nWould you like to open a virtual input port? [y/N] ";
 
   std::string keyHit;
-  std::getline(std::cin, keyHit);
+  std::getline(std::cin.ignore(), keyHit);
   if (keyHit == "y")
   {
     libremidi.open_virtual_port();
@@ -117,6 +117,7 @@ inline bool chooseMidiPort(libremidi::midi_in& libremidi)
   std::cout << "\n";
   libremidi.open_port(ports[i]);
 
+  getchar();
   return true;
 }
 
@@ -125,7 +126,7 @@ inline bool chooseMidiPort(libremidi::midi_out& libremidi)
   std::cout << "\nWould you like to open a virtual output port? [y/N] ";
 
   std::string keyHit;
-  std::getline(std::cin, keyHit);
+  std::getline(std::cin.ignore(), keyHit);
   if (keyHit == "y")
   {
     libremidi.open_virtual_port();
@@ -157,7 +158,7 @@ inline bool chooseMidiPort(libremidi::midi_out& libremidi)
     do
     {
       std::cout << "\nChoose a port number: ";
-      std::cin >> i;
+      std::cin.ignore() >> i;
     } while (i >= nPorts);
   }
 
