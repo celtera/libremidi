@@ -6,8 +6,6 @@ namespace libremidi
 {
 class midi_in_api : public midi_api
 {
-  friend struct midi_stream_decoder;
-
 public:
   midi_in_api() = default;
   ~midi_in_api() override = default;
@@ -24,14 +22,8 @@ namespace midi1
 {
 class in_api : public midi_in_api
 {
-  friend struct midi_stream_decoder;
-
 public:
   using midi_in_api::midi_in_api;
-
-  libremidi::message message{};
-  bool continueSysex{false};
-  bool firstMessage{true};
 };
 }
 
