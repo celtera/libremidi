@@ -83,6 +83,8 @@ struct pipewire_helpers
       this->global_context = std::make_shared<pipewire_context>(this->global_instance);
       this->filter = std::make_unique<pipewire_filter>(this->global_context);
 
+      if constexpr (requires { self.process({}); })
+      {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
       static constexpr struct pw_filter_events filter_events
@@ -95,6 +97,7 @@ struct pipewire_helpers
 
       this->filter->create_filter(self.configuration.client_name, filter_events, &self);
       this->filter->start_filter();
+      }
       return 0;
     }
     return 0;
@@ -167,7 +170,6 @@ struct pipewire_helpers
     if (!this->filter->port)
     {
       this->filter->create_local_port(portName.data(), direction);
-      main_loop_thread = std::jthread{[this, &self]() { run_poll_loop(); }};
     }
 
     if (!this->filter->port)
@@ -176,6 +178,11 @@ struct pipewire_helpers
       return false;
     }
     return true;
+  }
+
+  void start_thread()
+  {
+    main_loop_thread = std::jthread{[this]() { run_poll_loop(); }};
   }
 
   void do_close_port()
@@ -201,28 +208,133 @@ struct pipewire_helpers
       this->filter->rename_port(port_name);
   }
 
-  template <bool Input>
-  static auto to_port_info(pw_main_loop* client, void* port)
-      -> std::conditional_t<Input, input_port, output_port>
+  bool link_ports(auto& self, const input_port& in_port)
   {
+    // Wait for the pipewire server to send us back our node's info
+    for (int i = 0; i < 1000; i++)
+      this->filter->synchronize_node();
+
+    auto this_node = this->filter->filter_node_id();
+    auto& midi = this->global_context->current_graph.software_midi;
+    auto node_it = midi.find(this_node);
+    if (node_it == midi.end())
+    {
+      std::cerr << "Node " << this_node << " not found! \n";
+      return false;
+    }
+
+    // Wait for the pipewire server to send us back our node's ports
+    this->filter->synchronize_ports(node_it->second);
+
+    if (node_it->second.inputs.empty())
+    {
+      std::cerr << "Node " << this_node << " has no ports! \n";
+      return false;
+    }
+
+    // Link ports
+    const auto& p = node_it->second.inputs.front();
+    auto link = this->global_context->link_ports(in_port.port, p.id);
+    pw_loop_iterate(this->global_context->lp, 1);
+    if (!link)
+    {
+      self.template error<invalid_parameter_error>(
+          self.configuration,
+          "PipeWire: could not connect to port: " + in_port.port_name + " -> " + p.port_name);
+      return false;
+    }
+
+    return true;
+  }
+
+  bool link_ports(auto& self, const output_port& out_port)
+  {
+    // Wait for the pipewire server to send us back our node's info
+    for (int i = 0; i < 1000; i++)
+      this->filter->synchronize_node();
+
+    auto this_node = this->filter->filter_node_id();
+    auto& midi = this->global_context->current_graph.software_midi;
+    auto node_it = midi.find(this_node);
+    if (node_it == midi.end())
+    {
+      std::cerr << "Node " << this_node << " not found! \n";
+      return false;
+    }
+
+    // Wait for the pipewire server to send us back our node's ports
+    this->filter->synchronize_ports(node_it->second);
+
+    if (node_it->second.outputs.empty())
+    {
+      std::cerr << "Node " << this_node << " has no ports! \n";
+      return false;
+    }
+
+    // Link ports
+    const auto& p = node_it->second.outputs.front();
+    auto link = this->global_context->link_ports(p.id, out_port.port);
+    pw_loop_iterate(this->global_context->lp, 1);
+    if (!link)
+    {
+      self.template error<invalid_parameter_error>(
+          self.configuration,
+          "PipeWire: could not connect to port: " + p.port_name + " -> " + out_port.port_name);
+      return false;
+    }
+
+    return true;
+  }
+
+  template <spa_direction Direction>
+  static auto to_port_info(const pipewire_context::port_info& port)
+      -> std::conditional_t<Direction == SPA_DIRECTION_OUTPUT, input_port, output_port>
+  {
+    std::string device_name, port_name;
+    auto name_colon = port.port_alias.find(':');
+    if (name_colon != std::string::npos)
+    {
+      device_name = port.port_alias.substr(0, name_colon);
+      port_name = port.port_alias.substr(name_colon + 1);
+    }
+    else
+    {
+      port_name = port.port_alias;
+    }
+
     return {{
-        .client = reinterpret_cast<std::uintptr_t>(client),
-        .port = 0,
+        .client = 0,
+        .port = port.id,
         .manufacturer = "",
-        .device_name = "",
-        .port_name = "",
-        .display_name = "",
+        .device_name = device_name,
+        .port_name = port.port_name,
+        .display_name = port_name,
     }};
   }
 
-  template <bool Input>
-  static auto get_ports(pw_main_loop* client, const char* pattern, int flags) noexcept
-      -> std::vector<std::conditional_t<Input, input_port, output_port>>
+  // Note: keep in mind that an "input" port for us (e.g. a keyboard that goes to the computer)
+  // is an "output" port from the point of view of pipewire as data will come out of it
+  template <spa_direction Direction>
+  static auto get_ports(const pipewire_context& ctx) noexcept -> std::vector<
+      std::conditional_t<Direction == SPA_DIRECTION_OUTPUT, input_port, output_port>>
   {
-    std::vector<std::conditional_t<Input, input_port, output_port>> ret;
+    std::vector<std::conditional_t<Direction == SPA_DIRECTION_OUTPUT, input_port, output_port>>
+        ret;
 
-    if (!client)
-      return {};
+    for (auto& node : ctx.current_graph.physical_midi)
+    {
+      for (auto& p : (Direction == SPA_DIRECTION_INPUT ? node.second.inputs : node.second.outputs))
+      {
+        ret.push_back(to_port_info<Direction>(p));
+      }
+    }
+    for (auto& node : ctx.current_graph.software_midi)
+    {
+      for (auto& p : (Direction == SPA_DIRECTION_INPUT ? node.second.inputs : node.second.outputs))
+      {
+        ret.push_back(to_port_info<Direction>(p));
+      }
+    }
 
     return ret;
   }

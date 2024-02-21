@@ -40,28 +40,25 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE; }
 
-  bool open_port(const input_port&, std::string_view portName) override
+  bool open_port(const input_port& in_port, std::string_view name) override
   {
-    if (!open_virtual_port(portName))
+    if (!create_local_port(*this, name, SPA_DIRECTION_INPUT))
       return false;
 
-#if 0
-    if (auto ret
-        = pipewire_connect(this->client, port.port_name.c_str(), pipewire_port_name(this->port));
-        ret != 0)
-    {
-      error<invalid_parameter_error>(
-          configuration, "PipeWire: could not connect to port: " + port.port_name + " -> "
-                             + pipewire_port_name(this->port));
+    if (!link_ports(*this, in_port))
       return false;
-    }
-#endif
+
+    start_thread();
     return true;
   }
 
-  bool open_virtual_port(std::string_view portName) override
+  bool open_virtual_port(std::string_view name) override
   {
-    return create_local_port(*this, portName, SPA_DIRECTION_INPUT);
+    if (!create_local_port(*this, name, SPA_DIRECTION_INPUT))
+      return false;
+
+    start_thread();
+    return true;
   }
 
   void close_port() override { return do_close_port(); }
@@ -85,6 +82,8 @@ public:
         .has_samples = true,
     };
 
+    assert(this->filter);
+    assert(this->filter->port);
     const auto b = pw.filter_dequeue_buffer(this->filter->port);
     if (!b)
       return;

@@ -41,26 +41,25 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE; }
 
-  bool open_port(const output_port&, std::string_view portName) override
+  bool open_port(const output_port& out_port, std::string_view name) override
   {
-    if (!open_virtual_port(portName))
+    if (!create_local_port(*this, name, SPA_DIRECTION_OUTPUT))
       return false;
 
-#if 0
-    // Connecting to the output
-    if (pipewire_connect(this->client, pipewire_port_name(this->port), port.port_name.c_str()) != 0)
-    {
-      error<invalid_parameter_error>(
-          configuration, "PipeWire: could not connect to port" + port.port_name);
+    if (!link_ports(*this, out_port))
       return false;
-    }
-#endif
+
+    start_thread();
     return true;
   }
 
-  bool open_virtual_port(std::string_view portName) override
+  bool open_virtual_port(std::string_view name) override
   {
-    return create_local_port(*this, portName, SPA_DIRECTION_OUTPUT);
+    if (!create_local_port(*this, name, SPA_DIRECTION_OUTPUT))
+      return false;
+
+    start_thread();
+    return true;
   }
 
   void close_port() override { return do_close_port(); }

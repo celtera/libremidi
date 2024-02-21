@@ -5,7 +5,7 @@
 #include <libremidi/backends/pipewire/helpers.hpp>
 #include <libremidi/backends/pipewire/midi_in.hpp>
 #include <libremidi/backends/pipewire/midi_out.hpp>
-// #include <libremidi/backends/pipewire/observer.hpp>
+#include <libremidi/backends/pipewire/observer.hpp>
 
 namespace libremidi::pipewire
 {
@@ -13,7 +13,7 @@ struct backend
 {
   using midi_in = midi_in_pipewire;
   using midi_out = midi_out_pipewire;
-  using midi_observer = observer_dummy;
+  using midi_observer = observer_pipewire;
   using midi_in_configuration = pipewire_input_configuration;
   using midi_out_configuration = pipewire_output_configuration;
   using midi_observer_configuration = pipewire_observer_configuration;

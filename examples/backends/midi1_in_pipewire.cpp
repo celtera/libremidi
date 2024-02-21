@@ -17,7 +17,7 @@ try
   auto ports = obs.get_input_ports();
   for (const auto& port : ports)
   {
-    std::cerr << "Port: " << port.port_name << "\n";
+    std::cerr << "Port: " << port.display_name << "\n";
   }
 
   {
@@ -27,7 +27,7 @@ try
     api::midi_in_configuration in_api_config;
     libremidi::midi_in midiin{in_config, in_api_config};
 
-    midiin.open_virtual_port("hehe");
+    midiin.open_port(ports[1]);
 
     std::this_thread::sleep_for(std::chrono::seconds(60));
   }

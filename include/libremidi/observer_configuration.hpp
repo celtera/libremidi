@@ -19,6 +19,7 @@ struct LIBREMIDI_EXPORT port_information
   // CoreMIDI: MidiClientRef
   // WebMIDI: unused
   // JACK: jack_client_t*
+  // PipeWire: unused
   // WinMM: unused
   // WinUWP: unused
   client_handle client;
@@ -28,6 +29,7 @@ struct LIBREMIDI_EXPORT port_information
   // CoreMIDI: MidiObjectRef
   // WebMIDI: unused
   // JACK: jack_port_id_t
+  // PipeWire: port.id
   // WinMM: unset, identified by port_name
   // WinUWP: unused
   port_handle port;

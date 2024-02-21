@@ -9,7 +9,7 @@ namespace libremidi
 {
 class observer_pipewire final
     : public observer_api
-    , private pipewire_client
+    , private pipewire_helpers
     , private error_handler
 {
 public:
@@ -22,6 +22,8 @@ public:
   explicit observer_pipewire(observer_configuration&& conf, pipewire_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
+    connect(*this);
+#if 0
     // Initialize PipeWire client
     if (configuration.context)
     {
@@ -29,7 +31,10 @@ public:
       set_callbacks();
     }
     else
+#endif
     {
+
+#if 0
       pipewire_status_t status{};
       this->client
           = pipewire_client_open(configuration.client_name.c_str(), PipewireNoStartServer, &status);
@@ -42,9 +47,11 @@ public:
 
         pipewire_activate(this->client);
       }
+#endif
     }
   }
 
+#if 0
   void initial_callback()
   {
     {
@@ -60,7 +67,7 @@ public:
           auto flags = pipewire_port_flags(port);
 
           bool physical = flags & PipewirePortIsPhysical;
-          bool ok = false;
+          bool ok = configuration.track_any;
           if (configuration.track_hardware)
             ok |= physical;
           if (configuration.track_virtual)
@@ -92,7 +99,7 @@ public:
           auto flags = pipewire_port_flags(port);
 
           bool physical = flags & PipewirePortIsPhysical;
-          bool ok = false;
+          bool ok = configuration.track_any;
           if (configuration.track_hardware)
             ok |= physical;
           if (configuration.track_virtual)
@@ -195,20 +202,23 @@ public:
         this);
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::PipeWire_MIDI; }
+#endif
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE; }
 
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
-    return get_ports<true>(this->client, nullptr, PipewirePortIsOutput);
+    return get_ports<SPA_DIRECTION_OUTPUT>(*this->global_context);
   }
 
   std::vector<libremidi::output_port> get_output_ports() const noexcept override
   {
-    return get_ports<false>(this->client, nullptr, PipewirePortIsInput);
+    return get_ports<SPA_DIRECTION_INPUT>(*this->global_context);
   }
 
   ~observer_pipewire()
   {
+    disconnect(*this);
+#if 0
     if (client && !configuration.context)
     {
       // If we own the client, deactivate it
@@ -216,6 +226,7 @@ public:
       pipewire_client_close(this->client);
       this->client = nullptr;
     }
+#endif
   }
 
   std::unordered_set<std::string> seen_input_ports;

@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -209,10 +210,14 @@ struct pipewire_context
     pw_registry_add_listener(this->registry, &this->registry_listener, &registry_events, this);
 
     synchronize();
+
+    // Add a manual 1ms event loop iteration at the end of
+    // ctor to ensure synchronous clients will still see the ports
+    pw_loop_iterate(this->lp, 1);
   }
 
-  int pending{};
-  int done{};
+  std::atomic<int> pending{};
+  std::atomic<int> done{};
   void synchronize()
   {
     pending = 0;
@@ -253,15 +258,12 @@ struct pipewire_context
         PW_KEY_LINK_OUTPUT_PORT, std::to_string(out_port).c_str(), PW_KEY_LINK_INPUT_PORT,
         std::to_string(in_port).c_str(), nullptr);
 
-    spa_hook listener{};
-    spa_zero(listener);
-
     auto proxy = (pw_proxy*)pw_core_create_object(
         this->core, "link-factory", PW_TYPE_INTERFACE_Link, PW_VERSION_LINK, &props->dict, 0);
 
     if (!proxy)
     {
-      // libremidi::logger().error("PipeWire: could not allocate link");
+      std::cerr << "PipeWire: could not allocate link\n";
       pw.properties_free(props);
       return nullptr;
     }
@@ -270,6 +272,8 @@ struct pipewire_context
     pw.properties_free(props);
     return proxy;
   }
+
+  void unlink_ports(pw_proxy* link) { pw.proxy_destroy(link); }
 
   void register_port(const pw_port_info* info)
   {
@@ -399,7 +403,7 @@ struct pipewire_filter
   struct port
   {
     void* data;
-  }* port;
+  }* port{};
 
   explicit pipewire_filter(std::shared_ptr<pipewire_context> loop)
       : loop{loop}
@@ -417,6 +421,11 @@ struct pipewire_filter
             PW_KEY_MEDIA_TYPE, "Midi",
             PW_KEY_MEDIA_CATEGORY, "Filter",
             PW_KEY_MEDIA_ROLE, "DSP",
+            PW_KEY_MEDIA_NAME, "libremidi",
+            PW_KEY_NODE_LOCK_RATE, "true",
+            PW_KEY_NODE_ALWAYS_PROCESS, "true",
+            PW_KEY_NODE_PAUSE_ON_IDLE, "false",
+            PW_KEY_NODE_SUSPEND_ON_IDLE, "false",
             nullptr),
         &events,
         context);
@@ -471,33 +480,31 @@ struct pipewire_filter
 
   uint32_t filter_node_id() { return this->loop->pw.filter_get_node_id(this->filter); }
 
-  void synchronize()
+  void synchronize_node()
   {
     this->loop->synchronize();
+    int k = 0;
+    auto node_id = filter_node_id();
+    while (node_id == 4294967295)
     {
-      int k = 0;
-      auto node_id = filter_node_id();
-      while (node_id == 4294967295)
-      {
-        this->loop->synchronize();
-        node_id = filter_node_id();
+      this->loop->synchronize();
+      node_id = filter_node_id();
 
-        if (k++; k > 100)
-          return;
-      }
-      /*
-      // Leave some time to resolve the ports
-      k = 0;
-      const auto num_local_ins = this->input_ports.size();
-      const auto num_local_outs = this->output_ports.size();
-      auto& this_node = this->loop->current_graph.software_audio[node_id];
-      while (this_node.inputs.size() < num_local_ins && this_node.outputs.size() < num_local_outs)
-      {
-        this->loop->synchronize();
-        if (k++; k > 100)
-          return;
-      }
-*/
+      if (k++; k > 100)
+        return;
+    }
+  }
+  void synchronize_ports(const pipewire_context::node& this_node)
+  {
+    // Leave some time to resolve the ports
+    int k = 0;
+    const auto num_local_ins = 1;
+    const auto num_local_outs = 0;
+    while (this_node.inputs.size() < num_local_ins || this_node.outputs.size() < num_local_outs)
+    {
+      this->loop->synchronize();
+      if (k++; k > 100)
+        return;
     }
   }
 };
