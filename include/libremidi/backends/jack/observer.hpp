@@ -60,7 +60,7 @@ public:
           auto flags = jack_port_flags(port);
 
           bool physical = flags & JackPortIsPhysical;
-          bool ok = false;
+          bool ok = configuration.track_any;
           if (configuration.track_hardware)
             ok |= physical;
           if (configuration.track_virtual)
@@ -92,7 +92,7 @@ public:
           auto flags = jack_port_flags(port);
 
           bool physical = flags & JackPortIsPhysical;
-          bool ok = false;
+          bool ok = configuration.track_any;
           if (configuration.track_hardware)
             ok |= physical;
           if (configuration.track_virtual)
@@ -123,7 +123,7 @@ public:
         return;
 
       bool physical = flags & JackPortIsPhysical;
-      bool ok = false;
+      bool ok = configuration.track_any;
       if (configuration.track_hardware)
         ok |= physical;
       if (configuration.track_virtual)

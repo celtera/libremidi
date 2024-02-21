@@ -78,6 +78,7 @@ struct jack_client
     int i = 0;
     while (ports[i] != nullptr)
     {
+      // FIXME this does not take into account filtering sw / hw ports
       auto port = jack_port_by_name(client, ports[i]);
       ret.push_back(to_port_info<Input>(client, port));
       i++;
