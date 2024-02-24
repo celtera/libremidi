@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -89,10 +90,12 @@ struct pipewire_context
 
   struct graph
   {
+    mutable std::mutex mtx;
     libremidi::hash_map<uint32_t, node> physical_audio;
     libremidi::hash_map<uint32_t, node> physical_midi;
     libremidi::hash_map<uint32_t, node> software_audio;
     libremidi::hash_map<uint32_t, node> software_midi;
+    libremidi::hash_map<uint32_t, port_info> port_cache;
 
     void for_each_port(auto func)
     {
@@ -110,6 +113,7 @@ struct pipewire_context
 
     void remove_port(uint32_t id)
     {
+      port_cache.erase(id);
       for (auto map : {&physical_audio, &physical_midi, &software_audio, &software_midi})
       {
         for (auto& [_, node] : *map)
@@ -161,13 +165,19 @@ struct pipewire_context
       return;
     }
 
+    initialize_observation();
+
+    synchronize();
+
+    // Add a manual 1ms event loop iteration at the end of
+    // ctor to ensure synchronous clients will still see the ports
+    pw_loop_iterate(this->lp, 1);
+  }
+
+  void initialize_observation()
+  {
     // Register a listener which will listen on when ports are added / removed
     spa_zero(registry_listener);
-    static constexpr const struct pw_port_events port_events = {
-        .version = PW_VERSION_PORT_EVENTS,
-        .info = [](void* object,
-                   const pw_port_info* info) { ((pipewire_context*)object)->register_port(info); },
-    };
 
     static constexpr const struct pw_registry_events registry_events = {
         .version = PW_VERSION_REGISTRY_EVENTS,
@@ -175,45 +185,72 @@ struct pipewire_context
             [](void* object, uint32_t id, uint32_t /*permissions*/, const char* type,
                uint32_t /*version*/, const struct spa_dict* /*props*/) {
       pipewire_context& self = *(pipewire_context*)object;
-
-      // When a port is added:
       if (strcmp(type, PW_TYPE_INTERFACE_Port) == 0)
-      {
-        auto port = (pw_port*)pw_registry_bind(self.registry, id, type, PW_VERSION_PORT, 0);
-        self.port_listener.push_back({id, port, std::make_unique<spa_hook>()});
-        auto& l = self.port_listener.back();
-
-        pw_port_add_listener(l.port, l.listener.get(), &port_events, &self);
-      }
+        self.register_port(id, type);
         },
         .global_remove =
             [](void* object, uint32_t id) {
       pipewire_context& self = *(pipewire_context*)object;
-
-      // When a port is removed:
-      // Remove from the graph
-      self.current_graph.remove_port(id);
-
-      // Remove from the listeners
-      auto it = std::find_if(
-          self.port_listener.begin(), self.port_listener.end(),
-          [&](const listened_port& l) { return l.id == id; });
-      if (it != self.port_listener.end())
-      {
-        libpipewire::instance().proxy_destroy((pw_proxy*)it->port);
-        self.port_listener.erase(it);
-      }
+      self.unregister_port(id);
         },
         };
 
     // Start listening
     pw_registry_add_listener(this->registry, &this->registry_listener, &registry_events, this);
+  }
 
-    synchronize();
+  void register_port(uint32_t id, const char* type)
+  {
+    auto port = (pw_port*)pw_registry_bind(registry, id, type, PW_VERSION_PORT, 0);
+    port_listener.push_back({id, port, std::make_unique<spa_hook>()});
+    auto& l = port_listener.back();
 
-    // Add a manual 1ms event loop iteration at the end of
-    // ctor to ensure synchronous clients will still see the ports
-    pw_loop_iterate(this->lp, 1);
+    static constexpr const struct pw_port_events port_events = {
+        .version = PW_VERSION_PORT_EVENTS,
+        .info
+        = [](void* object,
+             const pw_port_info* info) { ((pipewire_context*)object)->update_port_info(info); },
+    };
+    pw_port_add_listener(l.port, l.listener.get(), &port_events, this);
+  }
+
+  void unregister_port(uint32_t id)
+  {
+    // When a port is removed:
+    // Notify
+    std::unique_lock _{current_graph.mtx, std::defer_lock};
+    if (on_port_removed)
+    {
+      _.lock();
+      if (auto it = current_graph.port_cache.find(id); it != current_graph.port_cache.end())
+      {
+        auto copy = it->second;
+        _.unlock();
+        on_port_removed(copy);
+      }
+      else
+      {
+        _.unlock();
+      }
+    }
+
+    // Remove from the graph
+    {
+      _.lock();
+      current_graph.remove_port(id);
+      _.unlock();
+    }
+
+    // Remove from the listeners
+    auto it
+        = std::find_if(port_listener.begin(), port_listener.end(), [&](const listened_port& l) {
+            return l.id == id;
+          });
+    if (it != port_listener.end())
+    {
+      libpipewire::instance().proxy_destroy((pw_proxy*)it->port);
+      port_listener.erase(it);
+    }
   }
 
   std::atomic<int> pending{};
@@ -275,7 +312,7 @@ struct pipewire_context
 
   void unlink_ports(pw_proxy* link) { pw.proxy_destroy(link); }
 
-  void register_port(const pw_port_info* info)
+  void update_port_info(const pw_port_info* info)
   {
     const spa_dict_item* item{};
 
@@ -320,48 +357,38 @@ struct pipewire_context
       return;
 
     const auto nid = std::stoul(p.node_id);
-    if (p.physical)
-    {
-      if (p.format.find("audio") != p.format.npos)
+    auto get_node = [&]() -> node* {
+      if (p.physical)
       {
-        if (p.direction == pw_direction::SPA_DIRECTION_OUTPUT)
-          this->current_graph.physical_audio[nid].outputs.push_back(std::move(p));
-        else
-          this->current_graph.physical_audio[nid].inputs.push_back(std::move(p));
-      }
-      else if (p.format.find("midi") != p.format.npos)
-      {
-        if (p.direction == pw_direction::SPA_DIRECTION_OUTPUT)
-          this->current_graph.physical_midi[nid].outputs.push_back(std::move(p));
-        else
-          this->current_graph.physical_midi[nid].inputs.push_back(std::move(p));
+        if (p.format.find("audio") != p.format.npos)
+          return &this->current_graph.physical_audio[nid];
+        else if (p.format.find("midi") != p.format.npos)
+          return &this->current_graph.physical_midi[nid];
       }
       else
       {
-        // TODO, video ?
+        if (p.format.find("audio") != p.format.npos)
+          return &this->current_graph.software_audio[nid];
+        else if (p.format.find("midi") != p.format.npos)
+          return &this->current_graph.software_midi[nid];
       }
-    }
-    else
+      return nullptr;
+    };
+
     {
-      if (p.format.find("audio") != p.format.npos)
+      std::lock_guard _{current_graph.mtx};
+      current_graph.port_cache[p.id] = p;
+      if (auto node = get_node())
       {
         if (p.direction == pw_direction::SPA_DIRECTION_OUTPUT)
-          this->current_graph.software_audio[nid].outputs.push_back(std::move(p));
+          node->outputs.push_back(p);
         else
-          this->current_graph.software_audio[nid].inputs.push_back(std::move(p));
-      }
-      else if (p.format.find("midi") != p.format.npos)
-      {
-        if (p.direction == pw_direction::SPA_DIRECTION_OUTPUT)
-          this->current_graph.software_midi[nid].outputs.push_back(std::move(p));
-        else
-          this->current_graph.software_midi[nid].inputs.push_back(std::move(p));
-      }
-      else
-      {
-        // TODO, video ?
+          node->inputs.push_back(p);
       }
     }
+
+    if (on_port_added)
+      on_port_added(p);
   }
 
   int get_fd() const noexcept
@@ -391,6 +418,9 @@ struct pipewire_context
     if (this->main_loop)
       pw.main_loop_destroy(this->main_loop);
   }
+
+  std::function<void(const port_info&)> on_port_added;
+  std::function<void(const port_info&)> on_port_removed;
 };
 
 struct pipewire_filter

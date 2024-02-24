@@ -44,7 +44,6 @@ struct pipewire_helpers
   template <typename Self>
   int connect(Self& self)
   {
-
     if (this->filter)
       return 0;
 
@@ -178,6 +177,54 @@ struct pipewire_helpers
       return false;
     }
     return true;
+  }
+
+  void add_callbacks(const observer_configuration& conf)
+  {
+    assert(global_context);
+    global_context->on_port_added = [&conf](const pipewire_context::port_info& port) {
+      if (port.format.find("midi") == std::string::npos)
+        return;
+
+      bool unfiltered = conf.track_any;
+      unfiltered |= (port.physical && conf.track_hardware);
+      unfiltered |= (!port.physical && conf.track_virtual);
+      if (unfiltered)
+      {
+        if (port.direction == SPA_DIRECTION_INPUT)
+        {
+          if (conf.output_added)
+            conf.output_added(to_port_info<SPA_DIRECTION_INPUT>(port));
+        }
+        else
+        {
+          if (conf.input_added)
+            conf.input_added(to_port_info<SPA_DIRECTION_OUTPUT>(port));
+        }
+      }
+    };
+
+    global_context->on_port_removed = [&conf](const pipewire_context::port_info& port) {
+      if (port.format.find("midi") == std::string::npos)
+        return;
+
+      bool unfiltered = conf.track_any;
+      unfiltered |= (port.physical && conf.track_hardware);
+      unfiltered |= (!port.physical && conf.track_virtual);
+      if (unfiltered)
+      {
+        if (port.direction == SPA_DIRECTION_INPUT)
+        {
+          if (conf.output_removed)
+            conf.output_removed(to_port_info<SPA_DIRECTION_INPUT>(port));
+        }
+        else
+        {
+          if (conf.input_removed)
+            conf.input_removed(to_port_info<SPA_DIRECTION_OUTPUT>(port));
+        }
+      }
+    };
   }
 
   void start_thread()
@@ -321,18 +368,23 @@ struct pipewire_helpers
     std::vector<std::conditional_t<Direction == SPA_DIRECTION_OUTPUT, input_port, output_port>>
         ret;
 
-    for (auto& node : ctx.current_graph.physical_midi)
     {
-      for (auto& p : (Direction == SPA_DIRECTION_INPUT ? node.second.inputs : node.second.outputs))
+      std::lock_guard _{ctx.current_graph.mtx};
+      for (auto& node : ctx.current_graph.physical_midi)
       {
-        ret.push_back(to_port_info<Direction>(p));
+        for (auto& p :
+             (Direction == SPA_DIRECTION_INPUT ? node.second.inputs : node.second.outputs))
+        {
+          ret.push_back(to_port_info<Direction>(p));
+        }
       }
-    }
-    for (auto& node : ctx.current_graph.software_midi)
-    {
-      for (auto& p : (Direction == SPA_DIRECTION_INPUT ? node.second.inputs : node.second.outputs))
+      for (auto& node : ctx.current_graph.software_midi)
       {
-        ret.push_back(to_port_info<Direction>(p));
+        for (auto& p :
+             (Direction == SPA_DIRECTION_INPUT ? node.second.inputs : node.second.outputs))
+        {
+          ret.push_back(to_port_info<Direction>(p));
+        }
       }
     }
 

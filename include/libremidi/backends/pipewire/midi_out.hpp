@@ -66,8 +66,9 @@ public:
 
   void set_port_name(std::string_view port_name) override { rename_port(port_name); }
 
-  int process(spa_io_position*)
+  int process(spa_io_position* pos)
   {
+    m_process_clock.store(pos->clock.nsec, std::memory_order_relaxed);
     const auto b = pw.filter_dequeue_buffer(this->filter->port);
     if (!b)
       return 1;
@@ -78,27 +79,38 @@ public:
     if (d->data == nullptr)
       return 1;
 
-    int n_frames = d->maxsize;
     spa_pod_builder build;
     spa_zero(build);
-    spa_pod_builder_init(&build, d->data, n_frames);
+    spa_pod_builder_init(&build, d->data, d->maxsize);
 
     spa_pod_frame f;
     spa_pod_builder_push_sequence(&build, &f, 0);
 
     // for all events
-    message m;
-    while (m_queue.try_dequeue(m))
+    while (auto m_ptr = m_queue.peek())
     {
+      auto& m = *m_ptr;
       if (m.empty())
+      {
+        m_queue.pop();
         continue;
+      }
 
       // TODO why
       if (m.bytes[0] == 0xff)
+      {
+        m_queue.pop();
         continue;
+      }
 
       spa_pod_builder_control(&build, m.timestamp, SPA_CONTROL_Midi);
-      spa_pod_builder_bytes(&build, m.bytes.data(), m.bytes.size());
+      int res = spa_pod_builder_bytes(&build, m.bytes.data(), m.bytes.size());
+
+      // Try again next buffer
+      if (res == -ENOSPC)
+        break;
+
+      m_queue.pop();
     }
     spa_pod_builder_pop(&build, &f);
 
@@ -144,5 +156,6 @@ public:
   }
 
   moodycamel::ReaderWriterQueue<libremidi::message> m_queue;
+  std::atomic_int64_t m_process_clock = 0;
 };
 }

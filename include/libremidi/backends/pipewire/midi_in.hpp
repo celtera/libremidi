@@ -65,14 +65,7 @@ public:
 
   void set_port_name(std::string_view port_name) override { rename_port(port_name); }
 
-  timestamp absolute_timestamp() const noexcept override
-  {
-    return 0;
-
-#if 0
-    //1000 * pipewire_frames_to_time(client, pipewire_frame_time(client));
-#endif
-  }
+  timestamp absolute_timestamp() const noexcept override { return system_ns(); }
 
   void process(struct spa_io_position* position)
   {
