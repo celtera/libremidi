@@ -480,6 +480,28 @@ struct pipewire_filter
     assert(port);
   }
 
+  void set_port_buffer(int bytes)
+  {
+    uint8_t buffer[1024];
+    struct spa_pod_builder builder;
+    spa_pod_builder_init(&builder, buffer, sizeof(buffer));
+
+    // clang-format off
+    const struct spa_pod* params[1] = {
+      (spa_pod*) spa_pod_builder_add_object(
+        &builder,
+        SPA_TYPE_OBJECT_ParamBuffers, SPA_PARAM_Buffers,
+        SPA_PARAM_BUFFERS_buffers, SPA_POD_CHOICE_RANGE_Int(1, 1, 32),
+        SPA_PARAM_BUFFERS_blocks, SPA_POD_Int(1),
+        SPA_PARAM_BUFFERS_size, SPA_POD_CHOICE_RANGE_Int(bytes, 4096, INT32_MAX),
+        SPA_PARAM_BUFFERS_stride, SPA_POD_Int(1)
+      )
+    };
+    // clang-format on
+
+    pw.filter_update_params(this->filter, this->port, params, 1);
+  }
+
   void remove_port()
   {
     assert(port);

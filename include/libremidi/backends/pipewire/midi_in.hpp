@@ -61,7 +61,11 @@ public:
     return true;
   }
 
-  void close_port() override { return do_close_port(); }
+  void close_port() override
+  {
+    stop_thread();
+    do_close_port();
+  }
 
   void set_port_name(std::string_view port_name) override { rename_port(port_name); }
 

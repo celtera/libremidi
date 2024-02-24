@@ -46,6 +46,8 @@ public:
     if (!create_local_port(*this, name, SPA_DIRECTION_OUTPUT))
       return false;
 
+    this->filter->set_port_buffer(configuration.output_buffer_size);
+
     if (!link_ports(*this, out_port))
       return false;
 
@@ -58,11 +60,17 @@ public:
     if (!create_local_port(*this, name, SPA_DIRECTION_OUTPUT))
       return false;
 
+    this->filter->set_port_buffer(configuration.output_buffer_size);
+
     start_thread();
     return true;
   }
 
-  void close_port() override { return do_close_port(); }
+  void close_port() override
+  {
+    stop_thread();
+    do_close_port();
+  }
 
   void set_port_name(std::string_view port_name) override { rename_port(port_name); }
 

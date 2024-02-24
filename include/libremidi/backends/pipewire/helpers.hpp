@@ -232,19 +232,22 @@ struct pipewire_helpers
     main_loop_thread = std::jthread{[this]() { run_poll_loop(); }};
   }
 
-  void do_close_port()
+  void stop_thread()
   {
-    if (!this->filter)
-      return;
-    if (!this->filter->port)
-      return;
-
     if (main_loop_thread.joinable())
     {
       termination_event.notify();
       main_loop_thread.request_stop();
       main_loop_thread.join();
     }
+  }
+
+  void do_close_port()
+  {
+    if (!this->filter)
+      return;
+    if (!this->filter->port)
+      return;
 
     this->filter->remove_port();
   }

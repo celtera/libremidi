@@ -34,6 +34,8 @@ struct pipewire_output_configuration
   pw_main_loop* context{};
   std::function<void(pipewire_callback)> set_process_func;
   std::function<void(int64_t)> clear_process_func;
+
+  int64_t output_buffer_size{65536};
 };
 
 struct pipewire_observer_configuration
