@@ -112,7 +112,6 @@ public:
       p.port_name = name;
 
     auto cap = snd.seq.port_info_get_capability(pinfo);
-    // FIXME isn't it missing SND_SEQ_PORT_CAP_SUBS_READ / WRITE??
     p.isInput = (cap & SND_SEQ_PORT_CAP_DUPLEX) | (cap & SND_SEQ_PORT_CAP_READ);
     p.isOutput = (cap & SND_SEQ_PORT_CAP_DUPLEX) | (cap & SND_SEQ_PORT_CAP_WRITE);
 

@@ -56,7 +56,6 @@ inline constexpr std::pair<int, int> seq_from_port_handle(port_handle p) noexcep
   return {client, port};
 }
 
-// FIXME would be much prettier with std::generator
 inline void for_all_ports(
     const libasound& snd, snd_seq_t* seq,
     std::function<void(snd_seq_client_info_t&, snd_seq_port_info_t&)> func)

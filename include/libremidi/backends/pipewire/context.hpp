@@ -446,7 +446,7 @@ struct pipewire_filter
     // clang-format off
     this->filter = pw.filter_new_simple(
         loop->lp,
-        filter_name.data(), // FIXME
+        filter_name.data(),
         pw.properties_new(
             PW_KEY_MEDIA_TYPE, "Midi",
             PW_KEY_MEDIA_CATEGORY, "Filter",
