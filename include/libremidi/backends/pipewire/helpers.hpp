@@ -33,6 +33,14 @@ struct pipewire_helpers
   eventfd_notifier termination_event{};
   pollfd fds[2]{};
 
+  enum poll_state
+  {
+    start_poll,
+    in_poll,
+    not_in_poll
+  };
+  std::atomic<poll_state> current_state{not_in_poll};
+
   pipewire_helpers()
   {
     static std::atomic_int64_t instance{};
@@ -47,7 +55,7 @@ struct pipewire_helpers
     if (this->filter)
       return 0;
 
-    // Initialize PipeWire client
+      // Initialize PipeWire client
 #if 0
     auto& configuration = self.configuration;
     if (configuration.context)
@@ -86,16 +94,16 @@ struct pipewire_helpers
       {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-      static constexpr struct pw_filter_events filter_events
-          = {.version = PW_VERSION_FILTER_EVENTS,
-             .process = +[](void* _data, struct spa_io_position* position) -> void {
-               Self& self = *static_cast<Self*>(_data);
-               self.process(position);
-             }};
+        static constexpr struct pw_filter_events filter_events
+            = {.version = PW_VERSION_FILTER_EVENTS,
+               .process = +[](void* _data, struct spa_io_position* position) -> void {
+                 Self& self = *static_cast<Self*>(_data);
+                 self.process(position);
+               }};
 #pragma GCC diagnostic pop
 
-      this->filter->create_filter(self.configuration.client_name, filter_events, &self);
-      this->filter->start_filter();
+        this->filter->create_filter(self.configuration.client_name, filter_events, &self);
+        this->filter->start_filter();
       }
       return 0;
     }
@@ -117,15 +125,24 @@ struct pipewire_helpers
 #endif
     {
       termination_event.notify();
+      for (int i = 0; i < 100; i++)
+      {
+        if (current_state == poll_state::not_in_poll)
+          break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        termination_event.notify();
+      }
     }
   }
 
   void run_poll_loop()
+  try
   {
     // Note: called from a std::jthread.
     if (int fd = this->global_context->get_fd(); fd != -1)
     {
       fds[0] = {.fd = fd, .events = POLLIN, .revents = 0};
+      current_state = poll_state::in_poll;
 
       for (;;)
       {
@@ -134,7 +151,7 @@ struct pipewire_helpers
           if (err == -EAGAIN)
             continue;
           else
-            return;
+            break;
         }
 
         // Check pipewire fd:
@@ -156,6 +173,11 @@ struct pipewire_helpers
         }
       }
     }
+    current_state = poll_state::not_in_poll;
+  }
+  catch (...)
+  {
+    current_state = poll_state::not_in_poll;
   }
 
   template <typename Self>
@@ -229,6 +251,7 @@ struct pipewire_helpers
 
   void start_thread()
   {
+    current_state = poll_state::start_poll;
     main_loop_thread = std::jthread{[this]() { run_poll_loop(); }};
   }
 
