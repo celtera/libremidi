@@ -24,11 +24,11 @@ LIBREMIDI_INLINE libremidi::API midi_in_emscripten::get_current_api() const noex
   return libremidi::API::WEBMIDI;
 }
 
-LIBREMIDI_INLINE bool midi_in_emscripten::open_port(unsigned int portNumber, std::string_view)
+LIBREMIDI_INLINE bool midi_in_emscripten::open_port(int portNumber, std::string_view)
 {
   auto& midi = webmidi_helpers::midi_access_emscripten::instance();
 
-  if (portNumber >= midi.input_count())
+  if (portNumber < 0 || portNumber >= midi.input_count())
   {
     error<no_devices_found_error>(
         this->configuration, "midi_in_emscripten::open_port: no MIDI output sources found.");
@@ -59,44 +59,14 @@ LIBREMIDI_INLINE void midi_in_emscripten::close_port()
   midi.close_input(portNumber_, *this);
 }
 
-LIBREMIDI_INLINE void midi_in_emscripten::set_client_name(std::string_view clientName)
+LIBREMIDI_INLINE void midi_in_emscripten::set_client_name(std::string_view)
 {
   warning(configuration, "midi_in_emscripten::set_client_name: unsupported.");
 }
 
-LIBREMIDI_INLINE void midi_in_emscripten::set_port_name(std::string_view portName)
+LIBREMIDI_INLINE void midi_in_emscripten::set_port_name(std::string_view)
 {
   warning(configuration, "midi_in_emscripten::set_port_name: unsupported.");
-}
-
-LIBREMIDI_INLINE void midi_in_emscripten::set_timestamp(double ts, libremidi::message& m)
-{
-  switch (configuration.timestamps)
-  {
-    case timestamp_mode::NoTimestamp:
-      m.timestamp = 0;
-      break;
-    case timestamp_mode::Relative: {
-      if (firstMessage == true)
-      {
-        firstMessage = false;
-        m.timestamp = 0;
-      }
-      else
-      {
-        m.timestamp = (ts - last_time_) * 1e6;
-      }
-      last_time_ = ts;
-      break;
-    }
-    case timestamp_mode::Absolute:
-    case timestamp_mode::SystemMonotonic:
-      m.timestamp = ts * 1e6;
-      break;
-    case timestamp_mode::Custom:
-      m.timestamp = configuration.get_timestamp(ts * 1e6);
-      break;
-  }
 }
 
 LIBREMIDI_INLINE int64_t midi_in_emscripten::absolute_timestamp() const noexcept
@@ -104,9 +74,17 @@ LIBREMIDI_INLINE int64_t midi_in_emscripten::absolute_timestamp() const noexcept
   return system_ns();
 }
 
-LIBREMIDI_INLINE void midi_in_emscripten::on_input(libremidi::message msg)
+LIBREMIDI_INLINE void
+midi_in_emscripten::on_input(double ts, unsigned char* begin, unsigned char* end)
 {
-  this->configuration.on_message(std::move(msg));
+  static constexpr timestamp_backend_info timestamp_info{
+      .has_absolute_timestamps = true,
+      .absolute_is_monotonic = true,
+      .has_samples = false,
+  };
+  const auto to_ns = [=] { return 1e6 * ts; };
+
+  m_processing.on_bytes({begin, end}, m_processing.timestamp<timestamp_info>(to_ns, 0));
 }
 
 }

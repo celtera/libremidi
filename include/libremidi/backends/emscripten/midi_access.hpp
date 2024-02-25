@@ -30,22 +30,22 @@ public:
     return inst;
   }
 
-  const bool available() const noexcept
+  bool available() const noexcept
   {
     return EM_ASM_INT(return typeof globalThis.__libreMidi_access !== undefined;);
   }
 
-  const int input_count() const noexcept
+  int input_count() const noexcept
   {
     return EM_ASM_INT(return globalThis.__libreMidi_currentInputs.length;);
   }
 
-  const int output_count() const noexcept
+  int output_count() const noexcept
   {
     return EM_ASM_INT(return globalThis.__libreMidi_currentOutputs.length;);
   }
 
-  const void load_current_infos() noexcept
+  void load_current_infos() noexcept
   {
 #define get_js_string(variable_to_read, ...) \
   (char*)EM_ASM_INT(                            \
@@ -198,13 +198,9 @@ public:
   void devices_input(int port, double timestamp, int len, char* data)
   {
     unsigned char* bytes = reinterpret_cast<unsigned char*>(data);
-    message msg;
-    msg.bytes.assign(bytes, bytes + len);
-
     for (auto input : m_opened_inputs[port])
     {
-      input->set_timestamp(timestamp, msg);
-      input->on_input(msg);
+      input->on_input(timestamp, bytes, bytes + len);
     }
   }
 
