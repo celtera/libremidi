@@ -452,10 +452,14 @@ struct pipewire_filter
             PW_KEY_MEDIA_CATEGORY, "Filter",
             PW_KEY_MEDIA_ROLE, "DSP",
             PW_KEY_MEDIA_NAME, "libremidi",
+#if defined(PW_KEY_NODE_LOCK_RATE)
             PW_KEY_NODE_LOCK_RATE, "true",
+#endif
             PW_KEY_NODE_ALWAYS_PROCESS, "true",
             PW_KEY_NODE_PAUSE_ON_IDLE, "false",
+#if defined(PW_KEY_NODE_SUSPEND_ON_IDLE)
             PW_KEY_NODE_SUSPEND_ON_IDLE, "false",
+#endif
             nullptr),
         &events,
         context);
