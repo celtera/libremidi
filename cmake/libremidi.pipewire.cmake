@@ -16,7 +16,7 @@ if(PIPEWIRE_PATH AND PIPEWIRE_SPA_PATH)
     ${_public}
       LIBREMIDI_PIPEWIRE
   )
-  target_include_directories(libremidi
+  target_include_directories(libremidi SYSTEM
     ${_public}
       $<BUILD_INTERFACE:${PIPEWIRE_PATH}> $<BUILD_INTERFACE:${PIPEWIRE_SPA_PATH}>
   )
