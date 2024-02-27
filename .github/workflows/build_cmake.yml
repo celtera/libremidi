@@ -218,8 +218,11 @@ jobs:
         apt-get install -qq --force-yes \
           build-essential binutils gcc g++ \
           clang libc++-dev \
-          libboost-dev libasound-dev libjack-jackd2-dev \
-          libudev-dev
+          libboost-dev \
+          libasound-dev \
+          libjack-jackd2-dev \
+          libudev-dev \
+          libpipewire-0.3-dev
 
         if [[ "${{matrix.distro}}" == 'bullseye' ]]; then
           apt-get install -qq --force-yes cmake/bullseye-backports
