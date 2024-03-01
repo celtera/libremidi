@@ -45,25 +45,12 @@ struct pipewire_instance
 
 struct pipewire_context
 {
-  const libpipewire& pw = libpipewire::instance();
-  std::shared_ptr<pipewire_instance> global_instance;
-
-  pw_main_loop* main_loop{};
-  pw_loop* lp{};
-
-  pw_context* context{};
-  pw_core* core{};
-
-  pw_registry* registry{};
-  spa_hook registry_listener{};
-
   struct listened_port
   {
     uint32_t id{};
     pw_port* port{};
     std::unique_ptr<spa_hook> listener;
   };
-  std::vector<listened_port> port_listener{};
 
   struct port_info
   {
@@ -125,10 +112,18 @@ struct pipewire_context
     }
   } current_graph;
 
-  int sync{};
+  explicit pipewire_context(pw_main_loop* inst)
+      : main_loop{inst}
+      , owns_main_loop{false}
+  {
+    assert(main_loop);
+
+    initialize();
+  }
 
   explicit pipewire_context(std::shared_ptr<pipewire_instance> inst)
       : global_instance{inst}
+      , owns_main_loop{true}
   {
     this->main_loop = pw.main_loop_new(nullptr);
     if (!this->main_loop)
@@ -136,7 +131,11 @@ struct pipewire_context
       // libremidi::logger().error("PipeWire: main_loop_new failed!");
       return;
     }
+    initialize();
+  }
 
+  void initialize()
+  {
     this->lp = pw.main_loop_get_loop(this->main_loop);
     if (!lp)
     {
@@ -248,13 +247,11 @@ struct pipewire_context
           });
     if (it != port_listener.end())
     {
-      libpipewire::instance().proxy_destroy((pw_proxy*)it->port);
+      pw.proxy_destroy((pw_proxy*)it->port);
       port_listener.erase(it);
     }
   }
 
-  std::atomic<int> pending{};
-  std::atomic<int> done{};
   void synchronize()
   {
     pending = 0;
@@ -289,7 +286,7 @@ struct pipewire_context
     spa_hook_remove(&core_listener);
   }
 
-  pw_proxy* link_ports(uint32_t out_port, uint32_t in_port)
+  [[nodiscard]] pw_proxy* link_ports(uint32_t out_port, uint32_t in_port)
   {
     auto props = pw.properties_new(
         PW_KEY_LINK_OUTPUT_PORT, std::to_string(out_port).c_str(), PW_KEY_LINK_INPUT_PORT,
@@ -415,12 +412,32 @@ struct pipewire_context
       pw.core_disconnect(this->core);
     if (this->context)
       pw.context_destroy(this->context);
-    if (this->main_loop)
+    if (owns_main_loop && this->main_loop)
       pw.main_loop_destroy(this->main_loop);
   }
 
+  friend struct pipewire_filter;
+  const libpipewire& pw = libpipewire::instance();
+  std::shared_ptr<pipewire_instance> global_instance;
+
+  pw_main_loop* main_loop{};
+  pw_loop* lp{};
+
+  pw_context* context{};
+  pw_core* core{};
+
+  pw_registry* registry{};
+  spa_hook registry_listener{};
+
   std::function<void(const port_info&)> on_port_added;
   std::function<void(const port_info&)> on_port_removed;
+
+  std::vector<listened_port> port_listener{};
+
+  std::atomic<int> pending{};
+  std::atomic<int> done{};
+  bool owns_main_loop{true};
+  int sync{};
 };
 
 struct pipewire_filter
@@ -440,8 +457,16 @@ struct pipewire_filter
   {
   }
 
+  explicit pipewire_filter(std::shared_ptr<pipewire_context> loop, pw_filter* filter)
+      : loop{loop}
+      , filter{filter}
+  {
+  }
+
   void create_filter(std::string_view filter_name, const pw_filter_events& events, void* context)
   {
+    assert(!filter);
+
     auto& pw = libpipewire::instance();
     // clang-format off
     this->filter = pw.filter_new_simple(
@@ -465,6 +490,12 @@ struct pipewire_filter
         context);
     // clang-format on
     assert(filter);
+  }
+
+  void destroy()
+  {
+    if (this->filter)
+      pw.filter_destroy(this->filter);
   }
 
   void create_local_port(std::string_view port_name, spa_direction direction)

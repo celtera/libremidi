@@ -22,7 +22,7 @@ public:
   explicit observer_pipewire(observer_configuration&& conf, pipewire_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    connect(*this);
+    create_context(*this);
 
     // FIXME notify_in_constructor
     // FIXME port rename callback
@@ -55,7 +55,8 @@ public:
 
   ~observer_pipewire()
   {
-    disconnect(*this);
+    stop_thread();
+    destroy_context();
 #if 0
     if (client && !configuration.context)
     {

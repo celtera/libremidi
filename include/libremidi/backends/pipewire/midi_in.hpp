@@ -23,14 +23,16 @@ public:
   explicit midi_in_pipewire(input_configuration&& conf, pipewire_input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    connect(*this);
+    create_context(*this);
+    create_filter(*this);
   }
 
   ~midi_in_pipewire() override
   {
-    midi_in_pipewire::close_port();
-
-    disconnect(*this);
+    stop_thread();
+    do_close_port();
+    destroy_filter(*this);
+    destroy_context();
   }
 
   void set_client_name(std::string_view) override

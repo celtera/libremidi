@@ -27,6 +27,7 @@ struct pipewire_helpers
   std::shared_ptr<pipewire_instance> global_instance;
   std::shared_ptr<pipewire_context> global_context;
   std::unique_ptr<pipewire_filter> filter;
+  pw_proxy* link{};
 
   int64_t this_instance{};
 
@@ -50,48 +51,39 @@ struct pipewire_helpers
   }
 
   template <typename Self>
-  int connect(Self& self)
+  void create_filter(Self& self)
   {
-    if (this->filter)
-      return 0;
-
-      // Initialize PipeWire client
-#if 0
-    auto& configuration = self.configuration;
-    if (configuration.context)
+    if constexpr (requires { self.process({}); })
     {
-      // FIXME case where user provides an existing filter
+      if (this->filter)
+        return;
 
-      if (!configuration.set_process_func)
-        return -1;
-      configuration.set_process_func(
-          {.token = this_instance,
-           .callback = [&self, p = std::weak_ptr{this->port.impl}](int nf) -> int {
-             auto pt = p.lock();
-             if (!pt)
-               return 0;
-             auto ppt = pt->load();
-             if (!ppt)
-               return 0;
-
-             self.process(nf);
-
-             self.check_client_released();
-             return 0;
-           }});
-
-      this->client = configuration.context;
-      return 0;
-    }
-    else
-#endif
-    {
-      this->global_instance = std::make_shared<pipewire_instance>();
-      this->global_context = std::make_shared<pipewire_context>(this->global_instance);
-      this->filter = std::make_unique<pipewire_filter>(this->global_context);
-
-      if constexpr (requires { self.process({}); })
+      auto& configuration = self.configuration;
+      if (configuration.context && configuration.filter && configuration.set_process_func)
       {
+        this->filter
+            = std::make_unique<pipewire_filter>(this->global_context, configuration.filter);
+
+        pipewire_callback cbs{
+            .token = this_instance, .callback = [&self](spa_io_position* nf) -> void {
+              // auto pt = p.lock();
+              // if (!pt)
+              //   return 0;
+              // auto ppt = pt->load();
+              // if (!ppt)
+              //   return 0;
+
+              self.process(nf);
+
+              // self.check_client_released();
+            }};
+        configuration.set_process_func(cbs);
+
+        //        this->client = configuration.context;
+      }
+      else
+      {
+        this->filter = std::make_unique<pipewire_filter>(this->global_context);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
         static constexpr struct pw_filter_events filter_events
@@ -105,16 +97,13 @@ struct pipewire_helpers
         this->filter->create_filter(self.configuration.client_name, filter_events, &self);
         this->filter->start_filter();
       }
-      return 0;
     }
-    return 0;
   }
 
   template <typename Self>
-  void disconnect(Self&)
+  void destroy_filter(Self& self)
   {
-#if 0
-    if (self.configuration.context)
+    if (!global_context->owns_main_loop)
     {
       if (self.configuration.clear_process_func)
       {
@@ -122,17 +111,41 @@ struct pipewire_helpers
       }
     }
     else
-#endif
     {
-      termination_event.notify();
-      for (int i = 0; i < 100; i++)
+      if (this->filter)
       {
-        if (current_state == poll_state::not_in_poll)
-          break;
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        termination_event.notify();
+        this->filter->destroy();
       }
     }
+
+    this->filter.reset();
+  }
+
+  template <typename Self>
+  int create_context(Self& self)
+  {
+    if (this->global_context)
+      return 0;
+
+    // Initialize PipeWire client
+    auto& configuration = self.configuration;
+    if (configuration.context)
+    {
+      this->global_context = std::make_shared<pipewire_context>(configuration.context);
+    }
+    else
+    {
+      this->global_instance = std::make_shared<pipewire_instance>();
+      this->global_context = std::make_shared<pipewire_context>(this->global_instance);
+    }
+    return 0;
+  }
+
+  void destroy_context()
+  {
+    assert(this->global_context);
+    this->global_context.reset();
+    this->global_instance.reset();
   }
 
   void run_poll_loop()
@@ -183,6 +196,7 @@ struct pipewire_helpers
   template <typename Self>
   bool create_local_port(Self& self, std::string_view portName, spa_direction direction)
   {
+    assert(this->global_context);
     assert(this->filter);
 
     if (portName.empty())
@@ -257,11 +271,22 @@ struct pipewire_helpers
 
   void stop_thread()
   {
-    if (main_loop_thread.joinable())
+    if (main_loop_thread.joinable() || current_state != poll_state::not_in_poll)
     {
       termination_event.notify();
       main_loop_thread.request_stop();
-      main_loop_thread.join();
+
+      termination_event.notify();
+      for (int i = 0; i < 100; i++)
+      {
+        if (current_state == poll_state::not_in_poll)
+          break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        termination_event.notify();
+      }
+
+      if (main_loop_thread.joinable())
+        main_loop_thread.join();
     }
   }
 
@@ -272,6 +297,7 @@ struct pipewire_helpers
     if (!this->filter->port)
       return;
 
+    unlink_ports();
     this->filter->remove_port();
   }
 
@@ -279,6 +305,15 @@ struct pipewire_helpers
   {
     if (this->filter)
       this->filter->rename_port(port_name);
+  }
+
+  void unlink_ports()
+  {
+    if (link)
+    {
+      this->global_context->unlink_ports(link);
+      link = nullptr;
+    }
   }
 
   bool link_ports(auto& self, const input_port& in_port)
@@ -307,7 +342,7 @@ struct pipewire_helpers
 
     // Link ports
     const auto& p = node_it->second.inputs.front();
-    auto link = this->global_context->link_ports(in_port.port, p.id);
+    link = this->global_context->link_ports(in_port.port, p.id);
     pw_loop_iterate(this->global_context->lp, 1);
     if (!link)
     {
@@ -346,7 +381,7 @@ struct pipewire_helpers
 
     // Link ports
     const auto& p = node_it->second.outputs.front();
-    auto link = this->global_context->link_ports(p.id, out_port.port);
+    link = this->global_context->link_ports(p.id, out_port.port);
     pw_loop_iterate(this->global_context->lp, 1);
     if (!link)
     {
