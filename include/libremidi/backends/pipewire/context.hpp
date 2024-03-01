@@ -539,14 +539,14 @@ struct pipewire_filter
 
   void remove_port()
   {
-    assert(port);
+    assert(this->port);
     pw.filter_remove_port(this->port);
     this->port = nullptr;
   }
 
   void rename_port(std::string_view port_name)
   {
-    assert(port);
+    assert(this->port);
     spa_dict_item items[1] = {
         SPA_DICT_ITEM_INIT(PW_KEY_PORT_NAME, port_name.data()),
     };

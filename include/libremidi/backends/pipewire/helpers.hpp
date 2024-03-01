@@ -5,6 +5,7 @@
 #include <libremidi/backends/pipewire/context.hpp>
 #include <libremidi/detail/memory.hpp>
 #include <libremidi/detail/midi_in.hpp>
+#include <libremidi/detail/semaphore.hpp>
 
 #include <atomic>
 #include <semaphore>
@@ -34,6 +35,9 @@ struct pipewire_helpers
   eventfd_notifier termination_event{};
   pollfd fds[2]{};
 
+  semaphore_pair_lock thread_lock;
+  std::shared_ptr<void> canary;
+
   enum poll_state
   {
     start_poll,
@@ -53,56 +57,47 @@ struct pipewire_helpers
   template <typename Self>
   void create_filter(Self& self)
   {
-    if constexpr (requires { self.process({}); })
+    if (this->filter)
+      return;
+
+    auto& configuration = self.configuration;
+    if (configuration.context && configuration.filter && configuration.set_process_func)
     {
-      if (this->filter)
-        return;
+      this->filter = std::make_unique<pipewire_filter>(this->global_context, configuration.filter);
 
-      auto& configuration = self.configuration;
-      if (configuration.context && configuration.filter && configuration.set_process_func)
-      {
-        this->filter
-            = std::make_unique<pipewire_filter>(this->global_context, configuration.filter);
-
-        pipewire_callback cbs{
-            .token = this_instance, .callback = [&self](spa_io_position* nf) -> void {
-              // auto pt = p.lock();
-              // if (!pt)
-              //   return 0;
-              // auto ppt = pt->load();
-              // if (!ppt)
-              //   return 0;
-
+      pipewire_callback cbs{
+          .token = this_instance,
+          .callback = [&self, p = std::weak_ptr{canary}](spa_io_position* nf) -> void {
+            if (auto pt = p.lock())
               self.process(nf);
 
-              // self.check_client_released();
-            }};
-        configuration.set_process_func(cbs);
-
-        //        this->client = configuration.context;
-      }
-      else
-      {
-        this->filter = std::make_unique<pipewire_filter>(this->global_context);
+            self.thread_lock.check_client_released();
+          }};
+      configuration.set_process_func(cbs);
+    }
+    else
+    {
+      this->filter = std::make_unique<pipewire_filter>(this->global_context);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-        static constexpr struct pw_filter_events filter_events
-            = {.version = PW_VERSION_FILTER_EVENTS,
-               .process = +[](void* _data, struct spa_io_position* position) -> void {
-                 Self& self = *static_cast<Self*>(_data);
-                 self.process(position);
-               }};
+      static constexpr struct pw_filter_events filter_events
+          = {.version = PW_VERSION_FILTER_EVENTS,
+             .process = +[](void* _data, struct spa_io_position* position) -> void {
+               // FIXME likely we need the thread_lock check here too
+               Self& self = *static_cast<Self*>(_data);
+               self.process(position);
+             }};
 #pragma GCC diagnostic pop
 
-        this->filter->create_filter(self.configuration.client_name, filter_events, &self);
-        this->filter->start_filter();
-      }
+      this->filter->create_filter(self.configuration.client_name, filter_events, &self);
+      this->filter->start_filter();
     }
   }
 
   template <typename Self>
   void destroy_filter(Self& self)
   {
+    assert(global_context);
     if (!global_context->owns_main_loop)
     {
       if (self.configuration.clear_process_func)
@@ -152,6 +147,7 @@ struct pipewire_helpers
   try
   {
     // Note: called from a std::jthread.
+    assert(this->global_context);
     if (int fd = this->global_context->get_fd(); fd != -1)
     {
       fds[0] = {.fd = fd, .events = POLLIN, .revents = 0};
@@ -265,12 +261,19 @@ struct pipewire_helpers
 
   void start_thread()
   {
+    if (!this->global_context->owns_main_loop)
+      return;
+
     current_state = poll_state::start_poll;
     main_loop_thread = std::jthread{[this]() { run_poll_loop(); }};
   }
 
   void stop_thread()
   {
+    assert(this->global_context);
+    if (!this->global_context->owns_main_loop)
+      return;
+
     if (main_loop_thread.joinable() || current_state != poll_state::not_in_poll)
     {
       termination_event.notify();
@@ -296,6 +299,12 @@ struct pipewire_helpers
       return;
     if (!this->filter->port)
       return;
+
+    if (!this->global_context->owns_main_loop)
+    {
+      this->canary.reset();
+      this->thread_lock.prepare_release_client();
+    }
 
     unlink_ports();
     this->filter->remove_port();

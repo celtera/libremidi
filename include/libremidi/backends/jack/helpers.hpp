@@ -10,6 +10,7 @@
   #include <jack/ringbuffer.h>
 #endif
 #include <libremidi/detail/midi_in.hpp>
+#include <libremidi/detail/semaphore.hpp>
 
 #include <atomic>
 #include <semaphore>
@@ -112,28 +113,13 @@ struct jack_helpers : jack_client
   } port;
 
   int64_t this_instance{};
-  std::binary_semaphore sem_cleanup{0};
-  std::binary_semaphore sem_needpost{0};
+
+  semaphore_pair_lock thread_lock;
 
   jack_helpers()
   {
     static std::atomic_int64_t instance{};
     this_instance = ++instance;
-  }
-
-  void prepare_release_client()
-  {
-    using namespace std::literals;
-
-    // FIXME if jack is not running we can skip this
-    this->sem_needpost.release();
-    this->sem_cleanup.try_acquire_for(1s);
-  }
-
-  void check_client_released()
-  {
-    if (!this->sem_needpost.try_acquire())
-      this->sem_cleanup.release();
   }
 
   template <typename Self>
@@ -153,16 +139,11 @@ struct jack_helpers : jack_client
       configuration.set_process_func(
           {.token = this_instance,
            .callback = [&self, p = std::weak_ptr{this->port.impl}](jack_nframes_t nf) -> int {
-             auto pt = p.lock();
-             if (!pt)
-               return 0;
-             auto ppt = pt->load();
-             if (!ppt)
-               return 0;
+             if (auto pt = p.lock())
+               if (auto ppt = pt->load())
+                 self.process(nf);
 
-             self.process(nf);
-
-             self.check_client_released();
+             self.thread_lock.check_client_released();
              return 0;
            }});
 
@@ -188,7 +169,7 @@ struct jack_helpers : jack_client
 
               self.process(nf);
 
-              self.check_client_released();
+              self.thread_lock.check_client_released();
               return 0;
             },
             &self);
@@ -251,7 +232,7 @@ struct jack_helpers : jack_client
     this->port = nullptr;
 
     // 2. Signal through the semaphore and wait for the signal return
-    this->prepare_release_client();
+    this->thread_lock.prepare_release_client();
 
     // 3. Now we are sure that the client is not going to use the port anymore
     jack_port_unregister(this->client, port_ptr);

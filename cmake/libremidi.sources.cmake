@@ -102,6 +102,8 @@ target_sources(libremidi PRIVATE
     include/libremidi/detail/midi_out.hpp
     include/libremidi/detail/midi_stream_decoder.hpp
     include/libremidi/detail/observer.hpp
+    include/libremidi/detail/semaphore.hpp
+    include/libremidi/detail/ump_stream.hpp
 
     include/libremidi/api.hpp
     include/libremidi/client.hpp
