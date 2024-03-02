@@ -1,0 +1,34 @@
+# Reading MIDI 2 messages from a device through callbacks
+
+Note that MIDI 2 support is still experimental and subject to change.
+Note also that the MIDI 1 and MIDI 2 send functions (not yet receive) are useable no matter 
+the kind of backend used (e.g. one can send UMPs to MIDI 1 backends and MIDI 1 messages to MIDI 2 backends). This conversion is done in a best-effort way.
+
+```C++
+// Set the configuration of our MIDI port, same warnings apply than for MIDI 1.
+// Note that an UMP message is always at most 4 * 32 bits = 16 bytes.
+// Added to the 64-bit timestamp this is 24 bytes for a libremidi::ump 
+// which is definitely small enough to be passed by value.
+// Note that libremidi::ump is entirely constexpr.
+auto my_callback = [](libremidi::ump message) {
+  // how many bytes
+  message.size();
+  // access to the individual bytes
+  message[i];
+  // access to the timestamp
+  message.timestamp;
+};
+
+// Create the midi object
+libremidi::midi_in midi{ 
+  libremidi::ump_input_configuration{ .on_message = my_callback }
+};
+
+
+// Open a given midi port. 
+// The argument is a libremidi::input_port gotten from a libremidi::observer. 
+midi.open_port(/* a port */);
+// Alternatively, to get the default port for the system: 
+midi.open_port(libremidi::midi2::in_default_port());
+
+```
