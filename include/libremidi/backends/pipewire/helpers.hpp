@@ -36,7 +36,7 @@ struct pipewire_helpers
   pollfd fds[2]{};
 
   semaphore_pair_lock thread_lock;
-  std::shared_ptr<void> canary;
+  std::shared_ptr<void> canary = std::make_shared<int>();
 
   enum poll_state
   {
