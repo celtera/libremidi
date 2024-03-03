@@ -13,12 +13,15 @@ This is a fork / rewrite based on two libraries:
 
 Additionnally, for MIDI 2 parsing support we use [cmidi2](https://github.com/atsushieno/cmidi2)!
 
+Read the documentation [here](https://github.com/celtera/libremidi).
+
 ## Changelog 
 
 ### Since v4.5
 * Input logic refactored across all backends.
   * e.g. previously not backends had the same rules wrt timestamping, sysexes, etc. Now there is a single MIDI state machine which processes this.
-* Initial PipeWire support.
+* PipeWire support.
+* Many bugfixes across the stack.
 
 ### Since v4.4
 * iOS support restored (thanks @fwcd)
