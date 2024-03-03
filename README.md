@@ -13,7 +13,7 @@ This is a fork / rewrite based on two libraries:
 
 Additionnally, for MIDI 2 parsing support we use [cmidi2](https://github.com/atsushieno/cmidi2)!
 
-Read the documentation [here](https://github.com/celtera/libremidi).
+Read the documentation [here](https://celtera.github.io/libremidi).
 
 ## Changelog 
 
