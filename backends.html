@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="foreword.html"><strong aria-hidden="true">1.</strong> Foreword</a></li><li class="chapter-item expanded affix "><li class="part-title">Getting started</li><li class="chapter-item expanded "><a href="compiling.html"><strong aria-hidden="true">2.</strong> Compiling</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="header-only.html"><strong aria-hidden="true">2.1.</strong> Header-only support</a></li></ol></li><li class="chapter-item expanded "><a href="enumerating.html"><strong aria-hidden="true">3.</strong> Enumerating ports</a></li><li class="chapter-item expanded "><a href="midi-1-in.html"><strong aria-hidden="true">4.</strong> MIDI 1 in</a></li><li class="chapter-item expanded "><a href="midi-1-out.html"><strong aria-hidden="true">5.</strong> MIDI 1 out</a></li><li class="chapter-item expanded "><a href="midi-2-in.html"><strong aria-hidden="true">6.</strong> MIDI 2 in</a></li><li class="chapter-item expanded "><a href="midi-2-out.html"><strong aria-hidden="true">7.</strong> MIDI 2 out</a></li><li class="chapter-item expanded "><a href="file.html"><strong aria-hidden="true">8.</strong> MIDI file support</a></li><li class="chapter-item expanded affix "><li class="part-title">Advanced features</li><li class="chapter-item expanded "><a href="midi-2-integrations.html"><strong aria-hidden="true">9.</strong> MIDI 2 integrations</a></li><li class="chapter-item expanded "><a href="hotplug.html"><strong aria-hidden="true">10.</strong> Hotplug support</a></li><li class="chapter-item expanded "><a href="error-handling.html"><strong aria-hidden="true">11.</strong> Error handling</a></li><li class="chapter-item expanded "><a href="configuration.html"><strong aria-hidden="true">12.</strong> Custom configuration</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="context-sharing.html"><strong aria-hidden="true">12.1.</strong> Context sharing</a></li><li class="chapter-item expanded "><a href="polling.html"><strong aria-hidden="true">12.2.</strong> External polling</a></li><li class="chapter-item expanded "><a href="timestamping.html"><strong aria-hidden="true">12.3.</strong> Timestamping</a></li></ol></li><li class="chapter-item expanded "><a href="queue.html"><strong aria-hidden="true">13.</strong> Queue vs callbacks</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="backends.html" class="active"><strong aria-hidden="true">14.</strong> Backends</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">15.</strong> Examples overview</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="foreword.html"><strong aria-hidden="true">1.</strong> Foreword</a></li><li class="chapter-item expanded affix "><li class="part-title">Getting started</li><li class="chapter-item expanded "><a href="compiling.html"><strong aria-hidden="true">2.</strong> Compiling</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="header-only.html"><strong aria-hidden="true">2.1.</strong> Header-only support</a></li></ol></li><li class="chapter-item expanded "><a href="enumerating.html"><strong aria-hidden="true">3.</strong> Enumerating ports</a></li><li class="chapter-item expanded "><a href="midi-1-in.html"><strong aria-hidden="true">4.</strong> MIDI 1 in</a></li><li class="chapter-item expanded "><a href="midi-1-out.html"><strong aria-hidden="true">5.</strong> MIDI 1 out</a></li><li class="chapter-item expanded "><a href="midi-2-in.html"><strong aria-hidden="true">6.</strong> MIDI 2 in</a></li><li class="chapter-item expanded "><a href="midi-2-out.html"><strong aria-hidden="true">7.</strong> MIDI 2 out</a></li><li class="chapter-item expanded "><a href="file.html"><strong aria-hidden="true">8.</strong> MIDI file support</a></li><li class="chapter-item expanded affix "><li class="part-title">Advanced features</li><li class="chapter-item expanded "><a href="midi-2-integrations.html"><strong aria-hidden="true">9.</strong> MIDI 2 integrations</a></li><li class="chapter-item expanded "><a href="hotplug.html"><strong aria-hidden="true">10.</strong> Hotplug support</a></li><li class="chapter-item expanded "><a href="error-handling.html"><strong aria-hidden="true">11.</strong> Error handling</a></li><li class="chapter-item expanded "><a href="configuration.html"><strong aria-hidden="true">12.</strong> Custom configuration</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="context-sharing.html"><strong aria-hidden="true">12.1.</strong> Context sharing</a></li><li class="chapter-item expanded "><a href="polling.html"><strong aria-hidden="true">12.2.</strong> External polling</a></li><li class="chapter-item expanded "><a href="timestamping.html"><strong aria-hidden="true">12.3.</strong> Timestamping</a></li></ol></li><li class="chapter-item expanded "><a href="queue.html"><strong aria-hidden="true">13.</strong> Queue vs callbacks</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="backends.html" class="active"><strong aria-hidden="true">14.</strong> Backends</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -175,11 +175,64 @@
                     <main>
                         <h1 id="feature-matrix"><a class="header" href="#feature-matrix">Feature matrix</a></h1>
 <p>This table shows which feature is supported by which backend so far, for advanced features.</p>
-<p>It may be because the backend does not provide the ability at all, or because it has not been implemented yet.</p>
-<div class="table-wrapper"><table><thead><tr><th></th><th>ALSA Raw</th><th>ALSA Seq</th><th>JACK</th><th>WinMM</th><th>UWP</th><th>CoreMIDI</th><th>Emscripten</th></tr></thead><tbody>
-<tr><td>Virtual ports</td><td>N/A</td><td>Yes</td><td>Yes</td><td>N/A</td><td>No</td><td>Yes</td><td>N/A</td></tr>
-<tr><td>Observer</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
-<tr><td>Chunking</td><td>No</td><td>No</td><td>No</td><td>No</td><td>No</td><td>No</td><td>No</td></tr>
+<p>It may be because the backend does not provide the ability at all (N/A),
+or because it has not been implemented yet.</p>
+<h2 id="linux--bsd"><a class="header" href="#linux--bsd">Linux &amp; BSD</a></h2>
+<div class="table-wrapper"><table><thead><tr><th></th><th>ALSA Raw</th><th>ALSA Seq</th><th>PipeWire</th></tr></thead><tbody>
+<tr><td>MIDI 1</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>MIDI 2</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+<tr><td>Virtual ports</td><td>N/A</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Observer</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Scheduling</td><td>No</td><td>No</td><td>No</td></tr>
+</tbody></table>
+</div>
+<h3 id="special-features"><a class="header" href="#special-features">Special features</a></h3>
+<ul>
+<li>
+<p>The ALSA Raw back-end allows to perform chunked sending of MIDI messages,
+which can be useful to upload firmwares.</p>
+</li>
+<li>
+<p><code>libasound</code> and <code>libpipewire</code> are always loaded through <code>dlopen</code>.
+JACK can also be, optionally.</p>
+</li>
+</ul>
+<p>This allows libremidi to be built on a system with e.g. PipeWire support
+without preventing application loading if the end user does not use it.</p>
+<h2 id="windows"><a class="header" href="#windows">Windows</a></h2>
+<div class="table-wrapper"><table><thead><tr><th></th><th>WinMM</th><th>UWP</th><th>WinMIDI</th></tr></thead><tbody>
+<tr><td>MIDI 1</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+<tr><td>MIDI 2</td><td>N/A</td><td>N/A</td><td>No</td></tr>
+<tr><td>Virtual ports</td><td>N/A</td><td>No</td><td>No</td></tr>
+<tr><td>Observer</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+<tr><td>Scheduling</td><td>No</td><td>No</td><td>No</td></tr>
+</tbody></table>
+</div>
+<h2 id="mac--ios"><a class="header" href="#mac--ios">Mac &amp; iOS</a></h2>
+<div class="table-wrapper"><table><thead><tr><th></th><th>CoreMIDI</th></tr></thead><tbody>
+<tr><td>MIDI 1</td><td>Yes</td></tr>
+<tr><td>MIDI 2</td><td>Yes</td></tr>
+<tr><td>Virtual ports</td><td>Yes</td></tr>
+<tr><td>Observer</td><td>Yes</td></tr>
+<tr><td>Scheduling</td><td>No</td></tr>
+</tbody></table>
+</div>
+<h2 id="web"><a class="header" href="#web">Web</a></h2>
+<div class="table-wrapper"><table><thead><tr><th></th><th>Emscripten WebMIDI</th></tr></thead><tbody>
+<tr><td>MIDI 1</td><td>Yes</td></tr>
+<tr><td>MIDI 2</td><td>N/A</td></tr>
+<tr><td>Virtual ports</td><td>N/A</td></tr>
+<tr><td>Observer</td><td>Yes</td></tr>
+<tr><td>Scheduling</td><td>No</td></tr>
+</tbody></table>
+</div>
+<h2 id="shared-backends"><a class="header" href="#shared-backends">Shared backends</a></h2>
+<div class="table-wrapper"><table><thead><tr><th></th><th>JACK</th></tr></thead><tbody>
+<tr><td>MIDI 1</td><td>Yes</td></tr>
+<tr><td>MIDI 2</td><td>No</td></tr>
+<tr><td>Virtual ports</td><td>Yes</td></tr>
+<tr><td>Observer</td><td>Yes</td></tr>
+<tr><td>Scheduling</td><td>No</td></tr>
 </tbody></table>
 </div>
                     </main>
@@ -190,9 +243,6 @@
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="examples.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
-                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -204,9 +254,6 @@
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="examples.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
-                    </a>
             </nav>
 
         </div>

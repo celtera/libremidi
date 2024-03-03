@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="foreword.html"><strong aria-hidden="true">1.</strong> Foreword</a></li><li class="chapter-item expanded affix "><li class="part-title">Getting started</li><li class="chapter-item expanded "><a href="compiling.html"><strong aria-hidden="true">2.</strong> Compiling</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="header-only.html"><strong aria-hidden="true">2.1.</strong> Header-only support</a></li></ol></li><li class="chapter-item expanded "><a href="enumerating.html"><strong aria-hidden="true">3.</strong> Enumerating ports</a></li><li class="chapter-item expanded "><a href="midi-1-in.html"><strong aria-hidden="true">4.</strong> MIDI 1 in</a></li><li class="chapter-item expanded "><a href="midi-1-out.html"><strong aria-hidden="true">5.</strong> MIDI 1 out</a></li><li class="chapter-item expanded "><a href="midi-2-in.html"><strong aria-hidden="true">6.</strong> MIDI 2 in</a></li><li class="chapter-item expanded "><a href="midi-2-out.html"><strong aria-hidden="true">7.</strong> MIDI 2 out</a></li><li class="chapter-item expanded "><a href="file.html"><strong aria-hidden="true">8.</strong> MIDI file support</a></li><li class="chapter-item expanded affix "><li class="part-title">Advanced features</li><li class="chapter-item expanded "><a href="midi-2-integrations.html"><strong aria-hidden="true">9.</strong> MIDI 2 integrations</a></li><li class="chapter-item expanded "><a href="hotplug.html"><strong aria-hidden="true">10.</strong> Hotplug support</a></li><li class="chapter-item expanded "><a href="error-handling.html"><strong aria-hidden="true">11.</strong> Error handling</a></li><li class="chapter-item expanded "><a href="configuration.html"><strong aria-hidden="true">12.</strong> Custom configuration</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="context-sharing.html"><strong aria-hidden="true">12.1.</strong> Context sharing</a></li><li class="chapter-item expanded "><a href="polling.html"><strong aria-hidden="true">12.2.</strong> External polling</a></li><li class="chapter-item expanded "><a href="timestamping.html" class="active"><strong aria-hidden="true">12.3.</strong> Timestamping</a></li></ol></li><li class="chapter-item expanded "><a href="queue.html"><strong aria-hidden="true">13.</strong> Queue vs callbacks</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="backends.html"><strong aria-hidden="true">14.</strong> Backends</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">15.</strong> Examples overview</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="foreword.html"><strong aria-hidden="true">1.</strong> Foreword</a></li><li class="chapter-item expanded affix "><li class="part-title">Getting started</li><li class="chapter-item expanded "><a href="compiling.html"><strong aria-hidden="true">2.</strong> Compiling</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="header-only.html"><strong aria-hidden="true">2.1.</strong> Header-only support</a></li></ol></li><li class="chapter-item expanded "><a href="enumerating.html"><strong aria-hidden="true">3.</strong> Enumerating ports</a></li><li class="chapter-item expanded "><a href="midi-1-in.html"><strong aria-hidden="true">4.</strong> MIDI 1 in</a></li><li class="chapter-item expanded "><a href="midi-1-out.html"><strong aria-hidden="true">5.</strong> MIDI 1 out</a></li><li class="chapter-item expanded "><a href="midi-2-in.html"><strong aria-hidden="true">6.</strong> MIDI 2 in</a></li><li class="chapter-item expanded "><a href="midi-2-out.html"><strong aria-hidden="true">7.</strong> MIDI 2 out</a></li><li class="chapter-item expanded "><a href="file.html"><strong aria-hidden="true">8.</strong> MIDI file support</a></li><li class="chapter-item expanded affix "><li class="part-title">Advanced features</li><li class="chapter-item expanded "><a href="midi-2-integrations.html"><strong aria-hidden="true">9.</strong> MIDI 2 integrations</a></li><li class="chapter-item expanded "><a href="hotplug.html"><strong aria-hidden="true">10.</strong> Hotplug support</a></li><li class="chapter-item expanded "><a href="error-handling.html"><strong aria-hidden="true">11.</strong> Error handling</a></li><li class="chapter-item expanded "><a href="configuration.html"><strong aria-hidden="true">12.</strong> Custom configuration</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="context-sharing.html"><strong aria-hidden="true">12.1.</strong> Context sharing</a></li><li class="chapter-item expanded "><a href="polling.html"><strong aria-hidden="true">12.2.</strong> External polling</a></li><li class="chapter-item expanded "><a href="timestamping.html" class="active"><strong aria-hidden="true">12.3.</strong> Timestamping</a></li></ol></li><li class="chapter-item expanded "><a href="queue.html"><strong aria-hidden="true">13.</strong> Queue vs callbacks</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="backends.html"><strong aria-hidden="true">14.</strong> Backends</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -174,6 +174,42 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="timestamping"><a class="header" href="#timestamping">Timestamping</a></h1>
+<p>libremidi provides many useful timestamping options for its input callbacks:</p>
+<pre><code>libremidi::input_configuration conf;
+
+// No timestamping at all, all timestamps are zero
+conf.timestamps = libremidi::NoTimestamp;
+
+// In nanoseconds, timestamp is the time since the previous event (or zero)
+conf.timestamps = libremidi::Relative;
+
+// In nanoseconds, as per an arbitrary reference which may be provided by the host API,
+// e.g. since the JACK cycle start, ALSA sequencer queue creation, through AudioHostTime on macOS.
+// It offers the most precise ordering between events as it's the closest to the real timestamp of
+// the event as provided by the host API.
+// If the API does not provide any timing, it will be mapped to SystemMonotonic instead.
+conf.timestamps = libremidi::Absolute;
+
+// In nanoseconds, as per std::steady_clock::now() or equivalent (raw if possible).
+// May be less precise than Absolute as timestamping is done within the library,
+// but is more useful for system-wide synchronization.
+// Note: depending on the backend, Absolute and SystemMonotonic may be the same.
+conf.timestamps = libremidi::SystemMonotonic;
+
+// For APIs which are based on audio process cycles such as JACK, timestamps will be in frames since
+// the beginning of the current cycle's audio buffer
+conf.timestamps = libremidi::AudioFrame;
+
+// Will call the custom timestamping function provided by the user in the input configuration.
+// We try to make sure that the input timestamp is as precise as possible ; it is given in the Absolute mode.
+conf.get_timestamp = [] (libremidi::timestamp absolute) -&gt; libremidi::timestamp { 
+  // Map absolute timestamp to the desired time domain
+  return absolute / 1e6;
+};
+conf.timestamps = libremidi::Custom;
+</code></pre>
+<p>For the absolute timestamps, the origin of the timestamp can be obtained with <code>midi_in::absolute_timestamp()</code>.
+For instance, it will return the time at which the timestamping queue was created in the ALSA back-end.</p>
 
                     </main>
 

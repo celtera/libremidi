@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="foreword.html" class="active"><strong aria-hidden="true">1.</strong> Foreword</a></li><li class="chapter-item expanded affix "><li class="part-title">Getting started</li><li class="chapter-item expanded "><a href="compiling.html"><strong aria-hidden="true">2.</strong> Compiling</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="header-only.html"><strong aria-hidden="true">2.1.</strong> Header-only support</a></li></ol></li><li class="chapter-item expanded "><a href="enumerating.html"><strong aria-hidden="true">3.</strong> Enumerating ports</a></li><li class="chapter-item expanded "><a href="midi-1-in.html"><strong aria-hidden="true">4.</strong> MIDI 1 in</a></li><li class="chapter-item expanded "><a href="midi-1-out.html"><strong aria-hidden="true">5.</strong> MIDI 1 out</a></li><li class="chapter-item expanded "><a href="midi-2-in.html"><strong aria-hidden="true">6.</strong> MIDI 2 in</a></li><li class="chapter-item expanded "><a href="midi-2-out.html"><strong aria-hidden="true">7.</strong> MIDI 2 out</a></li><li class="chapter-item expanded "><a href="file.html"><strong aria-hidden="true">8.</strong> MIDI file support</a></li><li class="chapter-item expanded affix "><li class="part-title">Advanced features</li><li class="chapter-item expanded "><a href="midi-2-integrations.html"><strong aria-hidden="true">9.</strong> MIDI 2 integrations</a></li><li class="chapter-item expanded "><a href="hotplug.html"><strong aria-hidden="true">10.</strong> Hotplug support</a></li><li class="chapter-item expanded "><a href="error-handling.html"><strong aria-hidden="true">11.</strong> Error handling</a></li><li class="chapter-item expanded "><a href="configuration.html"><strong aria-hidden="true">12.</strong> Custom configuration</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="context-sharing.html"><strong aria-hidden="true">12.1.</strong> Context sharing</a></li><li class="chapter-item expanded "><a href="polling.html"><strong aria-hidden="true">12.2.</strong> External polling</a></li><li class="chapter-item expanded "><a href="timestamping.html"><strong aria-hidden="true">12.3.</strong> Timestamping</a></li></ol></li><li class="chapter-item expanded "><a href="queue.html"><strong aria-hidden="true">13.</strong> Queue vs callbacks</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="backends.html"><strong aria-hidden="true">14.</strong> Backends</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">15.</strong> Examples overview</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="foreword.html" class="active"><strong aria-hidden="true">1.</strong> Foreword</a></li><li class="chapter-item expanded affix "><li class="part-title">Getting started</li><li class="chapter-item expanded "><a href="compiling.html"><strong aria-hidden="true">2.</strong> Compiling</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="header-only.html"><strong aria-hidden="true">2.1.</strong> Header-only support</a></li></ol></li><li class="chapter-item expanded "><a href="enumerating.html"><strong aria-hidden="true">3.</strong> Enumerating ports</a></li><li class="chapter-item expanded "><a href="midi-1-in.html"><strong aria-hidden="true">4.</strong> MIDI 1 in</a></li><li class="chapter-item expanded "><a href="midi-1-out.html"><strong aria-hidden="true">5.</strong> MIDI 1 out</a></li><li class="chapter-item expanded "><a href="midi-2-in.html"><strong aria-hidden="true">6.</strong> MIDI 2 in</a></li><li class="chapter-item expanded "><a href="midi-2-out.html"><strong aria-hidden="true">7.</strong> MIDI 2 out</a></li><li class="chapter-item expanded "><a href="file.html"><strong aria-hidden="true">8.</strong> MIDI file support</a></li><li class="chapter-item expanded affix "><li class="part-title">Advanced features</li><li class="chapter-item expanded "><a href="midi-2-integrations.html"><strong aria-hidden="true">9.</strong> MIDI 2 integrations</a></li><li class="chapter-item expanded "><a href="hotplug.html"><strong aria-hidden="true">10.</strong> Hotplug support</a></li><li class="chapter-item expanded "><a href="error-handling.html"><strong aria-hidden="true">11.</strong> Error handling</a></li><li class="chapter-item expanded "><a href="configuration.html"><strong aria-hidden="true">12.</strong> Custom configuration</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="context-sharing.html"><strong aria-hidden="true">12.1.</strong> Context sharing</a></li><li class="chapter-item expanded "><a href="polling.html"><strong aria-hidden="true">12.2.</strong> External polling</a></li><li class="chapter-item expanded "><a href="timestamping.html"><strong aria-hidden="true">12.3.</strong> Timestamping</a></li></ol></li><li class="chapter-item expanded "><a href="queue.html"><strong aria-hidden="true">13.</strong> Queue vs callbacks</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="backends.html"><strong aria-hidden="true">14.</strong> Backends</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -174,6 +174,37 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="funky-midi-with-libremidi"><a class="header" href="#funky-midi-with-libremidi">Funky MIDI with <a href="https://github.com/celtera/libremidi">libremidi</a></a></h1>
+<p>libremidi is an all-in-one cross-platform C++20 MIDI library for both file and real-time output.
+Real-time I/O supports MIDI 2 on macOS (11+) and Linux (Kernel 6.5+), and soon on Windows (the OS does not support it yet).</p>
+<p>It is a fork / rewrite originally based on two libraries, but has since then almost been entirely rewritten:</p>
+<ul>
+<li><a href="https://github.com/theSTK/RtMidi">RtMidi</a></li>
+<li><a href="https://github.com/ddiakopoulos/ModernMIDI">ModernMIDI</a></li>
+</ul>
+<p>Compared to its origins, it features a lot of changes and improvements:</p>
+<ul>
+<li><code>libremidi::observer</code> provides hotplug support.</li>
+<li>Ports are identified not with a number but with a handle which enables more stability when unplugging / replugging.</li>
+<li>Memory allocations and virtual function calls are greatly reduced when compared to the RtMidi base-line.
+<ul>
+<li>Ability to enforce fixed message sizes with boost::static_vector for hard real-time operation</li>
+<li>Ability to use boost::small_vector to cover most cases.</li>
+</ul>
+</li>
+<li>Integer timestamps everywhere, by default in nanoseconds.</li>
+<li>Ability to choose different timestamping methods (e.g. relative, absolute monotonic clock, sample-based or custom timestamping...).</li>
+<li>Integration of modern C++20 types (for instance std::span instead of std::vector, std::function for callbacks, etc.)</li>
+<li>Standard C++ threading primitives (std::thread, std::jthread) are now used, as well as modern Linux facilities for polling control (eventfd, timerfd).</li>
+<li>Most of the code has been refactored in multiple files for clarity.</li>
+</ul>
+<p>It also features some new &amp; improved backends:</p>
+<ul>
+<li>ALSA RawMidi API.</li>
+<li>PipeWire.</li>
+<li>Windows UWP.</li>
+<li>WebMIDI in Emscripten.</li>
+<li>JACK support on all platforms where it is available.</li>
+</ul>
 
                     </main>
 

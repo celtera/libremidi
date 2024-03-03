@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="foreword.html"><strong aria-hidden="true">1.</strong> Foreword</a></li><li class="chapter-item expanded affix "><li class="part-title">Getting started</li><li class="chapter-item expanded "><a href="compiling.html"><strong aria-hidden="true">2.</strong> Compiling</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="header-only.html"><strong aria-hidden="true">2.1.</strong> Header-only support</a></li></ol></li><li class="chapter-item expanded "><a href="enumerating.html"><strong aria-hidden="true">3.</strong> Enumerating ports</a></li><li class="chapter-item expanded "><a href="midi-1-in.html"><strong aria-hidden="true">4.</strong> MIDI 1 in</a></li><li class="chapter-item expanded "><a href="midi-1-out.html"><strong aria-hidden="true">5.</strong> MIDI 1 out</a></li><li class="chapter-item expanded "><a href="midi-2-in.html"><strong aria-hidden="true">6.</strong> MIDI 2 in</a></li><li class="chapter-item expanded "><a href="midi-2-out.html"><strong aria-hidden="true">7.</strong> MIDI 2 out</a></li><li class="chapter-item expanded "><a href="file.html"><strong aria-hidden="true">8.</strong> MIDI file support</a></li><li class="chapter-item expanded affix "><li class="part-title">Advanced features</li><li class="chapter-item expanded "><a href="midi-2-integrations.html" class="active"><strong aria-hidden="true">9.</strong> MIDI 2 integrations</a></li><li class="chapter-item expanded "><a href="hotplug.html"><strong aria-hidden="true">10.</strong> Hotplug support</a></li><li class="chapter-item expanded "><a href="error-handling.html"><strong aria-hidden="true">11.</strong> Error handling</a></li><li class="chapter-item expanded "><a href="configuration.html"><strong aria-hidden="true">12.</strong> Custom configuration</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="context-sharing.html"><strong aria-hidden="true">12.1.</strong> Context sharing</a></li><li class="chapter-item expanded "><a href="polling.html"><strong aria-hidden="true">12.2.</strong> External polling</a></li><li class="chapter-item expanded "><a href="timestamping.html"><strong aria-hidden="true">12.3.</strong> Timestamping</a></li></ol></li><li class="chapter-item expanded "><a href="queue.html"><strong aria-hidden="true">13.</strong> Queue vs callbacks</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="backends.html"><strong aria-hidden="true">14.</strong> Backends</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">15.</strong> Examples overview</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="foreword.html"><strong aria-hidden="true">1.</strong> Foreword</a></li><li class="chapter-item expanded affix "><li class="part-title">Getting started</li><li class="chapter-item expanded "><a href="compiling.html"><strong aria-hidden="true">2.</strong> Compiling</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="header-only.html"><strong aria-hidden="true">2.1.</strong> Header-only support</a></li></ol></li><li class="chapter-item expanded "><a href="enumerating.html"><strong aria-hidden="true">3.</strong> Enumerating ports</a></li><li class="chapter-item expanded "><a href="midi-1-in.html"><strong aria-hidden="true">4.</strong> MIDI 1 in</a></li><li class="chapter-item expanded "><a href="midi-1-out.html"><strong aria-hidden="true">5.</strong> MIDI 1 out</a></li><li class="chapter-item expanded "><a href="midi-2-in.html"><strong aria-hidden="true">6.</strong> MIDI 2 in</a></li><li class="chapter-item expanded "><a href="midi-2-out.html"><strong aria-hidden="true">7.</strong> MIDI 2 out</a></li><li class="chapter-item expanded "><a href="file.html"><strong aria-hidden="true">8.</strong> MIDI file support</a></li><li class="chapter-item expanded affix "><li class="part-title">Advanced features</li><li class="chapter-item expanded "><a href="midi-2-integrations.html" class="active"><strong aria-hidden="true">9.</strong> MIDI 2 integrations</a></li><li class="chapter-item expanded "><a href="hotplug.html"><strong aria-hidden="true">10.</strong> Hotplug support</a></li><li class="chapter-item expanded "><a href="error-handling.html"><strong aria-hidden="true">11.</strong> Error handling</a></li><li class="chapter-item expanded "><a href="configuration.html"><strong aria-hidden="true">12.</strong> Custom configuration</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="context-sharing.html"><strong aria-hidden="true">12.1.</strong> Context sharing</a></li><li class="chapter-item expanded "><a href="polling.html"><strong aria-hidden="true">12.2.</strong> External polling</a></li><li class="chapter-item expanded "><a href="timestamping.html"><strong aria-hidden="true">12.3.</strong> Timestamping</a></li></ol></li><li class="chapter-item expanded "><a href="queue.html"><strong aria-hidden="true">13.</strong> Queue vs callbacks</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="backends.html"><strong aria-hidden="true">14.</strong> Backends</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -174,6 +174,64 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="midi-2-integrations"><a class="header" href="#midi-2-integrations">MIDI 2 integrations</a></h1>
+<p>libremidi integrates with the existing MIDI 2 ecosystem.</p>
+<h2 id="cmidi2"><a class="header" href="#cmidi2">cmidi2</a></h2>
+<p>We ship Atsushi Eno's <a href="https://github.com/atsushieno/cmidi2">cmidi2</a> header-only MIDI 2 implementation as part of the library.
+This allows to quickly match incoming messages with MIDI 2 types. A lot of useful utility functions are provided.</p>
+<p>See the <code>midi2_echo.cpp</code> example: it uses the following printing function:</p>
+<pre><code class="language-cpp">std::ostream&amp; operator&lt;&lt;(std::ostream&amp; s, const libremidi::ump&amp; message)
+{
+  // Automatic conversion from libremidi::ump&amp; to cmidi2_ump*
+  const cmidi2_ump* b = message;
+  
+  // Read MIDI 2 information
+  int bytes = cmidi2_ump_get_num_bytes(message.data[0]);
+  int group = cmidi2_ump_get_group(b);
+  int status = cmidi2_ump_get_status_code(b);
+  int channel = cmidi2_ump_get_channel(b);
+  s &lt;&lt; "[ " &lt;&lt; bytes &lt;&lt; " | " &lt;&lt; group;
+
+  switch ((libremidi::message_type)status)
+  {
+    case libremidi::message_type::NOTE_ON:
+      s &lt;&lt; " | note on: " &lt;&lt; channel &lt;&lt; (int)cmidi2_ump_get_midi2_note_note(b) &lt;&lt; " | "
+        &lt;&lt; cmidi2_ump_get_midi2_note_velocity(b);
+      break;
+    case libremidi::message_type::NOTE_OFF:
+      s &lt;&lt; " | note off: " &lt;&lt; channel &lt;&lt; (int)cmidi2_ump_get_midi2_note_note(b) &lt;&lt; " | "
+        &lt;&lt; cmidi2_ump_get_midi2_note_velocity(b);
+      break;
+    case libremidi::message_type::CONTROL_CHANGE:
+      s &lt;&lt; " | cc: " &lt;&lt; channel &lt;&lt; (int)cmidi2_ump_get_midi2_cc_index(b) &lt;&lt; " | "
+        &lt;&lt; cmidi2_ump_get_midi2_cc_data(b);
+      break;
+
+    default:
+      break;
+  }
+  s &lt;&lt; " ]";
+  return s;
+}
+</code></pre>
+<h2 id="ni-midi2"><a class="header" href="#ni-midi2">ni-midi2</a></h2>
+<p>It is possible to enable compatibility with [ni-midi2](https://github.com/midi2-dev/ni-midi2, the MIDI Association-backed MIDI 2 implementation.
+This is done with the <code>LIBREMIDI_NI_MIDI2</code> CMake switch: <code>-DLIBREMIDI_NI_MIDI2=ON</code>.</p>
+<p>An example of initialisation of a MIDI 2-compliant communication can be found in the <code>midi2_interop.cpp</code> example.</p>
+<p>Note that due to the complexity of MIDI 2, we believe end-users will want to build their
+own, custom-tailored stack and API on top of these base layers.</p>
+<p>Current interoperability features are:</p>
+<ul>
+<li><code>libremidi::ump</code> can be converted to <code>midi::universal_packet</code> and conversely.</li>
+<li><code>libremidi::midi_out::send_ump</code> can be called with <code>midi::universal_packet</code>, <code>midi::sysex7_packet</code> and <code>midi::sysex8_packet</code>.</li>
+</ul>
+<p>This ensures that most MIDI-CI messages can be sent directly.
+Example:</p>
+<pre><code>libremidi::midi_out midiout;
+
+...
+
+midiout.send_ump(midi::ci::make_discovery_inquiry(my_muid, id, 0x02, 512));
+</code></pre>
 
                     </main>
 
