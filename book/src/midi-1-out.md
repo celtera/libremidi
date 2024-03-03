@@ -1,6 +1,6 @@
 # Sending MIDI 1 messages to a device
 
-```C++
+```cpp
 // Create the midi object
 libremidi::midi_out midi;
 

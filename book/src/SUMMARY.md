@@ -23,4 +23,3 @@
 
 # Reference
 - [Backends](./backends.md)
-- [Examples overview](./examples.md)

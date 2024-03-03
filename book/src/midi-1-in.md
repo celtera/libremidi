@@ -1,6 +1,6 @@
 # Reading MIDI 1 messages from a device through callbacks
 
-```C++
+```cpp
 // Set the configuration of our MIDI port
 // Note that the callback will be invoked from a separate thread,
 // it is up to you to protect your data structures afterwards.
@@ -25,5 +25,7 @@ libremidi::midi_in midi{
 midi.open_port(/* a port */);
 // Alternatively, to get the default port for the system: 
 midi.open_port(libremidi::midi1::in_default_port());
+
+// Note that only one port can be open at a given time on a midi_in or midi_out object.
 
 ```

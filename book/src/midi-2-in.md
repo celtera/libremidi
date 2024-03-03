@@ -4,7 +4,7 @@ Note that MIDI 2 support is still experimental and subject to change.
 Note also that the MIDI 1 and MIDI 2 send functions (not yet receive) are useable no matter 
 the kind of backend used (e.g. one can send UMPs to MIDI 1 backends and MIDI 1 messages to MIDI 2 backends). This conversion is done in a best-effort way.
 
-```C++
+```cpp
 // Set the configuration of our MIDI port, same warnings apply than for MIDI 1.
 // Note that an UMP message is always at most 4 * 32 bits = 16 bytes.
 // Added to the 64-bit timestamp this is 24 bytes for a libremidi::ump 

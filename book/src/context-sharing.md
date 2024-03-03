@@ -5,7 +5,7 @@ If no context is passed, each object will create one as they used to.
 
 Example:
 
-```C++
+```cpp
 #include <libremidi/configurations.hpp>
 
 ...
@@ -20,7 +20,7 @@ libremidi::midi_in in{
 
 If one simply wants to share a context across libremidi objects (for instance, a single context shared across an `observer`, `midi_ins` and `midi_outs`), the following methods will create appropriate configurations from an observer's configuration: 
 
-```C++
+```cpp
 // Create an observer with a fixed back-end
 libremidi::observer obs{
     libremidi::observer_configuration{}

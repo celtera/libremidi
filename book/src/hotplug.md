@@ -1,6 +1,6 @@
 # Device connection / disconnection notification
 
-```C++
+```cpp
 // The callbacks will be called when the relevant event happens.
 // Note that they may be called from other threads than the main thread.
 

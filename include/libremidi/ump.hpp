@@ -55,8 +55,10 @@ struct ump
 #endif
 
   // Compatibility with cmidi2:
-  operator uint32_t*() noexcept { return data; }
-  operator const uint32_t*() const noexcept { return data; }
+  operator uint32_t*() & noexcept { return data; }
+  operator const uint32_t*() const& noexcept { return data; }
+  operator uint32_t*() && noexcept = delete;
+  operator const uint32_t*() const&& noexcept = delete;
 
   constexpr std::size_t size() const noexcept
   {

@@ -5,7 +5,7 @@ If exceptions are undesirable, it is also possible to set a callback function wh
 
 (Some classes may still throw, such as when creating invalid MIDI messages with the `libremidi::message` helpers, or the `observer` classes).
 
-```C++
+```cpp
 // Create the configuration
 libremidi::input_configuration conf{
     .on_message = /* usual message callback */
