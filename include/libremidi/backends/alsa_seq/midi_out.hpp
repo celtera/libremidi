@@ -65,24 +65,24 @@ public:
         SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION, std::nullopt);
   }
 
-  bool open_port(const output_port& p, std::string_view portName) override
+  std::error_code open_port(const output_port& p, std::string_view portName) override
   {
     unsigned int nSrc = this->get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
     if (nSrc < 1)
     {
       error<no_devices_found_error>(
           this->configuration, "midi_out_alsa::open_port: no MIDI output sources found!");
-      return false;
+      return make_error_code(midi_error::NO_DEVICES_FOUND);
     }
 
     auto sink = get_port_info(p);
     if (!sink)
-      return false;
+      return std::make_error_code(std::errc::invalid_argument);
 
     if (int err = create_port(portName); err < 0)
     {
       error<driver_error>(configuration, "midi_out_alsa::create_port: ALSA error creating port.");
-      return false;
+      return from_errc(err);
     }
 
     snd_seq_addr_t source{
@@ -91,29 +91,36 @@ public:
     {
       error<driver_error>(
           configuration, "midi_out_alsa::create_port: ALSA error making port connection.");
-      return false;
+      return from_errc(err);
     }
 
-    return true;
+    return std::error_code{};
   }
 
-  bool open_virtual_port(std::string_view portName) override
+  std::error_code open_virtual_port(std::string_view portName) override
   {
     if (int err = create_port(portName); err < 0)
-      return false;
-    return true;
+      return from_errc(err);
+    return std::error_code{};
   }
 
-  void close_port() override { unsubscribe(); }
-
-  void set_client_name(std::string_view clientName) override
+  std::error_code close_port() override
   {
-    alsa_data::set_client_name(clientName);
+    unsubscribe();
+    return std::error_code{};
   }
 
-  void set_port_name(std::string_view portName) override { alsa_data::set_port_name(portName); }
+  std::error_code set_client_name(std::string_view clientName) override
+  {
+    return alsa_data::set_client_name(clientName);
+  }
 
-  void send_message(const unsigned char* message, std::size_t size) override
+  std::error_code set_port_name(std::string_view portName) override
+  {
+    return alsa_data::set_port_name(portName);
+  }
+
+  std::error_code send_message(const unsigned char* message, std::size_t size) override
   {
     int64_t result{};
     if (size > this->bufferSize)
@@ -126,7 +133,7 @@ public:
             this->configuration,
             "midi_out_alsa::send_message: ALSA error resizing MIDI event "
             "buffer.");
-        return;
+        return std::make_error_code(std::errc::no_buffer_space);
       }
     }
 
@@ -145,13 +152,13 @@ public:
       if (result < 0)
       {
         warning(this->configuration, "midi_out_alsa::send_message: event parsing error!");
-        return;
+        return std::make_error_code(std::errc::bad_message);
       }
 
       if (ev.type == SND_SEQ_EVENT_NONE)
       {
         warning(this->configuration, "midi_out_alsa::send_message: incomplete message!");
-        return;
+        return std::make_error_code(std::errc::message_size);
       }
 
       offset += result;
@@ -162,10 +169,11 @@ public:
         warning(
             this->configuration,
             "midi_out_alsa::send_message: error sending MIDI message to port.");
-        return;
+        return std::make_error_code(std::errc::io_error);
       }
     }
     snd.seq.drain_output(this->seq);
+    return std::error_code{};
   }
 
 private:

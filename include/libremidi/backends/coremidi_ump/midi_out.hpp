@@ -48,18 +48,18 @@ public:
       MIDIClientDispose(this->client);
   }
 
-  void set_client_name(std::string_view) override
+  std::error_code set_client_name(std::string_view) override
   {
     warning(configuration, "midi_out_impl: set_client_name unsupported");
   }
-  void set_port_name(std::string_view) override
+  std::error_code set_port_name(std::string_view) override
   {
     warning(configuration, "midi_out_impl: set_port_name unsupported");
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::COREMIDI_UMP; }
 
-  bool open_port(const output_port& info, std::string_view portName) override
+  std::error_code open_port(const output_port& info, std::string_view portName) override
   {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
 
@@ -86,7 +86,7 @@ public:
     return true;
   }
 
-  bool open_virtual_port(std::string_view portName) override
+  std::error_code open_virtual_port(std::string_view portName) override
   {
     if (this->endpoint)
     {
@@ -113,7 +113,7 @@ public:
     return true;
   }
 
-  void close_port() override
+  std::error_code close_port() override
   {
     if (this->endpoint)
     {
@@ -128,7 +128,7 @@ public:
     }
   }
 
-  void send_ump(const uint32_t* ump_stream, std::size_t count) override
+  std::error_code send_ump(const uint32_t* ump_stream, std::size_t count) override
   {
     MIDIEventList* eventList = reinterpret_cast<MIDIEventList*>(m_eventListBuffer);
     MIDIEventPacket* packet = MIDIEventListInit(eventList, kMIDIProtocol_2_0);

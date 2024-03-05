@@ -26,51 +26,43 @@ public:
 
   ~midi_out_winuwp() override { close_port(); }
 
-  bool open_virtual_port(std::string_view) override
-  {
-    warning(configuration, "midi_out_winuwp: open_virtual_port unsupported");
-    return false;
-  }
-  void set_client_name(std::string_view) override
-  {
-    warning(configuration, "midi_out_winuwp: set_client_name unsupported");
-  }
-  void set_port_name(std::string_view) override
-  {
-    warning(configuration, "midi_out_winuwp: set_port_name unsupported");
-  }
-
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 
-  bool open_port(const output_port& port, std::string_view) override
+  std::error_code open_port(const output_port& port, std::string_view) override
   {
     const auto id = winrt::to_hstring(port.port_name);
     if (id.empty())
-      return false;
+      return std::make_error_code(std::errc::invalid_argument);
 
     port_ = get(MidiOutPort::FromIdAsync(id));
-    return bool(port_);
+    if (!bool(port_))
+      return std::make_error_code(std::errc::io_error);
+
+    return std::error_code{};
   }
 
-  void close_port() override
+  std::error_code close_port() override
   {
     if (port_)
     {
       port_.Close();
       port_ = {};
     }
+    return std::error_code{};
   }
 
-  void send_message(const unsigned char* message, size_t size) override
+  std::error_code send_message(const unsigned char* message, size_t size) override
   {
     if (!port_)
-      return;
+      return std::make_error_code(std::errc::not_connected);
 
     InMemoryRandomAccessStream str;
     DataWriter rb(str);
     rb.WriteBytes(
         winrt::array_view<const uint8_t>{(const uint8_t*)message, (const uint8_t*)message + size});
     port_.SendBuffer(rb.DetachBuffer());
+
+    return std::error_code{};
   }
 
 private:

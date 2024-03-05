@@ -153,32 +153,40 @@ public:
   void remove_input(const input_port& port) { m_inputs.erase(port); }
   void remove_output(const output_port& port) { m_outputs.erase(port); }
 
-  void send_message(const unsigned char* message, size_t size)
+  std::error_code send_message(const unsigned char* message, size_t size)
   {
     for (auto& [_, out] : m_outputs)
     {
-      out.send_message(message, size);
+      if (auto err = out.send_message(message, size); err != std::error_code{})
+        return err;
     }
+    return std::error_code{};
   }
 
-  void send_ump(const uint32_t* message, size_t size)
+  std::error_code send_ump(const uint32_t* message, size_t size)
   {
     for (auto& [_, out] : m_outputs)
     {
-      out.send_ump(message, size);
+      if (auto err = out.send_ump(message, size); err != std::error_code{})
+        return err;
     }
+    return std::error_code{};
   }
 
-  void send_message(const output_port& port, const unsigned char* message, size_t size)
+  std::error_code send_message(const output_port& port, const unsigned char* message, size_t size)
   {
     if (auto it = m_outputs.find(port); it != m_outputs.end())
-      it->second.send_message(message, size);
+      return it->second.send_message(message, size);
+
+    return std::error_code{};
   }
 
-  void send_ump(const output_port& port, const uint32_t* message, size_t size)
+  std::error_code send_ump(const output_port& port, const uint32_t* message, size_t size)
   {
     if (auto it = m_outputs.find(port); it != m_outputs.end())
-      it->second.send_ump(message, size);
+      return it->second.send_ump(message, size);
+
+    return std::error_code{};
   }
 
 private:

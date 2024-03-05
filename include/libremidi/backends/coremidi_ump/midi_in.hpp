@@ -47,18 +47,18 @@ public:
       MIDIClientDispose(this->client);
   }
 
-  void set_client_name(std::string_view) override
+  std::error_code set_client_name(std::string_view) override
   {
     warning(configuration, "midi_in_core: set_client_name unsupported");
   }
-  void set_port_name(std::string_view) override
+  std::error_code set_port_name(std::string_view) override
   {
     warning(configuration, "midi_in_core: set_port_name unsupported");
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::COREMIDI_UMP; }
 
-  bool open_port(const input_port& info, std::string_view portName) override
+  std::error_code open_port(const input_port& info, std::string_view portName) override
   {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
 
@@ -99,7 +99,7 @@ public:
     return true;
   }
 
-  bool open_virtual_port(std::string_view portName) override
+  std::error_code open_virtual_port(std::string_view portName) override
   {
     // Create a virtual MIDI input destination.
     MIDIEndpointRef endpoint;
@@ -123,7 +123,7 @@ public:
     return true;
   }
 
-  void close_port() override
+  std::error_code close_port() override
   {
     if (this->endpoint)
     {

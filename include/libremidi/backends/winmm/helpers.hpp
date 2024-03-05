@@ -13,6 +13,11 @@
 namespace libremidi
 {
 
+inline std::error_code from_mmerr(int ret) noexcept
+{
+  return {ret, std::system_category()};
+}
+
 // Convert a nullptr-terminated wide string or ANSI-encoded string to UTF-8.
 inline std::string ConvertToUTF8(const TCHAR* str)
 {

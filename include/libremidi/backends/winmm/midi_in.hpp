@@ -46,23 +46,9 @@ public:
     DeleteCriticalSection(&(this->_mutex));
   }
 
-  bool open_virtual_port(std::string_view) override
-  {
-    warning(configuration, "midi_in_winmm: open_virtual_port unsupported");
-    return false;
-  }
-  void set_client_name(std::string_view) override
-  {
-    warning(configuration, "midi_in_winmm: set_client_name unsupported");
-  }
-  void set_port_name(std::string_view) override
-  {
-    warning(configuration, "midi_in_winmm: set_port_name unsupported");
-  }
-
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
-  bool do_open(unsigned int portNumber)
+  std::error_code do_open(unsigned int portNumber)
   {
     MMRESULT result = midiInOpen(
         &this->inHandle, portNumber, std::bit_cast<DWORD_PTR>(&midiInputCallback),
@@ -71,7 +57,7 @@ public:
     {
       error<driver_error>(
           configuration, "midi_in_winmm::open_port: error creating Windows MM MIDI input port.");
-      return false;
+      return from_mmerr(result);
     }
 
     // Allocate and init the sysex buffers.
@@ -94,7 +80,7 @@ public:
             configuration,
             "midi_in_winmm::open_port: error starting Windows MM MIDI input port "
             "(PrepareHeader).");
-        return false;
+        return from_mmerr(result);
       }
 
       // Register the buffer.
@@ -107,7 +93,7 @@ public:
             configuration,
             "midi_in_winmm::open_port: error starting Windows MM MIDI input port "
             "(AddBuffer).");
-        return false;
+        return from_mmerr(result);
       }
     }
 
@@ -119,13 +105,13 @@ public:
       this->inHandle = nullptr;
       error<driver_error>(
           configuration, "midi_in_winmm::open_port: error starting Windows MM MIDI input port.");
-      return false;
+      return from_mmerr(result);
     }
 
-    return true;
+    return std::error_code{};
   }
 
-  bool open_port(const input_port& p, std::string_view) override
+  std::error_code open_port(const input_port& p, std::string_view) override
   {
     observer_winmm obs{{}, winmm_observer_configuration{}};
     auto ports = obs.get_input_ports();
@@ -144,10 +130,10 @@ public:
     }
     error<invalid_parameter_error>(
         configuration, "midi_in_winmm::open_port: port not found: " + p.port_name);
-    return false;
+    return std::make_error_code(std::errc::invalid_argument);
   }
 
-  void close_port() override
+  std::error_code close_port() override
   {
     if (connected_)
     {
@@ -187,6 +173,7 @@ public:
       this->inHandle = nullptr;
       LeaveCriticalSection(&(this->_mutex));
     }
+    return std::error_code{};
   }
 
 private:

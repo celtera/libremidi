@@ -37,23 +37,9 @@ public:
     midi_out_winmm::close_port();
   }
 
-  bool open_virtual_port(std::string_view) override
-  {
-    warning(configuration, "midi_out_winmm: open_virtual_port unsupported");
-    return false;
-  }
-  void set_client_name(std::string_view) override
-  {
-    warning(configuration, "midi_out_winmm: set_client_name unsupported");
-  }
-  void set_port_name(std::string_view) override
-  {
-    warning(configuration, "midi_out_winmm: set_port_name unsupported");
-  }
-
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
-  [[nodiscard]] bool do_open(unsigned int portNumber)
+  [[nodiscard]] std::error_code do_open(unsigned int portNumber)
   {
     MMRESULT result = midiOutOpen(&this->outHandle, portNumber, 0, 0, CALLBACK_NULL);
     if (result != MMSYSERR_NOERROR)
@@ -62,13 +48,13 @@ public:
           configuration,
           "midi_out_winmm::open_port: error creating Windows MM MIDI output "
           "port.");
-      return false;
+      return from_mmerr(result);
     }
 
-    return true;
+    return std::error_code{};
   }
 
-  bool open_port(const output_port& p, std::string_view) override
+  std::error_code open_port(const output_port& p, std::string_view) override
   {
     observer_winmm obs{{}, winmm_observer_configuration{}};
     auto ports = obs.get_output_ports();
@@ -87,27 +73,28 @@ public:
     }
     error<invalid_parameter_error>(
         configuration, "midi_out_winmm::open_port: port not found: " + p.port_name);
-    return false;
+    return std::make_error_code(std::errc::invalid_argument);
   }
 
-  void close_port() override
+  std::error_code close_port() override
   {
     if (this->outHandle)
       midiOutClose(this->outHandle);
 
     this->outHandle = nullptr;
     connected_ = false;
+    return std::error_code{};
   }
 
-  void send_message(const unsigned char* message, size_t size) override
+  std::error_code send_message(const unsigned char* message, size_t size) override
   {
     if (!connected_)
-      return;
+      return std::make_error_code(std::errc::not_connected);
 
     if (size == 0)
     {
       warning(configuration, "midi_out_winmm::send_message: message argument is empty!");
-      return;
+      return std::make_error_code(std::errc::invalid_argument);
     }
 
     if (message[0] == 0xF0)
@@ -128,7 +115,7 @@ public:
       {
         error<driver_error>(
             configuration, "midi_out_winmm::send_message: error preparing sysex header.");
-        return;
+        return from_mmerr(result);
       }
 
       // Send the message.
@@ -137,7 +124,7 @@ public:
       {
         error<driver_error>(
             configuration, "midi_out_winmm::send_message: error sending sysex message.");
-        return;
+        return from_mmerr(result);
       }
 
       // Unprepare the buffer and MIDIHDR.
@@ -156,7 +143,7 @@ public:
             configuration,
             "midi_out_winmm::send_message: message size is greater than 3 bytes "
             "(and not sysex)!");
-        return;
+        return std::make_error_code(std::errc::message_size);
       }
 
       // Pack MIDI bytes into double word.
@@ -169,8 +156,10 @@ public:
       {
         error<driver_error>(
             configuration, "midi_out_winmm::send_message: error sending MIDI message.");
+        return from_mmerr(result);
       }
     }
+    return std::error_code{};
   }
 
 private:

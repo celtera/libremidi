@@ -18,19 +18,21 @@ public:
   midi_out_api& operator=(const midi_out_api&) = delete;
   midi_out_api& operator=(midi_out_api&&) = delete;
 
-  [[nodiscard]] virtual bool open_port(const output_port& pt, std::string_view local_port_name)
+  [[nodiscard]] virtual std::error_code
+  open_port(const output_port& pt, std::string_view local_port_name)
       = 0;
 
   [[nodiscard]] virtual int64_t current_time() const noexcept { return 0; }
 
-  virtual void send_message(const unsigned char* message, std::size_t size) = 0;
-  virtual void schedule_message(int64_t /*ts*/, const unsigned char* message, std::size_t size)
+  virtual std::error_code send_message(const unsigned char* message, std::size_t size) = 0;
+  virtual std::error_code
+  schedule_message(int64_t /*ts*/, const unsigned char* message, std::size_t size)
   {
     return send_message(message, size);
   }
 
-  virtual void send_ump(const uint32_t* message, std::size_t size) = 0;
-  virtual void schedule_ump(int64_t /*ts*/, const uint32_t* ump, std::size_t size)
+  virtual std::error_code send_ump(const uint32_t* message, std::size_t size) = 0;
+  virtual std::error_code schedule_ump(int64_t /*ts*/, const uint32_t* ump, std::size_t size)
   {
     return send_ump(ump, size);
   }
@@ -45,13 +47,15 @@ class out_api : public midi_out_api
 public:
   using midi_out_api::midi_out_api;
 
-  void send_ump(const uint32_t* message, std::size_t /*size*/)
+  std::error_code send_ump(const uint32_t* message, std::size_t /*size*/)
   {
     uint8_t midi[65536];
     const auto n
         = cmidi2_convert_single_ump_to_midi1(midi, sizeof(midi), const_cast<uint32_t*>(message));
     if (n > 0)
-      send_message(midi, n);
+      return send_message(midi, n);
+    else
+      return std::make_error_code(std::errc::no_buffer_space);
   }
 };
 }
@@ -65,7 +69,7 @@ class out_api : public midi_out_api
 public:
   using midi_out_api::midi_out_api;
 
-  void send_message(const unsigned char* message, std::size_t size)
+  std::error_code send_message(const unsigned char* message, std::size_t size)
   {
     cmidi2_midi_conversion_context context{};
     cmidi2_midi_conversion_context_initialize(&context);
@@ -80,9 +84,9 @@ public:
     context.ump_proceeded_bytes = 0;
 
     if (auto res = cmidi2_convert_midi1_to_ump(&context); res != CMIDI2_CONVERSION_RESULT_OK)
-      return;
+      return std::make_error_code(std::errc::invalid_argument);
 
-    send_ump(context.ump, context.ump_proceeded_bytes / 4);
+    return send_ump(context.ump, context.ump_proceeded_bytes / 4);
   }
 };
 }

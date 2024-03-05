@@ -177,18 +177,20 @@ struct alsa_data
     }
   }
 
-  void set_client_name(std::string_view clientName)
+  std::error_code set_client_name(std::string_view clientName)
   {
-    snd.seq.set_client_name(seq, clientName.data());
+    int ret = snd.seq.set_client_name(seq, clientName.data());
+    return from_errc(ret);
   }
 
-  void set_port_name(std::string_view portName)
+  std::error_code set_port_name(std::string_view portName)
   {
     snd_seq_port_info_t* pinfo;
     snd_seq_port_info_alloca(&pinfo);
     snd.seq.get_port_info(seq, vport, pinfo);
     snd.seq.port_info_set_name(pinfo, portName.data());
-    snd.seq.set_port_info(seq, vport, pinfo);
+    int ret = snd.seq.set_port_info(seq, vport, pinfo);
+    return from_errc(ret);
   }
 
   unsigned int get_port_count(int caps) const

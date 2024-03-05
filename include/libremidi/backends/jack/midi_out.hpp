@@ -87,14 +87,14 @@ public:
 
   ~midi_out_jack() override { }
 
-  void set_client_name(std::string_view) override
+  std::error_code set_client_name(std::string_view) override
   {
     warning(configuration, "midi_out_jack: set_client_name unsupported");
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_MIDI; }
 
-  bool open_port(const output_port& port, std::string_view portName) override
+  std::error_code open_port(const output_port& port, std::string_view portName) override
   {
     if (!create_local_port(*this, portName, JackPortIsOutput))
       return false;
@@ -110,14 +110,14 @@ public:
     return true;
   }
 
-  bool open_virtual_port(std::string_view portName) override
+  std::error_code open_virtual_port(std::string_view portName) override
   {
     return create_local_port(*this, portName, JackPortIsOutput);
   }
 
-  void close_port() override { return do_close_port(); }
+  std::error_code close_port() override { return do_close_port(); }
 
-  void set_port_name(std::string_view portName) override
+  std::error_code set_port_name(std::string_view portName) override
   {
     jack_port_rename(this->client, this->port, portName.data());
   }
@@ -142,7 +142,7 @@ public:
     disconnect(*this);
   }
 
-  void send_message(const unsigned char* message, std::size_t size) override
+  std::error_code send_message(const unsigned char* message, std::size_t size) override
   {
     queue.write(message, size);
   }
@@ -188,7 +188,7 @@ public:
     return 0;
   }
 
-  void send_message(const unsigned char* message, size_t size) override
+  std::error_code send_message(const unsigned char* message, size_t size) override
   {
     void* buff = jack_port_get_buffer(this->port, buffer_size);
     jack_midi_event_write(buff, 0, message, size);

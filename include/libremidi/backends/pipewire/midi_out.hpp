@@ -36,14 +36,14 @@ public:
     destroy_context();
   }
 
-  void set_client_name(std::string_view) override
+  std::error_code set_client_name(std::string_view) override
   {
     warning(configuration, "midi_out_pipewire: set_client_name unsupported");
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE; }
 
-  bool open_port(const output_port& out_port, std::string_view name) override
+  std::error_code open_port(const output_port& out_port, std::string_view name) override
   {
     if (!create_local_port(*this, name, SPA_DIRECTION_OUTPUT))
       return false;
@@ -57,7 +57,7 @@ public:
     return true;
   }
 
-  bool open_virtual_port(std::string_view name) override
+  std::error_code open_virtual_port(std::string_view name) override
   {
     if (!create_local_port(*this, name, SPA_DIRECTION_OUTPUT))
       return false;
@@ -68,13 +68,13 @@ public:
     return true;
   }
 
-  void close_port() override
+  std::error_code close_port() override
   {
     stop_thread();
     do_close_port();
   }
 
-  void set_port_name(std::string_view port_name) override { rename_port(port_name); }
+  std::error_code set_port_name(std::string_view port_name) override { rename_port(port_name); }
 
   int process(spa_io_position* pos)
   {
@@ -141,7 +141,7 @@ public:
     return 0;
   }
 
-  void send_message(const unsigned char* message, size_t size) override
+  std::error_code send_message(const unsigned char* message, size_t size) override
   {
     m_queue.enqueue(libremidi::message(midi_bytes{message, message + size}, 0));
   }

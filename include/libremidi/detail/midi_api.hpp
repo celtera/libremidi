@@ -69,11 +69,20 @@ public:
 
   [[nodiscard]] virtual libremidi::API get_current_api() const noexcept = 0;
 
-  [[nodiscard]] virtual bool open_virtual_port(std::string_view) = 0;
+  [[nodiscard]] virtual std::error_code open_virtual_port(std::string_view)
+  {
+    return std::make_error_code(std::errc::function_not_supported);
+  }
+  virtual std::error_code set_client_name(std::string_view)
+  {
+    return std::make_error_code(std::errc::function_not_supported);
+  }
+  virtual std::error_code set_port_name(std::string_view)
+  {
+    return std::make_error_code(std::errc::function_not_supported);
+  }
 
-  virtual void close_port() = 0;
-  virtual void set_client_name(std::string_view) = 0;
-  virtual void set_port_name(std::string_view) = 0;
+  virtual std::error_code close_port() = 0;
 
   bool is_port_open() const noexcept { return bool(port_open_); }
   bool is_port_connected() const noexcept { return bool(connected_); }

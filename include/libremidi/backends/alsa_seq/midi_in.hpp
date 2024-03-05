@@ -184,18 +184,22 @@ public:
     return 0;
   }
 
-  void close_port() override
+  std::error_code close_port() override
   {
     unsubscribe();
     stop_queue();
+    return std::error_code{};
   }
 
-  void set_client_name(std::string_view clientName) override
+  std::error_code set_client_name(std::string_view clientName) override
   {
-    alsa_data::set_client_name(clientName);
+    return alsa_data::set_client_name(clientName);
   }
 
-  void set_port_name(std::string_view portName) override { alsa_data::set_port_name(portName); }
+  std::error_code set_port_name(std::string_view portName) override
+  {
+    return alsa_data::set_port_name(portName);
+  }
 
 protected:
   void set_timestamp(const auto& ev, auto& msg) noexcept
@@ -303,11 +307,14 @@ protected:
       snd_seq_event_t* ev{};
       event_handle handle{snd};
       int result = 0;
-      while ((result = snd.seq.event_input(seq, &ev)) > 0)
+      if ((result = snd.seq.event_input(seq, &ev)) > 0)
       {
         handle.reset(ev);
         if (int err = process_event(*ev); err < 0)
+        {
+          fprintf(stderr, "err! %d\n", err);
           return err;
+        }
       }
       return result;
     }
@@ -394,39 +401,38 @@ public:
   ~midi_in_alsa_threaded() { this->close_port(); }
 
 private:
-  bool open_port(const input_port& pt, std::string_view local_port_name) override
+  std::error_code open_port(const input_port& pt, std::string_view local_port_name) override
   {
     if (int err = this->init_port(this->to_address(pt), local_port_name); err < 0)
-      return false;
+      return from_errc(err);
 
-    if (!start_thread())
-      return false;
-
-    return true;
+    return this->start_thread();
   }
 
-  bool open_virtual_port(std::string_view portName) override
+  std::error_code open_virtual_port(std::string_view portName) override
   {
     if (int err = this->init_virtual_port(portName); err < 0)
-      return false;
+      return from_errc(err);
 
-    if (!this->start_thread())
-      return false;
-    return true;
+    return this->start_thread();
   }
 
-  void close_port() override
+  std::error_code close_port() override
   {
-    midi_in_impl<ConfigurationBase, ConfigurationImpl>::close_port();
+    // FIXME shouldn't we always close the thread
+    auto err = midi_in_impl<ConfigurationBase, ConfigurationImpl>::close_port();
 
     stop_thread();
+
+    return err;
   }
 
-  [[nodiscard]] int start_thread()
+  [[nodiscard]] std::error_code start_thread()
   {
     try
     {
       this->thread = std::thread([this] { thread_handler(); });
+      return std::error_code{};
     }
     catch (const std::system_error& e)
     {
@@ -436,12 +442,11 @@ private:
       this->template error<thread_error>(
           this->configuration,
           "midi_in_alsa::start_thread: error starting MIDI input thread: "s + e.what());
-      return false;
+      return e.code();
     }
-    return true;
   }
 
-  void stop_thread()
+  std::error_code stop_thread()
   {
     termination_event.notify();
 
@@ -449,6 +454,7 @@ private:
       this->thread.join();
 
     termination_event.consume();
+    return std::error_code{};
   }
 
   void thread_handler()
@@ -463,7 +469,7 @@ private:
       if (alsa_data::snd.seq.event_input_pending(this->seq, 1) == 0)
       {
         // No data pending
-        if (poll(poll_fds, poll_fd_count, -1) >= 0)
+        if (poll(poll_fds, poll_fd_count, 0) >= 0)
         {
           // We got our stop-thread signal
           if (termination_event.ready(poll_fds[0]))
@@ -527,31 +533,33 @@ public:
 
   ~midi_in_alsa_manual() { this->close_port(); }
 
-  bool open_port(const input_port& pt, std::string_view local_port_name) override
+  std::error_code open_port(const input_port& pt, std::string_view local_port_name) override
   {
     if (int err = this->init_port(this->to_address(pt), local_port_name); err < 0)
-      return false;
+      return from_errc(err);
 
     if (int err = init_callback(); err < 0)
-      return false;
-    return true;
+      return from_errc(err);
+
+    return std::error_code{};
   }
 
-  bool open_virtual_port(std::string_view name) override
+  std::error_code open_virtual_port(std::string_view name) override
   {
     if (int err = this->init_virtual_port(name); err < 0)
-      return false;
+      return from_errc(err);
 
     if (int err = init_callback(); err < 0)
-      return false;
-    return true;
+      return from_errc(err);
+
+    return std::error_code{};
   }
 
-  void close_port() override
+  std::error_code close_port() override
   {
     this->configuration.stop_poll(this->vaddr);
 
-    midi_in_impl<ConfigurationBase, ConfigurationImpl>::close_port();
+    return midi_in_impl<ConfigurationBase, ConfigurationImpl>::close_port();
   }
 };
 }

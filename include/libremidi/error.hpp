@@ -4,9 +4,15 @@
 #include <functional>
 #include <stdexcept>
 #include <string_view>
+#include <system_error>
 
 namespace libremidi
 {
+inline auto from_errc(int ret) noexcept
+{
+  return std::make_error_code(static_cast<std::errc>(ret));
+}
+
 //! Defines various error types.
 enum midi_error
 {
@@ -21,6 +27,46 @@ enum midi_error
   SYSTEM_ERROR,      /*!< A system error occured. */
   THREAD_ERROR       /*!< A thread error occured. */
 };
+
+struct midi_error_category : public std::error_category
+{
+public:
+  const char* name() const noexcept override { return "midi"; }
+
+  std::string message(int code) const override
+  {
+    switch (code)
+    {
+      case midi_error::WARNING:
+        return "warning";
+      case midi_error::UNSPECIFIED:
+        return "unspecified";
+      case midi_error::NO_DEVICES_FOUND:
+        return "no devices found";
+      case midi_error::INVALID_DEVICE:
+        return "invalid device";
+      case midi_error::MEMORY_ERROR:
+        return "memory error";
+      case midi_error::INVALID_PARAMETER:
+        return "invalid parameter";
+      case midi_error::INVALID_USE:
+        return "invalid use";
+      case midi_error::DRIVER_ERROR:
+        return "driver error";
+      case midi_error::SYSTEM_ERROR:
+        return "system error";
+      case midi_error::THREAD_ERROR:
+        return "thread error";
+    }
+    return "unknown";
+  }
+};
+
+inline std::error_code make_error_code(midi_error e)
+{
+  static const midi_error_category mc;
+  return std::error_code(static_cast<int>(e), mc);
+}
 
 //! Base exception class for MIDI problems
 struct LIBREMIDI_EXPORT midi_exception : public std::runtime_error

@@ -70,9 +70,9 @@ LIBREMIDI_INLINE midi_out& midi_out::operator=(midi_out&& other) noexcept
 }
 
 LIBREMIDI_INLINE
-void midi_out::set_port_name(std::string_view portName) const
+std::error_code midi_out::set_port_name(std::string_view portName) const
 {
-  impl_->set_port_name(portName);
+  return impl_->set_port_name(portName);
 }
 
 LIBREMIDI_INLINE
@@ -82,36 +82,39 @@ libremidi::API midi_out::get_current_api() const noexcept
 }
 
 LIBREMIDI_INLINE
-void midi_out::open_port(const output_port& port, std::string_view portName) const
+std::error_code midi_out::open_port(const output_port& port, std::string_view portName) const
 {
   if (impl_->is_port_open())
-    return;
+    return std::make_error_code(std::errc::already_connected);
 
-  if (impl_->open_port(port, portName))
+  auto ret = impl_->open_port(port, portName);
+  if (ret == std::error_code{})
   {
     impl_->connected_ = true;
     impl_->port_open_ = true;
   }
+  return ret;
 }
 
 LIBREMIDI_INLINE
-void midi_out::open_virtual_port(std::string_view portName) const
+std::error_code midi_out::open_virtual_port(std::string_view portName) const
 {
   if (impl_->is_port_open())
-    return;
+    return std::make_error_code(std::errc::already_connected);
 
-  if (impl_->open_virtual_port(portName))
-  {
+  auto ret = impl_->open_virtual_port(portName);
+  if (ret == std::error_code{})
     impl_->port_open_ = true;
-  }
+  return ret;
 }
 
 LIBREMIDI_INLINE
-void midi_out::close_port() const
+std::error_code midi_out::close_port() const
 {
-  impl_->close_port();
+  auto ret = impl_->close_port();
   impl_->connected_ = false;
   impl_->port_open_ = false;
+  return ret;
 }
 
 LIBREMIDI_INLINE
@@ -127,89 +130,89 @@ bool midi_out::is_port_connected() const noexcept
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_message(const libremidi::message& message) const
+std::error_code midi_out::send_message(const libremidi::message& message) const
 {
-  send_message(message.bytes.data(), message.bytes.size());
+  return send_message(message.bytes.data(), message.bytes.size());
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_message(std::span<const unsigned char> message) const
+std::error_code midi_out::send_message(std::span<const unsigned char> message) const
 {
-  send_message(message.data(), message.size());
+  return send_message(message.data(), message.size());
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_message(unsigned char b0) const
+std::error_code midi_out::send_message(unsigned char b0) const
 {
-  send_message(&b0, 1);
+  return send_message(&b0, 1);
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_message(unsigned char b0, unsigned char b1) const
+std::error_code midi_out::send_message(unsigned char b0, unsigned char b1) const
 {
-  send_message(std::to_array({b0, b1}));
+  return send_message(std::to_array({b0, b1}));
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_message(unsigned char b0, unsigned char b1, unsigned char b2) const
+std::error_code midi_out::send_message(unsigned char b0, unsigned char b1, unsigned char b2) const
 {
-  send_message(std::to_array({b0, b1, b2}));
+  return send_message(std::to_array({b0, b1, b2}));
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_message(const unsigned char* message, size_t size) const
+std::error_code midi_out::send_message(const unsigned char* message, size_t size) const
 {
 #if defined(LIBREMIDI_ASSERTIONS)
   assert(size > 0);
 #endif
 
-  impl_->send_message(message, size);
+  return impl_->send_message(message, size);
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_ump(const uint32_t* message, size_t size) const
+std::error_code midi_out::send_ump(const uint32_t* message, size_t size) const
 {
 #if defined(LIBREMIDI_ASSERTIONS)
   assert(size > 0);
   assert(size <= 4);
 #endif
 
-  impl_->send_ump(message, size);
+  return impl_->send_ump(message, size);
 }
 LIBREMIDI_INLINE
-void midi_out::send_ump(const libremidi::ump& message) const
+std::error_code midi_out::send_ump(const libremidi::ump& message) const
 {
-  send_ump(message.data, message.size());
-}
-
-LIBREMIDI_INLINE
-void midi_out::send_ump(std::span<const uint32_t> message) const
-{
-  send_ump(message.data(), message.size());
+  return send_ump(message.data, message.size());
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_ump(uint32_t b0) const
+std::error_code midi_out::send_ump(std::span<const uint32_t> message) const
 {
-  send_ump(&b0, 1);
+  return send_ump(message.data(), message.size());
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_ump(uint32_t b0, uint32_t b1) const
+std::error_code midi_out::send_ump(uint32_t b0) const
 {
-  send_ump(std::to_array({b0, b1}));
+  return send_ump(&b0, 1);
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2) const
+std::error_code midi_out::send_ump(uint32_t b0, uint32_t b1) const
 {
-  send_ump(std::to_array({b0, b1, b2}));
+  return send_ump(std::to_array({b0, b1}));
 }
 
 LIBREMIDI_INLINE
-void midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b3) const
+std::error_code midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2) const
 {
-  send_ump(std::to_array({b0, b1, b2, b3}));
+  return send_ump(std::to_array({b0, b1, b2}));
+}
+
+LIBREMIDI_INLINE
+std::error_code midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b3) const
+{
+  return send_ump(std::to_array({b0, b1, b2, b3}));
 }
 
 }

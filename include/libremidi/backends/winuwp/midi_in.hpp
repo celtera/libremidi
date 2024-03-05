@@ -28,31 +28,17 @@ public:
 
   ~midi_in_winuwp() override { close_port(); }
 
-  bool open_virtual_port(std::string_view) override
-  {
-    warning(configuration, "midi_in_winuwp: open_virtual_port unsupported");
-    return false;
-  }
-  void set_client_name(std::string_view) override
-  {
-    warning(configuration, "midi_in_winuwp: set_client_name unsupported");
-  }
-  void set_port_name(std::string_view) override
-  {
-    warning(configuration, "midi_in_winuwp: set_port_name unsupported");
-  }
-
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 
-  bool open_port(const input_port& port, std::string_view) override
+  std::error_code open_port(const input_port& port, std::string_view) override
   {
     const auto id = winrt::to_hstring(port.port_name);
     if (id.empty())
-      return false;
+      return std::make_error_code(std::errc::invalid_argument);
 
     port_ = get(MidiInPort::FromIdAsync(id));
     if (!port_)
-      return false;
+      return std::make_error_code(std::errc::io_error);
 
     midi_start_timestamp = std::chrono::steady_clock::now();
 
@@ -62,7 +48,7 @@ public:
       this->process_message(args.Message());
     });
 
-    return true;
+    return std::error_code{};
   }
 
   void process_message(const winrt::Windows::Devices::Midi::IMidiMessage& msg)
@@ -81,13 +67,14 @@ public:
     m_processing.on_bytes({begin, end}, m_processing.timestamp<timestamp_info>(to_ns, 0));
   }
 
-  void close_port() override
+  std::error_code close_port() override
   {
     if (port_)
     {
       port_.Close();
       port_ = nullptr;
     }
+    return std::error_code{};
   }
 
   timestamp absolute_timestamp() const noexcept override

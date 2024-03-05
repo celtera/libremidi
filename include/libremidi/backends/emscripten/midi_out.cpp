@@ -43,22 +43,6 @@ LIBREMIDI_INLINE bool midi_out_emscripten::open_port(const output_port& p, std::
 
 LIBREMIDI_INLINE void midi_out_emscripten::close_port() { }
 
-LIBREMIDI_INLINE void midi_out_emscripten::set_client_name(std::string_view clientName)
-{
-  warning(configuration, "midi_out_emscripten::set_client_name: unsupported.");
-}
-
-LIBREMIDI_INLINE void midi_out_emscripten::set_port_name(std::string_view portName)
-{
-  warning(configuration, "midi_out_emscripten::set_port_name: unsupported.");
-}
-
-LIBREMIDI_INLINE bool midi_out_emscripten::open_virtual_port(std::string_view)
-{
-  warning(configuration, "midi_in_emscripten::open_virtual_port: unsupported.");
-  return false;
-}
-
 LIBREMIDI_INLINE void midi_out_emscripten::send_message(const unsigned char* message, size_t size)
 {
   if (portNumber_ < 0)

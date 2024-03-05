@@ -22,13 +22,10 @@ public:
 
   libremidi::API get_current_api() const noexcept override;
 
-  bool open_port(int portNumber, std::string_view);
-  bool open_port(const input_port& p, std::string_view) override;
-  bool open_virtual_port(std::string_view) override;
-  void close_port() override;
+  std::error_code open_port(int portNumber, std::string_view);
+  std::error_code open_port(const input_port& p, std::string_view) override;
+  std::error_code close_port() override;
 
-  void set_client_name(std::string_view clientName) override;
-  void set_port_name(std::string_view portName) override;
   timestamp absolute_timestamp() const noexcept override;
 
   void on_input(double ts, unsigned char* begin, unsigned char* end);

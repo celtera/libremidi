@@ -26,16 +26,16 @@ public:
 
   ~midi_in_impl() override { close_port(); }
 
-  bool open_virtual_port(std::string_view) override
+  std::error_code open_virtual_port(std::string_view) override
   {
     warning(configuration, "midi_in_winmidi: open_virtual_port unsupported");
     return false;
   }
-  void set_client_name(std::string_view) override
+  std::error_code set_client_name(std::string_view) override
   {
     warning(configuration, "midi_in_winmidi: set_client_name unsupported");
   }
-  void set_port_name(std::string_view) override
+  std::error_code set_port_name(std::string_view) override
   {
     warning(configuration, "midi_in_winmidi: set_port_name unsupported");
   }
@@ -45,7 +45,7 @@ public:
     return libremidi::API::WINDOWS_MIDI_SERVICES;
   }
 
-  bool open_port(const input_port& port, std::string_view) override
+  std::error_code open_port(const input_port& port, std::string_view) override
   {
 #if 0
     const auto id = winrt::to_hstring(port.port_name);
@@ -77,7 +77,7 @@ public:
   }
 #endif
 
-  void close_port() override
+  std::error_code close_port() override
   {
 #if 0
     if (port_)

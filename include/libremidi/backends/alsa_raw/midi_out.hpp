@@ -36,21 +36,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_RAW; }
 
-  bool open_virtual_port(std::string_view) override
-  {
-    warning(configuration, "midi_out_alsa_raw: open_virtual_port unsupported");
-    return false;
-  }
-  void set_client_name(std::string_view) override
-  {
-    warning(configuration, "midi_out_alsa_raw: set_client_name unsupported");
-  }
-  void set_port_name(std::string_view) override
-  {
-    warning(configuration, "midi_out_alsa_raw: set_port_name unsupported");
-  }
-
-  int connect_port(const char* portname)
+  std::error_code connect_port(const char* portname)
   {
     constexpr int mode = SND_RAWMIDI_SYNC;
     int status = snd.rawmidi.open(NULL, &midiport_, portname, mode);
@@ -58,24 +44,26 @@ public:
     {
       error<driver_error>(
           this->configuration, "midi_out_alsa_raw::open_port: cannot open device.");
-      return status;
+      return from_errc(status);
     }
-    return status;
+    return std::error_code{};
   }
 
-  bool open_port(const output_port& p, std::string_view) override
+  std::error_code open_port(const output_port& p, std::string_view) override
   {
-    return connect_port(raw_from_port_handle(p.port).to_string().c_str()) == 0;
+    return connect_port(raw_from_port_handle(p.port).to_string().c_str());
   }
 
-  void close_port() override
+  std::error_code close_port() override
   {
     if (midiport_)
       snd.rawmidi.close(midiport_);
     midiport_ = nullptr;
+
+    return std::error_code{};
   }
 
-  void send_message(const unsigned char* message, size_t size) override
+  std::error_code send_message(const unsigned char* message, size_t size) override
   {
     if (!midiport_)
       error<invalid_use_error>(
@@ -85,24 +73,24 @@ public:
 
     if (!this->configuration.chunking)
     {
-      write(message, size);
+      return write(message, size);
     }
     else
     {
-      write_chunked(message, size);
+      return write_chunked(message, size);
     }
   }
 
-  bool write(const unsigned char* message, size_t size)
+  std::error_code write(const unsigned char* message, size_t size)
   {
-    if (snd.rawmidi.write(midiport_, message, size) < 0)
+    if (auto err = snd.rawmidi.write(midiport_, message, size); err < 0)
     {
       error<driver_error>(
           this->configuration, "midi_out_alsa_raw::send_message: cannot write message.");
-      return false;
+      return from_errc(err);
     }
 
-    return true;
+    return std::error_code{};
   }
 
   std::size_t get_chunk_size() const noexcept
@@ -125,7 +113,7 @@ public:
   }
 
   // inspired from ALSA amidi.c source code
-  void write_chunked(const unsigned char* const begin, size_t size)
+  std::error_code write_chunked(const unsigned char* const begin, size_t size)
   {
     const unsigned char* data = begin;
     const unsigned char* end = begin + size;
@@ -135,8 +123,8 @@ public:
     // Send the first buffer
     std::size_t len = chunk_size;
 
-    if (!write(data, len))
-      return;
+    if (auto err = write(data, len); err != std::error_code{})
+      return err;
 
     data += len;
 
@@ -149,11 +137,11 @@ public:
       {
         if (!configuration.chunking->wait(
                 std::chrono::microseconds((chunk_size - available) * 320), written_bytes))
-          return;
+          return std::make_error_code(std::errc::protocol_error);
       };
 
       if (!configuration.chunking->wait(configuration.chunking->interval, written_bytes))
-        return;
+        return std::make_error_code(std::errc::protocol_error);
 
       // Write more data
       len = end - data;
@@ -165,11 +153,13 @@ public:
       if (len > chunk_size)
         len = chunk_size;
 
-      if (!write(data, len))
-        return;
+      if (auto err = write(data, len); err != std::error_code{})
+        return err;
 
       data += len;
     }
+
+    return std::error_code{};
   }
 
   snd_rawmidi_t* midiport_{};
