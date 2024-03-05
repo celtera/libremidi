@@ -37,16 +37,18 @@ public:
       jack_ringbuffer_free(ringbuffer);
   }
 
-  void write(const unsigned char* data, int64_t sz) const noexcept
+  std::error_code write(const unsigned char* data, int64_t sz) const noexcept
   {
     if (static_cast<std::size_t>(sz + size_sz) > ringbuffer_space)
-      return;
+      return std::make_error_code(std::errc::no_buffer_space);
 
     while (jack_ringbuffer_write_space(ringbuffer) < sz + size_sz)
       sched_yield();
 
     jack_ringbuffer_write(ringbuffer, reinterpret_cast<char*>(&sz), size_sz);
     jack_ringbuffer_write(ringbuffer, reinterpret_cast<const char*>(data), sz);
+
+    return std::error_code{};
   }
 
   void read(void* jack_events) const noexcept
@@ -87,27 +89,22 @@ public:
 
   ~midi_out_jack() override { }
 
-  std::error_code set_client_name(std::string_view) override
-  {
-    warning(configuration, "midi_out_jack: set_client_name unsupported");
-  }
-
   libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_MIDI; }
 
   std::error_code open_port(const output_port& port, std::string_view portName) override
   {
-    if (!create_local_port(*this, portName, JackPortIsOutput))
-      return false;
+    if (auto err = create_local_port(*this, portName, JackPortIsOutput); err != std::error_code{})
+      return err;
 
     // Connecting to the output
-    if (jack_connect(this->client, jack_port_name(this->port), port.port_name.c_str()) != 0)
+    if (int err = jack_connect(this->client, jack_port_name(this->port), port.port_name.c_str()))
     {
       error<invalid_parameter_error>(
           configuration, "JACK: could not connect to port" + port.port_name);
-      return false;
+      return from_errc(err);
     }
 
-    return true;
+    return std::error_code{};
   }
 
   std::error_code open_virtual_port(std::string_view portName) override
@@ -119,7 +116,8 @@ public:
 
   std::error_code set_port_name(std::string_view portName) override
   {
-    jack_port_rename(this->client, this->port, portName.data());
+    int ret = jack_port_rename(this->client, this->port, portName.data());
+    return from_errc(ret);
   }
 };
 
@@ -144,7 +142,7 @@ public:
 
   std::error_code send_message(const unsigned char* message, std::size_t size) override
   {
-    queue.write(message, size);
+    return queue.write(message, size);
   }
 
   int process(jack_nframes_t nframes)
@@ -191,7 +189,8 @@ public:
   std::error_code send_message(const unsigned char* message, size_t size) override
   {
     void* buff = jack_port_get_buffer(this->port, buffer_size);
-    jack_midi_event_write(buff, 0, message, size);
+    int ret = jack_midi_event_write(buff, 0, message, size);
+    return from_errc(ret);
   }
 
   int convert_timestamp(int64_t user) const noexcept
@@ -207,10 +206,11 @@ public:
     }
   }
 
-  void schedule_message(int64_t ts, const unsigned char* message, size_t size) override
+  std::error_code schedule_message(int64_t ts, const unsigned char* message, size_t size) override
   {
     void* buff = jack_port_get_buffer(this->port, buffer_size);
-    jack_midi_event_write(buff, convert_timestamp(ts), message, size);
+    int ret = jack_midi_event_write(buff, convert_timestamp(ts), message, size);
+    return from_errc(ret);
   }
 
   int buffer_size{};

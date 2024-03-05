@@ -35,27 +35,22 @@ public:
     disconnect(*this);
   }
 
-  std::error_code set_client_name(std::string_view) override
-  {
-    warning(configuration, "midi_in_jack: set_client_name unsupported");
-  }
-
   libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_MIDI; }
 
   std::error_code open_port(const input_port& port, std::string_view portName) override
   {
-    if (!create_local_port(*this, portName, JackPortIsInput))
-      return false;
+    if (auto err = create_local_port(*this, portName, JackPortIsInput); err != std::error_code{})
+      return err;
 
-    if (auto ret = jack_connect(this->client, port.port_name.c_str(), jack_port_name(this->port));
+    if (int ret = jack_connect(this->client, port.port_name.c_str(), jack_port_name(this->port));
         ret != 0)
     {
       error<invalid_parameter_error>(
           configuration, "JACK: could not connect to port: " + port.port_name + " -> "
                              + jack_port_name(this->port));
-      return false;
+      return from_errc(ret);
     }
-    return true;
+    return std::error_code{};
   }
 
   std::error_code open_virtual_port(std::string_view portName) override
@@ -67,7 +62,8 @@ public:
 
   std::error_code set_port_name(std::string_view portName) override
   {
-    jack_port_rename(this->client, this->port, portName.data());
+    int ret = jack_port_rename(this->client, this->port, portName.data());
+    return from_errc(ret);
   }
 
   timestamp absolute_timestamp() const noexcept override

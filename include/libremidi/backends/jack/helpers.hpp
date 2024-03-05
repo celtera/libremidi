@@ -194,7 +194,8 @@ struct jack_helpers : jack_client
       jack_client_close(this->client);
   }
 
-  bool create_local_port(const auto& self, std::string_view portName, JackPortFlags flags)
+  std::error_code
+  create_local_port(const auto& self, std::string_view portName, JackPortFlags flags)
   {
     // full name: "client_name:port_name\0"
     if (portName.empty())
@@ -205,7 +206,7 @@ struct jack_helpers : jack_client
     {
       self.template error<invalid_use_error>(
           self.configuration, "JACK: port name length limit exceeded");
-      return false;
+      return std::make_error_code(std::errc::invalid_argument);
     }
 
     if (!this->port)
@@ -217,15 +218,15 @@ struct jack_helpers : jack_client
     if (!this->port)
     {
       self.template error<driver_error>(self.configuration, "JACK: error creating port");
-      return false;
+      return std::make_error_code(std::errc::operation_not_supported);
     }
-    return true;
+    return std::error_code{};
   }
 
-  void do_close_port()
+  std::error_code do_close_port()
   {
     if (this->port == nullptr)
-      return;
+      return std::error_code{};
 
     // 1. Ensure that the next time the cycle runs it sees the port as nullptr
     jack_port_t* port_ptr = this->port.impl->load();
@@ -235,7 +236,8 @@ struct jack_helpers : jack_client
     this->thread_lock.prepare_release_client();
 
     // 3. Now we are sure that the client is not going to use the port anymore
-    jack_port_unregister(this->client, port_ptr);
+    int err = jack_port_unregister(this->client, port_ptr);
+    return from_errc(err);
   }
 };
 }
