@@ -35,41 +35,39 @@ public:
     destroy_context();
   }
 
-  std::error_code set_client_name(std::string_view) override
-  {
-    warning(configuration, "midi_in_pipewire: set_client_name unsupported");
-  }
-
   libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE; }
 
   std::error_code open_port(const input_port& in_port, std::string_view name) override
   {
-    if (!create_local_port(*this, name, SPA_DIRECTION_INPUT))
-      return false;
+    if (auto err = create_local_port(*this, name, SPA_DIRECTION_INPUT); err != std::error_code{})
+      return err;
 
-    if (!link_ports(*this, in_port))
-      return false;
+    if (auto err = link_ports(*this, in_port); err != std::error_code{})
+      return err;
 
     start_thread();
-    return true;
+    return std::error_code{};
   }
 
   std::error_code open_virtual_port(std::string_view name) override
   {
-    if (!create_local_port(*this, name, SPA_DIRECTION_INPUT))
-      return false;
+    if (auto err = create_local_port(*this, name, SPA_DIRECTION_INPUT); err != std::error_code{})
+      return err;
 
     start_thread();
-    return true;
+    return std::error_code{};
   }
 
   std::error_code close_port() override
   {
     stop_thread();
-    do_close_port();
+    return do_close_port();
   }
 
-  std::error_code set_port_name(std::string_view port_name) override { rename_port(port_name); }
+  std::error_code set_port_name(std::string_view port_name) override
+  {
+    return rename_port(port_name);
+  }
 
   timestamp absolute_timestamp() const noexcept override { return system_ns(); }
 

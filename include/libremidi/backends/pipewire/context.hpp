@@ -1,6 +1,7 @@
 #pragma once
 #include <libremidi/backends/linux/pipewire.hpp>
 #include <libremidi/detail/memory.hpp>
+#include <libremidi/error.hpp>
 
 #include <pipewire/filter.h>
 #include <pipewire/pipewire.h>
@@ -498,7 +499,7 @@ struct pipewire_filter
       pw.filter_destroy(this->filter);
   }
 
-  void create_local_port(std::string_view port_name, spa_direction direction)
+  std::error_code create_local_port(std::string_view port_name, spa_direction direction)
   {
     // clang-format off
     this->port = (struct port*)pw.filter_add_port(
@@ -512,7 +513,9 @@ struct pipewire_filter
             nullptr),
         nullptr, 0);
     // clang-format on
-    assert(port);
+    if (!port)
+      return std::make_error_code(std::errc::invalid_argument);
+    return std::error_code{};
   }
 
   void set_port_buffer(int bytes)
@@ -537,31 +540,41 @@ struct pipewire_filter
     pw.filter_update_params(this->filter, this->port, params, 1);
   }
 
-  void remove_port()
+  std::error_code remove_port()
   {
     assert(this->port);
-    pw.filter_remove_port(this->port);
+    int ret = pw.filter_remove_port(this->port);
     this->port = nullptr;
+    return from_errc(ret);
   }
 
-  void rename_port(std::string_view port_name)
+  std::error_code rename_port(std::string_view port_name)
   {
-    assert(this->port);
-    spa_dict_item items[1] = {
-        SPA_DICT_ITEM_INIT(PW_KEY_PORT_NAME, port_name.data()),
-    };
-
-    auto properties = SPA_DICT_INIT(items, 1);
-    pw.filter_update_properties(this->filter, this->port, &properties);
-    this->port = nullptr;
-  }
-
-  void start_filter()
-  {
-    if (pw.filter_connect(this->filter, PW_FILTER_FLAG_RT_PROCESS, NULL, 0) < 0)
+    if (this->port)
     {
-      std::cerr << "can't connect\n";
-      return;
+      spa_dict_item items[1] = {
+          SPA_DICT_ITEM_INIT(PW_KEY_PORT_NAME, port_name.data()),
+      };
+
+      auto properties = SPA_DICT_INIT(items, 1);
+      int ret = pw.filter_update_properties(this->filter, this->port, &properties);
+      return from_errc(ret);
+    }
+    else
+    {
+      return std::make_error_code(std::errc::not_connected);
+    }
+  }
+
+  [[nodiscard]] std::error_code start_filter()
+  {
+    if (int ret = pw.filter_connect(this->filter, PW_FILTER_FLAG_RT_PROCESS, NULL, 0); ret < 0)
+    {
+      return from_errc(ret);
+    }
+    else
+    {
+      return std::error_code{};
     }
   }
 

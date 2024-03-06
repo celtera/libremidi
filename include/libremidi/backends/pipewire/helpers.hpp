@@ -2,6 +2,7 @@
 
 #include <libremidi/backends/linux/helpers.hpp>
 #include <libremidi/backends/linux/pipewire.hpp>
+#include <libremidi/backends/pipewire/config.hpp>
 #include <libremidi/backends/pipewire/context.hpp>
 #include <libremidi/detail/memory.hpp>
 #include <libremidi/detail/midi_in.hpp>
@@ -55,10 +56,10 @@ struct pipewire_helpers
   }
 
   template <typename Self>
-  void create_filter(Self& self)
+  std::error_code create_filter(Self& self)
   {
     if (this->filter)
-      return;
+      return std::error_code{};
 
     auto& configuration = self.configuration;
     if (configuration.context && configuration.filter && configuration.set_process_func)
@@ -90,8 +91,9 @@ struct pipewire_helpers
 #pragma GCC diagnostic pop
 
       this->filter->create_filter(self.configuration.client_name, filter_events, &self);
-      this->filter->start_filter();
+      return this->filter->start_filter();
     }
+    return std::error_code{};
   }
 
   template <typename Self>
@@ -190,7 +192,7 @@ struct pipewire_helpers
   }
 
   template <typename Self>
-  bool create_local_port(Self& self, std::string_view portName, spa_direction direction)
+  std::error_code create_local_port(Self& self, std::string_view portName, spa_direction direction)
   {
     assert(this->global_context);
     assert(this->filter);
@@ -200,15 +202,15 @@ struct pipewire_helpers
 
     if (!this->filter->port)
     {
-      this->filter->create_local_port(portName.data(), direction);
+      auto ret = this->filter->create_local_port(portName.data(), direction);
+      if (ret != std::error_code{})
+      {
+        self.template error<driver_error>(self.configuration, "PipeWire: error creating port");
+        return ret;
+      }
     }
 
-    if (!this->filter->port)
-    {
-      self.template error<driver_error>(self.configuration, "PipeWire: error creating port");
-      return false;
-    }
-    return true;
+    return std::error_code{};
   }
 
   void add_callbacks(const observer_configuration& conf)
@@ -293,12 +295,12 @@ struct pipewire_helpers
     }
   }
 
-  void do_close_port()
+  std::error_code do_close_port()
   {
     if (!this->filter)
-      return;
+      return std::error_code{};
     if (!this->filter->port)
-      return;
+      return std::error_code{};
 
     if (!this->global_context->owns_main_loop)
     {
@@ -307,13 +309,19 @@ struct pipewire_helpers
     }
 
     unlink_ports();
-    this->filter->remove_port();
+    return this->filter->remove_port();
   }
 
-  void rename_port(std::string_view port_name)
+  std::error_code rename_port(std::string_view port_name)
   {
     if (this->filter)
-      this->filter->rename_port(port_name);
+    {
+      return this->filter->rename_port(port_name);
+    }
+    else
+    {
+      return std::make_error_code(std::errc::not_connected);
+    }
   }
 
   void unlink_ports()
@@ -325,7 +333,7 @@ struct pipewire_helpers
     }
   }
 
-  bool link_ports(auto& self, const input_port& in_port)
+  std::error_code link_ports(auto& self, const input_port& in_port)
   {
     // Wait for the pipewire server to send us back our node's info
     for (int i = 0; i < 1000; i++)
@@ -335,19 +343,13 @@ struct pipewire_helpers
     auto& midi = this->global_context->current_graph.software_midi;
     auto node_it = midi.find(this_node);
     if (node_it == midi.end())
-    {
-      std::cerr << "Node " << this_node << " not found! \n";
-      return false;
-    }
+      return std::make_error_code(std::errc::invalid_argument);
 
     // Wait for the pipewire server to send us back our node's ports
     this->filter->synchronize_ports(node_it->second);
 
     if (node_it->second.inputs.empty())
-    {
-      std::cerr << "Node " << this_node << " has no ports! \n";
-      return false;
-    }
+      return std::make_error_code(std::errc::no_link);
 
     // Link ports
     const auto& p = node_it->second.inputs.front();
@@ -358,13 +360,13 @@ struct pipewire_helpers
       self.template error<invalid_parameter_error>(
           self.configuration,
           "PipeWire: could not connect to port: " + in_port.port_name + " -> " + p.port_name);
-      return false;
+      return std::make_error_code(std::errc::no_link);
     }
 
-    return true;
+    return std::error_code{};
   }
 
-  bool link_ports(auto& self, const output_port& out_port)
+  std::error_code link_ports(auto& self, const output_port& out_port)
   {
     // Wait for the pipewire server to send us back our node's info
     for (int i = 0; i < 1000; i++)
@@ -375,8 +377,7 @@ struct pipewire_helpers
     auto node_it = midi.find(this_node);
     if (node_it == midi.end())
     {
-      std::cerr << "Node " << this_node << " not found! \n";
-      return false;
+      return std::make_error_code(std::errc::invalid_argument);
     }
 
     // Wait for the pipewire server to send us back our node's ports
@@ -384,8 +385,7 @@ struct pipewire_helpers
 
     if (node_it->second.outputs.empty())
     {
-      std::cerr << "Node " << this_node << " has no ports! \n";
-      return false;
+      return std::make_error_code(std::errc::no_link);
     }
 
     // Link ports
@@ -397,10 +397,10 @@ struct pipewire_helpers
       self.template error<invalid_parameter_error>(
           self.configuration,
           "PipeWire: could not connect to port: " + p.port_name + " -> " + out_port.port_name);
-      return false;
+      return std::make_error_code(std::errc::no_link);
     }
 
-    return true;
+    return std::error_code{};
   }
 
   template <spa_direction Direction>

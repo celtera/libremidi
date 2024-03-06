@@ -36,45 +36,43 @@ public:
     destroy_context();
   }
 
-  std::error_code set_client_name(std::string_view) override
-  {
-    warning(configuration, "midi_out_pipewire: set_client_name unsupported");
-  }
-
   libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE; }
 
   std::error_code open_port(const output_port& out_port, std::string_view name) override
   {
-    if (!create_local_port(*this, name, SPA_DIRECTION_OUTPUT))
-      return false;
+    if (auto err = create_local_port(*this, name, SPA_DIRECTION_OUTPUT); err != std::error_code{})
+      return err;
 
     this->filter->set_port_buffer(configuration.output_buffer_size);
 
-    if (!link_ports(*this, out_port))
-      return false;
+    if (auto err = link_ports(*this, out_port); err != std::error_code{})
+      return err;
 
     start_thread();
-    return true;
+    return std::error_code{};
   }
 
   std::error_code open_virtual_port(std::string_view name) override
   {
-    if (!create_local_port(*this, name, SPA_DIRECTION_OUTPUT))
-      return false;
+    if (auto err = create_local_port(*this, name, SPA_DIRECTION_OUTPUT); err != std::error_code{})
+      return err;
 
     this->filter->set_port_buffer(configuration.output_buffer_size);
 
     start_thread();
-    return true;
+    return std::error_code{};
   }
 
   std::error_code close_port() override
   {
     stop_thread();
-    do_close_port();
+    return do_close_port();
   }
 
-  std::error_code set_port_name(std::string_view port_name) override { rename_port(port_name); }
+  std::error_code set_port_name(std::string_view port_name) override
+  {
+    return rename_port(port_name);
+  }
 
   int process(spa_io_position* pos)
   {
@@ -120,6 +118,8 @@ public:
       if (res == -ENOSPC)
         break;
 
+      // Recycle the memory
+      m_gcqueue.enqueue(std::move(m));
       m_queue.pop();
     }
     spa_pod_builder_pop(&build, &f);
@@ -143,7 +143,12 @@ public:
 
   std::error_code send_message(const unsigned char* message, size_t size) override
   {
-    m_queue.enqueue(libremidi::message(midi_bytes{message, message + size}, 0));
+    libremidi::message m;
+    m_gcqueue.try_dequeue(m);
+    m.bytes.assign(message, message + size);
+    m.timestamp = 0;
+    m_queue.enqueue(std::move(m));
+    return std::error_code{};
   }
 
   int convert_timestamp(int64_t user) const noexcept
@@ -159,13 +164,15 @@ public:
     }
   }
 
-  void schedule_message(int64_t ts, const unsigned char* message, size_t size) override
+  std::error_code schedule_message(int64_t ts, const unsigned char* message, size_t size) override
   {
     m_queue.enqueue(
         libremidi::message(midi_bytes{message, message + size}, convert_timestamp(ts)));
+    return std::error_code{};
   }
 
   moodycamel::ReaderWriterQueue<libremidi::message> m_queue;
+  moodycamel::ReaderWriterQueue<libremidi::message> m_gcqueue;
   std::atomic_int64_t m_process_clock = 0;
 };
 }
