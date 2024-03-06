@@ -21,6 +21,11 @@
 
 namespace libremidi
 {
+inline std::error_code from_osstatus(OSStatus ret) noexcept
+{
+  return {ret, std::system_category()};
+}
+
 using CFString_handle = unique_handle<const __CFString, CFRelease>;
 using CFStringMutable_handle = unique_handle<__CFString, CFRelease>;
 namespace
@@ -318,6 +323,23 @@ struct coremidi_data
         break;
       }
     }
+  }
+
+  std::error_code close_port()
+  {
+    if (this->endpoint)
+    {
+      MIDIEndpointDispose(this->endpoint);
+      this->endpoint = 0;
+    }
+
+    if (this->port)
+    {
+      MIDIPortDispose(this->port);
+      this->port = 0;
+    }
+
+    return std::error_code{};
   }
 };
 

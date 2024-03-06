@@ -88,7 +88,8 @@ inline bool chooseMidiPort(libremidi::midi_in& libremidi)
   std::string portName;
   auto ports = libremidi::observer{{}, observer_configuration_for(libremidi.get_current_api())}
                    .get_input_ports();
-  unsigned int i = 0, nPorts = ports.size();
+  unsigned int i = 0;
+  std::size_t nPorts = ports.size();
   if (nPorts == 0)
   {
     std::cout << "No input ports available!" << std::endl;
@@ -136,7 +137,8 @@ inline bool chooseMidiPort(libremidi::midi_out& libremidi)
   std::string portName;
   auto ports = libremidi::observer{{}, observer_configuration_for(libremidi.get_current_api())}
                    .get_output_ports();
-  unsigned int i = 0, nPorts = ports.size();
+  unsigned int i = 0;
+  std::size_t nPorts = ports.size();
   if (nPorts == 0)
   {
     std::cout << "No output ports available!" << std::endl;

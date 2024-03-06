@@ -45,15 +45,6 @@ public:
       MIDIClientDispose(this->client);
   }
 
-  std::error_code set_client_name(std::string_view) override
-  {
-    warning(configuration, "midi_out_core: set_client_name unsupported");
-  }
-  std::error_code set_port_name(std::string_view) override
-  {
-    warning(configuration, "midi_out_core: set_port_name unsupported");
-  }
-
   libremidi::API get_current_api() const noexcept override { return libremidi::API::COREMIDI; }
 
   std::error_code open_port(const output_port& info, std::string_view portName) override
@@ -63,7 +54,7 @@ public:
     // Find where we want to send
     auto destination = locate_object(*this, info, kMIDIObjectType_Destination);
     if (destination == 0)
-      return false;
+      return std::make_error_code(std::errc::invalid_argument);
 
     // Create our local source
     MIDIPortRef port;
@@ -73,27 +64,18 @@ public:
       close_client();
       error<driver_error>(
           this->configuration, "midi_out_core::open_port: error creating macOS MIDI output port.");
-      return false;
+      return from_osstatus(result);
     }
 
     // Save our api-specific connection information.
     this->port = port;
     this->destinationId = destination;
 
-    return true;
+    return std::error_code{};
   }
 
   std::error_code open_virtual_port(std::string_view portName) override
   {
-    if (this->endpoint)
-    {
-      warning(
-          configuration,
-          "midi_out_core::open_virtual_port: a virtual output port already "
-          "exists!");
-      return false;
-    }
-
     // Create a virtual MIDI output source.
     MIDIEndpointRef endpoint;
     OSStatus result = MIDISourceCreate(this->client, toCFString(portName).get(), &endpoint);
@@ -103,27 +85,18 @@ public:
       error<driver_error>(
           this->configuration,
           "midi_out_core::initialize: error creating macOS virtual MIDI source.");
-      return false;
+
+      return from_osstatus(result);
     }
 
     // Save our api-specific connection information.
     this->endpoint = endpoint;
-    return true;
+    return std::error_code{};
   }
 
   std::error_code close_port() override
   {
-    if (this->endpoint)
-    {
-      MIDIEndpointDispose(this->endpoint);
-      this->endpoint = 0;
-    }
-
-    if (this->port)
-    {
-      MIDIPortDispose(this->port);
-      this->port = 0;
-    }
+    return coremidi_data::close_port();
   }
 
   std::error_code send_message(const unsigned char* message, size_t size) override
@@ -132,7 +105,7 @@ public:
     if (nBytes == 0)
     {
       warning(configuration, "midi_out_core::send_message: no data in message argument!");
-      return;
+      return std::make_error_code(std::errc::invalid_argument);
     }
 
     if (message[0] != 0xF0 && nBytes > 3)
@@ -141,7 +114,7 @@ public:
           configuration,
           "midi_out_core::send_message: message format problem ... not sysex but "
           "> 3 bytes?");
-      return;
+      return std::make_error_code(std::errc::bad_message);
     }
 
     const MIDITimeStamp timestamp = LIBREMIDI_AUDIO_GET_CURRENT_HOST_TIME();
@@ -168,7 +141,8 @@ public:
       {
         error<driver_error>(
             this->configuration, "midi_out_core::send_message: could not allocate packet list");
-        return;
+
+        return std::make_error_code(std::errc::message_size);
       }
 
       // Send to any destinations that may have connected to us.
@@ -181,6 +155,7 @@ public:
               this->configuration,
               "midi_out_core::send_message: error sending MIDI to virtual "
               "destinations.");
+          return std::make_error_code(std::errc::io_error);
         }
       }
 
@@ -193,9 +168,11 @@ public:
           warning(
               this->configuration,
               "midi_out_core::send_message: error sending MIDI message to port.");
+          return std::make_error_code(std::errc::io_error);
         }
       }
     }
+    return std::error_code{};
   }
 
   MIDIEndpointRef destinationId{};

@@ -40,8 +40,8 @@ segment_ump_stream(const uint32_t* ump_stream, int64_t count, auto write_func, a
     {
       case 0:
         break;
-      case -ENOSPC:
-      case ENOSPC:
+      case -ENOMEM:
+      case ENOMEM:
         // Try again if we didn't have enough space in the OS queue
         realloc_func();
         if (auto err = write_func(ump_stream, ump_bytes); err != std::errc{})

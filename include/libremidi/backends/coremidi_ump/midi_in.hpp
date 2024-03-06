@@ -47,15 +47,6 @@ public:
       MIDIClientDispose(this->client);
   }
 
-  std::error_code set_client_name(std::string_view) override
-  {
-    warning(configuration, "midi_in_core: set_client_name unsupported");
-  }
-  std::error_code set_port_name(std::string_view) override
-  {
-    warning(configuration, "midi_in_core: set_port_name unsupported");
-  }
-
   libremidi::API get_current_api() const noexcept override { return libremidi::API::COREMIDI_UMP; }
 
   std::error_code open_port(const input_port& info, std::string_view portName) override
@@ -64,7 +55,7 @@ public:
 
     auto source = locate_object(*this, info, kMIDIObjectType_Source);
     if (source == 0)
-      return false;
+      return std::make_error_code(std::errc::invalid_argument);
 
     // Create our local sink
     MIDIPortRef port;
@@ -81,7 +72,7 @@ public:
       error<driver_error>(
           this->configuration, "midi_in_core::open_port: error creating macOS MIDI input port: "
                                    + std::to_string(result));
-      return false;
+      return from_osstatus(result);
     }
 
     // Make the connection.
@@ -91,12 +82,12 @@ public:
       close_client();
       error<driver_error>(
           this->configuration, "midi_in_core::open_port: error connecting macOS MIDI input port.");
-      return false;
+      return from_osstatus(result);
     }
 
     // Save our api-specific port information.
     this->port = port;
-    return true;
+    return std::error_code{};
   }
 
   std::error_code open_virtual_port(std::string_view portName) override
@@ -115,33 +106,17 @@ public:
           this->configuration,
           "midi_in_core::open_virtual_port: error creating virtual macOS MIDI "
           "destination.");
-      return false;
+      return from_osstatus(result);
     }
 
     // Save our api-specific connection information.
     this->endpoint = endpoint;
-    return true;
+    return std::error_code{};
   }
 
   std::error_code close_port() override
   {
-    if (this->endpoint)
-    {
-      MIDIEndpointDispose(this->endpoint);
-      this->endpoint = 0;
-    }
-
-    if (this->port)
-    {
-      MIDIPortDispose(this->port);
-      this->port = 0;
-    }
-  }
-
-  void set_timestamp(
-      [[maybe_unused]] const MIDIEventPacket& packet,
-      [[maybe_unused]] libremidi::ump& msg) noexcept
-  {
+    return coremidi_data::close_port();
   }
 
   timestamp absolute_timestamp() const noexcept override
