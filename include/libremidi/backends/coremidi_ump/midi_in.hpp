@@ -2,6 +2,7 @@
 #include <libremidi/backends/coremidi_ump/config.hpp>
 #include <libremidi/backends/coremidi_ump/helpers.hpp>
 #include <libremidi/detail/midi_in.hpp>
+#include <libremidi/detail/midi_stream_decoder.hpp>
 
 namespace libremidi::coremidi_ump
 {
@@ -126,33 +127,28 @@ public:
 
   void midiInputCallback(const MIDIEventList* list, void* /*srcRef*/)
   {
-    unsigned short nBytes{};
+    static constexpr timestamp_backend_info timestamp_info{
+        .has_absolute_timestamps = true,
+        .absolute_is_monotonic = false,
+        .has_samples = false,
+    };
 
     const MIDIEventPacket* packet = &list->packet[0];
     for (unsigned int i = 0; i < list->numPackets; ++i)
     {
-      nBytes = packet->wordCount;
-      if (nBytes == 0)
+      if (packet->wordCount > 0)
       {
-        packet = MIDIEventPacketNext(packet);
-        continue;
+        auto to_ns = [packet] { return time_in_nanos(packet->timeStamp); };
+        m_processing.on_bytes_multi(
+            {packet->words, packet->words + packet->wordCount},
+            m_processing.timestamp<timestamp_info>(to_ns, 0));
       }
-
-      libremidi::ump msg;
-      coremidi_data::set_timestamp(*this, packet->timeStamp, msg.timestamp);
-
-      if (packet->wordCount <= 4)
-      {
-        std::copy_n(packet->words, packet->wordCount, msg.data);
-        configuration.on_message(std::move(msg));
-      }
-      last_time = time_in_nanos(packet->timeStamp);
 
       packet = MIDIEventPacketNext(packet);
     }
   }
 
-  unsigned long long last_time{};
+  midi2::input_state_machine m_processing{this->configuration};
 };
 
 }

@@ -139,16 +139,13 @@ public:
       // MIDIPacketLists, they must be handled by multiple calls to this
       // function.
 
-      if (packet->length == 0)
+      if (packet->length > 0)
       {
-        packet = MIDIPacketNext(packet);
-        continue;
+        auto to_ns = [packet] { return time_in_nanos(packet->timeStamp); };
+        self.m_processing.on_bytes_multi(
+            {packet->data, packet->data + packet->length},
+            self.m_processing.timestamp<timestamp_info>(to_ns, 0));
       }
-
-      auto to_ns = [packet] { return time_in_nanos(packet->timeStamp); };
-      self.m_processing.on_bytes_multi(
-          {packet->data, packet->data + packet->length},
-          self.m_processing.timestamp<timestamp_info>(to_ns, 0));
 
       packet = MIDIPacketNext(packet);
     }

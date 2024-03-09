@@ -1,9 +1,9 @@
 #pragma once
 #include <libremidi/config.hpp>
+#include <system_error>
 #include <libremidi/system_error2.hpp>
 
 #include <functional>
-#include <stdexcept>
 #include <string_view>
 
 namespace libremidi

@@ -20,15 +20,6 @@ public:
   midi_out_winmm(output_configuration&& conf, winmm_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    // We'll issue a warning here if no devices are available but not
-    // throw an error since the user can plug something in later.
-    if (midiOutGetNumDevs() == 0)
-    {
-      warning(
-          configuration,
-          "midi_out_winmm::initialize: no MIDI output devices currently "
-          "available.");
-    }
   }
 
   ~midi_out_winmm() override

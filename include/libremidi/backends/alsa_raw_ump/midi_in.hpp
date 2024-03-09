@@ -41,7 +41,7 @@ public:
   [[nodiscard]] std::error_code do_init_port(const char* portname)
   {
     constexpr int mode = 0;
-    SND_RAWMIDI_NONBLOCK;
+    SND_RAWMIDI_NONBLOCK; // fixme
     if (int err = snd.ump.open(&midiport_, 0, portname, mode); err < 0)
     {
       error(this->configuration, "alsa_raw_ump::ump::open_port: cannot open device.");
@@ -131,70 +131,42 @@ public:
 
   ssize_t read_input_buffer()
   {
-    static const constexpr int nbytes = 1024;
-
-    unsigned char bytes[nbytes];
+    static constexpr timestamp_backend_info timestamp_info{
+        .has_absolute_timestamps = false,
+        .absolute_is_monotonic = false,
+        .has_samples = false,
+    };
+    static const constexpr int nwords = 64;
+    uint32_t words[nwords];
 
     ssize_t err = 0;
-    while ((err = snd.ump.read(this->midiport_, bytes, nbytes)) > 0)
+    while ((err = snd.ump.read(this->midiport_, words, nwords * 4)) > 0)
     {
-      std::cerr << "We read: " << nbytes << "bytes !!!!";
-      return 1;
-      // err is the amount of bytes read
-      // decoder_.add_bytes(bytes, err);
+      const auto to_ns = [this] { return absolute_timestamp(); };
+      m_processing.on_bytes({words, words + err / 4}, m_processing.timestamp<timestamp_info>(to_ns, 0));
     }
     return err;
   }
 
-  void set_timestamp(struct timespec ts, timestamp& res)
-  {
-    static constexpr int64_t nanos = 1e9;
-    switch (configuration.timestamps)
-    {
-      // Unneeded here
-      case timestamp_mode::NoTimestamp:
-        break;
-      case timestamp_mode::Relative: {
-        const auto t = static_cast<int64_t>(ts.tv_sec) * nanos + static_cast<int64_t>(ts.tv_nsec);
-        if (firstMessage == true)
-        {
-          firstMessage = false;
-          res = 0;
-        }
-        else
-        {
-          res = t - last_time;
-        }
-        last_time = t;
-        break;
-      }
-      case timestamp_mode::Absolute:
-      case timestamp_mode::SystemMonotonic:
-        res = static_cast<int64_t>(ts.tv_sec) * nanos + static_cast<int64_t>(ts.tv_nsec);
-        break;
-      case timestamp_mode::Custom:
-        res = configuration.get_timestamp(
-            static_cast<int64_t>(ts.tv_sec) * nanos + static_cast<int64_t>(ts.tv_nsec));
-        break;
-    }
-  }
-
   ssize_t read_input_buffer_with_timestamps()
   {
-    static const constexpr int nbytes = 1024;
+    static constexpr timestamp_backend_info timestamp_info{
+        .has_absolute_timestamps = true,
+        .absolute_is_monotonic = true,
+        .has_samples = false,
+    };
 
-    unsigned char bytes[nbytes];
+    static const constexpr int nwords = 64;
+    uint32_t words[nwords];
     struct timespec ts;
 
     ssize_t err = 0;
-    while ((err = snd.ump.tread(this->midiport_, &ts, bytes, nbytes)) > 0)
+    while ((err = snd.ump.tread(this->midiport_, &ts, words, nwords * 4)) > 0)
     {
-      // err is the amount of bytes read
-      int64_t ns{};
-      set_timestamp(ts, ns);
-      std::cerr << "We read: " << nbytes << "bytes !!!!";
-      return 1;
-      // decoder_.add_bytes(bytes, err, ns);
+      const auto to_ns = [ts] {
+        return static_cast<int64_t>(ts.tv_sec) * 1'000'000'000 + static_cast<int64_t>(ts.tv_nsec);
+      };
+      m_processing.on_bytes({words, words + err / 4}, m_processing.timestamp<timestamp_info>(to_ns, 0));
     }
     return err;
   }
@@ -220,8 +192,7 @@ public:
 
   snd_ump_t* midiport_{};
   std::vector<pollfd> fds_;
-  // midi_stream_decoder decoder_{this->configuration.on_message};
-  int64_t last_time{};
+  midi2::input_state_machine m_processing{this->configuration};
 };
 
 class midi_in_impl_threaded : public midi_in_impl

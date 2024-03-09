@@ -17,7 +17,7 @@ using midi_in_base
     = std::conditional_t<ConfigurationImpl::midi_version == 1, midi1::in_api, midi2::in_api>;
 template <typename ConfigurationImpl>
 using midi_in_processing = std::conditional_t<
-    ConfigurationImpl::midi_version == 1, midi1::input_state_machine, dummy_processing>;
+    ConfigurationImpl::midi_version == 1, midi1::input_state_machine, midi2::input_state_machine>;
 
 template <typename ConfigurationBase, typename ConfigurationImpl>
 class midi_in_impl
@@ -201,52 +201,6 @@ public:
     return alsa_data::set_port_name(portName);
   }
 
-protected:
-  void set_timestamp(const auto& ev, auto& msg) noexcept
-  {
-    static constexpr int64_t nanos = 1e9;
-    switch (configuration.timestamps)
-    {
-      case timestamp_mode::NoTimestamp:
-        msg.timestamp = 0;
-        return;
-      case timestamp_mode::Relative: {
-        const auto t1 = static_cast<int64_t>(ev.time.time.tv_sec) * nanos
-                        + static_cast<int64_t>(ev.time.time.tv_nsec);
-        const auto t0 = static_cast<int64_t>(last_time.tv_sec) * nanos
-                        + static_cast<int64_t>(last_time.tv_nsec);
-        const auto time = t1 - t0;
-
-        last_time = ev.time.time;
-
-        if (this->firstMessage == true)
-        {
-          this->firstMessage = false;
-          msg.timestamp = 0;
-        }
-        else
-        {
-          msg.timestamp = time;
-        }
-        return;
-      }
-      case timestamp_mode::Absolute: {
-        msg.timestamp = ev.time.time.tv_sec * nanos + ev.time.time.tv_nsec;
-        break;
-      }
-      case timestamp_mode::Custom: {
-        msg.timestamp
-            = configuration.get_timestamp(ev.time.time.tv_sec * nanos + ev.time.time.tv_nsec);
-        break;
-      }
-      case timestamp_mode::SystemMonotonic: {
-        namespace clk = std::chrono;
-        msg.timestamp = system_ns();
-        break;
-      }
-    }
-  }
-
   timestamp absolute_timestamp() const noexcept override
   {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -312,7 +266,6 @@ protected:
         handle.reset(ev);
         if (int err = process_event(*ev); err < 0)
         {
-          fprintf(stderr, "err! %d\n", err);
           return err;
         }
       }
@@ -353,11 +306,17 @@ protected:
       }
     }
 
-    // MIDI 2 : no decoder, we can just send the UMP data directly, yay
-    libremidi::ump ump;
-    std::memcpy(ump.data, ev.ump, sizeof(ev.ump));
-    set_timestamp(ev, ump);
-    configuration.on_message(std::move(ump));
+    static constexpr timestamp_backend_info timestamp_info{
+        .has_absolute_timestamps = true,
+        .absolute_is_monotonic = false,
+        .has_samples = false,
+    };
+    const auto to_ns = [ts = ev.time.time] {
+      return static_cast<int64_t>(ts.tv_sec) * 1'000'000'000 + static_cast<int64_t>(ts.tv_nsec);
+    };
+
+    m_processing.on_bytes_multi(
+        {ev.ump, ev.ump + 4}, m_processing.template timestamp<timestamp_info>(to_ns, 0));
     return 0;
   }
 
@@ -377,7 +336,6 @@ protected:
 #endif
 
   int queue_id{}; // an input queue is needed to get timestamped events
-  snd_seq_real_time_t last_time{};
 
   // Only needed for midi 1
   std::vector<unsigned char> decoding_buffer = std::vector<unsigned char>(4096);

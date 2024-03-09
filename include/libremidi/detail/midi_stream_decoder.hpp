@@ -2,6 +2,7 @@
 
 #include <libremidi/detail/midi_in.hpp>
 
+#include <libremidi/cmidi2.hpp>
 #include <chrono>
 #include <cstdint>
 #include <cinttypes>
@@ -28,16 +29,79 @@ struct timestamp_backend_info
   bool has_samples{};
 };
 
-namespace midi1
+template<typename Configuration>
+struct input_state_machine_base
 {
-struct input_state_machine
-{
-  const input_configuration& configuration;
-  explicit input_state_machine(const input_configuration& conf)
+  const Configuration& configuration;
+
+  explicit input_state_machine_base(const Configuration& conf)
       : configuration{conf}
   {
   }
 
+  template <timestamp_backend_info info>
+  int64_t timestamp(auto to_ns, int64_t samples)
+  {
+    switch (configuration.timestamps)
+    {
+      default:
+      case timestamp_mode::NoTimestamp:
+        return 0;
+
+      case timestamp_mode::Relative: {
+        int64_t time_ns;
+
+        if constexpr (info.has_absolute_timestamps)
+          time_ns = to_ns();
+        else
+          time_ns = system_ns();
+
+        int64_t res;
+        if (first_message)
+        {
+          first_message = false;
+          res = 0;
+        }
+        else
+        {
+          res = time_ns - last_time_ns;
+        }
+
+        last_time_ns = time_ns;
+        return res;
+      }
+
+      case timestamp_mode::Absolute:
+        if constexpr (info.has_absolute_timestamps)
+          return to_ns();
+        else
+          return system_ns();
+
+      case timestamp_mode::SystemMonotonic:
+        if constexpr (info.absolute_is_monotonic)
+          return to_ns();
+        else
+          return system_ns();
+
+      case timestamp_mode::AudioFrame:
+        if constexpr (info.has_samples)
+          return samples;
+        else
+          return 0;
+
+      case timestamp_mode::Custom:
+        return configuration.get_timestamp(to_ns());
+    }
+  }
+  int64_t last_time_ns = 0;
+  bool first_message = true;
+};
+
+namespace midi1
+{
+struct input_state_machine : input_state_machine_base<input_configuration>
+{
+  using input_state_machine_base::input_state_machine_base;
   bool has_finished_sysex(std::span<const uint8_t> bytes) const noexcept
   {
     return (((bytes.front() == 0xF0) || (state == in_sysex)) && (bytes.back() == 0xF7));
@@ -244,71 +308,108 @@ struct input_state_machine
     }
   }
 
-  template <timestamp_backend_info info>
-  int64_t timestamp(auto to_ns, int64_t samples)
-  {
-    switch (configuration.timestamps)
-    {
-      default:
-      case timestamp_mode::NoTimestamp:
-        return 0;
-
-      case timestamp_mode::Relative: {
-        int64_t time_ns;
-
-        if constexpr (info.has_absolute_timestamps)
-          time_ns = to_ns();
-        else
-          time_ns = system_ns();
-
-        int64_t res;
-        if (first_message)
-        {
-          first_message = false;
-          res = 0;
-        }
-        else
-        {
-          res = time_ns - last_time_ns;
-        }
-
-        last_time_ns = time_ns;
-        return res;
-      }
-
-      case timestamp_mode::Absolute:
-        if constexpr (info.has_absolute_timestamps)
-          return to_ns();
-        else
-          return system_ns();
-
-      case timestamp_mode::SystemMonotonic:
-        if constexpr (info.absolute_is_monotonic)
-          return to_ns();
-        else
-          return system_ns();
-
-      case timestamp_mode::AudioFrame:
-        if constexpr (info.has_samples)
-          return samples;
-        else
-          return 0;
-
-      case timestamp_mode::Custom:
-        return configuration.get_timestamp(to_ns());
-    }
-  }
-
   libremidi::message message;
 
-  int64_t last_time_ns = 0;
   enum
   {
     main,
     in_sysex
   } state{main};
 
-  bool first_message = true;
+};
+}
+
+namespace midi2
+{
+struct input_state_machine : input_state_machine_base<ump_input_configuration>
+{
+  using input_state_machine_base::input_state_machine_base;
+
+  // Function to process a byte stream which may contain multiple successive
+  // MIDI events (CoreMIDI, ALSA Sequencer can work like this)
+
+  void on_bytes_multi(std::span<const unsigned char> bytes, int64_t timestamp)
+  {
+    auto ptr = reinterpret_cast<const uint32_t*>(bytes.data());
+    auto sz = bytes.size() / 4;
+    return on_bytes_multi({ptr, sz}, timestamp);
+  }
+
+  void on_bytes_multi(std::span<const uint32_t> bytes, int64_t timestamp)
+  {
+    auto count = bytes.size();
+    auto ump_stream = bytes.data();
+    while (count > 0)
+    {
+      // Handle NOOP (or padding)
+      while (count > 0 && ump_stream[0] == 0)
+      {
+        count--;
+        ump_stream++;
+      }
+
+      if (count == 0)
+        break;
+
+      const auto ump_uints = cmidi2_ump_get_num_bytes(ump_stream[0]) / 4;
+      on_bytes({ump_stream, ump_stream + ump_uints}, timestamp);
+
+      ump_stream += ump_uints;
+      count -= ump_uints;
+    }
+  }
+
+  // Function to process bytes corresponding to at most one midi event
+  void on_bytes(std::span<const uint32_t> bytes, int64_t timestamp)
+  {
+    // Filter according to message type
+    switch(cmidi2_ump_get_message_type(bytes.data()))
+    {
+      case CMIDI2_MESSAGE_TYPE_UTILITY:
+      {
+        // All the utility messages are about timing
+        if (this->configuration.ignore_timing)
+          return;
+        break;
+      }
+
+      case CMIDI2_MESSAGE_TYPE_SYSTEM:
+      {
+        if (this->configuration.ignore_timing)
+        {
+          auto status = cmidi2_ump_get_system_message_byte2(bytes.data());
+          switch(status)
+          {
+            case CMIDI2_SYSTEM_STATUS_MIDI_TIME_CODE:
+            case CMIDI2_SYSTEM_STATUS_SONG_POSITION:
+            case CMIDI2_SYSTEM_STATUS_TIMING_CLOCK:
+              return;
+          }
+        }
+
+       if (this->configuration.ignore_sensing)
+       {
+         auto status = cmidi2_ump_get_system_message_byte2(bytes.data());
+         if(status == CMIDI2_SYSTEM_STATUS_ACTIVE_SENSING)
+           return;
+       }
+       break;
+      }
+
+      case CMIDI2_MESSAGE_TYPE_SYSEX7:
+      case CMIDI2_MESSAGE_TYPE_SYSEX8_MDS:
+      {
+        if (this->configuration.ignore_sysex)
+          return;
+        break;
+      }
+    }
+
+    libremidi::ump msg;
+    std::copy(bytes.begin(), bytes.end(), msg.data);
+    msg.timestamp = timestamp;
+    configuration.on_message(std::move(msg));
+  }
 };
 }
 }

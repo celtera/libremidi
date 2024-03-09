@@ -22,14 +22,6 @@ public:
   explicit midi_in_winmm(input_configuration&& conf, winmm_input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    // We'll issue a warning here if no devices are available but not
-    // throw an error since the user can plugin something later.
-    if (midiInGetNumDevs() == 0)
-    {
-      warning(
-          configuration, "midi_in_winmm::initialize: no MIDI input devices currently available.");
-    }
-
     if (!InitializeCriticalSectionAndSpinCount(&(this->_mutex), 0x00000400))
     {
       warning(
