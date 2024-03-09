@@ -184,19 +184,19 @@ public:
     return 0;
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     unsubscribe();
     stop_queue();
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code set_client_name(std::string_view clientName) override
+  stdx::error set_client_name(std::string_view clientName) override
   {
     return alsa_data::set_client_name(clientName);
   }
 
-  std::error_code set_port_name(std::string_view portName) override
+  stdx::error set_port_name(std::string_view portName) override
   {
     return alsa_data::set_port_name(portName);
   }
@@ -359,7 +359,7 @@ public:
   ~midi_in_alsa_threaded() { this->close_port(); }
 
 private:
-  std::error_code open_port(const input_port& pt, std::string_view local_port_name) override
+  stdx::error open_port(const input_port& pt, std::string_view local_port_name) override
   {
     if (int err = this->init_port(this->to_address(pt), local_port_name); err < 0)
       return from_errc(err);
@@ -367,7 +367,7 @@ private:
     return this->start_thread();
   }
 
-  std::error_code open_virtual_port(std::string_view portName) override
+  stdx::error open_virtual_port(std::string_view portName) override
   {
     if (int err = this->init_virtual_port(portName); err < 0)
       return from_errc(err);
@@ -375,7 +375,7 @@ private:
     return this->start_thread();
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     // FIXME shouldn't we always close the thread
     auto err = midi_in_impl<ConfigurationBase, ConfigurationImpl>::close_port();
@@ -385,12 +385,12 @@ private:
     return err;
   }
 
-  [[nodiscard]] std::error_code start_thread()
+  [[nodiscard]] stdx::error start_thread()
   {
     try
     {
       this->thread = std::thread([this] { thread_handler(); });
-      return std::error_code{};
+      return stdx::error{};
     }
     catch (const std::system_error& e)
     {
@@ -404,7 +404,7 @@ private:
     }
   }
 
-  std::error_code stop_thread()
+  stdx::error stop_thread()
   {
     termination_event.notify();
 
@@ -412,7 +412,7 @@ private:
       this->thread.join();
 
     termination_event.consume();
-    return std::error_code{};
+    return stdx::error{};
   }
 
   void thread_handler()
@@ -491,7 +491,7 @@ public:
 
   ~midi_in_alsa_manual() { this->close_port(); }
 
-  std::error_code open_port(const input_port& pt, std::string_view local_port_name) override
+  stdx::error open_port(const input_port& pt, std::string_view local_port_name) override
   {
     if (int err = this->init_port(this->to_address(pt), local_port_name); err < 0)
       return from_errc(err);
@@ -499,10 +499,10 @@ public:
     if (int err = init_callback(); err < 0)
       return from_errc(err);
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code open_virtual_port(std::string_view name) override
+  stdx::error open_virtual_port(std::string_view name) override
   {
     if (int err = this->init_virtual_port(name); err < 0)
       return from_errc(err);
@@ -510,10 +510,10 @@ public:
     if (int err = init_callback(); err < 0)
       return from_errc(err);
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     this->configuration.stop_poll(this->vaddr);
 

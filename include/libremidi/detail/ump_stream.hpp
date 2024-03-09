@@ -18,7 +18,7 @@ enum class segmentation_error
  * Utility function to segment an ump stream into individual messages.
  * Used to send a stream to APIs that work message-by-message.
  */
-inline std::error_code
+inline stdx::error
 segment_ump_stream(const uint32_t* ump_stream, int64_t count, auto write_func, auto realloc_func)
 {
   while (count > 0)
@@ -56,7 +56,7 @@ segment_ump_stream(const uint32_t* ump_stream, int64_t count, auto write_func, a
     count -= ump_uints;
   }
 
-  return std::error_code{};
+  return stdx::error{};
 }
 
 }

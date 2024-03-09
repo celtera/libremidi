@@ -65,7 +65,7 @@ public:
         SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION, std::nullopt);
   }
 
-  std::error_code open_port(const output_port& p, std::string_view portName) override
+  stdx::error open_port(const output_port& p, std::string_view portName) override
   {
     unsigned int nSrc = this->get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
     if (nSrc < 1)
@@ -92,33 +92,33 @@ public:
       return from_errc(err);
     }
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code open_virtual_port(std::string_view portName) override
+  stdx::error open_virtual_port(std::string_view portName) override
   {
     if (int err = create_port(portName); err < 0)
       return from_errc(err);
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     unsubscribe();
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code set_client_name(std::string_view clientName) override
+  stdx::error set_client_name(std::string_view clientName) override
   {
     return alsa_data::set_client_name(clientName);
   }
 
-  std::error_code set_port_name(std::string_view portName) override
+  stdx::error set_port_name(std::string_view portName) override
   {
     return alsa_data::set_port_name(portName);
   }
 
-  std::error_code send_message(const unsigned char* message, std::size_t size) override
+  stdx::error send_message(const unsigned char* message, std::size_t size) override
   {
     int64_t result{};
     if (size > this->bufferSize)
@@ -171,7 +171,7 @@ public:
       }
     }
     snd.seq.drain_output(this->seq);
-    return std::error_code{};
+    return stdx::error{};
   }
 
 private:

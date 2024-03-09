@@ -22,9 +22,9 @@ public:
 
   libremidi::API get_current_api() const noexcept override;
 
-  std::error_code open_port(int portNumber, std::string_view);
-  std::error_code open_port(const input_port& p, std::string_view) override;
-  std::error_code close_port() override;
+  stdx::error open_port(int portNumber, std::string_view);
+  stdx::error open_port(const input_port& p, std::string_view) override;
+  stdx::error close_port() override;
 
   timestamp absolute_timestamp() const noexcept override;
 

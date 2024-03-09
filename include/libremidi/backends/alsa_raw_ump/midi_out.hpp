@@ -39,7 +39,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_RAW; }
 
-  std::error_code connect_port(const char* portname)
+  stdx::error connect_port(const char* portname)
   {
     constexpr int mode = SND_RAWMIDI_SYNC;
     int ret = snd.ump.open(NULL, &midiport_, portname, mode);
@@ -49,23 +49,23 @@ public:
           this->configuration, "midi_out_alsa_raw::open_port: cannot open device.");
       return from_errc(ret);
     }
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code open_port(const output_port& p, std::string_view) override
+  stdx::error open_port(const output_port& p, std::string_view) override
   {
     return connect_port(raw_from_port_handle(p.port).to_string().c_str());
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     if (midiport_)
       snd.ump.close(midiport_);
     midiport_ = nullptr;
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code send_ump(const uint32_t* ump_stream, std::size_t count) override
+  stdx::error send_ump(const uint32_t* ump_stream, std::size_t count) override
   {
     if (!midiport_)
       error(
@@ -76,7 +76,7 @@ public:
     return write(ump_stream, count * sizeof(uint32_t));
   }
 
-  std::error_code write(const uint32_t* ump_stream, size_t bytes)
+  stdx::error write(const uint32_t* ump_stream, size_t bytes)
   {
     if (auto err = snd.ump.write(midiport_, ump_stream, bytes); err < 0)
     {
@@ -85,7 +85,7 @@ public:
       return from_errc(err);
     }
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
   snd_ump_t* midiport_{};

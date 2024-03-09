@@ -56,10 +56,10 @@ struct pipewire_helpers
   }
 
   template <typename Self>
-  std::error_code create_filter(Self& self)
+  stdx::error create_filter(Self& self)
   {
     if (this->filter)
-      return std::error_code{};
+      return stdx::error{};
 
     auto& configuration = self.configuration;
     if (configuration.context && configuration.filter && configuration.set_process_func)
@@ -93,7 +93,7 @@ struct pipewire_helpers
       this->filter->create_filter(self.configuration.client_name, filter_events, &self);
       return this->filter->start_filter();
     }
-    return std::error_code{};
+    return stdx::error{};
   }
 
   template <typename Self>
@@ -192,7 +192,7 @@ struct pipewire_helpers
   }
 
   template <typename Self>
-  std::error_code create_local_port(Self& self, std::string_view portName, spa_direction direction)
+  stdx::error create_local_port(Self& self, std::string_view portName, spa_direction direction)
   {
     assert(this->global_context);
     assert(this->filter);
@@ -203,14 +203,14 @@ struct pipewire_helpers
     if (!this->filter->port)
     {
       auto ret = this->filter->create_local_port(portName.data(), direction);
-      if (ret != std::error_code{})
+      if (ret != stdx::error{})
       {
         self.template error(self.configuration, "PipeWire: error creating port");
         return ret;
       }
     }
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
   void add_callbacks(const observer_configuration& conf)
@@ -295,12 +295,12 @@ struct pipewire_helpers
     }
   }
 
-  std::error_code do_close_port()
+  stdx::error do_close_port()
   {
     if (!this->filter)
-      return std::error_code{};
+      return stdx::error{};
     if (!this->filter->port)
-      return std::error_code{};
+      return stdx::error{};
 
     if (!this->global_context->owns_main_loop)
     {
@@ -312,7 +312,7 @@ struct pipewire_helpers
     return this->filter->remove_port();
   }
 
-  std::error_code rename_port(std::string_view port_name)
+  stdx::error rename_port(std::string_view port_name)
   {
     if (this->filter)
     {
@@ -333,7 +333,7 @@ struct pipewire_helpers
     }
   }
 
-  std::error_code link_ports(auto& self, const input_port& in_port)
+  stdx::error link_ports(auto& self, const input_port& in_port)
   {
     // Wait for the pipewire server to send us back our node's info
     for (int i = 0; i < 1000; i++)
@@ -363,10 +363,10 @@ struct pipewire_helpers
       return std::make_error_code(std::errc::no_link);
     }
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code link_ports(auto& self, const output_port& out_port)
+  stdx::error link_ports(auto& self, const output_port& out_port)
   {
     // Wait for the pipewire server to send us back our node's info
     for (int i = 0; i < 1000; i++)
@@ -400,7 +400,7 @@ struct pipewire_helpers
       return std::make_error_code(std::errc::no_link);
     }
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
   template <spa_direction Direction>

@@ -50,7 +50,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::COREMIDI_UMP; }
 
-  std::error_code open_port(const input_port& info, std::string_view portName) override
+  stdx::error open_port(const input_port& info, std::string_view portName) override
   {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
 
@@ -88,10 +88,10 @@ public:
 
     // Save our api-specific port information.
     this->port = port;
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code open_virtual_port(std::string_view portName) override
+  stdx::error open_virtual_port(std::string_view portName) override
   {
     // Create a virtual MIDI input destination.
     MIDIEndpointRef endpoint;
@@ -112,10 +112,10 @@ public:
 
     // Save our api-specific connection information.
     this->endpoint = endpoint;
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     return coremidi_data::close_port();
   }

@@ -38,38 +38,38 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE; }
 
-  std::error_code open_port(const output_port& out_port, std::string_view name) override
+  stdx::error open_port(const output_port& out_port, std::string_view name) override
   {
-    if (auto err = create_local_port(*this, name, SPA_DIRECTION_OUTPUT); err != std::error_code{})
+    if (auto err = create_local_port(*this, name, SPA_DIRECTION_OUTPUT); err != stdx::error{})
       return err;
 
     this->filter->set_port_buffer(configuration.output_buffer_size);
 
-    if (auto err = link_ports(*this, out_port); err != std::error_code{})
+    if (auto err = link_ports(*this, out_port); err != stdx::error{})
       return err;
 
     start_thread();
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code open_virtual_port(std::string_view name) override
+  stdx::error open_virtual_port(std::string_view name) override
   {
-    if (auto err = create_local_port(*this, name, SPA_DIRECTION_OUTPUT); err != std::error_code{})
+    if (auto err = create_local_port(*this, name, SPA_DIRECTION_OUTPUT); err != stdx::error{})
       return err;
 
     this->filter->set_port_buffer(configuration.output_buffer_size);
 
     start_thread();
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     stop_thread();
     return do_close_port();
   }
 
-  std::error_code set_port_name(std::string_view port_name) override
+  stdx::error set_port_name(std::string_view port_name) override
   {
     return rename_port(port_name);
   }
@@ -141,14 +141,14 @@ public:
     return 0;
   }
 
-  std::error_code send_message(const unsigned char* message, size_t size) override
+  stdx::error send_message(const unsigned char* message, size_t size) override
   {
     libremidi::message m;
     m_gcqueue.try_dequeue(m);
     m.bytes.assign(message, message + size);
     m.timestamp = 0;
     m_queue.enqueue(std::move(m));
-    return std::error_code{};
+    return stdx::error{};
   }
 
   int convert_timestamp(int64_t user) const noexcept
@@ -164,11 +164,11 @@ public:
     }
   }
 
-  std::error_code schedule_message(int64_t ts, const unsigned char* message, size_t size) override
+  stdx::error schedule_message(int64_t ts, const unsigned char* message, size_t size) override
   {
     m_queue.enqueue(
         libremidi::message(midi_bytes{message, message + size}, convert_timestamp(ts)));
-    return std::error_code{};
+    return stdx::error{};
   }
 
   moodycamel::ReaderWriterQueue<libremidi::message> m_queue;

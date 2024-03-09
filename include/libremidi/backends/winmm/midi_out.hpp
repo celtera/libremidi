@@ -30,7 +30,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
-  [[nodiscard]] std::error_code do_open(unsigned int portNumber)
+  [[nodiscard]] stdx::error do_open(unsigned int portNumber)
   {
     MMRESULT result = midiOutOpen(&this->outHandle, portNumber, 0, 0, CALLBACK_NULL);
     if (result != MMSYSERR_NOERROR)
@@ -42,10 +42,10 @@ public:
       return from_mmerr(result);
     }
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code open_port(const output_port& p, std::string_view) override
+  stdx::error open_port(const output_port& p, std::string_view) override
   {
     observer_winmm obs{{}, winmm_observer_configuration{}};
     auto ports = obs.get_output_ports();
@@ -67,17 +67,17 @@ public:
     return std::make_error_code(std::errc::invalid_argument);
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     if (this->outHandle)
       midiOutClose(this->outHandle);
 
     this->outHandle = nullptr;
     connected_ = false;
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code send_message(const unsigned char* message, size_t size) override
+  stdx::error send_message(const unsigned char* message, size_t size) override
   {
     if (!connected_)
       return std::make_error_code(std::errc::not_connected);
@@ -150,7 +150,7 @@ public:
         return from_mmerr(result);
       }
     }
-    return std::error_code{};
+    return stdx::error{};
   }
 
 private:

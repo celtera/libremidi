@@ -50,7 +50,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::COREMIDI_UMP; }
 
-  std::error_code open_port(const output_port& info, std::string_view portName) override
+  stdx::error open_port(const output_port& info, std::string_view portName) override
   {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
 
@@ -74,10 +74,10 @@ public:
     this->port = port;
     this->destinationId = destination;
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code open_virtual_port(std::string_view portName) override
+  stdx::error open_virtual_port(std::string_view portName) override
   {
     // Create a virtual MIDI output source.
     OSStatus result = MIDISourceCreateWithProtocol(
@@ -93,15 +93,15 @@ public:
       return from_osstatus(result);
     }
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     return coremidi_data::close_port();
   }
 
-  std::error_code send_ump(const uint32_t* ump_stream, std::size_t count) override
+  stdx::error send_ump(const uint32_t* ump_stream, std::size_t count) override
   {
     MIDIEventList* eventList = reinterpret_cast<MIDIEventList*>(m_eventListBuffer);
     MIDIEventPacket* packet = MIDIEventListInit(eventList, kMIDIProtocol_2_0);
@@ -124,7 +124,7 @@ public:
     return push_event_list(eventList);
   }
 
-  std::error_code push_event_list(MIDIEventList* eventList)
+  stdx::error push_event_list(MIDIEventList* eventList)
   {
     if (this->endpoint)
     {
@@ -150,7 +150,7 @@ public:
         return std::make_error_code(std::errc::io_error);
       }
     }
-    return std::error_code{};
+    return stdx::error{};
   }
 
   MIDIEndpointRef destinationId{};

@@ -204,7 +204,7 @@ public:
     }
   }
 
-  std::error_code send_message(int port_index, const char* bytes, int len)
+  stdx::error send_message(int port_index, const char* bytes, int len)
   {
     const auto& id = m_current_outputs[port_index].id;
     EM_ASM(

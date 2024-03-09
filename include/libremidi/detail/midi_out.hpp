@@ -18,21 +18,21 @@ public:
   midi_out_api& operator=(const midi_out_api&) = delete;
   midi_out_api& operator=(midi_out_api&&) = delete;
 
-  [[nodiscard]] virtual std::error_code
+  [[nodiscard]] virtual stdx::error
   open_port(const output_port& pt, std::string_view local_port_name)
       = 0;
 
   [[nodiscard]] virtual int64_t current_time() const noexcept { return 0; }
 
-  virtual std::error_code send_message(const unsigned char* message, std::size_t size) = 0;
-  virtual std::error_code
+  virtual stdx::error send_message(const unsigned char* message, std::size_t size) = 0;
+  virtual stdx::error
   schedule_message(int64_t /*ts*/, const unsigned char* message, std::size_t size)
   {
     return send_message(message, size);
   }
 
-  virtual std::error_code send_ump(const uint32_t* message, std::size_t size) = 0;
-  virtual std::error_code schedule_ump(int64_t /*ts*/, const uint32_t* ump, std::size_t size)
+  virtual stdx::error send_ump(const uint32_t* message, std::size_t size) = 0;
+  virtual stdx::error schedule_ump(int64_t /*ts*/, const uint32_t* ump, std::size_t size)
   {
     return send_ump(ump, size);
   }
@@ -47,7 +47,7 @@ class out_api : public midi_out_api
 public:
   using midi_out_api::midi_out_api;
 
-  std::error_code send_ump(const uint32_t* message, std::size_t /*size*/)
+  stdx::error send_ump(const uint32_t* message, std::size_t /*size*/)
   {
     uint8_t midi[65536];
     const auto n
@@ -69,7 +69,7 @@ class out_api : public midi_out_api
 public:
   using midi_out_api::midi_out_api;
 
-  std::error_code send_message(const unsigned char* message, std::size_t size)
+  stdx::error send_message(const unsigned char* message, std::size_t size)
   {
     cmidi2_midi_conversion_context context{};
     cmidi2_midi_conversion_context_initialize(&context);

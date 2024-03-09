@@ -37,34 +37,34 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE; }
 
-  std::error_code open_port(const input_port& in_port, std::string_view name) override
+  stdx::error open_port(const input_port& in_port, std::string_view name) override
   {
-    if (auto err = create_local_port(*this, name, SPA_DIRECTION_INPUT); err != std::error_code{})
+    if (auto err = create_local_port(*this, name, SPA_DIRECTION_INPUT); err != stdx::error{})
       return err;
 
-    if (auto err = link_ports(*this, in_port); err != std::error_code{})
+    if (auto err = link_ports(*this, in_port); err != stdx::error{})
       return err;
 
     start_thread();
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code open_virtual_port(std::string_view name) override
+  stdx::error open_virtual_port(std::string_view name) override
   {
-    if (auto err = create_local_port(*this, name, SPA_DIRECTION_INPUT); err != std::error_code{})
+    if (auto err = create_local_port(*this, name, SPA_DIRECTION_INPUT); err != stdx::error{})
       return err;
 
     start_thread();
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     stop_thread();
     return do_close_port();
   }
 
-  std::error_code set_port_name(std::string_view port_name) override
+  stdx::error set_port_name(std::string_view port_name) override
   {
     return rename_port(port_name);
   }

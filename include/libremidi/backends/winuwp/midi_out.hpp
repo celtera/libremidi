@@ -28,7 +28,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 
-  std::error_code open_port(const output_port& port, std::string_view) override
+  stdx::error open_port(const output_port& port, std::string_view) override
   {
     const auto id = winrt::to_hstring(port.port_name);
     if (id.empty())
@@ -38,20 +38,20 @@ public:
     if (!bool(port_))
       return std::make_error_code(std::errc::io_error);
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     if (port_)
     {
       port_.Close();
       port_ = {};
     }
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code send_message(const unsigned char* message, size_t size) override
+  stdx::error send_message(const unsigned char* message, size_t size) override
   {
     if (!port_)
       return std::make_error_code(std::errc::not_connected);
@@ -62,7 +62,7 @@ public:
         winrt::array_view<const uint8_t>{(const uint8_t*)message, (const uint8_t*)message + size});
     port_.SendBuffer(rb.DetachBuffer());
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
 private:

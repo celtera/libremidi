@@ -21,11 +21,11 @@ public:
 
   libremidi::API get_current_api() const noexcept override;
 
-  std::error_code open_port(unsigned int portNumber, std::string_view);
-  std::error_code open_port(const output_port& p, std::string_view) override;
-  std::error_code close_port() override;
+  stdx::error open_port(unsigned int portNumber, std::string_view);
+  stdx::error open_port(const output_port& p, std::string_view) override;
+  stdx::error close_port() override;
 
-  std::error_code send_message(const unsigned char* message, size_t size) override;
+  stdx::error send_message(const unsigned char* message, size_t size) override;
 
 private:
   int portNumber_{-1};

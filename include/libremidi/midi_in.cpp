@@ -91,7 +91,7 @@ LIBREMIDI_INLINE midi_in::midi_in(midi_in&& other) noexcept
 }
 
 LIBREMIDI_INLINE
-std::error_code midi_in::set_port_name(std::string_view portName)
+stdx::error midi_in::set_port_name(std::string_view portName)
 {
   return impl_->set_port_name(portName);
 }
@@ -111,13 +111,13 @@ libremidi::API midi_in::get_current_api() const noexcept
 }
 
 LIBREMIDI_INLINE
-std::error_code midi_in::open_port(const input_port& port, std::string_view portName)
+stdx::error midi_in::open_port(const input_port& port, std::string_view portName)
 {
   if (impl_->is_port_open())
     return std::make_error_code(std::errc::already_connected);
 
   auto ret = impl_->open_port(port, portName);
-  if (ret == std::error_code{})
+  if (ret == stdx::error{})
   {
     impl_->connected_ = true;
     impl_->port_open_ = true;
@@ -126,19 +126,19 @@ std::error_code midi_in::open_port(const input_port& port, std::string_view port
 }
 
 LIBREMIDI_INLINE
-std::error_code midi_in::open_virtual_port(std::string_view portName)
+stdx::error midi_in::open_virtual_port(std::string_view portName)
 {
   if (impl_->is_port_open())
     return std::make_error_code(std::errc::already_connected);
 
   auto ret = impl_->open_virtual_port(portName);
-  if (ret == std::error_code{})
+  if (ret == stdx::error{})
     impl_->port_open_ = true;
   return ret;
 }
 
 LIBREMIDI_INLINE
-std::error_code midi_in::close_port()
+stdx::error midi_in::close_port()
 {
   auto ret = impl_->close_port();
 

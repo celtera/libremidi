@@ -13,7 +13,7 @@
 namespace libremidi
 {
 
-inline std::error_code from_mmerr(int ret) noexcept
+inline stdx::error from_mmerr(int ret) noexcept
 {
   return {ret, std::system_category()};
 }

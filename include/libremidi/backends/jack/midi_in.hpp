@@ -37,9 +37,9 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_MIDI; }
 
-  std::error_code open_port(const input_port& port, std::string_view portName) override
+  stdx::error open_port(const input_port& port, std::string_view portName) override
   {
-    if (auto err = create_local_port(*this, portName, JackPortIsInput); err != std::error_code{})
+    if (auto err = create_local_port(*this, portName, JackPortIsInput); err != stdx::error{})
       return err;
 
     if (int ret = jack_connect(this->client, port.port_name.c_str(), jack_port_name(this->port));
@@ -50,17 +50,17 @@ public:
                              + jack_port_name(this->port));
       return from_errc(ret);
     }
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code open_virtual_port(std::string_view portName) override
+  stdx::error open_virtual_port(std::string_view portName) override
   {
     return create_local_port(*this, portName, JackPortIsInput);
   }
 
-  std::error_code close_port() override { return do_close_port(); }
+  stdx::error close_port() override { return do_close_port(); }
 
-  std::error_code set_port_name(std::string_view portName) override
+  stdx::error set_port_name(std::string_view portName) override
   {
     int ret = jack_port_rename(this->client, this->port, portName.data());
     return from_errc(ret);

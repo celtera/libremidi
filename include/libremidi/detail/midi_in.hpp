@@ -14,7 +14,7 @@ public:
   midi_in_api& operator=(const midi_in_api&) = delete;
   midi_in_api& operator=(midi_in_api&&) = delete;
 
-  [[nodiscard]] virtual std::error_code
+  [[nodiscard]] virtual stdx::error
   open_port(const input_port& pt, std::string_view local_port_name)
       = 0;
   [[nodiscard]] virtual timestamp absolute_timestamp() const noexcept = 0;

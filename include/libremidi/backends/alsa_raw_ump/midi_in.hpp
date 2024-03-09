@@ -38,7 +38,7 @@ public:
   libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_RAW_UMP; }
 
   // Must be a string such as: "hw:2,4,1"
-  [[nodiscard]] std::error_code do_init_port(const char* portname)
+  [[nodiscard]] stdx::error do_init_port(const char* portname)
   {
     constexpr int mode = 0;
     SND_RAWMIDI_NONBLOCK; // fixme
@@ -84,12 +84,12 @@ public:
     return init_pollfd();
   }
 
-  [[nodiscard]] std::error_code init_port(const port_information& p)
+  [[nodiscard]] stdx::error init_port(const port_information& p)
   {
     return do_init_port(raw_from_port_handle(p.port).to_string().c_str());
   }
 
-  [[nodiscard]] std::error_code init_pollfd()
+  [[nodiscard]] stdx::error init_pollfd()
   {
     int num_fds = snd.ump.poll_descriptors_count(this->midiport_);
 
@@ -99,7 +99,7 @@ public:
     int ret = snd.ump.poll_descriptors(this->midiport_, fds_.data(), num_fds);
     if (ret < 0)
       return from_errc(ret);
-    return std::error_code{};
+    return stdx::error{};
   }
 
   ssize_t do_read_events(auto parse_func, std::span<pollfd> fds)
@@ -171,13 +171,13 @@ public:
     return err;
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     if (midiport_)
       snd.ump.close(midiport_);
     midiport_ = nullptr;
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
   timestamp absolute_timestamp() const noexcept override { return system_ns(); }
@@ -238,7 +238,7 @@ private:
     }
   }
 
-  [[nodiscard]] std::error_code start_thread()
+  [[nodiscard]] stdx::error start_thread()
   {
     try
     {
@@ -251,7 +251,7 @@ private:
         this->thread_ = std::thread{
             [this] { run_thread(&midi_in_impl::read_input_buffer_with_timestamps); }};
       }
-      return std::error_code{};
+      return stdx::error{};
     }
     catch (const std::system_error& e)
     {
@@ -262,19 +262,19 @@ private:
           "midi_in_alsa::start_thread: error starting MIDI input thread: "s + e.what());
       return e.code();
     }
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code open_port(const input_port& port, [[maybe_unused]] std::string_view name) override
+  stdx::error open_port(const input_port& port, [[maybe_unused]] std::string_view name) override
   {
-    if (auto err = midi_in_impl::init_port(port); err != std::error_code{})
+    if (auto err = midi_in_impl::init_port(port); err != stdx::error{})
       return err;
-    if (auto err = start_thread(); err != std::error_code{})
+    if (auto err = start_thread(); err != stdx::error{})
       return err;
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     termination_event.notify();
     if (thread_.joinable())
@@ -320,12 +320,12 @@ private:
     }
   }
 
-  std::error_code open_port(const input_port& p, [[maybe_unused]] std::string_view name) override
+  stdx::error open_port(const input_port& p, [[maybe_unused]] std::string_view name) override
   {
-    if (auto err = midi_in_impl::init_port(p); err != std::error_code{})
+    if (auto err = midi_in_impl::init_port(p); err != stdx::error{})
       return err;
     send_poll_callback();
-    return std::error_code{};
+    return stdx::error{};
   }
 };
 }

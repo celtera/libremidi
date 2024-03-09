@@ -36,7 +36,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_RAW; }
 
-  std::error_code connect_port(const char* portname)
+  stdx::error connect_port(const char* portname)
   {
     constexpr int mode = SND_RAWMIDI_SYNC;
     int status = snd.rawmidi.open(NULL, &midiport_, portname, mode);
@@ -46,24 +46,24 @@ public:
           this->configuration, "midi_out_alsa_raw::open_port: cannot open device.");
       return from_errc(status);
     }
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code open_port(const output_port& p, std::string_view) override
+  stdx::error open_port(const output_port& p, std::string_view) override
   {
     return connect_port(raw_from_port_handle(p.port).to_string().c_str());
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     if (midiport_)
       snd.rawmidi.close(midiport_);
     midiport_ = nullptr;
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code send_message(const unsigned char* message, size_t size) override
+  stdx::error send_message(const unsigned char* message, size_t size) override
   {
     if (!midiport_)
       error(
@@ -81,7 +81,7 @@ public:
     }
   }
 
-  std::error_code write(const unsigned char* message, size_t size)
+  stdx::error write(const unsigned char* message, size_t size)
   {
     if (auto err = snd.rawmidi.write(midiport_, message, size); err < 0)
     {
@@ -90,7 +90,7 @@ public:
       return from_errc(err);
     }
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
   std::size_t get_chunk_size() const noexcept
@@ -113,7 +113,7 @@ public:
   }
 
   // inspired from ALSA amidi.c source code
-  std::error_code write_chunked(const unsigned char* const begin, size_t size)
+  stdx::error write_chunked(const unsigned char* const begin, size_t size)
   {
     const unsigned char* data = begin;
     const unsigned char* end = begin + size;
@@ -123,7 +123,7 @@ public:
     // Send the first buffer
     std::size_t len = chunk_size;
 
-    if (auto err = write(data, len); err != std::error_code{})
+    if (auto err = write(data, len); err != stdx::error{})
       return err;
 
     data += len;
@@ -153,13 +153,13 @@ public:
       if (len > chunk_size)
         len = chunk_size;
 
-      if (auto err = write(data, len); err != std::error_code{})
+      if (auto err = write(data, len); err != stdx::error{})
         return err;
 
       data += len;
     }
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
   snd_rawmidi_t* midiport_{};

@@ -30,7 +30,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 
-  std::error_code open_port(const input_port& port, std::string_view) override
+  stdx::error open_port(const input_port& port, std::string_view) override
   {
     const auto id = winrt::to_hstring(port.port_name);
     if (id.empty())
@@ -48,7 +48,7 @@ public:
       this->process_message(args.Message());
     });
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
   void process_message(const winrt::Windows::Devices::Midi::IMidiMessage& msg)
@@ -67,14 +67,14 @@ public:
     m_processing.on_bytes({begin, end}, m_processing.timestamp<timestamp_info>(to_ns, 0));
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     if (port_)
     {
       port_.Close();
       port_ = nullptr;
     }
-    return std::error_code{};
+    return stdx::error{};
   }
 
   timestamp absolute_timestamp() const noexcept override

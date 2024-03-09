@@ -29,22 +29,22 @@ public:
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }
-  std::error_code open_port(const input_port& /*pt*/, std::string_view /*local_port_name*/) override
+  stdx::error open_port(const input_port& /*pt*/, std::string_view /*local_port_name*/) override
   {
-    return std::error_code{};
+    return stdx::error{};
   }
-  std::error_code open_virtual_port(std::string_view /*portName*/) override
+  stdx::error open_virtual_port(std::string_view /*portName*/) override
   {
-    return std::error_code{};
+    return stdx::error{};
   }
-  std::error_code close_port() override { return std::error_code{}; }
-  std::error_code set_client_name(std::string_view /*clientName*/) override
+  stdx::error close_port() override { return stdx::error{}; }
+  stdx::error set_client_name(std::string_view /*clientName*/) override
   {
-    return std::error_code{};
+    return stdx::error{};
   }
-  std::error_code set_port_name(std::string_view /*portName*/) override
+  stdx::error set_port_name(std::string_view /*portName*/) override
   {
-    return std::error_code{};
+    return stdx::error{};
   }
   timestamp absolute_timestamp() const noexcept override { return 0; }
 };
@@ -60,27 +60,27 @@ public:
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }
-  std::error_code open_port(const output_port& /*pt*/, std::string_view /*local_port_name*/) override
+  stdx::error open_port(const output_port& /*pt*/, std::string_view /*local_port_name*/) override
   {
-    return std::error_code{};
+    return stdx::error{};
   }
-  std::error_code open_virtual_port(std::string_view /*portName*/) override
+  stdx::error open_virtual_port(std::string_view /*portName*/) override
   {
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code close_port() override { return std::error_code{}; }
-  std::error_code set_client_name(std::string_view /*clientName*/) override
+  stdx::error close_port() override { return stdx::error{}; }
+  stdx::error set_client_name(std::string_view /*clientName*/) override
   {
-    return std::error_code{};
+    return stdx::error{};
   }
-  std::error_code set_port_name(std::string_view /*portName*/) override
+  stdx::error set_port_name(std::string_view /*portName*/) override
   {
-    return std::error_code{};
+    return stdx::error{};
   }
-  std::error_code send_message(const unsigned char* /*message*/, size_t /*size*/) override
+  stdx::error send_message(const unsigned char* /*message*/, size_t /*size*/) override
   {
-    return std::error_code{};
+    return stdx::error{};
   }
 };
 

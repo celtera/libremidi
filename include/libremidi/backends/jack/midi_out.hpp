@@ -37,7 +37,7 @@ public:
       jack_ringbuffer_free(ringbuffer);
   }
 
-  std::error_code write(const unsigned char* data, int64_t sz) const noexcept
+  stdx::error write(const unsigned char* data, int64_t sz) const noexcept
   {
     if (static_cast<std::size_t>(sz + size_sz) > ringbuffer_space)
       return std::make_error_code(std::errc::no_buffer_space);
@@ -48,7 +48,7 @@ public:
     jack_ringbuffer_write(ringbuffer, reinterpret_cast<char*>(&sz), size_sz);
     jack_ringbuffer_write(ringbuffer, reinterpret_cast<const char*>(data), sz);
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
   void read(void* jack_events) const noexcept
@@ -91,9 +91,9 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_MIDI; }
 
-  std::error_code open_port(const output_port& port, std::string_view portName) override
+  stdx::error open_port(const output_port& port, std::string_view portName) override
   {
-    if (auto err = create_local_port(*this, portName, JackPortIsOutput); err != std::error_code{})
+    if (auto err = create_local_port(*this, portName, JackPortIsOutput); err != stdx::error{})
       return err;
 
     // Connecting to the output
@@ -104,17 +104,17 @@ public:
       return from_errc(err);
     }
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code open_virtual_port(std::string_view portName) override
+  stdx::error open_virtual_port(std::string_view portName) override
   {
     return create_local_port(*this, portName, JackPortIsOutput);
   }
 
-  std::error_code close_port() override { return do_close_port(); }
+  stdx::error close_port() override { return do_close_port(); }
 
-  std::error_code set_port_name(std::string_view portName) override
+  stdx::error set_port_name(std::string_view portName) override
   {
     int ret = jack_port_rename(this->client, this->port, portName.data());
     return from_errc(ret);
@@ -140,7 +140,7 @@ public:
     disconnect(*this);
   }
 
-  std::error_code send_message(const unsigned char* message, std::size_t size) override
+  stdx::error send_message(const unsigned char* message, std::size_t size) override
   {
     return queue.write(message, size);
   }
@@ -186,7 +186,7 @@ public:
     return 0;
   }
 
-  std::error_code send_message(const unsigned char* message, size_t size) override
+  stdx::error send_message(const unsigned char* message, size_t size) override
   {
     void* buff = jack_port_get_buffer(this->port, buffer_size);
     int ret = jack_midi_event_write(buff, 0, message, size);
@@ -206,7 +206,7 @@ public:
     }
   }
 
-  std::error_code schedule_message(int64_t ts, const unsigned char* message, size_t size) override
+  stdx::error schedule_message(int64_t ts, const unsigned char* message, size_t size) override
   {
     void* buff = jack_port_get_buffer(this->port, buffer_size);
     int ret = jack_midi_event_write(buff, convert_timestamp(ts), message, size);

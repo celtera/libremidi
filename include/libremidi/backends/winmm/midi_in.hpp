@@ -40,7 +40,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
-  std::error_code do_open(unsigned int portNumber)
+  stdx::error do_open(unsigned int portNumber)
   {
     MMRESULT result = midiInOpen(
         &this->inHandle, portNumber, std::bit_cast<DWORD_PTR>(&midiInputCallback),
@@ -100,10 +100,10 @@ public:
       return from_mmerr(result);
     }
 
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code open_port(const input_port& p, std::string_view) override
+  stdx::error open_port(const input_port& p, std::string_view) override
   {
     observer_winmm obs{{}, winmm_observer_configuration{}};
     auto ports = obs.get_input_ports();
@@ -125,7 +125,7 @@ public:
     return std::make_error_code(std::errc::invalid_argument);
   }
 
-  std::error_code close_port() override
+  stdx::error close_port() override
   {
     if (connected_)
     {
@@ -165,7 +165,7 @@ public:
       this->inHandle = nullptr;
       LeaveCriticalSection(&(this->_mutex));
     }
-    return std::error_code{};
+    return stdx::error{};
   }
 
 private:

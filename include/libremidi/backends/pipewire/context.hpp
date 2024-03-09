@@ -499,7 +499,7 @@ struct pipewire_filter
       pw.filter_destroy(this->filter);
   }
 
-  std::error_code create_local_port(std::string_view port_name, spa_direction direction)
+  stdx::error create_local_port(std::string_view port_name, spa_direction direction)
   {
     // clang-format off
     this->port = (struct port*)pw.filter_add_port(
@@ -515,7 +515,7 @@ struct pipewire_filter
     // clang-format on
     if (!port)
       return std::make_error_code(std::errc::invalid_argument);
-    return std::error_code{};
+    return stdx::error{};
   }
 
   void set_port_buffer(int bytes)
@@ -540,7 +540,7 @@ struct pipewire_filter
     pw.filter_update_params(this->filter, this->port, params, 1);
   }
 
-  std::error_code remove_port()
+  stdx::error remove_port()
   {
     assert(this->port);
     int ret = pw.filter_remove_port(this->port);
@@ -548,7 +548,7 @@ struct pipewire_filter
     return from_errc(ret);
   }
 
-  std::error_code rename_port(std::string_view port_name)
+  stdx::error rename_port(std::string_view port_name)
   {
     if (this->port)
     {
@@ -566,7 +566,7 @@ struct pipewire_filter
     }
   }
 
-  [[nodiscard]] std::error_code start_filter()
+  [[nodiscard]] stdx::error start_filter()
   {
     if (int ret = pw.filter_connect(this->filter, PW_FILTER_FLAG_RT_PROCESS, NULL, 0); ret < 0)
     {
@@ -574,7 +574,7 @@ struct pipewire_filter
     }
     else
     {
-      return std::error_code{};
+      return stdx::error{};
     }
   }
 

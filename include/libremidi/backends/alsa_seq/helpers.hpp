@@ -177,13 +177,13 @@ struct alsa_data
     }
   }
 
-  std::error_code set_client_name(std::string_view clientName)
+  stdx::error set_client_name(std::string_view clientName)
   {
     int ret = snd.seq.set_client_name(seq, clientName.data());
     return from_errc(ret);
   }
 
-  std::error_code set_port_name(std::string_view portName)
+  stdx::error set_port_name(std::string_view portName)
   {
     snd_seq_port_info_t* pinfo;
     snd_seq_port_info_alloca(&pinfo);

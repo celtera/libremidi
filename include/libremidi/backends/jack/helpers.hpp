@@ -194,7 +194,7 @@ struct jack_helpers : jack_client
       jack_client_close(this->client);
   }
 
-  std::error_code
+  stdx::error
   create_local_port(const auto& self, std::string_view portName, JackPortFlags flags)
   {
     // full name: "client_name:port_name\0"
@@ -220,13 +220,13 @@ struct jack_helpers : jack_client
       self.template error(self.configuration, "JACK: error creating port");
       return std::make_error_code(std::errc::operation_not_supported);
     }
-    return std::error_code{};
+    return stdx::error{};
   }
 
-  std::error_code do_close_port()
+  stdx::error do_close_port()
   {
     if (this->port == nullptr)
-      return std::error_code{};
+      return stdx::error{};
 
     // 1. Ensure that the next time the cycle runs it sees the port as nullptr
     jack_port_t* port_ptr = this->port.impl->load();
