@@ -120,7 +120,7 @@ struct message
   {
 #if defined(__cpp_exceptions)
     if (channel <= 0 || channel > 16)
-      throw std::range_error("message::uses_channel: out of range");
+      throw std::range_error("out of range");
 #endif
     return ((bytes[0] & 0xF) == channel - 1) && ((bytes[0] & 0xF0) != 0xF0);
   }
@@ -261,7 +261,7 @@ struct meta_events
   {
 #if defined(__cpp_exceptions)
     if (keyIndex < -7 || keyIndex > 7)
-      throw std::range_error("meta_events::key_signature: out of range");
+      throw std::range_error("out of range");
 #endif
     return {
         0xff, 0x59, 0x02, static_cast<uint8_t>(keyIndex),

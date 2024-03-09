@@ -29,7 +29,7 @@ public:
     {
       error(
           this->configuration,
-          "midi_in_alsa::initialize: error creating ALSA sequencer client "
+          "error creating ALSA sequencer client "
           "object.");
       return;
     }
@@ -38,7 +38,7 @@ public:
     {
       error(
           this->configuration,
-          "midi_out_alsa::initialize: error initializing MIDI event "
+          "error initializing MIDI event "
           "parser.");
       return;
     }
@@ -75,18 +75,17 @@ public:
     unsigned int nSrc = this->get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
     if (nSrc < 1)
     {
-      error(
-          this->configuration, "midi_out_alsa::open_port: no MIDI output sources found!");
+      error(this->configuration, "no MIDI output sources found!");
       return make_error_code(std::errc::no_such_device);
     }
 
     auto sink = get_port_info(p);
     if (!sink)
-      return std::make_error_code(std::errc::invalid_argument);
+      return std::errc::invalid_argument;
 
     if (int err = create_port(portName); err < 0)
     {
-      error(configuration, "midi_out_alsa::create_port: ALSA error creating port.");
+      error(configuration, "ALSA error creating port.");
       return from_errc(err);
     }
 
@@ -94,8 +93,7 @@ public:
         .client = (unsigned char)snd.seq.client_id(this->seq), .port = (unsigned char)this->vport};
     if (int err = create_connection(*this, source, *sink, true); err < 0)
     {
-      error(
-          configuration, "midi_out_alsa::create_port: ALSA error making port connection.");
+      error(configuration, "ALSA error making port connection.");
       return from_errc(err);
     }
 
@@ -140,9 +138,7 @@ public:
       const int ret = snd.seq.ump.event_output_direct(this->seq, &ev);
       if (ret < 0)
       {
-        warning(
-            this->configuration,
-            "midi_out_alsa::send_message: error sending MIDI message to port.");
+        warning(this->configuration, "error sending MIDI message to port.");
         return static_cast<std::errc>(-ret);
       }
       return std::errc{0};

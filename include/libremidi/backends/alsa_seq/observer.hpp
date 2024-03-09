@@ -2,6 +2,7 @@
 #include <libremidi/backends/alsa_seq/config.hpp>
 #include <libremidi/backends/alsa_seq/helpers.hpp>
 #include <libremidi/backends/linux/helpers.hpp>
+#include <libremidi/detail/midi_api.hpp>
 #include <libremidi/detail/observer.hpp>
 
 #include <alsa/asoundlib.h>
@@ -26,6 +27,7 @@ template <typename ConfigurationImpl>
 class observer_impl
     : public observer_api
     , public alsa_data
+    , public error_handler
 {
 public:
   struct
@@ -40,7 +42,11 @@ public:
     using namespace std::literals;
     if (int err = init_client(configuration); err < 0)
     {
-      throw std::runtime_error("observer_alsa: snd_seq_open failed");
+      error(
+          this->configuration,
+          "error creating ALSA sequencer client "
+          "object.");
+      return;
     }
 
     if (!configuration.has_callbacks())
@@ -65,7 +71,8 @@ public:
           *this, "libremidi-observe", caps, SND_SEQ_PORT_TYPE_APPLICATION, false);
       if (err < 0)
       {
-        throw std::runtime_error("observer: ALSA error creating port.");
+        error(this->configuration, "error creating ALSA sequencer port.");
+        return;
       }
     }
 
@@ -75,7 +82,8 @@ public:
           = snd.seq.connect_from(seq, vport, SND_SEQ_CLIENT_SYSTEM, SND_SEQ_PORT_SYSTEM_ANNOUNCE);
       if (err < 0)
       {
-        throw std::runtime_error("observer_alsa: snd_seq_connect_from failed");
+        error(this->configuration, "error connecting to ALSA sequencer.");
+        return;
       }
     }
   }

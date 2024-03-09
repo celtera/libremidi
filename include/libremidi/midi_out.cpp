@@ -85,7 +85,7 @@ LIBREMIDI_INLINE
 stdx::error midi_out::open_port(const output_port& port, std::string_view portName) const
 {
   if (impl_->is_port_open())
-    return std::make_error_code(std::errc::already_connected);
+    return std::errc::already_connected;
 
   auto ret = impl_->open_port(port, portName);
   if (ret == stdx::error{})
@@ -100,7 +100,7 @@ LIBREMIDI_INLINE
 stdx::error midi_out::open_virtual_port(std::string_view portName) const
 {
   if (impl_->is_port_open())
-    return std::make_error_code(std::errc::already_connected);
+    return std::errc::already_connected;
 
   auto ret = impl_->open_virtual_port(portName);
   if (ret == stdx::error{})

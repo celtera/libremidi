@@ -28,7 +28,7 @@ struct midi2_enumerator : alsa_raw::enumerator
 
       if (status < 0)
       {
-        error(
+        LIBREMIDI_LOG(
             "alsa_raw_ump::midi2_enumerator::enumerate_devices: "
             "cannot determine device number: ",
             snd.strerror(status));

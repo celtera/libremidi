@@ -54,7 +54,7 @@ public:
     // Find where we want to send
     auto destination = locate_object(*this, info, kMIDIObjectType_Destination);
     if (destination == 0)
-      return std::make_error_code(std::errc::invalid_argument);
+      return std::errc::invalid_argument;
 
     // Create our local source
     MIDIPortRef port;
@@ -63,7 +63,7 @@ public:
     {
       close_client();
       error(
-          this->configuration, "midi_out_core::open_port: error creating macOS MIDI output port.");
+          this->configuration, "error creating macOS MIDI output port.");
       return from_osstatus(result);
     }
 
@@ -84,7 +84,7 @@ public:
     {
       error(
           this->configuration,
-          "midi_out_core::initialize: error creating macOS virtual MIDI source.");
+          "error creating macOS virtual MIDI source.");
 
       return from_osstatus(result);
     }
@@ -104,17 +104,17 @@ public:
     unsigned int nBytes = static_cast<unsigned int>(size);
     if (nBytes == 0)
     {
-      warning(configuration, "midi_out_core::send_message: no data in message argument!");
-      return std::make_error_code(std::errc::invalid_argument);
+      warning(configuration, "no data in message argument!");
+      return std::errc::invalid_argument;
     }
 
     if (message[0] != 0xF0 && nBytes > 3)
     {
       warning(
           configuration,
-          "midi_out_core::send_message: message format problem ... not sysex but "
+          "message format problem ... not sysex but "
           "> 3 bytes?");
-      return std::make_error_code(std::errc::bad_message);
+      return std::errc::bad_message;
     }
 
     const MIDITimeStamp timestamp = LIBREMIDI_AUDIO_GET_CURRENT_HOST_TIME();
@@ -140,9 +140,9 @@ public:
       if (!packet)
       {
         error(
-            this->configuration, "midi_out_core::send_message: could not allocate packet list");
+            this->configuration, "could not allocate packet list");
 
-        return std::make_error_code(std::errc::message_size);
+        return std::errc::message_size;
       }
 
       // Send to any destinations that may have connected to us.
@@ -153,9 +153,9 @@ public:
         {
           warning(
               this->configuration,
-              "midi_out_core::send_message: error sending MIDI to virtual "
+              "error sending MIDI to virtual "
               "destinations.");
-          return std::make_error_code(std::errc::io_error);
+          return std::errc::io_error;
         }
       }
 
@@ -167,8 +167,8 @@ public:
         {
           warning(
               this->configuration,
-              "midi_out_core::send_message: error sending MIDI message to port.");
-          return std::make_error_code(std::errc::io_error);
+              "error sending MIDI message to port.");
+          return std::errc::io_error;
         }
       }
     }

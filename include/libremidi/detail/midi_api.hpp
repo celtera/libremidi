@@ -4,7 +4,7 @@
 #include <libremidi/error.hpp>
 #include <libremidi/observer_configuration.hpp>
 
-#include <iostream>
+#include <source_location>
 #include <string_view>
 
 namespace libremidi
@@ -12,7 +12,9 @@ namespace libremidi
 struct error_handler
 {
   //! Error reporting function for libremidi classes. Throws.
-  void error(auto& configuration, std::string_view errorString) const
+  void error(
+      auto& configuration, std::string_view errorString,
+      const std::source_location location = std::source_location::current()) const
   {
     if (configuration.on_error)
     {
@@ -25,14 +27,14 @@ struct error_handler
     }
     else
     {
-#if defined(__LIBREMIDI_DEBUG__)
-      std::cerr << '\n' << errorString << "\n\n";
-#endif
+      LIBREMIDI_LOG(errorString);
     }
   }
 
   //! Warning reporting function for libremidi classes.
-  void warning(auto& configuration, std::string_view errorString) const
+  void warning(
+      auto& configuration, std::string_view errorString,
+      const std::source_location location = std::source_location::current()) const
   {
     if (configuration.on_warning)
     {
@@ -45,9 +47,7 @@ struct error_handler
       return;
     }
 
-#if defined(__LIBREMIDI_DEBUG__)
-    std::cerr << '\n' << errorString << "\n\n";
-#endif
+    LIBREMIDI_LOG(errorString);
   }
 
   // To prevent infinite error loops
@@ -69,15 +69,15 @@ public:
 
   [[nodiscard]] virtual stdx::error open_virtual_port(std::string_view)
   {
-    return std::make_error_code(std::errc::function_not_supported);
+    return std::errc::function_not_supported;
   }
   virtual stdx::error set_client_name(std::string_view)
   {
-    return std::make_error_code(std::errc::function_not_supported);
+    return std::errc::function_not_supported;
   }
   virtual stdx::error set_port_name(std::string_view)
   {
-    return std::make_error_code(std::errc::function_not_supported);
+    return std::errc::function_not_supported;
   }
 
   virtual stdx::error close_port() = 0;

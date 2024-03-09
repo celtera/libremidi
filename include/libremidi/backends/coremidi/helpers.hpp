@@ -282,14 +282,14 @@ locate_object(auto& self, const port_information& info, MIDIObjectType requested
   if (ret != noErr)
   {
     self.template error(
-        self.configuration, "coremidi::locate_object: cannot find port: " + info.port_name);
+        self.configuration, "cannot find port: " + info.port_name);
     return 0;
   }
 
   if (type != requested_type || object == 0)
   {
     self.template error(
-        self.configuration, "coremidi::locate_object: invalid object: " + info.port_name + " : "
+        self.configuration, "invalid object: " + info.port_name + " : "
                                 + std::to_string(object));
     return 0;
   }

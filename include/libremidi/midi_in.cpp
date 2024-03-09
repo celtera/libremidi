@@ -51,7 +51,12 @@ midi_in::midi_in(input_configuration base_conf, std::any api_conf)
     : impl_{make_midi_in(base_conf, api_conf, midi1::available_backends)}
 {
   if (!impl_)
-    throw std::runtime_error("Could not open midi in for the given api");
+  {
+    static constexpr error_handler e;
+    e.error(base_conf, "Could not open midi in for the given api");
+  }
+
+  impl_ = std::make_unique<midi_in_dummy>(input_configuration{}, dummy_configuration{});
 }
 
 LIBREMIDI_INLINE midi_in::midi_in(ump_input_configuration base_conf) noexcept
@@ -114,7 +119,7 @@ LIBREMIDI_INLINE
 stdx::error midi_in::open_port(const input_port& port, std::string_view portName)
 {
   if (impl_->is_port_open())
-    return std::make_error_code(std::errc::already_connected);
+    return std::errc::already_connected;
 
   auto ret = impl_->open_port(port, portName);
   if (ret == stdx::error{})
@@ -129,7 +134,7 @@ LIBREMIDI_INLINE
 stdx::error midi_in::open_virtual_port(std::string_view portName)
 {
   if (impl_->is_port_open())
-    return std::make_error_code(std::errc::already_connected);
+    return std::errc::already_connected;
 
   auto ret = impl_->open_virtual_port(portName);
   if (ret == stdx::error{})

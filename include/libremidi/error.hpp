@@ -8,6 +8,7 @@
 #pragma GCC diagnostic pop
 
 #include <functional>
+#include <iostream>
 #include <string_view>
 
 namespace libremidi
@@ -27,3 +28,22 @@ inline auto from_errc(int ret) noexcept
 using midi_error_callback = std::function<void(std::string_view errorText)>;
 using midi_warning_callback = std::function<void(std::string_view errorText)>;
 }
+
+#if !defined(LIBREMIDI_LOG)
+  #if defined(__LIBREMIDI_DEBUG__)
+    #define LIBREMIDI_LOG(...) \
+      do                       \
+      {                        \
+      } while (0)
+  #else
+    #include <iostream>
+    #define LIBREMIDI_LOG(...)        \
+      do                              \
+      {                               \
+        [](auto&&... args) {          \
+          (std::cerr << ... << args); \
+          std::cerr << std::endl;     \
+        }(__VA_ARGS__);               \
+      } while (0)
+  #endif
+#endif

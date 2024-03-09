@@ -57,7 +57,7 @@ public:
     // Find where we want to send
     auto destination = locate_object(*this, info, kMIDIObjectType_Destination);
     if (destination == 0)
-      return std::make_error_code(std::errc::invalid_argument);
+      return std::errc::invalid_argument;
 
     // Create our local source
     MIDIPortRef port;
@@ -66,7 +66,7 @@ public:
     {
       close_client();
       error(
-          this->configuration, "midi_out_impl::open_port: error creating macOS MIDI output port.");
+          this->configuration, "error creating macOS MIDI output port.");
       return from_osstatus(result);
     }
 
@@ -88,7 +88,7 @@ public:
       this->endpoint = 0;
       error(
           this->configuration,
-          "midi_out_impl::initialize: error creating macOS virtual MIDI source.");
+          "error creating macOS virtual MIDI source.");
 
       return from_osstatus(result);
     }
@@ -133,9 +133,9 @@ public:
       {
         warning(
             this->configuration,
-            "midi_out_core::send_message: error sending MIDI to virtual "
+            "error sending MIDI to virtual "
             "destinations.");
-        return std::make_error_code(std::errc::io_error);
+        return std::errc::io_error;
       }
     }
 
@@ -146,8 +146,8 @@ public:
       {
         warning(
             this->configuration,
-            "midi_out_core::send_message: error sending MIDI message to port.");
-        return std::make_error_code(std::errc::io_error);
+            "error sending MIDI message to port.");
+        return std::errc::io_error;
       }
     }
     return stdx::error{};

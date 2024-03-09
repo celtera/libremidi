@@ -32,11 +32,11 @@ public:
   {
     const auto id = winrt::to_hstring(port.port_name);
     if (id.empty())
-      return std::make_error_code(std::errc::invalid_argument);
+      return std::errc::invalid_argument;
 
     port_ = get(MidiOutPort::FromIdAsync(id));
     if (!bool(port_))
-      return std::make_error_code(std::errc::io_error);
+      return std::errc::io_error;
 
     return stdx::error{};
   }
@@ -54,7 +54,7 @@ public:
   stdx::error send_message(const unsigned char* message, size_t size) override
   {
     if (!port_)
-      return std::make_error_code(std::errc::not_connected);
+      return std::errc::not_connected;
 
     InMemoryRandomAccessStream str;
     DataWriter rb(str);

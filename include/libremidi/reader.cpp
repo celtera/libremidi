@@ -71,7 +71,7 @@ struct validator
     if (track.empty())
     {
 #if defined(__LIBREMIDI_DEBUG__)
-      std::cerr << "libremidi::reader: empty track" << std::endl;
+      std::cerr << "empty track" << std::endl;
 #endif
       return false;
     }
@@ -85,7 +85,7 @@ struct validator
     if (it == track.end())
     {
 #if defined(__LIBREMIDI_DEBUG__)
-      std::cerr << "libremidi::reader: track has no END OF TRACK" << std::endl;
+      std::cerr << "track has no END OF TRACK" << std::endl;
 #endif
       return false;
     }
@@ -94,7 +94,7 @@ struct validator
     {
 #if defined(__LIBREMIDI_DEBUG__)
       std::cerr << std::distance(it, track.end());
-      std::cerr << "libremidi::reader: track does not end with END OF TRACK" << std::endl;
+      std::cerr << "track does not end with END OF TRACK" << std::endl;
 #endif
       return false;
     }
@@ -544,7 +544,7 @@ try
   if (size == 0)
   {
 #if defined(__LIBREMIDI_DEBUG__)
-    std::cerr << "libremidi::reader: empty buffer passed to parse." << std::endl;
+    std::cerr << "empty buffer passed to parse." << std::endl;
 #endif
     return parse_result::invalid;
   }
@@ -557,7 +557,7 @@ try
   if (static_cast<int>(headerId) != str_to_headerid("MThd") || headerLength != 6)
   {
 #if defined(__LIBREMIDI_DEBUG__)
-    std::cerr << "libremidi::reader: couldn't parse header" << std::endl;
+    std::cerr << "couldn't parse header" << std::endl;
 #endif
     return parse_result::invalid;
   }
@@ -567,7 +567,7 @@ try
   if (format > 2)
   {
 #if defined(__LIBREMIDI_DEBUG__)
-    std::cerr << "libremidi::reader: unknown format" << std::endl;
+    std::cerr << "unknown format" << std::endl;
 #endif
     return parse_result::invalid;
   }
@@ -579,7 +579,7 @@ try
   if (timeDivision & 0x8000)
   {
 #if defined(__LIBREMIDI_DEBUG__)
-    std::cerr << "libremidi::reader: found SMPTE time frames (unsupported)" << std::endl;
+    std::cerr << "found SMPTE time frames (unsupported)" << std::endl;
     int fps = (timeDivision >> 16) & 0x7f;
     if (fps != -30 && fps != -29 && fps != -25 && fps != -24)
       return parse_result::invalid;
@@ -604,7 +604,7 @@ try
     if (headerId != str_to_headerid("MTrk"))
     {
 #if defined(__LIBREMIDI_DEBUG__)
-      std::cerr << "libremidi::reader: couldn't find track header" << std::endl;
+      std::cerr << "couldn't find track header" << std::endl;
 #endif
       return parse_result::incomplete;
     }
@@ -613,7 +613,7 @@ try
     if (available < headerLength)
     {
 #if defined(__LIBREMIDI_DEBUG__)
-      std::cerr << "libremidi::reader: not enough data available" << std::endl;
+      std::cerr << "not enough data available" << std::endl;
 #endif
       return parse_result::incomplete;
     }
@@ -652,7 +652,7 @@ try
         else
         {
 #if defined(__LIBREMIDI_DEBUG__)
-          std::cerr << "libremidi::reader: could not read event" << std::endl;
+          std::cerr << "could not read event" << std::endl;
 #endif
           dataPtr = trackEnd;
           result = parse_result::incomplete;
@@ -664,7 +664,7 @@ try
       catch (const std::exception& e)
       {
 #if defined(__LIBREMIDI_DEBUG__)
-        std::cerr << "libremidi::reader: " << e.what() << std::endl;
+        std::cerr << "" << e.what() << std::endl;
 #endif
         dataPtr = trackEnd;
         result = parse_result::incomplete;
@@ -697,7 +697,7 @@ try
 catch (const std::exception& e)
 {
 #if defined(__LIBREMIDI_DEBUG__)
-  std::cerr << "libremidi::reader: " << e.what() << std::endl;
+  std::cerr << "" << e.what() << std::endl;
 #endif
   return parse_result::invalid;
 }

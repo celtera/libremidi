@@ -182,14 +182,6 @@ public:
 
   timestamp absolute_timestamp() const noexcept override { return system_ns(); }
 
-  midi2_enumerator get_device_enumerator() const noexcept
-  {
-    midi2_enumerator device_list;
-    device_list.error_callback
-        = [this](std::string_view text) { this->error(this->configuration, text); };
-    return device_list;
-  }
-
   snd_ump_t* midiport_{};
   std::vector<pollfd> fds_;
   midi2::input_state_machine m_processing{this->configuration};
@@ -204,7 +196,7 @@ public:
   {
     if (this->termination_event < 0)
     {
-      error(this->configuration, "midi_in_alsa::initialize: error creating eventfd.");
+      error(this->configuration, "error creating eventfd.");
     }
   }
 
@@ -259,7 +251,7 @@ private:
 
       error(
           this->configuration,
-          "midi_in_alsa::start_thread: error starting MIDI input thread: "s + e.what());
+          "error starting MIDI input thread: "s + e.what());
       return e.code();
     }
     return stdx::error{};

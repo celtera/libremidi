@@ -43,7 +43,7 @@ public:
     if (status < 0)
     {
       error(
-          this->configuration, "midi_out_alsa_raw::open_port: cannot open device.");
+          this->configuration, "cannot open device.");
       return from_errc(status);
     }
     return stdx::error{};
@@ -68,7 +68,7 @@ public:
     if (!midiport_)
       error(
           this->configuration,
-          "midi_out_alsa_raw::send_message: trying to send a message without an open "
+          "trying to send a message without an open "
           "port.");
 
     if (!this->configuration.chunking)
@@ -86,7 +86,7 @@ public:
     if (auto err = snd.rawmidi.write(midiport_, message, size); err < 0)
     {
       error(
-          this->configuration, "midi_out_alsa_raw::send_message: cannot write message.");
+          this->configuration, "cannot write message.");
       return from_errc(err);
     }
 
@@ -137,11 +137,11 @@ public:
       {
         if (!configuration.chunking->wait(
                 std::chrono::microseconds((chunk_size - available) * 320), written_bytes))
-          return std::make_error_code(std::errc::protocol_error);
+          return std::errc::protocol_error;
       };
 
       if (!configuration.chunking->wait(configuration.chunking->interval, written_bytes))
-        return std::make_error_code(std::errc::protocol_error);
+        return std::errc::protocol_error;
 
       // Write more data
       len = end - data;

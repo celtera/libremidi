@@ -38,7 +38,7 @@ public:
     {
       error(
           configuration,
-          "midi_out_winmm::open_port: error creating Windows MM MIDI output "
+          "error creating Windows MM MIDI output "
           "port.");
       return from_mmerr(result);
     }
@@ -64,8 +64,8 @@ public:
         return do_open(port.port);
     }
     error(
-        configuration, "midi_out_winmm::open_port: port not found: " + p.port_name);
-    return std::make_error_code(std::errc::invalid_argument);
+        configuration, "port not found: " + p.port_name);
+    return std::errc::invalid_argument;
   }
 
   stdx::error close_port() override
@@ -81,12 +81,12 @@ public:
   stdx::error send_message(const unsigned char* message, size_t size) override
   {
     if (!connected_)
-      return std::make_error_code(std::errc::not_connected);
+      return std::errc::not_connected;
 
     if (size == 0)
     {
-      warning(configuration, "midi_out_winmm::send_message: message argument is empty!");
-      return std::make_error_code(std::errc::invalid_argument);
+      warning(configuration, "message argument is empty!");
+      return std::errc::invalid_argument;
     }
 
     if (message[0] == 0xF0)
@@ -106,7 +106,7 @@ public:
       if (result != MMSYSERR_NOERROR)
       {
         error(
-            configuration, "midi_out_winmm::send_message: error preparing sysex header.");
+            configuration, "error preparing sysex header.");
         return from_mmerr(result);
       }
 
@@ -115,7 +115,7 @@ public:
       if (result != MMSYSERR_NOERROR)
       {
         error(
-            configuration, "midi_out_winmm::send_message: error sending sysex message.");
+            configuration, "error sending sysex message.");
         return from_mmerr(result);
       }
 
@@ -133,9 +133,9 @@ public:
       {
         warning(
             configuration,
-            "midi_out_winmm::send_message: message size is greater than 3 bytes "
+            "message size is greater than 3 bytes "
             "(and not sysex)!");
-        return std::make_error_code(std::errc::message_size);
+        return std::errc::message_size;
       }
 
       // Pack MIDI bytes into double word.
@@ -147,7 +147,7 @@ public:
       if (result != MMSYSERR_NOERROR)
       {
         error(
-            configuration, "midi_out_winmm::send_message: error sending MIDI message.");
+            configuration, "error sending MIDI message.");
         return from_mmerr(result);
       }
     }

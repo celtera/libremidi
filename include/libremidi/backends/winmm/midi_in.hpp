@@ -26,7 +26,7 @@ public:
     {
       warning(
           configuration,
-          "midi_in_winmm::initialize: InitializeCriticalSectionAndSpinCount failed.");
+          "InitializeCriticalSectionAndSpinCount failed.");
     }
   }
 
@@ -48,7 +48,7 @@ public:
     if (result != MMSYSERR_NOERROR)
     {
       error(
-          configuration, "midi_in_winmm::open_port: error creating Windows MM MIDI input port.");
+          configuration, "error creating Windows MM MIDI input port.");
       return from_mmerr(result);
     }
 
@@ -70,7 +70,7 @@ public:
         this->inHandle = nullptr;
         error(
             configuration,
-            "midi_in_winmm::open_port: error starting Windows MM MIDI input port "
+            "error starting Windows MM MIDI input port "
             "(PrepareHeader).");
         return from_mmerr(result);
       }
@@ -83,7 +83,7 @@ public:
         this->inHandle = nullptr;
         error(
             configuration,
-            "midi_in_winmm::open_port: error starting Windows MM MIDI input port "
+            "error starting Windows MM MIDI input port "
             "(AddBuffer).");
         return from_mmerr(result);
       }
@@ -96,7 +96,7 @@ public:
       midiInClose(this->inHandle);
       this->inHandle = nullptr;
       error(
-          configuration, "midi_in_winmm::open_port: error starting Windows MM MIDI input port.");
+          configuration, "error starting Windows MM MIDI input port.");
       return from_mmerr(result);
     }
 
@@ -121,8 +121,8 @@ public:
         return do_open(port.port);
     }
     error(
-        configuration, "midi_in_winmm::open_port: port not found: " + p.port_name);
-    return std::make_error_code(std::errc::invalid_argument);
+        configuration, "port not found: " + p.port_name);
+    return std::errc::invalid_argument;
   }
 
   stdx::error close_port() override
@@ -150,7 +150,7 @@ public:
         {
           warning(
               configuration,
-              "midi_in_winmm::open_port: error closing Windows MM MIDI input "
+              "error closing Windows MM MIDI input "
               "port (midiInUnprepareHeader).");
           continue;
         }
@@ -265,10 +265,9 @@ private:
         LeaveCriticalSection(&(self._mutex));
         if (result != MMSYSERR_NOERROR)
         {
-#if defined(__LIBREMIDI_DEBUG__)
-          std::cerr << "\nmidi_in::midiInputCallback: error sending sysex to "
-                       "Midi device!!\n\n";
-#endif
+          LIBREMIDI_LOG(
+              "error sending sysex to "
+              "Midi device!!");
         }
       }
     }

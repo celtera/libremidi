@@ -514,7 +514,7 @@ struct pipewire_filter
         nullptr, 0);
     // clang-format on
     if (!port)
-      return std::make_error_code(std::errc::invalid_argument);
+      return std::errc::invalid_argument;
     return stdx::error{};
   }
 
@@ -562,7 +562,7 @@ struct pipewire_filter
     }
     else
     {
-      return std::make_error_code(std::errc::not_connected);
+      return std::errc::not_connected;
     }
   }
 

@@ -320,7 +320,7 @@ struct pipewire_helpers
     }
     else
     {
-      return std::make_error_code(std::errc::not_connected);
+      return std::errc::not_connected;
     }
   }
 
@@ -343,13 +343,13 @@ struct pipewire_helpers
     auto& midi = this->global_context->current_graph.software_midi;
     auto node_it = midi.find(this_node);
     if (node_it == midi.end())
-      return std::make_error_code(std::errc::invalid_argument);
+      return std::errc::invalid_argument;
 
     // Wait for the pipewire server to send us back our node's ports
     this->filter->synchronize_ports(node_it->second);
 
     if (node_it->second.inputs.empty())
-      return std::make_error_code(std::errc::no_link);
+      return std::errc::no_link;
 
     // Link ports
     const auto& p = node_it->second.inputs.front();
@@ -360,7 +360,7 @@ struct pipewire_helpers
       self.template error(
           self.configuration,
           "PipeWire: could not connect to port: " + in_port.port_name + " -> " + p.port_name);
-      return std::make_error_code(std::errc::no_link);
+      return std::errc::no_link;
     }
 
     return stdx::error{};
@@ -377,7 +377,7 @@ struct pipewire_helpers
     auto node_it = midi.find(this_node);
     if (node_it == midi.end())
     {
-      return std::make_error_code(std::errc::invalid_argument);
+      return std::errc::invalid_argument;
     }
 
     // Wait for the pipewire server to send us back our node's ports
@@ -385,7 +385,7 @@ struct pipewire_helpers
 
     if (node_it->second.outputs.empty())
     {
-      return std::make_error_code(std::errc::no_link);
+      return std::errc::no_link;
     }
 
     // Link ports
@@ -397,7 +397,7 @@ struct pipewire_helpers
       self.template error(
           self.configuration,
           "PipeWire: could not connect to port: " + p.port_name + " -> " + out_port.port_name);
-      return std::make_error_code(std::errc::no_link);
+      return std::errc::no_link;
     }
 
     return stdx::error{};

@@ -56,7 +56,7 @@ public:
 
     auto source = locate_object(*this, info, kMIDIObjectType_Source);
     if (source == 0)
-      return std::make_error_code(std::errc::invalid_argument);
+      return std::errc::invalid_argument;
 
     // Create our local sink
     MIDIPortRef port;
@@ -71,7 +71,7 @@ public:
     {
       close_client();
       error(
-          this->configuration, "midi_in_core::open_port: error creating macOS MIDI input port: "
+          this->configuration, "error creating macOS MIDI input port: "
                                    + std::to_string(result));
       return from_osstatus(result);
     }
@@ -82,7 +82,7 @@ public:
       MIDIPortDispose(port);
       close_client();
       error(
-          this->configuration, "midi_in_core::open_port: error connecting macOS MIDI input port.");
+          this->configuration, "error connecting macOS MIDI input port.");
       return from_osstatus(result);
     }
 
@@ -105,7 +105,7 @@ public:
     {
       error(
           this->configuration,
-          "midi_in_core::open_virtual_port: error creating virtual macOS MIDI "
+          "error creating virtual macOS MIDI "
           "destination.");
       return from_osstatus(result);
     }

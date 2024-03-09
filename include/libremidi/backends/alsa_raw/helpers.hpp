@@ -3,14 +3,9 @@
 #include <libremidi/config.hpp>
 #include <libremidi/detail/observer.hpp>
 
-#include <chrono>
 #include <functional>
-#include <iostream>
-#include <optional>
-#include <span>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 // Credits: greatly inspired from
@@ -90,38 +85,6 @@ struct enumerator
   std::vector<alsa_raw_port_info> inputs;
   std::vector<alsa_raw_port_info> outputs;
 
-  std::function<void(std::string_view)> error_callback;
-  std::function<void(std::string_view)> warn_callback;
-
-  template <typename... Args>
-  void warning(Args&&... args)
-  {
-    std::string s;
-    ((s += args), ...);
-    if (warn_callback)
-    {
-      warn_callback(std::move(s));
-    }
-    else
-    {
-      std::cerr << s << std::endl;
-    }
-  }
-  template <typename... Args>
-  void error(Args&&... args)
-  {
-    std::string s;
-    ((s += args), ...);
-    if (error_callback)
-    {
-      error_callback(std::move(s));
-    }
-    else
-    {
-      throw std::runtime_error(s.c_str());
-    }
-  }
-
   // 1: is an input / output
   // 0: isn't an input / output
   // < 0: error
@@ -141,7 +104,7 @@ struct enumerator
     }
     else if (status < 0 && status != -ENXIO)
     {
-      error(
+      LIBREMIDI_LOG(
           "alsa_raw_helpers::enumerator::is: cannot get rawmidi information:", card, device, sub,
           snd.strerror(status));
       return status;
@@ -185,26 +148,26 @@ struct enumerator
     return s;
   }
 
-  void enumerate_cards()
+  stdx::error enumerate_cards()
   {
     int card = -1;
 
     int status = snd.card.next(&card);
     if (status < 0)
     {
-      error(
+      LIBREMIDI_LOG(
           "alsa_raw_helpers::enumerator::enumerate_cards: "
           "cannot determine card number: ",
           snd.strerror(status));
-      return;
+      return from_errc(status);
     }
 
     if (card < 0)
     {
-      error(
+      LIBREMIDI_LOG(
           "alsa_raw_helpers::enumerator::enumerate_cards: "
           "no sound cards found");
-      return;
+      return std::errc::no_such_device;
     }
 
     while (card >= 0)
@@ -213,13 +176,14 @@ struct enumerator
 
       if ((status = snd.card.next(&card)) < 0)
       {
-        error(
+        LIBREMIDI_LOG(
             "alsa_raw_helpers::enumerator::enumerate_cards: "
             "cannot determine card number: ",
             snd.strerror(status));
-        break;
+        return std::errc::no_such_device;
       }
     }
+    return stdx::error{};
   }
 
   virtual void enumerate_devices(int card) = 0;
@@ -231,7 +195,7 @@ inline snd_ctl_wrapper::snd_ctl_wrapper(enumerator& self, const char* name)
   int status = snd.ctl.open(&ctl, name, 0);
   if (status < 0)
   {
-    self.error(
+    LIBREMIDI_LOG(
         "alsa_raw_helpers::enumerator::snd_ctl_wrapper: "
         "cannot open control for card",
         name, snd.strerror(status));
@@ -261,7 +225,7 @@ struct midi1_enumerator : enumerator
 
       if (status < 0)
       {
-        error(
+        LIBREMIDI_LOG(
             "alsa_raw::midi1_enumerator::enumerate_devices: "
             "cannot determine device number: ",
             snd.strerror(status));

@@ -28,7 +28,7 @@ LIBREMIDI_INLINE bool midi_out_emscripten::open_port(unsigned int portNumber, st
   if (portNumber >= midi.output_count())
   {
     error(
-        this->configuration, "midi_out_emscripten::open_port: no MIDI output sources found.");
+        this->configuration, "no MIDI output sources found.");
     return false;
   }
 
@@ -48,7 +48,7 @@ LIBREMIDI_INLINE void midi_out_emscripten::send_message(const unsigned char* mes
   if (portNumber_ < 0)
     error(
         this->configuration,
-        "midi_out_emscripten::send_message: trying to send a message without an open "
+        "trying to send a message without an open "
         "port.");
 
   webmidi_helpers::midi_access_emscripten::instance().send_message(

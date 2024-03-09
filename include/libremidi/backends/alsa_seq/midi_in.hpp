@@ -57,7 +57,7 @@ public:
     {
       error(
           this->configuration,
-          "midi_in_alsa::initialize: error creating ALSA sequencer client "
+          "error creating ALSA sequencer client "
           "object.");
       return;
     }
@@ -80,8 +80,7 @@ public:
       int result = snd.midi.event_new(0, &coder);
       if (result < 0)
       {
-        error(
-            this->configuration, "midi_in_alsa::initialize: error during snd_midi_event_new.");
+        error(this->configuration, "error during snd_midi_event_new.");
         return;
       }
       snd.midi.event_init(coder);
@@ -157,14 +156,13 @@ public:
 
     if (int ret = create_port(portName); ret < 0)
     {
-      error(configuration, "midi_in_alsa::create_port: ALSA error creating port.");
+      error(configuration, "ALSA error creating port.");
       return ret;
     }
 
     if (int ret = connect_port(*source); ret < 0)
     {
-      error(
-          configuration, "midi_in_alsa::create_port: ALSA error making port connection.");
+      error(configuration, "ALSA error making port connection.");
       return ret;
     }
 
@@ -351,8 +349,7 @@ public:
   {
     if (this->termination_event < 0)
     {
-      this->template error(
-          this->configuration, "midi_in_alsa::initialize: error creating eventfd.");
+      this->template error(this->configuration, "error creating eventfd.");
     }
   }
 
@@ -397,9 +394,7 @@ private:
       using namespace std::literals;
       this->unsubscribe();
 
-      this->template error(
-          this->configuration,
-          "midi_in_alsa::start_thread: error starting MIDI input thread: "s + e.what());
+      this->template error(this->configuration, "error starting MIDI input thread: "s + e.what());
       return e.code();
     }
   }
@@ -450,12 +445,8 @@ private:
       }
 #endif
 
-      (void)res;
-#if defined(__LIBREMIDI_DEBUG__)
       if (res < 0)
-        std::cerr << "midi_in_alsa::thread_handler: MIDI input error: " << snd.strerror(res)
-                  << "\n";
-#endif
+        LIBREMIDI_LOG("MIDI input error: ", this->snd.strerror(res));
     }
   }
 

@@ -55,7 +55,7 @@ public:
     if (n > 0)
       return send_message(midi, n);
     else
-      return std::make_error_code(std::errc::no_buffer_space);
+      return std::errc::no_buffer_space;
   }
 };
 }
@@ -84,7 +84,7 @@ public:
     context.ump_proceeded_bytes = 0;
 
     if (auto res = cmidi2_convert_midi1_to_ump(&context); res != CMIDI2_CONVERSION_RESULT_OK)
-      return std::make_error_code(std::errc::invalid_argument);
+      return std::errc::invalid_argument;
 
     return send_ump(context.ump, context.ump_proceeded_bytes / 4);
   }

@@ -213,7 +213,7 @@ struct alsa_data
     // {
     //   self.template error(
     //       self.configuration,
-    //       "alsa::get_port_info: invalid 'portNumber' argument: " + std::to_string(portNumber));
+    //       "invalid 'portNumber' argument: " + std::to_string(portNumber));
     //   return {};
     // }
     snd_seq_addr_t addr;

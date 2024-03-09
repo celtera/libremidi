@@ -40,7 +40,7 @@ public:
   stdx::error write(const unsigned char* data, int64_t sz) const noexcept
   {
     if (static_cast<std::size_t>(sz + size_sz) > ringbuffer_space)
-      return std::make_error_code(std::errc::no_buffer_space);
+      return std::errc::no_buffer_space;
 
     while (jack_ringbuffer_write_space(ringbuffer) < sz + size_sz)
       sched_yield();

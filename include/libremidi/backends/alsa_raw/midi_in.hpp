@@ -41,7 +41,7 @@ public:
     constexpr int mode = SND_RAWMIDI_NONBLOCK;
     if (const int err = snd.rawmidi.open(&midiport_, nullptr, portname, mode); err < 0)
     {
-      error(this->configuration, "midi_in_alsa_raw::open_port: cannot open device.");
+      error(this->configuration, "cannot open device.");
       return from_errc(err);
     }
 
@@ -200,7 +200,7 @@ public:
   {
     if (this->termination_event < 0)
     {
-      error(this->configuration, "midi_in_alsa::initialize: error creating eventfd.");
+      error(this->configuration, "error creating eventfd.");
     }
   }
 
@@ -255,7 +255,7 @@ private:
 
       error(
           this->configuration,
-          "midi_in_alsa::start_thread: error starting MIDI input thread: "s + e.what());
+          "error starting MIDI input thread: "s + e.what());
       return e.code();
     }
     return stdx::error{};

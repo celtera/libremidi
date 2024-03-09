@@ -34,11 +34,11 @@ public:
   {
     const auto id = winrt::to_hstring(port.port_name);
     if (id.empty())
-      return std::make_error_code(std::errc::invalid_argument);
+      return std::errc::invalid_argument;
 
     port_ = get(MidiInPort::FromIdAsync(id));
     if (!port_)
-      return std::make_error_code(std::errc::io_error);
+      return std::errc::io_error;
 
     midi_start_timestamp = std::chrono::steady_clock::now();
 
