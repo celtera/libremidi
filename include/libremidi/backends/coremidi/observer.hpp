@@ -38,7 +38,7 @@ public:
 
     if (result != noErr)
     {
-      error<driver_error>(
+      error(
           this->configuration,
           "midi_in_core: error creating MIDI client object: " + std::to_string(result));
       return;

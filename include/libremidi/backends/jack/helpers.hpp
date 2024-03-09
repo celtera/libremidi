@@ -204,7 +204,7 @@ struct jack_helpers : jack_client
     if (self.configuration.client_name.size() + portName.size() + 2u
         >= static_cast<size_t>(jack_port_name_size()))
     {
-      self.template error<invalid_use_error>(
+      self.template error(
           self.configuration, "JACK: port name length limit exceeded");
       return std::make_error_code(std::errc::invalid_argument);
     }
@@ -217,7 +217,7 @@ struct jack_helpers : jack_client
 
     if (!this->port)
     {
-      self.template error<driver_error>(self.configuration, "JACK: error creating port");
+      self.template error(self.configuration, "JACK: error creating port");
       return std::make_error_code(std::errc::operation_not_supported);
     }
     return std::error_code{};

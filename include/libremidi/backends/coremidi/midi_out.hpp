@@ -22,7 +22,7 @@ public:
   {
     if (auto result = init_client(configuration); result != noErr)
     {
-      error<driver_error>(
+      error(
           this->configuration,
           "midi_out_core: error creating MIDI client object: " + std::to_string(result));
       return;
@@ -62,7 +62,7 @@ public:
     if (result != noErr)
     {
       close_client();
-      error<driver_error>(
+      error(
           this->configuration, "midi_out_core::open_port: error creating macOS MIDI output port.");
       return from_osstatus(result);
     }
@@ -82,7 +82,7 @@ public:
 
     if (result != noErr)
     {
-      error<driver_error>(
+      error(
           this->configuration,
           "midi_out_core::initialize: error creating macOS virtual MIDI source.");
 
@@ -139,7 +139,7 @@ public:
 
       if (!packet)
       {
-        error<driver_error>(
+        error(
             this->configuration, "midi_out_core::send_message: could not allocate packet list");
 
         return std::make_error_code(std::errc::message_size);

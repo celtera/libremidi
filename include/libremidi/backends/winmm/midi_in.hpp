@@ -55,7 +55,7 @@ public:
         std::bit_cast<DWORD_PTR>(this), CALLBACK_FUNCTION);
     if (result != MMSYSERR_NOERROR)
     {
-      error<driver_error>(
+      error(
           configuration, "midi_in_winmm::open_port: error creating Windows MM MIDI input port.");
       return from_mmerr(result);
     }
@@ -76,7 +76,7 @@ public:
       {
         midiInClose(this->inHandle);
         this->inHandle = nullptr;
-        error<driver_error>(
+        error(
             configuration,
             "midi_in_winmm::open_port: error starting Windows MM MIDI input port "
             "(PrepareHeader).");
@@ -89,7 +89,7 @@ public:
       {
         midiInClose(this->inHandle);
         this->inHandle = nullptr;
-        error<driver_error>(
+        error(
             configuration,
             "midi_in_winmm::open_port: error starting Windows MM MIDI input port "
             "(AddBuffer).");
@@ -103,7 +103,7 @@ public:
     {
       midiInClose(this->inHandle);
       this->inHandle = nullptr;
-      error<driver_error>(
+      error(
           configuration, "midi_in_winmm::open_port: error starting Windows MM MIDI input port.");
       return from_mmerr(result);
     }
@@ -128,7 +128,7 @@ public:
       if (p.port_name == port.port_name)
         return do_open(port.port);
     }
-    error<invalid_parameter_error>(
+    error(
         configuration, "midi_in_winmm::open_port: port not found: " + p.port_name);
     return std::make_error_code(std::errc::invalid_argument);
   }

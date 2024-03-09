@@ -41,7 +41,7 @@ public:
     constexpr int mode = SND_RAWMIDI_NONBLOCK;
     if (const int err = snd.rawmidi.open(&midiport_, nullptr, portname, mode); err < 0)
     {
-      error<driver_error>(this->configuration, "midi_in_alsa_raw::open_port: cannot open device.");
+      error(this->configuration, "midi_in_alsa_raw::open_port: cannot open device.");
       return from_errc(err);
     }
 
@@ -200,8 +200,7 @@ public:
   {
     if (this->termination_event < 0)
     {
-      error<driver_error>(
-          this->configuration, "midi_in_alsa::initialize: error creating eventfd.");
+      error(this->configuration, "midi_in_alsa::initialize: error creating eventfd.");
     }
   }
 
@@ -254,10 +253,10 @@ private:
     {
       using namespace std::literals;
 
-      error<thread_error>(
+      error(
           this->configuration,
           "midi_in_alsa::start_thread: error starting MIDI input thread: "s + e.what());
-      return make_error_code(midi_error::THREAD_ERROR);
+      return e.code();
     }
     return std::error_code{};
   }

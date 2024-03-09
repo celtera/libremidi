@@ -44,8 +44,7 @@ public:
     SND_RAWMIDI_NONBLOCK;
     if (int err = snd.ump.open(&midiport_, 0, portname, mode); err < 0)
     {
-      error<driver_error>(
-          this->configuration, "alsa_raw_ump::ump::open_port: cannot open device.");
+      error(this->configuration, "alsa_raw_ump::ump::open_port: cannot open device.");
       return from_errc(err);
     }
 
@@ -215,7 +214,7 @@ public:
   {
     midi2_enumerator device_list;
     device_list.error_callback
-        = [this](std::string_view text) { this->error<driver_error>(this->configuration, text); };
+        = [this](std::string_view text) { this->error(this->configuration, text); };
     return device_list;
   }
 
@@ -234,8 +233,7 @@ public:
   {
     if (this->termination_event < 0)
     {
-      error<driver_error>(
-          this->configuration, "midi_in_alsa::initialize: error creating eventfd.");
+      error(this->configuration, "midi_in_alsa::initialize: error creating eventfd.");
     }
   }
 
@@ -288,10 +286,10 @@ private:
     {
       using namespace std::literals;
 
-      error<thread_error>(
+      error(
           this->configuration,
           "midi_in_alsa::start_thread: error starting MIDI input thread: "s + e.what());
-      return make_error_code(midi_error::THREAD_ERROR);
+      return e.code();
     }
     return std::error_code{};
   }

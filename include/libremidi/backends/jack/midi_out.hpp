@@ -99,7 +99,7 @@ public:
     // Connecting to the output
     if (int err = jack_connect(this->client, jack_port_name(this->port), port.port_name.c_str()))
     {
-      error<invalid_parameter_error>(
+      error(
           configuration, "JACK: could not connect to port" + port.port_name);
       return from_errc(err);
     }

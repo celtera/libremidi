@@ -45,7 +45,7 @@ public:
     int ret = snd.ump.open(NULL, &midiport_, portname, mode);
     if (ret < 0)
     {
-      error<driver_error>(
+      error(
           this->configuration, "midi_out_alsa_raw::open_port: cannot open device.");
       return from_errc(ret);
     }
@@ -68,7 +68,7 @@ public:
   std::error_code send_ump(const uint32_t* ump_stream, std::size_t count) override
   {
     if (!midiport_)
-      error<invalid_use_error>(
+      error(
           this->configuration,
           "midi_out_alsa_raw::send_message: trying to send a message without an open "
           "port.");
@@ -80,7 +80,7 @@ public:
   {
     if (auto err = snd.ump.write(midiport_, ump_stream, bytes); err < 0)
     {
-      error<driver_error>(
+      error(
           this->configuration, "midi_out_alsa_raw::send_message: cannot write message.");
       return from_errc(err);
     }

@@ -12,7 +12,6 @@ namespace libremidi
 struct error_handler
 {
   //! Error reporting function for libremidi classes. Throws.
-  template <typename Error_T>
   void error(auto& configuration, std::string_view errorString) const
   {
     if (configuration.on_error)
@@ -21,7 +20,7 @@ struct error_handler
         return;
 
       first_error = true;
-      configuration.on_error(Error_T::code, errorString);
+      configuration.on_error(errorString);
       first_error = false;
     }
     else
@@ -29,7 +28,6 @@ struct error_handler
 #if defined(__LIBREMIDI_DEBUG__)
       std::cerr << '\n' << errorString << "\n\n";
 #endif
-      throw Error_T{errorString.data()};
     }
   }
 
@@ -42,7 +40,7 @@ struct error_handler
         return;
 
       first_warning = true;
-      configuration.on_warning(midi_error::WARNING, errorString);
+      configuration.on_warning(errorString);
       first_warning = false;
       return;
     }

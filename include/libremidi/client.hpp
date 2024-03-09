@@ -31,7 +31,7 @@ struct client_configuration
     best to set the error callback function before opening a port.
   */
   midi_error_callback on_error{};
-  midi_error_callback on_warning{};
+  midi_warning_callback on_warning{};
 
   //! Poll period for observation polling operations, if relevant to the backend
   std::chrono::milliseconds poll_period{100};

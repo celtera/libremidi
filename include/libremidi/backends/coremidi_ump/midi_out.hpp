@@ -25,7 +25,7 @@ public:
   {
     if (auto result = init_client(configuration); result != noErr)
     {
-      error<driver_error>(
+      error(
           this->configuration,
           "midi_out_impl: error creating MIDI client object: " + std::to_string(result));
       return;
@@ -65,7 +65,7 @@ public:
     if (result != noErr)
     {
       close_client();
-      error<driver_error>(
+      error(
           this->configuration, "midi_out_impl::open_port: error creating macOS MIDI output port.");
       return from_osstatus(result);
     }
@@ -86,7 +86,7 @@ public:
     if (result != noErr)
     {
       this->endpoint = 0;
-      error<driver_error>(
+      error(
           this->configuration,
           "midi_out_impl::initialize: error creating macOS virtual MIDI source.");
 

@@ -57,16 +57,6 @@ LIBREMIDI_INLINE libremidi::API get_compiled_api_by_name(std::string_view name)
   return apis;
 }
 
-LIBREMIDI_INLINE midi_exception::~midi_exception() = default;
-LIBREMIDI_INLINE no_devices_found_error::~no_devices_found_error() = default;
-LIBREMIDI_INLINE invalid_device_error::~invalid_device_error() = default;
-LIBREMIDI_INLINE memory_error::~memory_error() = default;
-LIBREMIDI_INLINE invalid_parameter_error::~invalid_parameter_error() = default;
-LIBREMIDI_INLINE invalid_use_error::~invalid_use_error() = default;
-LIBREMIDI_INLINE driver_error::~driver_error() = default;
-LIBREMIDI_INLINE system_error::~system_error() = default;
-LIBREMIDI_INLINE thread_error::~thread_error() = default;
-
 LIBREMIDI_INLINE
 std::any midi_in_configuration_for(libremidi::API api)
 {

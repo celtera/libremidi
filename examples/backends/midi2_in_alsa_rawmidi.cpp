@@ -34,7 +34,7 @@ try
   }
   return 0;
 }
-catch (const libremidi::midi_exception& error)
+catch (const std::exception& error)
 {
   std::cerr << error.what() << std::endl;
   exit(EXIT_FAILURE);

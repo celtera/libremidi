@@ -59,7 +59,7 @@ using output_port_callback = std::function<void(const output_port&)>;
 struct observer_configuration
 {
   midi_error_callback on_error{};
-  midi_error_callback on_warning{};
+  midi_warning_callback on_warning{};
 
   input_port_callback input_added;
   input_port_callback input_removed;

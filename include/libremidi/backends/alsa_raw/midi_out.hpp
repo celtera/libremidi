@@ -42,7 +42,7 @@ public:
     int status = snd.rawmidi.open(NULL, &midiport_, portname, mode);
     if (status < 0)
     {
-      error<driver_error>(
+      error(
           this->configuration, "midi_out_alsa_raw::open_port: cannot open device.");
       return from_errc(status);
     }
@@ -66,7 +66,7 @@ public:
   std::error_code send_message(const unsigned char* message, size_t size) override
   {
     if (!midiport_)
-      error<invalid_use_error>(
+      error(
           this->configuration,
           "midi_out_alsa_raw::send_message: trying to send a message without an open "
           "port.");
@@ -85,7 +85,7 @@ public:
   {
     if (auto err = snd.rawmidi.write(midiport_, message, size); err < 0)
     {
-      error<driver_error>(
+      error(
           this->configuration, "midi_out_alsa_raw::send_message: cannot write message.");
       return from_errc(err);
     }

@@ -23,7 +23,7 @@ public:
   {
     if (init_client(configuration) < 0)
     {
-      error<driver_error>(
+      error(
           this->configuration,
           "midi_in_alsa::initialize: error creating ALSA sequencer client "
           "object.");
@@ -32,7 +32,7 @@ public:
 
     if (snd.midi.event_new(this->bufferSize, &this->coder) < 0)
     {
-      error<driver_error>(
+      error(
           this->configuration,
           "midi_out_alsa::initialize: error initializing MIDI event "
           "parser.");
@@ -70,9 +70,8 @@ public:
     unsigned int nSrc = this->get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
     if (nSrc < 1)
     {
-      error<no_devices_found_error>(
-          this->configuration, "midi_out_alsa::open_port: no MIDI output sources found!");
-      return make_error_code(midi_error::NO_DEVICES_FOUND);
+      error(this->configuration, "midi_out_alsa::open_port: no MIDI output sources found!");
+      return make_error_code(std::errc::no_such_device);
     }
 
     auto sink = get_port_info(p);
@@ -81,7 +80,7 @@ public:
 
     if (int err = create_port(portName); err < 0)
     {
-      error<driver_error>(configuration, "midi_out_alsa::create_port: ALSA error creating port.");
+      error(configuration, "midi_out_alsa::create_port: ALSA error creating port.");
       return from_errc(err);
     }
 
@@ -89,8 +88,7 @@ public:
         .client = (unsigned char)snd.seq.client_id(this->seq), .port = (unsigned char)this->vport};
     if (int err = create_connection(*this, source, *sink, true); err < 0)
     {
-      error<driver_error>(
-          configuration, "midi_out_alsa::create_port: ALSA error making port connection.");
+      error(configuration, "midi_out_alsa::create_port: ALSA error making port connection.");
       return from_errc(err);
     }
 
@@ -129,7 +127,7 @@ public:
       result = snd.midi.event_resize_buffer(this->coder, size);
       if (result != 0)
       {
-        error<driver_error>(
+        error(
             this->configuration,
             "midi_out_alsa::send_message: ALSA error resizing MIDI event "
             "buffer.");

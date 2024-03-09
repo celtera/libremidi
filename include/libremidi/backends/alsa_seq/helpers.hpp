@@ -211,7 +211,7 @@ struct alsa_data
     // snd.seq.port_info_set_port(src_pinfo, port);
 
     // {
-    //   self.template error<invalid_parameter_error>(
+    //   self.template error(
     //       self.configuration,
     //       "alsa::get_port_info: invalid 'portNumber' argument: " + std::to_string(portNumber));
     //   return {};
@@ -272,7 +272,7 @@ struct alsa_data
     // Make subscription
     if (int err = snd.seq.port_subscribe_malloc(&this->subscription); err < 0)
     {
-      self.template error<driver_error>(
+      self.template error(
           self.configuration, "create_connection: ALSA error allocation port subscription.");
       return err;
     }

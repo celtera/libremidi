@@ -44,7 +44,7 @@ public:
     MMRESULT result = midiOutOpen(&this->outHandle, portNumber, 0, 0, CALLBACK_NULL);
     if (result != MMSYSERR_NOERROR)
     {
-      error<driver_error>(
+      error(
           configuration,
           "midi_out_winmm::open_port: error creating Windows MM MIDI output "
           "port.");
@@ -71,7 +71,7 @@ public:
       if (p.port_name == port.port_name)
         return do_open(port.port);
     }
-    error<invalid_parameter_error>(
+    error(
         configuration, "midi_out_winmm::open_port: port not found: " + p.port_name);
     return std::make_error_code(std::errc::invalid_argument);
   }
@@ -113,7 +113,7 @@ public:
       auto result = midiOutPrepareHeader(this->outHandle, &sysex, sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
       {
-        error<driver_error>(
+        error(
             configuration, "midi_out_winmm::send_message: error preparing sysex header.");
         return from_mmerr(result);
       }
@@ -122,7 +122,7 @@ public:
       result = midiOutLongMsg(this->outHandle, &sysex, sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
       {
-        error<driver_error>(
+        error(
             configuration, "midi_out_winmm::send_message: error sending sysex message.");
         return from_mmerr(result);
       }
@@ -154,7 +154,7 @@ public:
       auto result = midiOutShortMsg(this->outHandle, packet);
       if (result != MMSYSERR_NOERROR)
       {
-        error<driver_error>(
+        error(
             configuration, "midi_out_winmm::send_message: error sending MIDI message.");
         return from_mmerr(result);
       }

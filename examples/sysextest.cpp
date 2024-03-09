@@ -67,7 +67,7 @@ try
     std::this_thread::sleep_for(500ms); // pause a little
   }
 }
-catch (libremidi::midi_exception& error)
+catch (const std::exception& error)
 {
   std::cerr << error.what() << std::endl;
   return 0;

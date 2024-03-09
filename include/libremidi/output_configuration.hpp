@@ -15,7 +15,7 @@ struct output_configuration
     best to set the error callback function before opening a port.
   */
   midi_error_callback on_error{};
-  midi_error_callback on_warning{};
+  midi_warning_callback on_warning{};
 
   //! Timestamp mode for the timestamps passed to schedule_message
   uint32_t timestamps : 3 = timestamp_mode::Absolute;

@@ -205,7 +205,7 @@ struct pipewire_helpers
       auto ret = this->filter->create_local_port(portName.data(), direction);
       if (ret != std::error_code{})
       {
-        self.template error<driver_error>(self.configuration, "PipeWire: error creating port");
+        self.template error(self.configuration, "PipeWire: error creating port");
         return ret;
       }
     }
@@ -357,7 +357,7 @@ struct pipewire_helpers
     pw_loop_iterate(this->global_context->lp, 1);
     if (!link)
     {
-      self.template error<invalid_parameter_error>(
+      self.template error(
           self.configuration,
           "PipeWire: could not connect to port: " + in_port.port_name + " -> " + p.port_name);
       return std::make_error_code(std::errc::no_link);
@@ -394,7 +394,7 @@ struct pipewire_helpers
     pw_loop_iterate(this->global_context->lp, 1);
     if (!link)
     {
-      self.template error<invalid_parameter_error>(
+      self.template error(
           self.configuration,
           "PipeWire: could not connect to port: " + p.port_name + " -> " + out_port.port_name);
       return std::make_error_code(std::errc::no_link);

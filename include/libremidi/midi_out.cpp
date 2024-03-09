@@ -50,7 +50,7 @@ midi_out::midi_out(output_configuration base_conf, std::any api_conf)
     : impl_{make_midi_out(base_conf, api_conf)}
 {
   if (!impl_)
-    throw midi_exception("Could not open midi out for the given api");
+    throw std::runtime_error("Could not open midi out for the given api");
 }
 
 LIBREMIDI_INLINE midi_out::~midi_out() = default;

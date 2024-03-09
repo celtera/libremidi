@@ -40,7 +40,7 @@ public:
     using namespace std::literals;
     if (int err = init_client(configuration); err < 0)
     {
-      throw driver_error("observer_alsa: snd_seq_open failed");
+      throw std::runtime_error("observer_alsa: snd_seq_open failed");
     }
 
     if (!configuration.has_callbacks())
@@ -65,7 +65,7 @@ public:
           *this, "libremidi-observe", caps, SND_SEQ_PORT_TYPE_APPLICATION, false);
       if (err < 0)
       {
-        throw driver_error("observer: ALSA error creating port.");
+        throw std::runtime_error("observer: ALSA error creating port.");
       }
     }
 
@@ -75,7 +75,7 @@ public:
           = snd.seq.connect_from(seq, vport, SND_SEQ_CLIENT_SYSTEM, SND_SEQ_PORT_SYSTEM_ANNOUNCE);
       if (err < 0)
       {
-        throw driver_error("observer_alsa: snd_seq_connect_from failed");
+        throw std::runtime_error("observer_alsa: snd_seq_connect_from failed");
       }
     }
   }

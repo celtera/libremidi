@@ -61,7 +61,7 @@ struct input_configuration
     best to set the error callback function before opening a port.
   */
   midi_error_callback on_error{};
-  midi_error_callback on_warning{};
+  midi_warning_callback on_warning{};
 
   //! Specify whether certain MIDI message types should be queued or ignored
   //! during input.
@@ -98,7 +98,7 @@ struct ump_input_configuration
     best to set the error callback function before opening a port.
   */
   midi_error_callback on_error{};
-  midi_error_callback on_warning{};
+  midi_warning_callback on_warning{};
 
   //! Specify whether certain MIDI message types should be queued or ignored
   //! during input.
