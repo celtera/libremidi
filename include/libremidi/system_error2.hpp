@@ -18,7 +18,7 @@
 
   // -------- GNU G++
 
-    #include <features.h>
+    #include <version>
 
     #define STDX_GCC_COMPILER 1
 
