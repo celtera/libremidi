@@ -82,8 +82,17 @@ struct snd_ctl_wrapper
 struct enumerator
 {
   const libasound& snd = libasound::instance();
+  const error_handler& handler;
+  const observer_configuration& configuration;
   std::vector<alsa_raw_port_info> inputs;
   std::vector<alsa_raw_port_info> outputs;
+
+  explicit enumerator(auto& self)
+      : handler{self}
+      , configuration{self.configuration}
+  {
+
+  }
 
   // 1: is an input / output
   // 0: isn't an input / output
@@ -104,7 +113,7 @@ struct enumerator
     }
     else if (status < 0 && status != -ENXIO)
     {
-      LIBREMIDI_LOG(
+      handler.libremidi_handle_error(configuration,
           "alsa_raw_helpers::enumerator::is: cannot get rawmidi information:", card, device, sub,
           snd.strerror(status));
       return status;
@@ -155,7 +164,7 @@ struct enumerator
     int status = snd.card.next(&card);
     if (status < 0)
     {
-      LIBREMIDI_LOG(
+      handler.libremidi_handle_error(configuration,
           "alsa_raw_helpers::enumerator::enumerate_cards: "
           "cannot determine card number: ",
           snd.strerror(status));
@@ -164,7 +173,7 @@ struct enumerator
 
     if (card < 0)
     {
-      LIBREMIDI_LOG(
+      handler.libremidi_handle_error(configuration,
           "alsa_raw_helpers::enumerator::enumerate_cards: "
           "no sound cards found");
       return std::errc::no_such_device;
@@ -176,7 +185,7 @@ struct enumerator
 
       if ((status = snd.card.next(&card)) < 0)
       {
-        LIBREMIDI_LOG(
+        handler.libremidi_handle_error(configuration,
             "alsa_raw_helpers::enumerator::enumerate_cards: "
             "cannot determine card number: ",
             snd.strerror(status));
@@ -195,7 +204,7 @@ inline snd_ctl_wrapper::snd_ctl_wrapper(enumerator& self, const char* name)
   int status = snd.ctl.open(&ctl, name, 0);
   if (status < 0)
   {
-    LIBREMIDI_LOG(
+    self.handler.libremidi_handle_error(self.configuration,
         "alsa_raw_helpers::enumerator::snd_ctl_wrapper: "
         "cannot open control for card",
         name, snd.strerror(status));
@@ -204,6 +213,8 @@ inline snd_ctl_wrapper::snd_ctl_wrapper(enumerator& self, const char* name)
 
 struct midi1_enumerator : enumerator
 {
+  using alsa_raw::enumerator::enumerator;
+
   void enumerate_devices(int card) override
   {
     char name[128];
@@ -225,7 +236,7 @@ struct midi1_enumerator : enumerator
 
       if (status < 0)
       {
-        LIBREMIDI_LOG(
+        handler.libremidi_handle_error(configuration,
             "alsa_raw::midi1_enumerator::enumerate_devices: "
             "cannot determine device number: ",
             snd.strerror(status));

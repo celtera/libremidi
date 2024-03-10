@@ -54,7 +54,7 @@ public:
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
     std::vector<libremidi::input_port> ret;
-    Enumerator new_devs;
+    Enumerator new_devs{*this};
 
     new_devs.enumerate_cards();
     for (auto& d : new_devs.inputs)
@@ -67,7 +67,7 @@ public:
   std::vector<libremidi::output_port> get_output_ports() const noexcept override
   {
     std::vector<libremidi::output_port> ret;
-    Enumerator new_devs;
+    Enumerator new_devs{*this};
 
     new_devs.enumerate_cards();
     for (auto& d : new_devs.outputs)
@@ -147,7 +147,7 @@ private:
 
   void check_devices()
   {
-    Enumerator new_devs;
+    Enumerator new_devs{*this};
 
     new_devs.enumerate_cards();
 

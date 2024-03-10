@@ -10,9 +10,9 @@ struct backend
   using midi_in = midi_in_impl;
   using midi_out = midi_out_impl;
   using midi_observer = observer_impl;
-  using midi_in_configuration = coremidi_input_configuration;
-  using midi_out_configuration = coremidi_output_configuration;
-  using midi_observer_configuration = coremidi_observer_configuration;
+  using midi_in_configuration = coremidi_ump::input_configuration;
+  using midi_out_configuration = coremidi_ump::output_configuration;
+  using midi_observer_configuration = coremidi_ump::observer_configuration;
   static const constexpr auto API = libremidi::API::COREMIDI_UMP;
   static const constexpr auto name = "core_ump";
   static const constexpr auto display_name = "CoreMIDI UMP";

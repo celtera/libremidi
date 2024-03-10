@@ -16,7 +16,7 @@ struct error_handler
   //! Error reporting function for libremidi classes.
   void error_impl(
       const midi_error_callback& callback, std::string_view errorString,
-      const std::source_location& location) const
+      const source_location& location) const
   {
     if (callback)
     {
@@ -36,7 +36,7 @@ struct error_handler
   //! Warning reporting function for libremidi classes.
   void warning_impl(
       const midi_warning_callback& callback, std::string_view errorString,
-      const std::source_location& location) const
+      const source_location& location) const
   {
     if (callback)
     {
@@ -59,6 +59,6 @@ struct error_handler
 };
 
 // Needed as apple still doesn't support source_location in xcode 15.3
-#define libremidi_handle_error(config, str) error_impl(config.on_error, str, std::source_location::current())
-#define libremidi_handle_warning(config, str) warning_impl(config.on_warning, str, std::source_location::current())
+#define libremidi_handle_error(config, str) error_impl(config.on_error, str, libremidi::source_location::current())
+#define libremidi_handle_warning(config, str) warning_impl(config.on_warning, str, libremidi::source_location::current())
 }

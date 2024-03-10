@@ -19,7 +19,7 @@ public:
   {
   } configuration;
 
-  midi_in_impl(ump_input_configuration&& conf, coremidi_input_configuration&& apiconf)
+  midi_in_impl(ump_input_configuration&& conf, coremidi_ump::input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     if (auto result = init_client(configuration); result != noErr)

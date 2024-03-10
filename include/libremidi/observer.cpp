@@ -50,9 +50,8 @@ LIBREMIDI_INLINE observer::observer(observer_configuration base_conf, std::any a
   {
     static constexpr error_handler e;
     e.libremidi_handle_error(base_conf, "Could not open observer for the given api");
+    impl_ = std::make_unique<observer_dummy>(observer_configuration{}, dummy_configuration{});
   }
-
-  impl_ = std::make_unique<observer_dummy>(observer_configuration{}, dummy_configuration{});
 }
 
 LIBREMIDI_INLINE observer::observer(observer&& other) noexcept

@@ -7,6 +7,7 @@ namespace libremidi::alsa_raw_ump
 {
 struct midi2_enumerator : alsa_raw::enumerator
 {
+  using alsa_raw::enumerator::enumerator;
   void enumerate_devices(int card) override
   {
     char name[128];
@@ -28,7 +29,7 @@ struct midi2_enumerator : alsa_raw::enumerator
 
       if (status < 0)
       {
-        LIBREMIDI_LOG(
+        handler.libremidi_handle_error(configuration,
             "alsa_raw_ump::midi2_enumerator::enumerate_devices: "
             "cannot determine device number: ",
             snd.strerror(status));

@@ -54,9 +54,8 @@ midi_out::midi_out(output_configuration base_conf, std::any api_conf)
   {
     static constexpr error_handler e;
     e.libremidi_handle_error(base_conf, "Could not open midi out for the given api");
+    impl_ = std::make_unique<midi_out_dummy>(output_configuration{}, dummy_configuration{});
   }
-
-  impl_ = std::make_unique<midi_out_dummy>(output_configuration{}, dummy_configuration{});
 }
 
 LIBREMIDI_INLINE midi_out::~midi_out() = default;

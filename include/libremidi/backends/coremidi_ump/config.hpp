@@ -3,7 +3,21 @@
 
 namespace libremidi::coremidi_ump
 {
-using input_configuration = coremidi_input_configuration;
-using output_configuration = coremidi_output_configuration;
-using observer_configuration = coremidi_observer_configuration;
+struct input_configuration
+{
+  std::string client_name = "libremidi client";
+  std::optional<MIDIClientRef> context{};
+};
+
+struct output_configuration
+{
+  std::string client_name = "libremidi client";
+  std::optional<MIDIClientRef> context{};
+};
+
+struct observer_configuration
+{
+  std::string client_name = "libremidi client";
+  std::function<void(MIDIClientRef)> on_create_context{};
+};
 }
