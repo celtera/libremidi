@@ -172,7 +172,9 @@ struct pipewire_helpers
           {
             int result = pw_loop_iterate(lp, 0);
             if (result < 0)
-              std::cerr << "pw_loop_iterate: " << spa_strerror(result) << "\n";
+            {
+              LIBREMIDI_LOG(spa_strerror(result));
+            }
           }
           fds[0].revents = 0;
         }
@@ -205,7 +207,7 @@ struct pipewire_helpers
       auto ret = this->filter->create_local_port(portName.data(), direction);
       if (ret != stdx::error{})
       {
-        self.template error(self.configuration, "PipeWire: error creating port");
+        self.libremidi_handle_error(self.configuration, "error creating port");
         return ret;
       }
     }
@@ -357,9 +359,9 @@ struct pipewire_helpers
     pw_loop_iterate(this->global_context->lp, 1);
     if (!link)
     {
-      self.template error(
+      self.libremidi_handle_error(
           self.configuration,
-          "PipeWire: could not connect to port: " + in_port.port_name + " -> " + p.port_name);
+          "could not connect to port: " + in_port.port_name + " -> " + p.port_name);
       return std::errc::no_link;
     }
 
@@ -394,9 +396,9 @@ struct pipewire_helpers
     pw_loop_iterate(this->global_context->lp, 1);
     if (!link)
     {
-      self.template error(
+      self.libremidi_handle_error(
           self.configuration,
-          "PipeWire: could not connect to port: " + p.port_name + " -> " + out_port.port_name);
+          "could not connect to port: " + p.port_name + " -> " + out_port.port_name);
       return std::errc::no_link;
     }
 

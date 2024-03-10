@@ -27,16 +27,16 @@ public:
 
   stdx::error open_virtual_port(std::string_view) override
   {
-    warning(configuration, "midi_out_winmidi: open_virtual_port unsupported");
+    libremidi_handle_warning(configuration, "open_virtual_port unsupported");
     return false;
   }
   stdx::error set_client_name(std::string_view) override
   {
-    warning(configuration, "midi_out_winmidi: set_client_name unsupported");
+    libremidi_handle_warning(configuration, "set_client_name unsupported");
   }
   stdx::error set_port_name(std::string_view) override
   {
-    warning(configuration, "midi_out_winmidi: set_port_name unsupported");
+    libremidi_handle_warning(configuration, "set_port_name unsupported");
   }
 
   libremidi::API get_current_api() const noexcept override

@@ -27,7 +27,7 @@ public:
     assert(snd.seq.ump.available);
     if (init_client(configuration) < 0)
     {
-      error(
+      libremidi_handle_error(
           this->configuration,
           "error creating ALSA sequencer client "
           "object.");
@@ -36,7 +36,7 @@ public:
 
     if (snd.midi.event_new(this->bufferSize, &this->coder) < 0)
     {
-      error(
+      libremidi_handle_error(
           this->configuration,
           "error initializing MIDI event "
           "parser.");
@@ -75,7 +75,7 @@ public:
     unsigned int nSrc = this->get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
     if (nSrc < 1)
     {
-      error(this->configuration, "no MIDI output sources found!");
+      libremidi_handle_error(this->configuration, "no MIDI output sources found!");
       return make_error_code(std::errc::no_such_device);
     }
 
@@ -85,7 +85,7 @@ public:
 
     if (int err = create_port(portName); err < 0)
     {
-      error(configuration, "ALSA error creating port.");
+      libremidi_handle_error(configuration, "ALSA error creating port.");
       return from_errc(err);
     }
 
@@ -93,7 +93,7 @@ public:
         .client = (unsigned char)snd.seq.client_id(this->seq), .port = (unsigned char)this->vport};
     if (int err = create_connection(*this, source, *sink, true); err < 0)
     {
-      error(configuration, "ALSA error making port connection.");
+      libremidi_handle_error(configuration, "ALSA error making port connection.");
       return from_errc(err);
     }
 
@@ -138,7 +138,7 @@ public:
       const int ret = snd.seq.ump.event_output_direct(this->seq, &ev);
       if (ret < 0)
       {
-        warning(this->configuration, "error sending MIDI message to port.");
+        libremidi_handle_warning(this->configuration, "error sending MIDI message to port.");
         return static_cast<std::errc>(-ret);
       }
       return std::errc{0};

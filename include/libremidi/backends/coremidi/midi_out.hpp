@@ -22,9 +22,9 @@ public:
   {
     if (auto result = init_client(configuration); result != noErr)
     {
-      error(
+      libremidi_handle_error(
           this->configuration,
-          "midi_out_core: error creating MIDI client object: " + std::to_string(result));
+          "error creating MIDI client object: " + std::to_string(result));
       return;
     }
   }
@@ -62,7 +62,7 @@ public:
     if (result != noErr)
     {
       close_client();
-      error(
+      libremidi_handle_error(
           this->configuration, "error creating macOS MIDI output port.");
       return from_osstatus(result);
     }
@@ -82,7 +82,7 @@ public:
 
     if (result != noErr)
     {
-      error(
+      libremidi_handle_error(
           this->configuration,
           "error creating macOS virtual MIDI source.");
 
@@ -104,13 +104,13 @@ public:
     unsigned int nBytes = static_cast<unsigned int>(size);
     if (nBytes == 0)
     {
-      warning(configuration, "no data in message argument!");
+      libremidi_handle_warning(configuration, "no data in message argument!");
       return std::errc::invalid_argument;
     }
 
     if (message[0] != 0xF0 && nBytes > 3)
     {
-      warning(
+      libremidi_handle_warning(
           configuration,
           "message format problem ... not sysex but "
           "> 3 bytes?");
@@ -139,7 +139,7 @@ public:
 
       if (!packet)
       {
-        error(
+        libremidi_handle_error(
             this->configuration, "could not allocate packet list");
 
         return std::errc::message_size;
@@ -151,7 +151,7 @@ public:
         auto result = MIDIReceived(this->endpoint, packetList);
         if (result != noErr)
         {
-          warning(
+          libremidi_handle_warning(
               this->configuration,
               "error sending MIDI to virtual "
               "destinations.");
@@ -165,7 +165,7 @@ public:
         auto result = MIDISend(this->port, this->destinationId, packetList);
         if (result != noErr)
         {
-          warning(
+          libremidi_handle_warning(
               this->configuration,
               "error sending MIDI message to port.");
           return std::errc::io_error;

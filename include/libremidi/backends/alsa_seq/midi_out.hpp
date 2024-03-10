@@ -23,7 +23,7 @@ public:
   {
     if (init_client(configuration) < 0)
     {
-      error(
+      libremidi_handle_error(
           this->configuration,
           "error creating ALSA sequencer client "
           "object.");
@@ -32,7 +32,7 @@ public:
 
     if (snd.midi.event_new(this->bufferSize, &this->coder) < 0)
     {
-      error(this->configuration, "error initializing MIDI event parser.");
+      libremidi_handle_error(this->configuration, "error initializing MIDI event parser.");
       return;
     }
     snd.midi.event_init(this->coder);
@@ -67,7 +67,7 @@ public:
     unsigned int nSrc = this->get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
     if (nSrc < 1)
     {
-      error(this->configuration, "no MIDI output sources found!");
+      libremidi_handle_error(this->configuration, "no MIDI output sources found!");
       return make_error_code(std::errc::no_such_device);
     }
 
@@ -77,7 +77,7 @@ public:
 
     if (int err = create_port(portName); err < 0)
     {
-      error(configuration, "ALSA error creating port.");
+      libremidi_handle_error(configuration, "ALSA error creating port.");
       return from_errc(err);
     }
 
@@ -85,7 +85,7 @@ public:
         .client = (unsigned char)snd.seq.client_id(this->seq), .port = (unsigned char)this->vport};
     if (int err = create_connection(*this, source, *sink, true); err < 0)
     {
-      error(configuration, "ALSA error making port connection.");
+      libremidi_handle_error(configuration, "ALSA error making port connection.");
       return from_errc(err);
     }
 
@@ -124,7 +124,7 @@ public:
       result = snd.midi.event_resize_buffer(this->coder, size);
       if (result != 0)
       {
-        error(
+        libremidi_handle_error(
             this->configuration,
             "ALSA error resizing MIDI event "
             "buffer.");
@@ -146,13 +146,13 @@ public:
       result = snd.midi.event_encode(this->coder, message + offset, (long)(nBytes - offset), &ev);
       if (result < 0)
       {
-        warning(this->configuration, "event parsing error!");
+        libremidi_handle_warning(this->configuration, "event parsing error!");
         return std::errc::bad_message;
       }
 
       if (ev.type == SND_SEQ_EVENT_NONE)
       {
-        warning(this->configuration, "incomplete message!");
+        libremidi_handle_warning(this->configuration, "incomplete message!");
         return std::errc::message_size;
       }
 
@@ -161,7 +161,7 @@ public:
       result = snd.seq.event_output(this->seq, &ev);
       if (result < 0)
       {
-        warning(this->configuration, "error sending MIDI message to port.");
+        libremidi_handle_warning(this->configuration, "error sending MIDI message to port.");
         return std::errc::io_error;
       }
     }

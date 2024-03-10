@@ -42,7 +42,7 @@ public:
     int status = snd.rawmidi.open(NULL, &midiport_, portname, mode);
     if (status < 0)
     {
-      error(
+      libremidi_handle_error(
           this->configuration, "cannot open device.");
       return from_errc(status);
     }
@@ -66,7 +66,7 @@ public:
   stdx::error send_message(const unsigned char* message, size_t size) override
   {
     if (!midiport_)
-      error(
+      libremidi_handle_error(
           this->configuration,
           "trying to send a message without an open "
           "port.");
@@ -85,7 +85,7 @@ public:
   {
     if (auto err = snd.rawmidi.write(midiport_, message, size); err < 0)
     {
-      error(
+      libremidi_handle_error(
           this->configuration, "cannot write message.");
       return from_errc(err);
     }

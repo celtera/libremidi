@@ -1,6 +1,8 @@
 #pragma once
 #include <libremidi/detail/midi_api.hpp>
+#include <libremidi/observer_configuration.hpp>
 #include <libremidi/input_configuration.hpp>
+#include <libremidi/error_handler.hpp>
 
 namespace libremidi
 {

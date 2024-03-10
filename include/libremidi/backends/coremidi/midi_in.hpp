@@ -23,9 +23,9 @@ public:
   {
     if (auto result = init_client(configuration); result != noErr)
     {
-      error(
+      libremidi_handle_error(
           this->configuration,
-          "midi_in_core: error creating MIDI client object: " + std::to_string(result));
+          "error creating MIDI client object: " + std::to_string(result));
       return;
     }
   }
@@ -65,7 +65,7 @@ public:
     if (result != noErr)
     {
       close_client();
-      error(
+      libremidi_handle_error(
           this->configuration, "error creating macOS MIDI input port: "
                                    + std::to_string(result));
       return from_osstatus(result);
@@ -76,7 +76,7 @@ public:
     {
       MIDIPortDispose(port);
       close_client();
-      error(
+      libremidi_handle_error(
           this->configuration, "error connecting macOS MIDI input port.");
       return from_osstatus(result);
     }
@@ -95,7 +95,7 @@ public:
 
     if (result != noErr)
     {
-      error(
+      libremidi_handle_error(
           this->configuration,
           "error creating virtual macOS MIDI "
           "destination.");

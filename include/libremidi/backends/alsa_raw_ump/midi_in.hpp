@@ -44,7 +44,7 @@ public:
     SND_RAWMIDI_NONBLOCK; // fixme
     if (int err = snd.ump.open(&midiport_, 0, portname, mode); err < 0)
     {
-      error(this->configuration, "alsa_raw_ump::ump::open_port: cannot open device.");
+      libremidi_handle_error(this->configuration, "alsa_raw_ump::ump::open_port: cannot open device.");
       return from_errc(err);
     }
 
@@ -196,7 +196,7 @@ public:
   {
     if (this->termination_event < 0)
     {
-      error(this->configuration, "error creating eventfd.");
+      libremidi_handle_error(this->configuration, "error creating eventfd.");
     }
   }
 
@@ -249,7 +249,7 @@ private:
     {
       using namespace std::literals;
 
-      error(
+      libremidi_handle_error(
           this->configuration,
           "error starting MIDI input thread: "s + e.what());
       return e.code();

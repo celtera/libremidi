@@ -111,6 +111,7 @@ target_sources(libremidi PRIVATE
     include/libremidi/config.hpp
     include/libremidi/configurations.hpp
     include/libremidi/error.hpp
+    include/libremidi/error_handler.hpp
     include/libremidi/input_configuration.hpp
     include/libremidi/libremidi.hpp
     include/libremidi/message.hpp

@@ -24,7 +24,7 @@ public:
   {
     if (!InitializeCriticalSectionAndSpinCount(&(this->_mutex), 0x00000400))
     {
-      warning(
+      libremidi_handle_warning(
           configuration,
           "InitializeCriticalSectionAndSpinCount failed.");
     }
@@ -47,7 +47,7 @@ public:
         std::bit_cast<DWORD_PTR>(this), CALLBACK_FUNCTION);
     if (result != MMSYSERR_NOERROR)
     {
-      error(
+      libremidi_handle_error(
           configuration, "error creating Windows MM MIDI input port.");
       return from_mmerr(result);
     }
@@ -68,7 +68,7 @@ public:
       {
         midiInClose(this->inHandle);
         this->inHandle = nullptr;
-        error(
+        libremidi_handle_error(
             configuration,
             "error starting Windows MM MIDI input port "
             "(PrepareHeader).");
@@ -81,7 +81,7 @@ public:
       {
         midiInClose(this->inHandle);
         this->inHandle = nullptr;
-        error(
+        libremidi_handle_error(
             configuration,
             "error starting Windows MM MIDI input port "
             "(AddBuffer).");
@@ -95,7 +95,7 @@ public:
     {
       midiInClose(this->inHandle);
       this->inHandle = nullptr;
-      error(
+      libremidi_handle_error(
           configuration, "error starting Windows MM MIDI input port.");
       return from_mmerr(result);
     }
@@ -120,7 +120,7 @@ public:
       if (p.port_name == port.port_name)
         return do_open(port.port);
     }
-    error(
+    libremidi_handle_error(
         configuration, "port not found: " + p.port_name);
     return std::errc::invalid_argument;
   }
@@ -148,7 +148,7 @@ public:
 
         if (res != MMSYSERR_NOERROR)
         {
-          warning(
+          libremidi_handle_warning(
               configuration,
               "error closing Windows MM MIDI input "
               "port (midiInUnprepareHeader).");

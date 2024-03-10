@@ -36,7 +36,7 @@ public:
     MMRESULT result = midiOutOpen(&this->outHandle, portNumber, 0, 0, CALLBACK_NULL);
     if (result != MMSYSERR_NOERROR)
     {
-      error(
+      libremidi_handle_error(
           configuration,
           "error creating Windows MM MIDI output "
           "port.");
@@ -63,7 +63,7 @@ public:
       if (p.port_name == port.port_name)
         return do_open(port.port);
     }
-    error(
+    libremidi_handle_error(
         configuration, "port not found: " + p.port_name);
     return std::errc::invalid_argument;
   }
@@ -85,7 +85,7 @@ public:
 
     if (size == 0)
     {
-      warning(configuration, "message argument is empty!");
+      libremidi_handle_warning(configuration, "message argument is empty!");
       return std::errc::invalid_argument;
     }
 
@@ -105,7 +105,7 @@ public:
       auto result = midiOutPrepareHeader(this->outHandle, &sysex, sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
       {
-        error(
+        libremidi_handle_error(
             configuration, "error preparing sysex header.");
         return from_mmerr(result);
       }
@@ -114,7 +114,7 @@ public:
       result = midiOutLongMsg(this->outHandle, &sysex, sizeof(MIDIHDR));
       if (result != MMSYSERR_NOERROR)
       {
-        error(
+        libremidi_handle_error(
             configuration, "error sending sysex message.");
         return from_mmerr(result);
       }
@@ -131,7 +131,7 @@ public:
       // Make sure the message size isn't too big.
       if (size > 3)
       {
-        warning(
+        libremidi_handle_warning(
             configuration,
             "message size is greater than 3 bytes "
             "(and not sysex)!");
@@ -146,7 +146,7 @@ public:
       auto result = midiOutShortMsg(this->outHandle, packet);
       if (result != MMSYSERR_NOERROR)
       {
-        error(
+        libremidi_handle_error(
             configuration, "error sending MIDI message.");
         return from_mmerr(result);
       }

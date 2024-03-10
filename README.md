@@ -17,6 +17,10 @@ Read the documentation [here](https://celtera.github.io/libremidi).
 
 ## Changelog 
 
+### Since v5
+* Use stdx::error for error reporting until C++26 and std::error are widely available :-)
+* Hunt exceptions down
+
 ### Since v4.5
 * Input logic refactored across all backends.
   * e.g. previously not backends had the same rules wrt timestamping, sysexes, etc. Now there is a single MIDI state machine which processes this.

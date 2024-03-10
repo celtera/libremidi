@@ -42,7 +42,7 @@ public:
     using namespace std::literals;
     if (int err = init_client(configuration); err < 0)
     {
-      error(
+      libremidi_handle_error(
           this->configuration,
           "error creating ALSA sequencer client "
           "object.");
@@ -71,7 +71,7 @@ public:
           *this, "libremidi-observe", caps, SND_SEQ_PORT_TYPE_APPLICATION, false);
       if (err < 0)
       {
-        error(this->configuration, "error creating ALSA sequencer port.");
+        libremidi_handle_error(this->configuration, "error creating ALSA sequencer port.");
         return;
       }
     }
@@ -82,7 +82,7 @@ public:
           = snd.seq.connect_from(seq, vport, SND_SEQ_CLIENT_SYSTEM, SND_SEQ_PORT_SYSTEM_ANNOUNCE);
       if (err < 0)
       {
-        error(this->configuration, "error connecting to ALSA sequencer.");
+        libremidi_handle_error(this->configuration, "error connecting to ALSA sequencer.");
         return;
       }
     }

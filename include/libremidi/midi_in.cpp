@@ -53,7 +53,7 @@ midi_in::midi_in(input_configuration base_conf, std::any api_conf)
   if (!impl_)
   {
     static constexpr error_handler e;
-    e.error(base_conf, "Could not open midi in for the given api");
+    e.libremidi_handle_error(base_conf, "Could not open midi in for the given api");
   }
 
   impl_ = std::make_unique<midi_in_dummy>(input_configuration{}, dummy_configuration{});
@@ -74,6 +74,7 @@ LIBREMIDI_INLINE midi_in::midi_in(ump_input_configuration base_conf) noexcept
     if (impl_)
       return;
   }
+
   if (!impl_)
     impl_ = std::make_unique<midi_in_dummy>(input_configuration{}, dummy_configuration{});
 }
@@ -83,7 +84,12 @@ midi_in::midi_in(ump_input_configuration base_conf, std::any api_conf)
     : impl_{make_midi_in(base_conf, api_conf, midi2::available_backends)}
 {
   if (!impl_)
-    throw std::runtime_error("Could not open midi in for the given api");
+  {
+    static constexpr error_handler e;
+    e.libremidi_handle_error(base_conf, "Could not open midi in for the given api");
+  }
+
+  impl_ = std::make_unique<midi_in_dummy>(input_configuration{}, dummy_configuration{});
 }
 
 LIBREMIDI_INLINE midi_in::~midi_in() = default;

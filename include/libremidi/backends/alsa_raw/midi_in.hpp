@@ -41,7 +41,7 @@ public:
     constexpr int mode = SND_RAWMIDI_NONBLOCK;
     if (const int err = snd.rawmidi.open(&midiport_, nullptr, portname, mode); err < 0)
     {
-      error(this->configuration, "cannot open device.");
+      libremidi_handle_error(this->configuration, "cannot open device.");
       return from_errc(err);
     }
 
@@ -200,7 +200,7 @@ public:
   {
     if (this->termination_event < 0)
     {
-      error(this->configuration, "error creating eventfd.");
+      libremidi_handle_error(this->configuration, "error creating eventfd.");
     }
   }
 
@@ -253,7 +253,7 @@ private:
     {
       using namespace std::literals;
 
-      error(
+      libremidi_handle_error(
           this->configuration,
           "error starting MIDI input thread: "s + e.what());
       return e.code();

@@ -99,8 +99,8 @@ public:
     // Connecting to the output
     if (int err = jack_connect(this->client, jack_port_name(this->port), port.port_name.c_str()))
     {
-      error(
-          configuration, "JACK: could not connect to port" + port.port_name);
+      libremidi_handle_error(
+          configuration, "could not connect to port" + port.port_name);
       return from_errc(err);
     }
 
@@ -130,7 +130,7 @@ public:
   {
     auto status = connect(*this);
     if (status != jack_status_t{})
-      warning(configuration, "midi_out_jack_queued: " + std::to_string((int)jack_status_t{}));
+      libremidi_handle_error(configuration, std::to_string((int)status));
   }
 
   ~midi_out_jack_queued() override
@@ -167,7 +167,7 @@ public:
   {
     auto status = connect(*this);
     if (status != jack_status_t{})
-      warning(configuration, "midi_out_jack_direct: " + std::to_string((int)jack_status_t{}));
+      libremidi_handle_error(configuration, std::to_string((int)status));
 
     buffer_size = jack_get_buffer_size(this->client);
   }

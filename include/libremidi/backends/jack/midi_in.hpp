@@ -25,7 +25,7 @@ public:
   {
     auto status = connect(*this);
     if (status != jack_status_t{})
-      warning(configuration, "midi_in_jack: " + std::to_string((int)jack_status_t{}));
+      libremidi_handle_error(configuration, std::to_string((int)jack_status_t{}));
   }
 
   ~midi_in_jack() override
@@ -45,8 +45,8 @@ public:
     if (int ret = jack_connect(this->client, port.port_name.c_str(), jack_port_name(this->port));
         ret != 0)
     {
-      error(
-          configuration, "JACK: could not connect to port: " + port.port_name + " -> "
+      libremidi_handle_error(
+          configuration, "could not connect to port: " + port.port_name + " -> "
                              + jack_port_name(this->port));
       return from_errc(ret);
     }

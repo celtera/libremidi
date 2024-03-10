@@ -45,7 +45,7 @@ public:
     int ret = snd.ump.open(NULL, &midiport_, portname, mode);
     if (ret < 0)
     {
-      error(this->configuration, "cannot open device.");
+      libremidi_handle_error(this->configuration, "cannot open device.");
       return from_errc(ret);
     }
     return stdx::error{};
@@ -67,7 +67,7 @@ public:
   stdx::error send_ump(const uint32_t* ump_stream, std::size_t count) override
   {
     if (!midiport_)
-      error(
+      libremidi_handle_error(
           this->configuration,
           "trying to send a message without an open "
           "port.");
@@ -79,7 +79,7 @@ public:
   {
     if (auto err = snd.ump.write(midiport_, ump_stream, bytes); err < 0)
     {
-      error(this->configuration, "cannot write message.");
+      libremidi_handle_error(this->configuration, "cannot write message.");
       return from_errc(err);
     }
 

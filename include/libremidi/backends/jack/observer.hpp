@@ -34,7 +34,7 @@ public:
       this->client
           = jack_client_open(configuration.client_name.c_str(), JackNoStartServer, &status);
       if (status != jack_status_t{})
-        warning(configuration, "observer_jack: " + std::to_string((int)jack_status_t{}));
+        libremidi_handle_error(configuration, std::to_string((int)status));
 
       if (this->client != nullptr)
       {

@@ -204,8 +204,8 @@ struct jack_helpers : jack_client
     if (self.configuration.client_name.size() + portName.size() + 2u
         >= static_cast<size_t>(jack_port_name_size()))
     {
-      self.template error(
-          self.configuration, "JACK: port name length limit exceeded");
+      self.libremidi_handle_error(
+          self.configuration, "port name length limit exceeded");
       return std::errc::invalid_argument;
     }
 
@@ -217,7 +217,7 @@ struct jack_helpers : jack_client
 
     if (!this->port)
     {
-      self.template error(self.configuration, "JACK: error creating port");
+      self.libremidi_handle_error(self.configuration, "error creating port");
       return std::errc::operation_not_supported;
     }
     return stdx::error{};

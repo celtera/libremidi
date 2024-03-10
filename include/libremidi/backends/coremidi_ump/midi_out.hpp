@@ -25,9 +25,9 @@ public:
   {
     if (auto result = init_client(configuration); result != noErr)
     {
-      error(
+      libremidi_handle_error(
           this->configuration,
-          "midi_out_impl: error creating MIDI client object: " + std::to_string(result));
+          "error creating MIDI client object: " + std::to_string(result));
       return;
     }
   }
@@ -65,7 +65,7 @@ public:
     if (result != noErr)
     {
       close_client();
-      error(
+      libremidi_handle_error(
           this->configuration, "error creating macOS MIDI output port.");
       return from_osstatus(result);
     }
@@ -86,7 +86,7 @@ public:
     if (result != noErr)
     {
       this->endpoint = 0;
-      error(
+      libremidi_handle_error(
           this->configuration,
           "error creating macOS virtual MIDI source.");
 
@@ -131,7 +131,7 @@ public:
       auto result = MIDIReceivedEventList(this->endpoint, eventList);
       if (result != noErr)
       {
-        warning(
+        libremidi_handle_warning(
             this->configuration,
             "error sending MIDI to virtual "
             "destinations.");
@@ -144,7 +144,7 @@ public:
       auto result = MIDISendEventList(this->port, this->destinationId, eventList);
       if (result != noErr)
       {
-        warning(
+        libremidi_handle_warning(
             this->configuration,
             "error sending MIDI message to port.");
         return std::errc::io_error;

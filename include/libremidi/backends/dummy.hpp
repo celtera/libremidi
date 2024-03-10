@@ -23,9 +23,13 @@ class midi_in_dummy final
     , public error_handler
 {
 public:
-  explicit midi_in_dummy(const auto& configuration, const auto&)
+  explicit midi_in_dummy(const input_configuration& configuration, std::any)
   {
-    warning(configuration, "midi_in_dummy: This class provides no functionality.");
+    libremidi_handle_warning(configuration, "This class provides no functionality.");
+  }
+  explicit midi_in_dummy(const ump_input_configuration& configuration, std::any)
+  {
+    libremidi_handle_warning(configuration, "This class provides no functionality.");
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }
@@ -54,9 +58,9 @@ class midi_out_dummy final
     , public error_handler
 {
 public:
-  explicit midi_out_dummy(const auto& configuration, const auto&)
+  explicit midi_out_dummy(const output_configuration& configuration, std::any)
   {
-    warning(configuration, "midi_out_dummy: This class provides no functionality.");
+    libremidi_handle_warning(configuration, "This class provides no functionality.");
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::DUMMY; }

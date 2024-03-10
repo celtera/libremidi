@@ -281,14 +281,14 @@ locate_object(auto& self, const port_information& info, MIDIObjectType requested
   auto ret = MIDIObjectFindByUniqueID(uid, &object, &type);
   if (ret != noErr)
   {
-    self.template error(
+    self.libremidi_handle_error(
         self.configuration, "cannot find port: " + info.port_name);
     return 0;
   }
 
   if (type != requested_type || object == 0)
   {
-    self.template error(
+    self.libremidi_handle_error(
         self.configuration, "invalid object: " + info.port_name + " : "
                                 + std::to_string(object));
     return 0;

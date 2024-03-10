@@ -55,7 +55,7 @@ public:
   {
     if (init_client(configuration) < 0)
     {
-      error(
+      libremidi_handle_error(
           this->configuration,
           "error creating ALSA sequencer client "
           "object.");
@@ -80,7 +80,7 @@ public:
       int result = snd.midi.event_new(0, &coder);
       if (result < 0)
       {
-        error(this->configuration, "error during snd_midi_event_new.");
+        libremidi_handle_error(this->configuration, "error during snd_midi_event_new.");
         return;
       }
       snd.midi.event_init(coder);
@@ -156,13 +156,13 @@ public:
 
     if (int ret = create_port(portName); ret < 0)
     {
-      error(configuration, "ALSA error creating port.");
+      libremidi_handle_error(configuration, "ALSA error creating port.");
       return ret;
     }
 
     if (int ret = connect_port(*source); ret < 0)
     {
-      error(configuration, "ALSA error making port connection.");
+      libremidi_handle_error(configuration, "ALSA error making port connection.");
       return ret;
     }
 
@@ -349,7 +349,7 @@ public:
   {
     if (this->termination_event < 0)
     {
-      this->template error(this->configuration, "error creating eventfd.");
+      libremidi_handle_error(this->configuration, "error creating eventfd.");
     }
   }
 
@@ -394,7 +394,7 @@ private:
       using namespace std::literals;
       this->unsubscribe();
 
-      this->template error(this->configuration, "error starting MIDI input thread: "s + e.what());
+      libremidi_handle_error(this->configuration, "error starting MIDI input thread: "s + e.what());
       return e.code();
     }
   }

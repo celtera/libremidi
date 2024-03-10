@@ -129,7 +129,7 @@ struct pipewire_context
     this->main_loop = pw.main_loop_new(nullptr);
     if (!this->main_loop)
     {
-      // libremidi::logger().error("PipeWire: main_loop_new failed!");
+      // libremidi::logger().libremidi_handle_error("main_loop_new failed!");
       return;
     }
     initialize();
@@ -140,28 +140,28 @@ struct pipewire_context
     this->lp = pw.main_loop_get_loop(this->main_loop);
     if (!lp)
     {
-      // libremidi::logger().error("PipeWire: main_loop_get_loop failed!");
+      // libremidi::logger().libremidi_handle_error("main_loop_get_loop failed!");
       return;
     }
 
     this->context = pw.context_new(lp, nullptr, 0);
     if (!this->context)
     {
-      // libremidi::logger().error("PipeWire: context_new failed!");
+      // libremidi::logger().libremidi_handle_error("context_new failed!");
       return;
     }
 
     this->core = pw.context_connect(this->context, nullptr, 0);
     if (!this->core)
     {
-      // libremidi::logger().error("PipeWire: context_connect failed!");
+      // libremidi::logger().libremidi_handle_error("context_connect failed!");
       return;
     }
 
     this->registry = pw_core_get_registry(this->core, PW_VERSION_REGISTRY, 0);
     if (!this->registry)
     {
-      // libremidi::logger().error("PipeWire: core_get_registry failed!");
+      // libremidi::logger().libremidi_handle_error("core_get_registry failed!");
       return;
     }
 
@@ -298,7 +298,6 @@ struct pipewire_context
 
     if (!proxy)
     {
-      std::cerr << "PipeWire: could not allocate link\n";
       pw.properties_free(props);
       return nullptr;
     }

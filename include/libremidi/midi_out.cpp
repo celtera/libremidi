@@ -41,6 +41,7 @@ LIBREMIDI_INLINE midi_out::midi_out(const output_configuration& base_conf) noexc
     if (impl_)
       return;
   }
+
   if (!impl_)
     impl_ = std::make_unique<midi_out_dummy>(output_configuration{}, dummy_configuration{});
 }
@@ -50,7 +51,12 @@ midi_out::midi_out(output_configuration base_conf, std::any api_conf)
     : impl_{make_midi_out(base_conf, api_conf)}
 {
   if (!impl_)
-    throw std::runtime_error("Could not open midi out for the given api");
+  {
+    static constexpr error_handler e;
+    e.libremidi_handle_error(base_conf, "Could not open midi out for the given api");
+  }
+
+  impl_ = std::make_unique<midi_out_dummy>(output_configuration{}, dummy_configuration{});
 }
 
 LIBREMIDI_INLINE midi_out::~midi_out() = default;
@@ -61,6 +67,7 @@ LIBREMIDI_INLINE midi_out::midi_out(midi_out&& other) noexcept
   other.impl_
       = std::make_unique<libremidi::midi_out_dummy>(output_configuration{}, dummy_configuration{});
 }
+
 LIBREMIDI_INLINE midi_out& midi_out::operator=(midi_out&& other) noexcept
 {
   this->impl_ = std::move(other.impl_);
