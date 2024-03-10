@@ -8,12 +8,12 @@
   #include <libremidi/backends/linux/udev.hpp>
   #include <libremidi/detail/observer.hpp>
 
-  #include <stdexcept>
-
 namespace libremidi::alsa_raw
 {
 template <typename Enumerator>
-class observer_impl_base : public observer_api
+class observer_impl_base
+    : public observer_api
+    , public error_handler
 {
 public:
   struct
