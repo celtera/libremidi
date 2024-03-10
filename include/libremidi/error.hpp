@@ -44,7 +44,7 @@ using midi_warning_callback = std::function<void(std::string_view errorText, con
 }
 
 #if !defined(LIBREMIDI_LOG)
-  #if defined(__LIBREMIDI_DEBUG__)
+  #if !defined(__LIBREMIDI_DEBUG__)
     #define LIBREMIDI_LOG(...) \
       do                       \
       {                        \

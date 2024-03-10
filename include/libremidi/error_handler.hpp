@@ -6,7 +6,6 @@
 #include <libremidi/input_configuration.hpp>
 #include <libremidi/output_configuration.hpp>
 
-#include <source_location>
 #include <string_view>
 
 namespace libremidi
