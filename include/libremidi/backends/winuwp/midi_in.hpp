@@ -21,12 +21,16 @@ public:
 
   explicit midi_in_winuwp(input_configuration&& conf, winuwp_input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-
   {
     winrt_init();
+    this->client_open_ = stdx::error{};
   }
 
-  ~midi_in_winuwp() override { close_port(); }
+  ~midi_in_winuwp() override
+  {
+    close_port();
+    this->client_open_ = std::errc::not_connected;
+  }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 

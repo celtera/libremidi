@@ -22,9 +22,14 @@ public:
       : configuration{std::move(conf), std::move(apiconf)}
   {
     winrt_init();
+    this->client_open_ = stdx::error{};
   }
 
-  ~midi_out_winuwp() override { close_port(); }
+  ~midi_out_winuwp() override
+  {
+    close_port();
+    this->client_open_ = std::errc::not_connected;
+  }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
 

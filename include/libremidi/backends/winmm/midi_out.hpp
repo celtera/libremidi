@@ -21,12 +21,14 @@ public:
   midi_out_winmm(output_configuration&& conf, winmm_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
+    this->client_open_ = stdx::error{};
   }
 
   ~midi_out_winmm() override
   {
     // Close a connection if it exists.
     midi_out_winmm::close_port();
+    this->client_open_ = std::errc::not_connected;
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }

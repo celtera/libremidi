@@ -24,10 +24,15 @@ public:
   {
     if (!InitializeCriticalSectionAndSpinCount(&(this->_mutex), 0x00000400))
     {
-      libremidi_handle_warning(
+      libremidi_handle_error(
           configuration,
           "InitializeCriticalSectionAndSpinCount failed.");
+
+      this->client_open_ = std::errc::too_many_files_open;
+      return;
     }
+
+    this->client_open_ = stdx::error{};
   }
 
   ~midi_in_winmm() override
@@ -35,7 +40,8 @@ public:
     // Close a connection if it exists.
     midi_in_winmm::close_port();
 
-    DeleteCriticalSection(&(this->_mutex));
+    if(this->client_open_ == stdx::error{})
+      DeleteCriticalSection(&(this->_mutex));
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
