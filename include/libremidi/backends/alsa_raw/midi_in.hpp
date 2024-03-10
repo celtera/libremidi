@@ -201,13 +201,18 @@ public:
     if (this->termination_event < 0)
     {
       libremidi_handle_error(this->configuration, "error creating eventfd.");
+      return;
     }
+
+    client_open_ = stdx::error{};
   }
 
   ~midi_in_alsa_raw_threaded() override
   {
     // Close a connection if it exists.
     this->midi_in_alsa_raw_threaded::close_port();
+
+    client_open_ = std::errc::not_connected;
   }
 
 private:
@@ -287,12 +292,18 @@ private:
 class midi_in_alsa_raw_manual : public midi_in_impl
 {
 public:
-  using midi_in_impl::midi_in_impl;
+  midi_in_alsa_raw_manual(input_configuration&& conf, alsa_raw_input_configuration&& apiconf)
+      : midi_in_impl{std::move(conf), std::move(apiconf)}
+  {
+    client_open_ = stdx::error{};
+  }
 
   ~midi_in_alsa_raw_manual()
   {
     // Close a connection if it exists.
     this->close_port();
+
+    client_open_ = std::errc::not_connected;
   }
 
 private:

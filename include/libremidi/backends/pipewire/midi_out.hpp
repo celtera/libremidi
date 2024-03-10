@@ -24,8 +24,17 @@ public:
   midi_out_pipewire(output_configuration&& conf, pipewire_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    create_context(*this);
-    create_filter(*this);
+    if (auto ret = create_context(*this); ret != stdx::error{})
+    {
+      client_open_ = ret;
+      return;
+    }
+    if (auto ret = create_filter(*this); ret != stdx::error{})
+    {
+      client_open_ = ret;
+      return;
+    }
+    client_open_ = stdx::error{};
   }
 
   ~midi_out_pipewire() override
@@ -34,6 +43,7 @@ public:
     do_close_port();
     destroy_filter(*this);
     destroy_context();
+    client_open_ = std::errc::not_connected;
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE; }

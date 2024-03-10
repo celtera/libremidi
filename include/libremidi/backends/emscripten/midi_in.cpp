@@ -11,12 +11,14 @@ LIBREMIDI_INLINE midi_in_emscripten::midi_in_emscripten(
     input_configuration&& conf, emscripten_input_configuration&& apiconf)
     : configuration{std::move(conf), std::move(apiconf)}
 {
+  client_open_ = std::error{};
 }
 
 LIBREMIDI_INLINE midi_in_emscripten::~midi_in_emscripten()
 {
   // Close a connection if it exists.
   midi_in_emscripten::close_port();
+  client_open_ = std::errc::not_connected;
 }
 
 LIBREMIDI_INLINE libremidi::API midi_in_emscripten::get_current_api() const noexcept

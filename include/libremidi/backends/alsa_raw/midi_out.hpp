@@ -26,12 +26,14 @@ public:
   midi_out_impl(output_configuration&& conf, alsa_raw_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
+    client_open_ = stdx::error{};
   }
 
   ~midi_out_impl() override
   {
     // Close a connection if it exists.
     midi_out_impl::close_port();
+    client_open_ = std::errc::not_connected;
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_RAW; }

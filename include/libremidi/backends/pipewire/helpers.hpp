@@ -119,10 +119,10 @@ struct pipewire_helpers
   }
 
   template <typename Self>
-  int create_context(Self& self)
+  stdx::error create_context(Self& self)
   {
     if (this->global_context)
-      return 0;
+      return stdx::error{};
 
     // Initialize PipeWire client
     auto& configuration = self.configuration;
@@ -135,7 +135,10 @@ struct pipewire_helpers
       this->global_instance = std::make_shared<pipewire_instance>();
       this->global_context = std::make_shared<pipewire_context>(this->global_instance);
     }
-    return 0;
+    if (!this->global_context->main_loop)
+      return std::errc::connection_refused;
+
+    return stdx::error{};
   }
 
   void destroy_context()

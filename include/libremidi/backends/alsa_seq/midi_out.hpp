@@ -36,6 +36,8 @@ public:
       return;
     }
     snd.midi.event_init(this->coder);
+
+    this->client_open_ = stdx::error{};
   }
 
   ~midi_out_impl() override
@@ -51,6 +53,8 @@ public:
 
     if (!configuration.context)
       snd.seq.close(this->seq);
+
+    client_open_ = std::errc::not_connected;
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_SEQ; }

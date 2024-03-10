@@ -133,7 +133,7 @@ public:
     auto status = connect(*this);
     if (!this->client)
     {
-      libremidi_handle_error(configuration, std::to_string((int)status));
+      libremidi_handle_error(configuration, "Could not create JACK client");
       client_open_ = from_jack_status(status);
       return;
     }
@@ -174,10 +174,15 @@ public:
       : midi_out_jack{std::move(conf), std::move(apiconf)}
   {
     auto status = connect(*this);
-    if (status != jack_status_t{})
-      libremidi_handle_error(configuration, std::to_string((int)status));
+    if (!this->client)
+    {
+      libremidi_handle_error(configuration, "Could not create JACK client");
+      client_open_ = from_jack_status(status);
+      return;
+    }
 
     buffer_size = jack_get_buffer_size(this->client);
+    client_open_ = stdx::error{};
   }
 
   ~midi_out_jack_direct() override

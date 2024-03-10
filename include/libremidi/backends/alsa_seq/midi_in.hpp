@@ -350,10 +350,17 @@ public:
     if (this->termination_event < 0)
     {
       this->libremidi_handle_error(this->configuration, "error creating eventfd.");
+      return;
     }
+
+    this->client_open_ = stdx::error{};
   }
 
-  ~midi_in_alsa_threaded() { this->close_port(); }
+  ~midi_in_alsa_threaded()
+  {
+    this->close_port();
+    this->client_open_ = std::errc::not_connected;
+  }
 
 private:
   stdx::error open_port(const input_port& pt, std::string_view local_port_name) override

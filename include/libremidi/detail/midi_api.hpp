@@ -41,7 +41,7 @@ public:
 protected:
   friend class midi_in;
   friend class midi_out;
-  stdx::error client_open_{};
+  stdx::error client_open_{std::errc::not_connected};
   bool port_open_{};
   bool connected_{};
 };

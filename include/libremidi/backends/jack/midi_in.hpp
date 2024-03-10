@@ -27,7 +27,7 @@ public:
     auto status = connect(*this);
     if (!this->client)
     {
-      libremidi_handle_error(configuration, std::to_string((int)status));
+      libremidi_handle_error(configuration, "Could not create JACK client");
       client_open_ = from_jack_status(status);
       return;
     }

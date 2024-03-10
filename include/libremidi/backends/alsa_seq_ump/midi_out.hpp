@@ -34,15 +34,7 @@ public:
       return;
     }
 
-    if (snd.midi.event_new(this->bufferSize, &this->coder) < 0)
-    {
-      libremidi_handle_error(
-          this->configuration,
-          "error initializing MIDI event "
-          "parser.");
-      return;
-    }
-    snd.midi.event_init(this->coder);
+    this->client_open_ = stdx::error{};
   }
 
   ~midi_out_impl() override
@@ -53,11 +45,11 @@ public:
     // Cleanup.
     if (this->vport >= 0)
       snd.seq.delete_port(this->seq, this->vport);
-    if (this->coder)
-      snd.midi.event_free(this->coder);
 
     if (!configuration.context)
       snd.seq.close(this->seq);
+
+    client_open_ = std::errc::not_connected;
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_SEQ; }
