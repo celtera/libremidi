@@ -1,6 +1,7 @@
 #pragma once
 #include <libremidi/detail/memory.hpp>
 #include <libremidi/detail/midi_api.hpp>
+#include <libremidi/error_handler.hpp>
 #include <libremidi/input_configuration.hpp>
 
 #include <CoreMIDI/CoreMIDI.h>
