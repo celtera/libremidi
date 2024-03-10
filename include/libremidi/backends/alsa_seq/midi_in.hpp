@@ -349,7 +349,7 @@ public:
   {
     if (this->termination_event < 0)
     {
-      libremidi_handle_error(this->configuration, "error creating eventfd.");
+      this->libremidi_handle_error(this->configuration, "error creating eventfd.");
     }
   }
 
@@ -394,7 +394,8 @@ private:
       using namespace std::literals;
       this->unsubscribe();
 
-      libremidi_handle_error(this->configuration, "error starting MIDI input thread: "s + e.what());
+      this->libremidi_handle_error(
+          this->configuration, "error starting MIDI input thread: "s + e.what());
       return e.code();
     }
   }
