@@ -52,7 +52,7 @@ midi_out::midi_out(output_configuration base_conf, std::any api_conf)
 {
   if (!impl_)
   {
-    static constexpr error_handler e;
+    error_handler e;
     e.libremidi_handle_error(base_conf, "Could not open midi out for the given api");
     impl_ = std::make_unique<midi_out_dummy>(output_configuration{}, dummy_configuration{});
   }
@@ -78,7 +78,10 @@ LIBREMIDI_INLINE midi_out& midi_out::operator=(midi_out&& other) noexcept
 LIBREMIDI_INLINE
 stdx::error midi_out::set_port_name(std::string_view portName) const
 {
-  return impl_->set_port_name(portName);
+  if(impl_->is_port_open())
+    return impl_->set_port_name(portName);
+
+  return std::errc::not_connected;
 }
 
 LIBREMIDI_INLINE
@@ -90,8 +93,11 @@ libremidi::API midi_out::get_current_api() const noexcept
 LIBREMIDI_INLINE
 stdx::error midi_out::open_port(const output_port& port, std::string_view portName) const
 {
+  if (auto err = impl_->is_client_open(); err != stdx::error{})
+    return std::errc::not_connected;
+
   if (impl_->is_port_open())
-    return std::errc::already_connected;
+    return std::errc::operation_not_supported;
 
   auto ret = impl_->open_port(port, portName);
   if (ret == stdx::error{})
@@ -105,8 +111,11 @@ stdx::error midi_out::open_port(const output_port& port, std::string_view portNa
 LIBREMIDI_INLINE
 stdx::error midi_out::open_virtual_port(std::string_view portName) const
 {
+  if (auto err = impl_->is_client_open(); err != stdx::error{})
+    return std::errc::not_connected;
+
   if (impl_->is_port_open())
-    return std::errc::already_connected;
+    return std::errc::operation_not_supported;
 
   auto ret = impl_->open_virtual_port(portName);
   if (ret == stdx::error{})
@@ -117,6 +126,9 @@ stdx::error midi_out::open_virtual_port(std::string_view portName) const
 LIBREMIDI_INLINE
 stdx::error midi_out::close_port() const
 {
+  if (auto err = impl_->is_client_open(); err != stdx::error{})
+    return std::errc::not_connected;
+
   auto ret = impl_->close_port();
   impl_->connected_ = false;
   impl_->port_open_ = false;

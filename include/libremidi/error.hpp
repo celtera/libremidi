@@ -29,7 +29,7 @@ namespace libremidi
 {
 inline auto from_errc(int ret) noexcept
 {
-  return std::make_error_code(static_cast<std::errc>(ret));
+  return static_cast<std::errc>(-ret);
 }
 
 /*! \brief Error callback function

@@ -3,6 +3,7 @@
 #include <libremidi/detail/midi_api.hpp>
 #include <libremidi/error_handler.hpp>
 #include <libremidi/input_configuration.hpp>
+#include <libremidi/backends/coremidi/error_domain.hpp>
 
 #include <CoreMIDI/CoreMIDI.h>
 #include <CoreServices/CoreServices.h>
@@ -22,72 +23,6 @@
 
 namespace libremidi
 {
-
-struct coremidi_error_domain : public stdx::error_domain
-{
-public:
-  constexpr coremidi_error_domain() noexcept
-      : error_domain{{0xa32b080ac770514eULL, 0xef59a407f921da43ULL}}
-  {
-  }
-
-  stdx::string_ref name() const noexcept override { return "coremidi"; }
-
-  bool equivalent(const stdx::error& lhs, const stdx::error& rhs) const noexcept override
-  {
-    if (lhs.domain() == rhs.domain())
-      return error_cast<std::errc>(lhs) == error_cast<std::errc>(rhs);
-
-    return false;
-  }
-
-  stdx::string_ref message(const stdx::error& e) const noexcept override
-  {
-    switch (error_cast<OSStatus>(e))
-    {
-      case kMIDIInvalidClient:
-        return "Invalid Client";
-      case kMIDIInvalidPort:
-        return "Invalid Port";
-      case kMIDIWrongEndpointType:
-        return "Wrong EndpointT ype";
-      case kMIDINoConnection:
-        return "No Connection";
-      case kMIDIUnknownEndpoint:
-        return "Unknown Endpoint";
-      case kMIDIUnknownProperty:
-        return "Unknown Property";
-      case kMIDIWrongPropertyType:
-        return "Wrong Property Type";
-      case kMIDINoCurrentSetup:
-        return "No Current Setup";
-      case kMIDIMessageSendErr:
-        return "Message Send Error";
-      case kMIDIServerStartErr:
-        return "Server Start Error";
-      case kMIDISetupFormatErr:
-        return "Setup Format Error";
-      case kMIDIWrongThread:
-        return "Wrong Thread";
-      case kMIDIObjectNotFound:
-        return "Object Not Found";
-      case kMIDIIDNotUnique:
-        return "ID Not Unique";
-      case kMIDINotPermitted:
-        return "Not Permitted";
-      case kMIDIUnknownError:
-        return "Unknown Error";
-    }
-    return "Unknown error code";
-  }
-};
-
-inline stdx::error from_osstatus(OSStatus ret) noexcept
-{
-  static constexpr coremidi_error_domain domain{};
-  return {ret, domain};
-}
-
 using CFString_handle = unique_handle<const __CFString, CFRelease>;
 using CFStringMutable_handle = unique_handle<__CFString, CFRelease>;
 namespace
@@ -320,6 +255,13 @@ struct coremidi_data
       return MIDIClientCreate(
           toCFString(configuration.client_name).get(), nullptr, nullptr, &client);
     }
+  }
+
+  void close_client(auto& self)
+  {
+    self.client_open_ = std::errc::not_connected;
+    if (!self.configuration.context)
+      MIDIClientDispose(self.client);
   }
 
   static uint64_t time_in_nanos(MIDITimeStamp tp) noexcept

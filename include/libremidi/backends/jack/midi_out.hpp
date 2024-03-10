@@ -76,6 +76,7 @@ class midi_out_jack
     , public error_handler
 {
 public:
+  using midi_api::client_open_;
   struct
       : output_configuration
       , jack_output_configuration
@@ -97,7 +98,8 @@ public:
       return err;
 
     // Connecting to the output
-    if (int err = jack_connect(this->client, jack_port_name(this->port), port.port_name.c_str()))
+    if (int err = jack_connect(this->client, jack_port_name(this->port), port.port_name.c_str());
+        err != 0 && err != EEXIST)
     {
       libremidi_handle_error(
           configuration, "could not connect to port" + port.port_name);
@@ -129,8 +131,14 @@ public:
       , queue{configuration.ringbuffer_size}
   {
     auto status = connect(*this);
-    if (status != jack_status_t{})
+    if (!this->client)
+    {
       libremidi_handle_error(configuration, std::to_string((int)status));
+      client_open_ = from_jack_status(status);
+      return;
+    }
+
+    client_open_ = stdx::error{};
   }
 
   ~midi_out_jack_queued() override

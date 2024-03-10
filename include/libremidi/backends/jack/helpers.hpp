@@ -1,14 +1,6 @@
 #pragma once
 
-#if __has_include(<weakjack/weak_libjack.h>)
-  #include <weakjack/weak_libjack.h>
-#elif __has_include(<weak_libjack.h>)
-  #include <weak_libjack.h>
-#elif __has_include(<jack/jack.h> )
-  #include <jack/jack.h>
-  #include <jack/midiport.h>
-  #include <jack/ringbuffer.h>
-#endif
+#include <libremidi/backends/jack/error_domain.hpp>
 #include <libremidi/detail/midi_in.hpp>
 #include <libremidi/detail/semaphore.hpp>
 
@@ -157,6 +149,10 @@ struct jack_helpers : jack_client
           = jack_client_open(configuration.client_name.c_str(), JackNoStartServer, &status);
       if (this->client != nullptr)
       {
+        if(status & JackNameNotUnique) {
+          self.libremidi_handle_warning(self.configuration, "JACK client with the same name already exists, renamed.");
+        }
+
         jack_set_process_callback(
             this->client,
             +[](jack_nframes_t nf, void* ctx) -> int {
@@ -192,6 +188,8 @@ struct jack_helpers : jack_client
 
     if (this->client && !self.configuration.context)
       jack_client_close(this->client);
+
+    self.client_open_ = std::errc::not_connected;
   }
 
   stdx::error

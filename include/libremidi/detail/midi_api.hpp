@@ -34,12 +34,14 @@ public:
 
   virtual stdx::error close_port() = 0;
 
-  bool is_port_open() const noexcept { return bool(port_open_); }
-  bool is_port_connected() const noexcept { return bool(connected_); }
+  stdx::error is_client_open() const noexcept { return client_open_; }
+  bool is_port_open() const noexcept { return port_open_; }
+  bool is_port_connected() const noexcept { return connected_; }
 
 protected:
   friend class midi_in;
   friend class midi_out;
+  stdx::error client_open_{};
   bool port_open_{};
   bool connected_{};
 };

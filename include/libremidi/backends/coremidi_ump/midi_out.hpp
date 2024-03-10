@@ -9,10 +9,11 @@ namespace libremidi::coremidi_ump
 {
 class midi_out_impl final
     : public midi2::out_api
-    , private coremidi_data
+    , public coremidi_data
     , public error_handler
 {
 public:
+  using midi_api::client_open_;
   struct
       : libremidi::output_configuration
       , coremidi_ump::output_configuration
@@ -28,8 +29,11 @@ public:
       libremidi_handle_error(
           this->configuration,
           "error creating MIDI client object: " + std::to_string(result));
+      client_open_ = from_osstatus(result);
       return;
     }
+
+    client_open_ = stdx::error{};
   }
 
   ~midi_out_impl()
@@ -39,13 +43,7 @@ public:
     if (this->endpoint)
       MIDIEndpointDispose(this->endpoint);
 
-    close_client();
-  }
-
-  void close_client()
-  {
-    if (!configuration.context)
-      MIDIClientDispose(this->client);
+    close_client(*this);
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::COREMIDI_UMP; }
@@ -64,7 +62,7 @@ public:
     OSStatus result = MIDIOutputPortCreate(this->client, toCFString(portName).get(), &port);
     if (result != noErr)
     {
-      close_client();
+      close_client(*this);
       libremidi_handle_error(
           this->configuration, "error creating macOS MIDI output port.");
       return from_osstatus(result);
