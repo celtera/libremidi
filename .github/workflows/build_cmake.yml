@@ -68,7 +68,7 @@ jobs:
             name: "macOS",
             os: macos-13,
             generator: "",
-            cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type",
+            cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DBOOST_ROOT=$PWD/boost_1_82_0",
             test_target: "test",
             tests: 1,
             examples: 1
@@ -77,7 +77,7 @@ jobs:
             name: "iOS",
             os: macos-13,
             generator: "-GXcode",
-            cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_XCODE_EFFECTIVE_PLATFORMS=-iphoneos",
+            cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DBOOST_ROOT=$PWD/boost_1_82_0 -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_XCODE_EFFECTIVE_PLATFORMS=-iphoneos",
             test_target: "test",
             tests: 0,
             examples: 0
@@ -106,12 +106,10 @@ jobs:
           sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
           sudo apt update
           sudo apt install cmake libboost-dev libasound-dev libjack-jackd2-dev clang libc++-dev
-        elif [ "$RUNNER_OS" == "Windows" ]; then
+        else
           curl -L https://github.com/ossia/sdk/releases/download/sdk28/boost_1_82_0.tar.gz > boost.tar.gz
           tar -xzf boost.tar.gz
           rm boost.tar.gz
-        else
-          brew install boost
         fi
       shell: bash
 
