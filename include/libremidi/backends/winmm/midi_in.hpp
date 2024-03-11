@@ -46,7 +46,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
-  stdx::error do_open(unsigned int portNumber)
+  stdx::error do_open(std::size_t portNumber)
   {
     MMRESULT result = midiInOpen(
         &this->inHandle, portNumber, std::bit_cast<DWORD_PTR>(&midiInputCallback),

@@ -1,3 +1,30 @@
+if(NOT LIBREMIDI_NO_WINMIDI)
+  file(DOWNLOAD
+    https://github.com/microsoft/MIDI/releases/download/dev-preview-5/all-headers-sdk-10.0.22621.0-plus-dp5.zip
+    "${CMAKE_BINARY_DIR}/cppwinrt-headers.zip"
+  )
+  file(ARCHIVE_EXTRACT 
+    INPUT "${CMAKE_BINARY_DIR}/cppwinrt-headers.zip"
+    DESTINATION "${CMAKE_BINARY_DIR}/cppwinrt/winrt/"
+  )
+
+  target_include_directories(libremidi ${_public}
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/cppwinrt>
+  )
+  target_compile_definitions(libremidi ${_public} LIBREMIDI_WINMIDI)
+  set(LIBREMIDI_HAS_WINMIDI 1)
+  target_link_libraries(libremidi INTERFACE RuntimeObject)
+
+  if(NOT LIBREMIDI_NO_WINUWP)
+    set(LIBREMIDI_HAS_WINUWP 1)
+    message(STATUS "libremidi: using WinUWP")
+
+    target_compile_options(libremidi ${_public} /EHsc /await)
+    target_compile_definitions(libremidi ${_public} LIBREMIDI_WINUWP)
+  endif()
+  return()
+endif()
+
 set(WINSDK_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots;KitsRoot10]")
 # List all the SDKs manually as CMAKE_VS_blabla is only defined for VS generators
 cmake_host_system_information(
@@ -29,4 +56,6 @@ if(CPPWINRT_PATH)
   target_compile_options(libremidi ${_public} /EHsc /await)
 else()
   message(STATUS "libremidi: Failed to find Windows SDK, UWP MIDI backend will not be available")
+  return()
 endif()
+

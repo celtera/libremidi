@@ -20,6 +20,10 @@ Read the documentation [here](https://celtera.github.io/libremidi).
 ### Since v5
 * Use stdx::error for error reporting until C++26 and std::error are widely available :-)
 * Hunt exceptions down
+* Basic I/O & observer with the Windows MIDI Services.
+  * Using Developer Preview 5, currently the most recent: https://github.com/microsoft/MIDI/releases/tag/dev-preview-5
+
+libremidi finally supports MIDI 2 on all desktop platforms 🎉!
 
 ### Since v4.5
 * Input logic refactored across all backends.

@@ -20,13 +20,11 @@ public:
   {
   } configuration;
 
-  MidiSession session;
 
   explicit observer_impl(
       libremidi::observer_configuration&& conf, winmidi::observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-      , session{
-            MidiSession::CreateNewSession(L"libremidi session", MidiSessionSettings::Default())}
+      , session{MidiSession::CreateSession(L"libremidi session")}
   {
     if (!configuration.has_callbacks())
       return;
@@ -36,6 +34,7 @@ public:
       if (configuration.input_added)
         for (const auto& p : get_input_ports())
           configuration.input_added(p);
+
       if (configuration.output_added)
         for (const auto& p : get_output_ports())
           configuration.output_added(p);
@@ -87,10 +86,14 @@ public:
 
     auto deviceSelector = MidiEndpointConnection::GetDeviceSelector();
     auto endpointDevices = DeviceInformation::FindAllAsync(deviceSelector).get();
-    for (const auto& selectedEndpointInformation : endpointDevices)
+    for (const auto& ep : endpointDevices)
     {
+      if(ep.Name().starts_with(L"Diagnostics")) {
+        continue;
+      }
       // FIXME if(has input...)
-      ret.emplace_back(to_port_info(selectedEndpointInformation));
+
+      ret.emplace_back(to_port_info<true>(ep));
     }
 
     return ret;
@@ -102,10 +105,13 @@ public:
 
     auto deviceSelector = MidiEndpointConnection::GetDeviceSelector();
     auto endpointDevices = DeviceInformation::FindAllAsync(deviceSelector).get();
-    for (const auto& selectedEndpointInformation : endpointDevices)
+    for (const auto& ep : endpointDevices)
     {
+      if(ep.Name().starts_with(L"Diagnostics")) {
+        continue;
+      }
       // FIXME if(has output...)
-      ret.emplace_back(to_port_info(selectedEndpointInformation));
+      ret.emplace_back(to_port_info<false>(ep));
     }
 
     return ret;
@@ -114,38 +120,29 @@ public:
   void on_input_added(const DeviceInformation& name)
   {
     if (configuration.input_added)
-      configuration.input_added(to_port_info(name));
+      configuration.input_added(to_port_info<true>(name));
   }
 
   void on_input_removed(const DeviceInformation& name)
   {
     if (configuration.input_removed)
-      configuration.input_removed(to_port_info(name));
+      configuration.input_removed(to_port_info<true>(name));
   }
 
   void on_output_added(const DeviceInformation& name)
   {
     if (configuration.output_added)
-      configuration.output_added(to_port_info(name));
+      configuration.output_added(to_port_info<false>(name));
   }
 
   void on_output_removed(const DeviceInformation& name)
   {
     if (configuration.output_removed)
-      configuration.output_removed(to_port_info(name));
+      configuration.output_removed(to_port_info<false>(name));
   }
 
 private:
-#if 0
-  static inline observer_winmidi_internal internalInPortObserver_{MidiInPort::GetDeviceSelector()};
-  static inline observer_winmidi_internal internalOutPortObserver_{
-      MidiOutPort::GetDeviceSelector()};
-
-  int evTokenOnInputAdded_{-1};
-  int evTokenOnInputRemoved_{-1};
-  int evTokenOnOutputAdded_{-1};
-  int evTokenOnOutputRemoved_{-1};
-#endif
+  MidiSession session;
 };
 
 }

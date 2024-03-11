@@ -73,3 +73,6 @@ if(LIBREMIDI_HAS_EMSCRIPTEN)
     add_example(emscripten_midiin)
 endif()
 
+if(LIBREMIDI_HAS_WINMIDI)
+  add_backend_example(midi2_in_winmidi)
+endif()

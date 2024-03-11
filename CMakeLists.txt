@@ -22,6 +22,7 @@ option(LIBREMIDI_HEADER_ONLY "Header-only mode" OFF)
 cmake_dependent_option(LIBREMIDI_NO_COREMIDI "Disable CoreMidi back-end" OFF "APPLE" OFF)
 cmake_dependent_option(LIBREMIDI_NO_WINMM "Disable WinMM back-end" OFF "WIN32" OFF)
 cmake_dependent_option(LIBREMIDI_NO_WINUWP "Disable UWP back-end" ON "WIN32" OFF)
+cmake_dependent_option(LIBREMIDI_NO_WINMIDI "Disable WinMIDI back-end" ON "WIN32" OFF)
 # if(LINUX) in CMake 3.25
 cmake_dependent_option(LIBREMIDI_NO_ALSA "Disable ALSA back-end" OFF "UNIX; NOT APPLE" OFF)
 cmake_dependent_option(LIBREMIDI_NO_UDEV "Disable udev support for ALSA" OFF "UNIX; NOT APPLE" OFF)

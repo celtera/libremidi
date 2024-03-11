@@ -3,6 +3,9 @@
 #include <libremidi/backends/winmidi/helpers.hpp>
 #include <libremidi/backends/winmidi/observer.hpp>
 #include <libremidi/detail/midi_in.hpp>
+#include <libremidi/detail/midi_stream_decoder.hpp>
+
+#include <iostream>
 
 namespace libremidi::winmidi
 {
@@ -21,23 +24,15 @@ public:
   explicit midi_in_impl(
       libremidi::ump_input_configuration&& conf, winmidi::input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
+      , m_session{MidiSession::CreateSession(L"libremidi session")}
   {
+    this->client_open_ = stdx::error{};
   }
 
-  ~midi_in_impl() override { close_port(); }
-
-  stdx::error open_virtual_port(std::string_view) override
+  ~midi_in_impl() override
   {
-    libremidi_handle_warning(configuration, "open_virtual_port unsupported");
-    return false;
-  }
-  stdx::error set_client_name(std::string_view) override
-  {
-    libremidi_handle_warning(configuration, "set_client_name unsupported");
-  }
-  stdx::error set_port_name(std::string_view) override
-  {
-    libremidi_handle_warning(configuration, "set_port_name unsupported");
+    close_port();
+    this->client_open_ = std::errc::not_connected;
   }
 
   libremidi::API get_current_api() const noexcept override
@@ -47,48 +42,56 @@ public:
 
   stdx::error open_port(const input_port& port, std::string_view) override
   {
-#if 0
-    const auto id = winrt::to_hstring(port.port_name);
-    if (id.empty())
-      return false;
+    auto ep = get_port_by_name(port.port_name);
+    if (!ep)
+      return std::errc::address_not_available;
 
-    port_ = get(MidiInPort::FromIdAsync(id));
-    if (!port_)
-      return false;
-    port_.MessageReceived(
-        [=](const winrt::Windows::Devices::Midi::IMidiInPort& inputPort,
-            const winrt::Windows::Devices::Midi::MidiMessageReceivedEventArgs& args) {
-      this->process_message(args.Message());
+    m_endpoint = m_session.CreateEndpointConnection(ep.Id());
+
+    m_revoke_token = m_endpoint.MessageReceived(
+        [&](const foundation::IInspectable& sender,
+            const winrt::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& args) {
+      process_message(args);
     });
 
-#endif
-    return true;
+    m_endpoint.Open();
+
+    return stdx::error{};
   }
 
-#if 0
-  void process_message(const winrt::Windows::Devices::Midi::IMidiMessage& msg)
+  void process_message(const winrt::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& msg)
   {
-    auto reader = DataReader::FromBuffer(msg.RawData());
-    auto begin = msg.RawData().data();
-    auto end = begin + msg.RawData().Length();
+    static constexpr timestamp_backend_info timestamp_info{
+        .has_absolute_timestamps = true,
+        .absolute_is_monotonic = false,
+        .has_samples = false,
+    };
 
-    auto t = msg.Timestamp().count();
-    this->configuration.on_message(libremidi::message{{begin, end}, t});
+    const auto& ump = msg.GetMessagePacket();
+    const auto& b = ump.GetAllWords();
+
+    uint32_t ump_space[64];
+    array_view<uint32_t> ref{ump_space};
+    b.GetMany(0, ref);
+
+    auto to_ns = [t = ump.Timestamp()] { return t; };
+    m_processing.on_bytes(
+        {ump_space, ump_space + b.Size()}, m_processing.timestamp<timestamp_info>(to_ns, 0));
   }
-#endif
 
   stdx::error close_port() override
   {
-#if 0
-    if (port_)
-    {
-      port_.Close();
-      port_ = nullptr;
-    }
-#endif
+    m_endpoint.MessageReceived(m_revoke_token);
+    m_session.DisconnectEndpointConnection(m_endpoint.ConnectionId());
+    return stdx::error{};
   }
 
+  virtual timestamp absolute_timestamp() const noexcept override { return {}; }
+
 private:
-  // winrt::Microsoft::Devices::Midi2::IMidiInPort port_{nullptr};
+  MidiSession m_session;
+  winrt::event_token m_revoke_token{};
+  winrt::Windows::Devices::Midi2::MidiEndpointConnection m_endpoint{nullptr};
+  midi2::input_state_machine m_processing{this->configuration};
 };
 }
