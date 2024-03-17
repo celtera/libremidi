@@ -30,7 +30,8 @@ namespace
 static inline std::string get_string_property(MIDIObjectRef object, CFStringRef property) noexcept
 {
   CFStringRef res;
-  MIDIObjectGetStringProperty(object, property, &res);
+  if (MIDIObjectGetStringProperty(object, property, &res) || !res)
+    return {};
 
   char name[256];
   CFStringGetCString(res, name, sizeof(name), kCFStringEncodingUTF8);
