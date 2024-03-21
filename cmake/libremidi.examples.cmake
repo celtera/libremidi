@@ -76,3 +76,8 @@ endif()
 if(LIBREMIDI_HAS_WINMIDI)
   add_backend_example(midi2_in_winmidi)
 endif()
+
+if(Boost_cobalt_FOUND)
+  add_example(coroutines)
+  target_link_libraries(coroutines PRIVATE Boost::cobalt)
+endif()
