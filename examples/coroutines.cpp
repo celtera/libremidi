@@ -16,11 +16,10 @@ struct channel
   cobalt::channel<libremidi::message>& impl;
   void operator()(const libremidi::message& message)
   {
-    cobalt::spawn(
-        impl.get_executor(),
-        [&impl = impl, message]() -> cobalt::task<void> { co_await impl.write(message); }(),
-        asio::detached);
+    cobalt::spawn(impl.get_executor(), task(message), asio::detached);
   }
+
+  cobalt::task<void> task(libremidi::message message) { co_await impl.write(std::move(message)); }
 };
 }
 
