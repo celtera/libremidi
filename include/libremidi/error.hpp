@@ -9,8 +9,9 @@
 
 #include <functional>
 #include <string_view>
+#include <version>
 
-#if  __has_include(<source_location>)
+#if __has_include(<source_location>) && (__cpp_lib_source_location >= 201907L)
   #include <source_location>
 namespace libremidi { using source_location = std::source_location; }
 #else
