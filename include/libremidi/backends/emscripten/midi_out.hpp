@@ -21,7 +21,7 @@ public:
 
   libremidi::API get_current_api() const noexcept override;
 
-  stdx::error open_port(unsigned int portNumber, std::string_view);
+  stdx::error open_port(int portNumber, std::string_view);
   stdx::error open_port(const output_port& p, std::string_view) override;
   stdx::error close_port() override;
 

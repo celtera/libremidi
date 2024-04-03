@@ -8,7 +8,7 @@ LIBREMIDI_INLINE midi_out_emscripten::midi_out_emscripten(
     output_configuration&& conf, emscripten_output_configuration&& apiconf)
     : configuration{std::move(conf), std::move(apiconf)}
 {
-  client_open_ = std::error{};
+  client_open_ = stdx::error{};
 }
 
 LIBREMIDI_INLINE midi_out_emscripten::~midi_out_emscripten()
@@ -23,7 +23,7 @@ LIBREMIDI_INLINE libremidi::API midi_out_emscripten::get_current_api() const noe
   return libremidi::API::WEBMIDI;
 }
 
-LIBREMIDI_INLINE bool midi_out_emscripten::open_port(unsigned int portNumber, std::string_view)
+LIBREMIDI_INLINE stdx::error midi_out_emscripten::open_port(int portNumber, std::string_view)
 {
   auto& midi = webmidi_helpers::midi_access_emscripten::instance();
 
@@ -31,21 +31,23 @@ LIBREMIDI_INLINE bool midi_out_emscripten::open_port(unsigned int portNumber, st
   {
     libremidi_handle_error(
         this->configuration, "no MIDI output sources found.");
-    return false;
+    return std::errc::invalid_argument;
   }
 
   portNumber_ = portNumber;
-  return true;
+  return stdx::error{};
 }
 
-LIBREMIDI_INLINE bool midi_out_emscripten::open_port(const output_port& p, std::string_view nm)
+LIBREMIDI_INLINE stdx::error midi_out_emscripten::open_port(const output_port& p, std::string_view nm)
 {
   return open_port(p.port, nm);
 }
 
-LIBREMIDI_INLINE void midi_out_emscripten::close_port() { }
+LIBREMIDI_INLINE stdx::error midi_out_emscripten::close_port() { 
+  return stdx::error{};
+}
 
-LIBREMIDI_INLINE void midi_out_emscripten::send_message(const unsigned char* message, size_t size)
+LIBREMIDI_INLINE stdx::error midi_out_emscripten::send_message(const unsigned char* message, size_t size)
 {
   if (portNumber_ < 0)
     libremidi_handle_error(
@@ -55,6 +57,7 @@ LIBREMIDI_INLINE void midi_out_emscripten::send_message(const unsigned char* mes
 
   webmidi_helpers::midi_access_emscripten::instance().send_message(
       portNumber_, reinterpret_cast<const char*>(message), size);
+  return stdx::error{};
 }
 }
 #endif
