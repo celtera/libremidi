@@ -66,7 +66,7 @@ jobs:
           }
         - {
             name: "macOS",
-            os: macos-13,
+            os: macos-14,
             generator: "",
             cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DBOOST_ROOT=$PWD/boost_1_82_0",
             test_target: "test",
@@ -75,7 +75,7 @@ jobs:
           }
         - {
             name: "iOS",
-            os: macos-13,
+            os: macos-14,
             generator: "-GXcode",
             cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DBOOST_ROOT=$PWD/boost_1_82_0 -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_XCODE_EFFECTIVE_PLATFORMS=-iphoneos",
             test_target: "test",
