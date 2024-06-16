@@ -2433,6 +2433,8 @@ public:
     m_domain->destroy(*this);
   }
 
+  bool is_set() const noexcept { return (*this != stdx::error{}); }
+
   const error_domain& domain() const noexcept
   {
     return *m_domain;
@@ -2453,6 +2455,8 @@ public:
   friend struct detail::error_move_access;
   friend struct detail::error_ref_access;
   friend struct detail::error_cref_access;
+  friend inline bool operator==(const error& lhs, const error& rhs) noexcept;
+  friend inline bool operator!=(const error& lhs, const error& rhs) noexcept;
 
 private:
 

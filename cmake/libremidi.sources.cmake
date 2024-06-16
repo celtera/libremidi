@@ -126,4 +126,7 @@ target_sources(libremidi PRIVATE
     include/libremidi/observer.cpp
     include/libremidi/reader.cpp
     include/libremidi/writer.cpp
+
+    include/libremidi/libremidi-c.h
+    include/libremidi/libremidi-c.cpp
 )

@@ -69,7 +69,6 @@
   #include <midi/universal_packet.h>
 #endif
 #include <any>
-#include <optional>
 
 namespace libremidi
 {
@@ -224,7 +223,7 @@ public:
 
   //! Try to schedule a message later in time if the underlying API supports it
   //! (currently not implemented anywhere)
-  stdx::error schedule_message(int64_t timestamp, const unsigned char* message, size_t size);
+  stdx::error schedule_message(int64_t timestamp, const unsigned char* message, size_t size) const;
 
   //! Immediately send a single UMP packet to an open MIDI output port.
   stdx::error send_ump(const uint32_t* message, size_t size) const;
@@ -250,7 +249,7 @@ public:
 
   //! Try to schedule an UMP packet later in time if the underlying API supports it
   //! (currently not implemented anywhere)
-  stdx::error schedule_ump(int64_t timestamp, const uint32_t* message, size_t size);
+  stdx::error schedule_ump(int64_t timestamp, const uint32_t* message, size_t size) const;
 
 private:
   std::unique_ptr<class midi_out_api> impl_;

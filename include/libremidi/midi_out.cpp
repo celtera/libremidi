@@ -188,6 +188,16 @@ stdx::error midi_out::send_message(const unsigned char* message, size_t size) co
 }
 
 LIBREMIDI_INLINE
+stdx::error midi_out::schedule_message(int64_t ts, const unsigned char* message, size_t size) const
+{
+#if defined(LIBREMIDI_ASSERTIONS)
+  assert(size > 0);
+#endif
+
+  return impl_->schedule_message(ts, message, size);
+}
+
+LIBREMIDI_INLINE
 stdx::error midi_out::send_ump(const uint32_t* message, size_t size) const
 {
 #if defined(LIBREMIDI_ASSERTIONS)
@@ -233,4 +243,13 @@ stdx::error midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b
   return send_ump(std::to_array({b0, b1, b2, b3}));
 }
 
+LIBREMIDI_INLINE
+stdx::error midi_out::schedule_ump(int64_t ts, const uint32_t* message, size_t size) const
+{
+#if defined(LIBREMIDI_ASSERTIONS)
+  assert(size > 0);
+#endif
+
+  return impl_->schedule_ump(ts, message, size);
+}
 }
