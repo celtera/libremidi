@@ -85,3 +85,6 @@ endif()
 
 add_executable(libremidi_c_api examples/c_api.c)
 target_link_libraries(libremidi_c_api PRIVATE libremidi)
+if(LIBREMIDI_HEADER_ONLY)
+  target_sources(libremidi_c_api PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/libremidi/libremidi-c.cpp")
+endif()

@@ -151,7 +151,8 @@ int libremidi_midi_observer_new(
 
   try
   {
-    auto ptr = new libremidi_midi_observer_handle{.self{std::move(conf), std::move(api_conf)}};
+    auto ptr = new libremidi_midi_observer_handle{
+        libremidi::observer{std::move(conf), std::move(api_conf)}};
     *out = ptr;
     return 0;
   }
@@ -237,7 +238,8 @@ int libremidi_midi_in_new(
 
       try
       {
-        auto ptr = new libremidi_midi_in_handle{.self{std::move(conf), std::move(api_conf)}};
+        auto ptr = new libremidi_midi_in_handle{
+            libremidi::midi_in{std::move(conf), std::move(api_conf)}};
         *out = ptr;
       }
       catch (...)
@@ -270,7 +272,8 @@ int libremidi_midi_in_new(
 
       try
       {
-        auto ptr = new libremidi_midi_in_handle{.self{std::move(conf), std::move(api_conf)}};
+        auto ptr = new libremidi_midi_in_handle{
+            libremidi::midi_in{std::move(conf), std::move(api_conf)}};
         *out = ptr;
       }
       catch (...)
@@ -350,7 +353,8 @@ int libremidi_midi_out_new(
   conf.timestamps = c->timestamps;
   try
   {
-    auto ptr = new libremidi_midi_out_handle{.self{std::move(conf), std::move(api_conf)}};
+    auto ptr
+        = new libremidi_midi_out_handle{libremidi::midi_out{std::move(conf), std::move(api_conf)}};
     *out = ptr;
   }
   catch (...)
