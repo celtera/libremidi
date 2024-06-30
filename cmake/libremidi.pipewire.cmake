@@ -8,10 +8,10 @@ if(NOT LIBREMIDI_HAS_STD_SEMAPHORE)
   return()
 endif()
 
-find_path(PIPEWIRE_PATH pipewire/pipewire.h HINTS /usr/include/pipewire-0.3)
-find_path(PIPEWIRE_SPA_PATH spa/control/control.h HINTS /usr/include/spa-0.2)
+find_path(PIPEWIRE_INCLUDEDIR pipewire-0.3/pipewire/filter.h)
+find_path(SPA_INCLUDEDIR spa-0.2/spa/param/latency-utils.h)
 
-if(PIPEWIRE_PATH AND PIPEWIRE_SPA_PATH)
+if(PIPEWIRE_INCLUDEDIR AND SPA_INCLUDEDIR)
   message(STATUS "libremidi: using PipeWire")
   set(LIBREMIDI_HAS_PIPEWIRE 1)
 
@@ -21,7 +21,8 @@ if(PIPEWIRE_PATH AND PIPEWIRE_SPA_PATH)
   )
   target_include_directories(libremidi SYSTEM
     ${_public}
-      $<BUILD_INTERFACE:${PIPEWIRE_PATH}> $<BUILD_INTERFACE:${PIPEWIRE_SPA_PATH}>
+      $<BUILD_INTERFACE:${PIPEWIRE_INCLUDEDIR}/pipewire-0.3>
+      $<BUILD_INTERFACE:${SPA_INCLUDEDIR}/spa-0.2>
   )
   target_link_libraries(libremidi
     ${_public}
