@@ -9,6 +9,52 @@
 
 namespace libremidi
 {
+
+static libremidi::ump_input_configuration
+convert_midi1_to_midi2_input_configuration(const input_configuration& base_conf) noexcept
+{
+  libremidi::ump_input_configuration c2;
+  c2.on_message = [cb = base_conf.on_message,
+                   converter = midi2_to_midi1{}](libremidi::ump&& msg) mutable -> void {
+    converter.convert(
+        msg.data, 1, msg.timestamp, [cb](const unsigned char* midi, std::size_t n, int64_t ts) {
+      cb(libremidi::message{{midi, midi + n}, ts});
+      return stdx::error{};
+    });
+  };
+  c2.get_timestamp = base_conf.get_timestamp;
+  c2.on_error = base_conf.on_error;
+  c2.on_warning = base_conf.on_warning;
+  c2.ignore_sysex = base_conf.ignore_sysex;
+  c2.ignore_timing = base_conf.ignore_timing;
+  c2.ignore_sensing = base_conf.ignore_sensing;
+  c2.timestamps = base_conf.timestamps;
+  return c2;
+}
+
+static libremidi::input_configuration
+convert_midi2_to_midi1_input_configuration(const ump_input_configuration& base_conf) noexcept
+{
+  libremidi::input_configuration c2;
+  c2.on_message = [cb = base_conf.on_message,
+                   converter = midi1_to_midi2{}](libremidi::message&& msg) mutable -> void {
+    converter.convert(
+        msg.bytes.data(), msg.bytes.size(), msg.timestamp,
+        [cb](const uint32_t* ump, std::size_t n, int64_t ts) {
+      cb(libremidi::ump{{}, 0});
+      return stdx::error{};
+    });
+  };
+  c2.get_timestamp = base_conf.get_timestamp;
+  c2.on_error = base_conf.on_error;
+  c2.on_warning = base_conf.on_warning;
+  c2.ignore_sysex = base_conf.ignore_sysex;
+  c2.ignore_timing = base_conf.ignore_timing;
+  c2.ignore_sensing = base_conf.ignore_sensing;
+  c2.timestamps = base_conf.timestamps;
+  return c2;
+}
+
 LIBREMIDI_INLINE auto make_midi_in(auto base_conf, std::any api_conf, auto backends)
 {
   std::unique_ptr<midi_in_api> ptr;
@@ -42,6 +88,25 @@ LIBREMIDI_INLINE midi_in::midi_in(const input_configuration& base_conf) noexcept
     if (impl_)
       return;
   }
+
+  // No MIDI 1 backend, try the MIDI 2 ones with a wrap:
+  {
+    auto c2 = convert_midi1_to_midi2_input_configuration(base_conf);
+    for (const auto& api : available_ump_apis())
+    {
+      try
+      {
+        impl_ = make_midi_in(c2, midi_in_configuration_for(api), midi2::available_backends);
+      }
+      catch (const std::exception& e)
+      {
+      }
+
+      if (impl_)
+        return;
+    }
+  }
+
   if (!impl_)
     impl_ = std::make_unique<midi_in_dummy>(input_configuration{}, dummy_configuration{});
 }
@@ -60,7 +125,7 @@ midi_in::midi_in(input_configuration base_conf, std::any api_conf)
 
 LIBREMIDI_INLINE midi_in::midi_in(ump_input_configuration base_conf) noexcept
 {
-  for (const auto& api : available_apis())
+  for (const auto& api : available_ump_apis())
   {
     try
     {
@@ -72,6 +137,24 @@ LIBREMIDI_INLINE midi_in::midi_in(ump_input_configuration base_conf) noexcept
 
     if (impl_)
       return;
+  }
+
+  // No MIDI 2 backend, try the MIDI 1 ones with a wrap:
+  {
+    auto c2 = convert_midi2_to_midi1_input_configuration(base_conf);
+    for (const auto& api : available_apis())
+    {
+      try
+      {
+        impl_ = make_midi_in(c2, midi_in_configuration_for(api), midi1::available_backends);
+      }
+      catch (const std::exception& e)
+      {
+      }
+
+      if (impl_)
+        return;
+    }
   }
 
   if (!impl_)

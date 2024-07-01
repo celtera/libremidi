@@ -1,7 +1,11 @@
 #include <libremidi/libremidi-c.h>
 #include <libremidi/libremidi.hpp>
 
+#include <cerrno>
+#include <cstdlib>
+#include <cstring>
 #include <limits>
+
 struct libremidi_midi_observer_handle
 {
   libremidi::observer self;

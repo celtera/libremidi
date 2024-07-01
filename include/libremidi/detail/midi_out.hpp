@@ -1,8 +1,8 @@
 #pragma once
-#include <libremidi/cmidi2.hpp>
+#include <libremidi/detail/conversion.hpp>
 #include <libremidi/detail/midi_api.hpp>
-#include <libremidi/output_configuration.hpp>
 #include <libremidi/error_handler.hpp>
+#include <libremidi/output_configuration.hpp>
 
 #include <string_view>
 
@@ -48,16 +48,15 @@ class out_api : public midi_out_api
 public:
   using midi_out_api::midi_out_api;
 
-  stdx::error send_ump(const uint32_t* message, std::size_t /*size*/)
+  stdx::error send_ump(const uint32_t* message, std::size_t size)
   {
-    uint8_t midi[65536];
-    const auto n
-        = cmidi2_convert_single_ump_to_midi1(midi, sizeof(midi), const_cast<uint32_t*>(message));
-    if (n > 0)
+    return converter.convert(
+        message, size, 0, [this](const unsigned char* midi, std::size_t n, int64_t ts) {
       return send_message(midi, n);
-    else
-      return std::errc::no_buffer_space;
+    });
   }
+
+  midi2_to_midi1 converter;
 };
 }
 
@@ -72,23 +71,13 @@ public:
 
   stdx::error send_message(const unsigned char* message, std::size_t size)
   {
-    cmidi2_midi_conversion_context context{};
-    cmidi2_midi_conversion_context_initialize(&context);
-
-    uint32_t ump[65536 / 4];
-
-    context.midi1 = const_cast<unsigned char*>(message);
-    context.midi1_num_bytes = size;
-    context.midi1_proceeded_bytes = 0;
-    context.ump = ump;
-    context.ump_num_bytes = sizeof(ump);
-    context.ump_proceeded_bytes = 0;
-
-    if (auto res = cmidi2_convert_midi1_to_ump(&context); res != CMIDI2_CONVERSION_RESULT_OK)
-      return std::errc::invalid_argument;
-
-    return send_ump(context.ump, context.ump_proceeded_bytes / 4);
+    return converter.convert(
+        message, size, 0, [this](const uint32_t* ump, std::size_t count, int64_t ts) {
+      return send_ump(ump, count);
+    });
   }
+
+  midi1_to_midi2 converter;
 };
 }
 
