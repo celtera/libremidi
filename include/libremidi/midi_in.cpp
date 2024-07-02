@@ -41,7 +41,12 @@ convert_midi2_to_midi1_input_configuration(const ump_input_configuration& base_c
     converter.convert(
         msg.bytes.data(), msg.bytes.size(), msg.timestamp,
         [cb](const uint32_t* ump, std::size_t n, int64_t ts) {
-      cb(libremidi::ump{{}, 0});
+      if(n >= 4)
+      {
+        libremidi::ump u{ump[0],ump[1],ump[2],ump[3]};
+        u.timestamp = ts;
+        cb(std::move(u));
+      }
       return stdx::error{};
     });
   };
