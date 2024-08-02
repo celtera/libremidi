@@ -271,9 +271,12 @@ public:
     // Start the listening thread
     thread = std::thread{[this] {
       auto& snd = alsa_data::snd;
+      const auto period
+          = std::chrono::duration_cast<std::chrono::milliseconds>(this->configuration.poll_period)
+                .count();
       for (;;)
       {
-        int err = poll(descriptors_.data(), descriptors_.size(), -1);
+        int err = poll(descriptors_.data(), descriptors_.size(), period);
         if (err >= 0)
         {
           // We got our stop-thread signal

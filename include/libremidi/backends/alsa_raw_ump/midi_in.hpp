@@ -258,11 +258,14 @@ private:
   void run_thread(auto parse_func)
   {
     fds_.push_back(this->termination_event);
+    const auto period
+        = std::chrono::duration_cast<std::chrono::milliseconds>(this->configuration.poll_period)
+              .count();
 
     for (;;)
     {
       // Poll
-      ssize_t err = poll(fds_.data(), fds_.size(), -1);
+      ssize_t err = poll(fds_.data(), fds_.size(), period);
       if (err == -EAGAIN)
         continue;
       else if (err < 0)
