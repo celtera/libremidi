@@ -38,6 +38,7 @@ struct input_configuration
   snd_seq_t* context{};
   std::function<bool(const poll_parameters&)> manual_poll;
   std::function<bool(snd_seq_addr_t)> stop_poll;
+  std::chrono::milliseconds poll_period{2};
 
   static constexpr int midi_version = 1;
 };
@@ -56,6 +57,7 @@ struct observer_configuration
   snd_seq_t* context{};
   std::function<bool(const poll_parameters&)> manual_poll;
   std::function<bool(snd_seq_addr_t)> stop_poll;
+  std::chrono::milliseconds poll_period{100};
 
   static constexpr int midi_version = 1;
 };

@@ -425,12 +425,15 @@ private:
     poll_fds[0] = this->termination_event;
     alsa_data::snd.seq.poll_descriptors(this->seq, poll_fds + 1, poll_fd_count - 1, POLLIN);
 
+    const auto period
+        = std::chrono::duration_cast<std::chrono::milliseconds>(this->configuration.poll_period)
+              .count();
     for (;;)
     {
       if (alsa_data::snd.seq.event_input_pending(this->seq, 1) == 0)
       {
         // No data pending
-        if (poll(poll_fds, poll_fd_count, 0) >= 0)
+        if (poll(poll_fds, poll_fd_count, period) >= 0)
         {
           // We got our stop-thread signal
           if (termination_event.ready(poll_fds[0]))

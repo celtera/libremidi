@@ -6,6 +6,7 @@ namespace libremidi::alsa_raw_ump
 struct input_configuration
 {
   std::function<bool(const manual_poll_parameters&)> manual_poll;
+  std::chrono::milliseconds poll_period{2};
 };
 
 struct output_configuration

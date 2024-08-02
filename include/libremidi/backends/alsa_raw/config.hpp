@@ -61,6 +61,7 @@ struct manual_poll_parameters
 struct alsa_raw_input_configuration
 {
   std::function<bool(const manual_poll_parameters&)> manual_poll;
+  std::chrono::milliseconds poll_period{2};
 };
 
 struct alsa_raw_output_configuration
