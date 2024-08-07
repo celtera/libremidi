@@ -22,7 +22,7 @@ struct LIBREMIDI_EXPORT port_information
   // PipeWire: unused
   // WinMM: unused
   // WinUWP: unused
-  client_handle client = -1;
+  client_handle client = static_cast<client_handle>(-1);
 
   // ALSA Raw: { uint16_t card, device, sub, padding; }
   // ALSA Seq: { uint32_t client, uint32_t port; }
@@ -32,7 +32,7 @@ struct LIBREMIDI_EXPORT port_information
   // PipeWire: port.id
   // WinMM: unset, identified by port_name
   // WinUWP: unused
-  port_handle port = -1;
+  port_handle port = static_cast<port_handle>(-1);
 
   std::string manufacturer;
   std::string device_name;
