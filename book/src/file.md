@@ -36,8 +36,8 @@ libremidi::writer writer;
 // Create tracks and events declaratively by changing the track vector directly:
 writer.tracks.push_back(
   libremidi::midi_track{
-    libremidi::track_event{0, 0, libremidi::message::note_on(1, 45, 35)},
-    libremidi::track_event{140, 0, libremidi::message::note_off(1, 45, 0)},
+    libremidi::track_event{0, 0, libremidi::channel_events::note_on(1, 45, 35)},
+    libremidi::track_event{140, 0, libremidi::channel_events::note_off(1, 45, 0)},
   }
 );
 
@@ -45,7 +45,7 @@ writer.tracks.push_back(
 {
   int tick = 500;
   int track = 3;
-  libremidi::message msg = libremidi::message::note_on(1, 45, 35);
+  libremidi::message msg = libremidi::channel_events::note_on(1, 45, 35);
 
   // Tracks will be added as needed within safe limits
   writer.add_event(tick, track, msg);
