@@ -18,10 +18,10 @@ midi.send_message(bytes, sizeof(bytes));
 // This allows to pass std::vector, std::array and the likes
 midi.send_message(std::span<unsigned char>{ ... your span-compatible data-structure ... });
 
-// Option D: helpers with the libremidi::message class
+// Option D: helpers with the libremidi::channel_events and libremidi::meta_events structs
 // See libremidi/message.hpp for the full list
-midi.send_message(libremidi::message::note_on(channel, note, velocity));
-midi.send_message(libremidi::message::control_change(channel, control, value));
-midi.send_message(libremidi::message::pitch_bend(channel, value));
+midi.send_message(libremidi::channel_events::note_on(channel, note, velocity));
+midi.send_message(libremidi::channel_events::control_change(channel, control, value));
+midi.send_message(libremidi::channel_events::pitch_bend(channel, value));
 midi.send_message(libremidi::message{ /* a message */ });
 ```
