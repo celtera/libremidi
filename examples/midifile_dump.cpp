@@ -1,8 +1,9 @@
 #include <libremidi/reader.hpp>
 
+#include <cmath>
 #include <fstream>
 #include <iomanip>
-#include <istream>
+#include <iostream>
 #include <vector>
 
 int main(int argc, char** argv)
@@ -154,7 +155,7 @@ int main(int argc, char** argv)
               break;
             case libremidi::meta_event_type::TIME_SIGNATURE:
               std::cout << "TIME_SIGNATURE: " << (int)event.m.bytes[3] << "/"
-                        << (int)pow(2., event.m.bytes[4]) << ", " << (int)event.m.bytes[5]
+                        << (int)std::pow(2., event.m.bytes[4]) << ", " << (int)event.m.bytes[5]
                         << " clocks per beat, " << (int)event.m.bytes[6]
                         << " 32nd notes per quarter note";
               break;
