@@ -106,9 +106,13 @@ public:
 
     const auto tp = snd.seq.port_info_get_type(pinfo);
     bool ok = this->configuration.track_any;
+
+    static constexpr auto virtual_port
+        = SND_SEQ_PORT_TYPE_SOFTWARE | SND_SEQ_PORT_TYPE_SYNTHESIZER;
+
     if ((tp & SND_SEQ_PORT_TYPE_HARDWARE) && this->configuration.track_hardware)
       ok = true;
-    else if ((tp & SND_SEQ_PORT_TYPE_SOFTWARE) && this->configuration.track_virtual)
+    else if ((tp & virtual_port) && this->configuration.track_virtual)
       ok = true;
     if (!ok)
       return {};
