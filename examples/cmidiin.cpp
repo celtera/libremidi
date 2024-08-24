@@ -14,43 +14,30 @@
 #include <cstdlib>
 #include <iostream>
 
-[[noreturn]] void usage()
+int main(int argc, const char** argv)
 {
-  // Error function in case of incorrect command-line
-  // argument specifications.
-  std::cout << "\nuseage: cmidiin <port>\n";
-  std::cout << "    where port = the device to use (default = 0).\n\n";
-  exit(0);
-}
+  // Read command line arguments
+  libremidi::examples::arguments args{argc, argv};
 
-int main(int argc, char**)
-try
-{
-  libremidi::midi_in midiin{{
-      // Set our callback function.
-      .on_message = [](const libremidi::message& message) { std::cout << message << std::endl; },
+  libremidi::midi_in midiin{
+      {
+          // Set our callback function.
+          .on_message
+          = [](const libremidi::message& message) { std::cout << message << std::endl; },
 
-      // Don't ignore sysex, timing, or active sensing messages.
-      .ignore_sysex = false,
-      .ignore_timing = false,
-      .ignore_sensing = false,
-  }};
+          // Don't ignore sysex, timing, or active sensing messages.
+          .ignore_sysex = false,
+          .ignore_timing = false,
+          .ignore_sensing = false,
+      },
+      libremidi::midi_in_configuration_for(
+          args.api)}; // Passing the second configuration argument can be skipped to use the default MIDI API
 
-  // Minimal command-line check.
-  if (argc > 2)
-    usage();
-
-  //// Call function to select port.
-  if (chooseMidiPort(midiin) == false)
-    return 0;
+  if (!args.open_port(midiin))
+    return 1;
 
   std::cout << "\nReading MIDI input ... press <enter> to quit.\n";
   int c;
   while ((c = getchar()) != '\n' && c != EOF)
     ;
-}
-catch (const std::exception& error)
-{
-  std::cerr << error.what() << std::endl;
-  return EXIT_FAILURE;
 }

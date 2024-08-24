@@ -18,15 +18,17 @@
 #include <iostream>
 #include <thread>
 
-int main(int, const char* argv[])
-try
+int main(int argc, const char** argv)
 {
   using namespace std::literals;
-  libremidi::midi_out midiout;
+  // Read command line arguments
+  libremidi::examples::arguments args{argc, argv};
+
+  libremidi::midi_out midiout{{}, libremidi::midi_out_configuration_for(args.api)};
 
   // Call function to select port.
-  if (chooseMidiPort(midiout) == false)
-    return 0;
+  if (!args.open_port(midiout))
+    return 1;
 
   // Period in ms = 100 BPM
   // 100*24 ticks / 1 minute, so (60*1000) / (100*24) = 25 ms / tick
@@ -71,9 +73,4 @@ try
   std::cout << "Done!" << std::endl;
 
   return 0;
-}
-catch (const std::exception& error)
-{
-  std::cerr << error.what() << std::endl;
-  exit(EXIT_FAILURE);
 }

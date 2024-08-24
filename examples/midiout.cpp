@@ -14,15 +14,18 @@
 #include <chrono>
 #include <thread>
 
-int main(void)
-try
+int main(int argc, const char** argv)
 {
   using namespace std::literals;
-  libremidi::midi_out midiout;
+
+  // Read command line arguments
+  libremidi::examples::arguments args{argc, argv};
+
+  libremidi::midi_out midiout{{}, libremidi::midi_out_configuration_for(args.api)};
 
   // Call function to select port.
-  if (chooseMidiPort(midiout) == false)
-    return 0;
+  if (!args.open_port(midiout))
+    return 1;
 
   // Send out a series of MIDI messages.
 
@@ -55,9 +58,4 @@ try
   midiout.send_message(std::to_array<unsigned char>({240, 67, 4, 3, 2, 247}));
 
   return 0;
-}
-catch (const std::exception& error)
-{
-  std::cerr << error.what() << std::endl;
-  exit(EXIT_FAILURE);
 }

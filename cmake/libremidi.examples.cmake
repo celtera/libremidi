@@ -23,6 +23,7 @@ add_example(client)
 add_example(midiprobe)
 add_example(qmidiin)
 add_example(sysextest)
+add_example(minimal)
 add_example(midi2_echo)
 
 if(LIBREMIDI_NI_MIDI2)

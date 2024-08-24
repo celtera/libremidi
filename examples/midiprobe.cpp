@@ -11,11 +11,9 @@
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
-#include <map>
 #include <thread>
 
 int main()
-try
 {
   for (auto& api : libremidi::available_apis())
   {
@@ -45,9 +43,4 @@ try
     std::cout << "\n";
   }
   return 0;
-}
-catch (const std::exception& error)
-{
-  std::cerr << error.what() << std::endl;
-  return EXIT_FAILURE;
 }

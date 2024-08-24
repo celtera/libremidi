@@ -13,13 +13,10 @@
 
 #include <libremidi/libremidi.hpp>
 
-#include <chrono>
 #include <cstdlib>
 #include <iostream>
-#include <thread>
 
-int main(int, const char* argv[])
-try
+int main(int argc, const char** argv)
 {
   unsigned int clock_count = 0;
   auto midi_callback = [&](const libremidi::message& message) {
@@ -47,27 +44,25 @@ try
       clock_count = 0;
   };
 
-  libremidi::midi_in midiin{{
-      // Setup a callback
-      .on_message = midi_callback,
+  // Read command line arguments
+  libremidi::examples::arguments args{argc, argv};
+  libremidi::midi_in midiin{
+      {
+          // Setup a callback
+          .on_message = midi_callback,
 
-      // Don't ignore sysex, timing, or active sensing messages.
-      .ignore_sysex = false,
-      .ignore_timing = false,
-      .ignore_sensing = false,
-  }};
+          // Don't ignore sysex, timing, or active sensing messages.
+          .ignore_sysex = false,
+          .ignore_timing = false,
+          .ignore_sensing = false,
+      },
+      libremidi::midi_in_configuration_for(args.api)};
 
-  // Call function to select port.
-  if (!chooseMidiPort(midiin))
-    return 0;
+  if (!args.open_port(midiin))
+    return 1;
 
   std::cout << "\nReading MIDI input ... press <enter> to quit.\n";
   char input;
   std::cin.get(input);
-  return 0;
-}
-catch (const std::exception& error)
-{
-  std::cerr << error.what() << std::endl;
   return 0;
 }

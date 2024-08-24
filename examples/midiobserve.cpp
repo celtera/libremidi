@@ -11,7 +11,6 @@
 #endif
 
 int main()
-try
 {
   std::vector<libremidi::observer> observers;
   for (auto api : libremidi::available_apis())
@@ -43,12 +42,9 @@ try
   // with an active CFRunLoop.
   CFRunLoopRun();
 #else
-  getchar();
+  int c;
+  while ((c = getchar()) != '\n' && c != EOF)
+    ;
 #endif
   return 0;
-}
-catch (const std::exception& error)
-{
-  std::cerr << error.what() << std::endl;
-  return EXIT_FAILURE;
 }

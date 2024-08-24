@@ -12,6 +12,7 @@ constexpr bool operator==(const snd_seq_addr_t& lhs, const snd_seq_addr_t& rhs) 
 {
   return lhs.client == rhs.client && lhs.port == rhs.port;
 }
+
 int main()
 {
   std::vector<libremidi::midi_in> midiin;

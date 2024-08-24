@@ -7,6 +7,8 @@
   #include <midi/universal_packet.h>
 #endif
 
+#include "3rdparty/args.hxx"
+
 #include <cstdlib>
 #include <iostream>
 
@@ -70,102 +72,119 @@ inline std::ostream& operator<<(std::ostream& s, const libremidi::port_informati
   return s << "]";
 }
 
-// This function should be embedded in a try/catch block in case of
-// an exception.  It offers the user a choice of MIDI ports to open.
-// It returns false if there are no ports available.
-inline bool chooseMidiPort(libremidi::midi_in& libremidi)
+namespace libremidi::examples
 {
-  std::cout << "\nWould you like to open a virtual input port? [y/N] ";
+struct arguments
+{
+  libremidi::API api{libremidi::API::UNSPECIFIED};
+  int input_port{0};
+  int output_port{0};
+  int count{50};
+  bool virtual_port{};
 
-  std::string keyHit;
-  std::getline(std::cin.ignore(), keyHit);
-  if (keyHit == "y")
+  static std::string api_list()
   {
-    libremidi.open_virtual_port();
-    return true;
-  }
-
-  std::string portName;
-  auto ports = libremidi::observer{{}, observer_configuration_for(libremidi.get_current_api())}
-                   .get_input_ports();
-  unsigned int i = 0;
-  std::size_t nPorts = ports.size();
-  if (nPorts == 0)
-  {
-    std::cout << "No input ports available!" << std::endl;
-    return false;
-  }
-
-  if (nPorts == 1)
-  {
-    std::cout << "\nOpening " << ports[0].display_name << std::endl;
-  }
-  else
-  {
-    for (i = 0; i < nPorts; i++)
+    std::string ret;
+    ret.reserve(64);
+    auto apis = libremidi::available_apis();
+    for (auto api : apis)
     {
-      portName = ports[i].display_name;
-      std::cout << "  Input port #" << i << ": " << portName << '\n';
+      ret += libremidi::get_api_name(api);
+      ret += ", ";
+    }
+    if (apis.size() > 0)
+      ret.resize(ret.size() - 2);
+    return ret;
+  }
+
+  arguments(int argc, const char** argv)
+  {
+    args::ArgumentParser parser("libremidi example");
+    args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
+
+    args::ValueFlag<std::string> opt_api(parser, "api", "API to use (" + api_list() + ")", {'a'});
+    args::ValueFlag<int> opt_port(parser, "input", "Input port to open", {'i'});
+    args::ValueFlag<int> opt_out_port(parser, "output", "Output port to open", {'o'});
+    args::ValueFlag<int> opt_count(parser, "count", "Number of bytes", {'n'});
+    args::Flag opt_virt(
+        parser, "virtual", "Open a virtual port instead of an existing one", {'v'});
+
+    args::CompletionFlag completion(parser, {"complete"});
+
+    try
+    {
+      parser.ParseCLI(argc, argv);
+    }
+    catch (args::Help)
+    {
+      std::cout << parser;
+      std::exit(1);
+    }
+    catch (args::ParseError e)
+    {
+      std::cerr << e.what() << std::endl;
+      std::cerr << parser;
+      std::exit(1);
+    }
+    catch (args::ValidationError e)
+    {
+      std::cerr << e.what() << std::endl;
+      std::cerr << parser;
+      std::exit(1);
     }
 
-    do
+    if (opt_api)
+      api = libremidi::get_compiled_api_by_name(opt_api.Get());
+    if (opt_port)
+      input_port = opt_port.Get();
+    if (opt_out_port)
+      output_port = opt_out_port.Get();
+    if (opt_count)
+      count = opt_count.Get();
+    if (opt_virt)
+      virtual_port = true;
+  }
+
+  template <typename T>
+  inline bool open_port(T& midi)
+  {
+    if (this->virtual_port)
     {
-      std::cout << "\nChoose a port number: ";
-      std::cin >> i;
-    } while (i >= nPorts);
-  }
-
-  std::cout << "\n";
-  libremidi.open_port(ports[i]);
-
-  getchar();
-  return true;
-}
-
-inline bool chooseMidiPort(libremidi::midi_out& libremidi)
-{
-  std::cout << "\nWould you like to open a virtual output port? [y/N] ";
-
-  std::string keyHit;
-  std::getline(std::cin.ignore(), keyHit);
-  if (keyHit == "y")
-  {
-    libremidi.open_virtual_port();
-    return true;
-  }
-
-  std::string portName;
-  auto ports = libremidi::observer{{}, observer_configuration_for(libremidi.get_current_api())}
-                   .get_output_ports();
-  unsigned int i = 0;
-  std::size_t nPorts = ports.size();
-  if (nPorts == 0)
-  {
-    std::cout << "No output ports available!" << std::endl;
-    return false;
-  }
-
-  if (nPorts == 1)
-  {
-    std::cout << "\nOpening " << ports[0].display_name << std::endl;
-  }
-  else
-  {
-    for (i = 0; i < nPorts; i++)
-    {
-      portName = ports[i].display_name;
-      std::cout << "  Output port #" << i << ": " << portName << '\n';
+      const auto err = midi.open_virtual_port();
+      return err == stdx::error{};
     }
 
-    do
+    const auto obs = libremidi::observer{
+        {.track_hardware = 1, .track_virtual = 1},
+        observer_configuration_for(midi.get_current_api())};
+    auto [ports, index] = get_ports(obs, midi);
+    if (ports.empty())
     {
-      std::cout << "\nChoose a port number: ";
-      std::cin.ignore() >> i;
-    } while (i >= nPorts);
+      std::cout << "No ports available!" << std::endl;
+      return false;
+    }
+
+    if (index >= 0 && index < ports.size())
+    {
+      std::cout << "Opening " << ports[index].display_name << std::endl;
+      const auto err = midi.open_port(ports[index]);
+      return err == stdx::error{};
+    }
+    else
+    {
+      std::cout << "Cannot open port " << index << std::endl;
+      return false;
+    }
   }
 
-  std::cout << "\n";
-  libremidi.open_port(ports[i]);
-
-  return true;
+private:
+  auto get_ports(const libremidi::observer& obs, const libremidi::midi_in&)
+  {
+    return std::make_pair(obs.get_input_ports(), this->input_port);
+  }
+  auto get_ports(const libremidi::observer& obs, const libremidi::midi_out&)
+  {
+    return std::make_pair(obs.get_output_ports(), this->output_port);
+  }
+};
 }

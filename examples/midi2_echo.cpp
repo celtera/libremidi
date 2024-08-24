@@ -1,51 +1,36 @@
-#include "utils.hpp"
-
 #include <libremidi/libremidi.hpp>
-
-#include <cstdlib>
 #include <iostream>
 
 int main()
 try
 {
-  libremidi::observer obs{{}, libremidi::midi2::observer_default_configuration()};
-  libremidi::midi_out midiout{{}, libremidi::midi2::out_default_configuration()};
+  using namespace libremidi;
+  namespace lm2 = libremidi::midi2;
+  // The observer object enumerates available inputs and outputs
+  observer obs{{}, lm2::observer_default_configuration()};
+  auto pi = obs.get_input_ports();
+  auto po = obs.get_output_ports();
+  if (pi.empty() || po.empty())
+    throw std::runtime_error("No MIDI in / out available");
 
-  libremidi::midi_in midiin{
-      {
-          // Set our callback function.
-          .on_message
-          = [&](const libremidi::ump& message) {
-    std::cout << message << std::endl;
+  // Create a midi out
+  midi_out midiout{{}, lm2::out_default_configuration()};
+  if (auto err = midiout.open_port(po[0]); err != stdx::error{})
+    err.throw_exception();
+
+  // Create a midi in
+  std::mutex out_mutex;
+  auto on_ump = [&](const libremidi::ump& message) {
+    std::lock_guard _{out_mutex};
     if (midiout.is_port_connected())
       midiout.send_ump(message);
-          }
-      },
-      libremidi::midi2::in_default_configuration()};
+  };
+  midi_in midiin{{.on_message = on_ump}, lm2::in_default_configuration()};
 
-  auto pi = obs.get_input_ports();
-  if (pi.empty())
-  {
-    std::cerr << "No MIDI 2 device found\n";
-    return -1;
-  }
+  if (auto err = midiin.open_port(pi[0]); err != stdx::error{})
+    err.throw_exception();
 
-  for (const auto& port : pi)
-  {
-    std::cout << "In: " << port.port_name << " | " << port.display_name << std::endl;
-  }
-
-  auto po = obs.get_output_ports();
-  for (const auto& port : po)
-  {
-    std::cout << "Out: " << port.port_name << " | " << port.display_name << std::endl;
-  }
-  midiin.open_port(pi[0]);
-
-  if(!po.empty())
-    midiout.open_port(po[0]);
-  std::cout << "\nReading MIDI input ... press <enter> to quit.\n";
-
+  // Wait until we exit
   char input;
   std::cin.get(input);
 }

@@ -149,22 +149,11 @@ private:
 };
 }
 
-[[noreturn]] static void usage()
-{
-  // Error function in case of incorrect command-line
-  // argument specifications.
-  std::cout << "\nusage: qmidiin <port>\n";
-  std::cout << "    where port = the device to use (default = 0).\n\n";
-  exit(0);
-}
-
-int main(int argc, char** argv)
-try
+int main(int argc, const char** argv)
 {
   using namespace std::literals;
-  // Minimal command-line check.
-  if (argc > 2)
-    usage();
+  // Read command line arguments
+  libremidi::examples::arguments args{argc, argv};
 
   libremidi::observer obs;
   auto ports = obs.get_input_ports();
@@ -179,25 +168,16 @@ try
       },
       libremidi::midi_in_configuration_for(obs)};
 
-  // Check available ports vs. specified.
-  auto port = 0U;
-  if (argc == 2)
-    port = atoi(argv[1]);
-
-  if (port >= ports.size())
-  {
-    std::cout << "Invalid port specifier!\n";
-    usage();
-  }
-
-  midiin.open_port(ports[port]);
+  if (!args.open_port(midiin))
+    return 1;
 
   // Install an interrupt handler function.
   static std::atomic_bool done{};
   signal(SIGINT, [](int) { done = true; });
 
   // Periodically check input queue.
-  std::cout << "Reading MIDI from port " << ports[port].display_name << " ... quit with Ctrl-C.\n";
+  std::cout << "Reading MIDI from port " << ports[args.input_port].display_name
+            << " ... quit with Ctrl-C.\n";
   while (!done)
   {
     for (;;)
@@ -212,9 +192,4 @@ try
   }
 
   return 0;
-}
-catch (const std::exception& error)
-{
-  std::cerr << error.what() << std::endl;
-  return EXIT_FAILURE;
 }

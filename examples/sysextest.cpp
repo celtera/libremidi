@@ -14,38 +14,29 @@
 #include <cstdlib>
 #include <iostream>
 #include <thread>
-#include <typeinfo>
 
-[[noreturn]] void usage()
-{
-  std::cout << "\nuseage: sysextest N\n";
-  std::cout << "    where N = length of sysex message to send / receive.\n\n";
-  exit(0);
-}
-
-int main(int argc, char* argv[])
-try
+int main(int argc, const char** argv)
 {
   using namespace std::literals;
-  libremidi::midi_out midiout;
-  libremidi::midi_in midiin{{
-      // Set our callback function.
-      .on_message = [](const libremidi::message& message) { std::cout << message << std::endl; },
+  libremidi::examples::arguments args{argc, argv};
 
-      .ignore_sysex = false,
-      .ignore_timing = true,
-      .ignore_sensing = true,
-  }};
+  libremidi::midi_out midiout{{}, libremidi::midi_out_configuration_for(args.api)};
+  libremidi::midi_in midiin{
+      {
+          // Set our callback function.
+          .on_message
+          = [](const libremidi::message& message) { std::cout << message << std::endl; },
 
-  // Minimal command-line check.
-  if (argc != 2)
-    usage();
-  auto nBytes = (unsigned int)atoi(argv[1]);
+          .ignore_sysex = false,
+          .ignore_timing = true,
+          .ignore_sensing = true,
+      },
+      libremidi::midi_in_configuration_for(args.api)};
 
-  if (chooseMidiPort(midiin) == false)
-    return 0;
-  if (chooseMidiPort(midiout) == false)
-    return 0;
+  if (!args.open_port(midiin))
+    return 1;
+  if (!args.open_port(midiout))
+    return 1;
 
   midiout.send_message(0xF6);
   std::this_thread::sleep_for(500ms); // pause a little
@@ -56,7 +47,7 @@ try
   {
     message.clear();
     message.push_back(240);
-    for (auto i = 0U; i < nBytes; i++)
+    for (auto i = 0U; i < args.count; i++)
       message.push_back(i % 128);
 
     message.push_back(247);
@@ -66,9 +57,4 @@ try
 
     std::this_thread::sleep_for(500ms); // pause a little
   }
-}
-catch (const std::exception& error)
-{
-  std::cerr << error.what() << std::endl;
-  return 0;
 }

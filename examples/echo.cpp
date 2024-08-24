@@ -8,7 +8,6 @@
 #include <thread>
 
 int main(int argc, char**)
-try
 {
   libremidi::observer obs;
   auto inputs = obs.get_input_ports();
@@ -34,12 +33,14 @@ try
           .on_message
           = [&](const libremidi::message& message) {
     std::cout << message << std::endl;
-    midiout.send_message(message);
+    auto _ = midiout.send_message(message); 
           },
       },
       libremidi::midi_in_configuration_for(obs)};
 
-  midiout.open_port(outputs[0]);
+  if (stdx::error err = midiout.open_port(outputs[0]); err.is_set())
+  {
+  }
   if (!midiout.is_port_connected())
   {
     std::cerr << "Could not connect to midi out\n";
@@ -58,9 +59,4 @@ try
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   char input;
   std::cin.get(input);
-}
-catch (const std::exception& error)
-{
-  std::cerr << error.what() << std::endl;
-  return EXIT_FAILURE;
 }
