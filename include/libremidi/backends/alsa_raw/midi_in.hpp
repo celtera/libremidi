@@ -144,7 +144,8 @@ public:
     while ((err = snd.rawmidi.read(this->midiport_, bytes, nbytes)) > 0)
     {
       const auto to_ns = [this] { return absolute_timestamp(); };
-      decoder_.on_bytes({bytes, bytes + err}, decoder_.timestamp<timestamp_info>(to_ns, 0));
+      m_processing.on_bytes(
+          {bytes, bytes + err}, m_processing.timestamp<timestamp_info>(to_ns, 0));
     }
     return err;
   }
@@ -169,7 +170,8 @@ public:
       const auto to_ns = [ts] {
         return static_cast<int64_t>(ts.tv_sec) * 1'000'000'000 + static_cast<int64_t>(ts.tv_nsec);
       };
-      decoder_.on_bytes({bytes, bytes + err}, decoder_.timestamp<timestamp_info>(to_ns, 0));
+      m_processing.on_bytes(
+          {bytes, bytes + err}, m_processing.timestamp<timestamp_info>(to_ns, 0));
     }
     return err;
   }
@@ -189,7 +191,7 @@ public:
 
   snd_rawmidi_t* midiport_{};
   std::vector<pollfd> fds_;
-  midi1::input_state_machine decoder_{this->configuration};
+  midi1::input_state_machine m_processing{this->configuration};
 };
 
 class midi_in_alsa_raw_threaded : public midi_in_impl

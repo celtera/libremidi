@@ -240,8 +240,7 @@ private:
       const auto* sysex = reinterpret_cast<MIDIHDR*>(midiMessage);
       if(inputStatus == MIM_LONGERROR)
       {
-        self.m_processing.message.bytes.clear();
-        self.m_processing.state = self.m_processing.main;
+        self.m_processing.reset();
       }
       else if (!self.configuration.ignore_sysex)
       {

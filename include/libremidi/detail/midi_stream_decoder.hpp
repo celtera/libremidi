@@ -102,6 +102,14 @@ namespace midi1
 struct input_state_machine : input_state_machine_base<input_configuration>
 {
   using input_state_machine_base::input_state_machine_base;
+
+  void reset()
+  {
+    message.bytes.clear();
+    message.timestamp = {};
+    state = main;
+  }
+
   bool has_finished_sysex(std::span<const uint8_t> bytes) const noexcept
   {
     return (((bytes.front() == 0xF0) || (state == in_sysex)) && (bytes.back() == 0xF7));
