@@ -1,5 +1,7 @@
 #include <libremidi/libremidi.hpp>
+
 #include <iostream>
+#include <mutex>
 
 int main()
 try
