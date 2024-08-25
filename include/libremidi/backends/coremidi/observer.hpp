@@ -69,11 +69,11 @@ public:
     MIDIEndpointGetEntity(obj, &e);
     bool physical = bool(e);
 
-    bool ok = false;
+    bool ok = this->configuration.track_any;
     if (physical && this->configuration.track_hardware)
-      ok = true;
+      ok |= true;
     else if ((!physical) && this->configuration.track_virtual)
-      ok = true;
+      ok |= true;
 
     if (!ok)
       return {};
