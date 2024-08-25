@@ -10,7 +10,8 @@
 
 namespace libremidi
 {
-LIBREMIDI_INLINE auto make_midi_out(auto base_conf, std::any api_conf)
+static LIBREMIDI_INLINE std::unique_ptr<midi_out_api>
+make_midi_out_impl(auto base_conf, std::any api_conf)
 {
   std::unique_ptr<midi_out_api> ptr;
   auto from_api = [&]<typename T>(T& /*backend*/) mutable {
@@ -26,24 +27,56 @@ LIBREMIDI_INLINE auto make_midi_out(auto base_conf, std::any api_conf)
   return ptr;
 }
 
-LIBREMIDI_INLINE midi_out::midi_out(const output_configuration& base_conf) noexcept
+static LIBREMIDI_INLINE std::unique_ptr<midi_out_api>
+make_midi_out(const output_configuration& base_conf)
 {
   for (const auto& api : available_apis())
   {
     try
     {
-      impl_ = make_midi_out(base_conf, midi_out_configuration_for(api));
+      if (auto ret = make_midi_out_impl(base_conf, midi_out_configuration_for(api)))
+        return ret;
     }
     catch (const std::exception& e)
     {
     }
-
-    if (impl_)
-      return;
   }
 
-  if (!impl_)
-    impl_ = std::make_unique<midi_out_dummy>(output_configuration{}, dummy_configuration{});
+  for (const auto& api : available_ump_apis())
+  {
+    try
+    {
+      if (auto ret = make_midi_out_impl(base_conf, midi_out_configuration_for(api)))
+        return ret;
+    }
+    catch (const std::exception& e)
+    {
+    }
+  }
+
+  return std::make_unique<midi_out_dummy>(output_configuration{}, dummy_configuration{});
+}
+
+static LIBREMIDI_INLINE std::unique_ptr<midi_out_api>
+make_midi_out(const output_configuration& base_conf, const std::any& api_conf)
+{
+  if (!api_conf.has_value())
+  {
+    return make_midi_out(base_conf);
+  }
+  else if (auto api = std::any_cast<libremidi::API>(&api_conf))
+  {
+    return make_midi_out_impl(base_conf, midi_out_configuration_for(*api));
+  }
+  else
+  {
+    return make_midi_out_impl(base_conf, api_conf);
+  }
+}
+
+LIBREMIDI_INLINE midi_out::midi_out(const output_configuration& base_conf) noexcept
+    : impl_{make_midi_out(base_conf)}
+{
 }
 
 LIBREMIDI_INLINE

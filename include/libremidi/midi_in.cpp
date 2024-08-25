@@ -78,20 +78,22 @@ LIBREMIDI_INLINE auto make_midi_in(auto base_conf, std::any api_conf, auto backe
   return ptr;
 }
 
-LIBREMIDI_INLINE midi_in::midi_in(const input_configuration& base_conf) noexcept
+/// MIDI 1 helpers
+static LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
+make_midi1_in(const input_configuration& base_conf)
 {
   for (const auto& api : available_apis())
   {
     try
     {
-      impl_ = make_midi_in(base_conf, midi_in_configuration_for(api), midi1::available_backends);
+      auto impl
+          = make_midi_in(base_conf, midi_in_configuration_for(api), midi1::available_backends);
+      if (impl)
+        return impl;
     }
     catch (const std::exception& e)
     {
     }
-
-    if (impl_)
-      return;
   }
 
   // No MIDI 1 backend, try the MIDI 2 ones with a wrap:
@@ -101,24 +103,45 @@ LIBREMIDI_INLINE midi_in::midi_in(const input_configuration& base_conf) noexcept
     {
       try
       {
-        impl_ = make_midi_in(c2, midi_in_configuration_for(api), midi2::available_backends);
+        auto impl = make_midi_in(c2, midi_in_configuration_for(api), midi2::available_backends);
+        if (impl)
+          return impl;
       }
       catch (const std::exception& e)
       {
       }
-
-      if (impl_)
-        return;
     }
   }
 
-  if (!impl_)
-    impl_ = std::make_unique<midi_in_dummy>(input_configuration{}, dummy_configuration{});
+  return std::make_unique<midi_in_dummy>(input_configuration{}, dummy_configuration{});
+}
+
+static LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
+make_midi1_in(const input_configuration& base_conf, const std::any& api_conf)
+{
+  if (!api_conf.has_value())
+  {
+    return make_midi1_in(base_conf);
+  }
+  else if (auto api = std::any_cast<libremidi::API>(&api_conf))
+  {
+    return make_midi_in(base_conf, midi_in_configuration_for(*api), midi1::available_backends);
+  }
+  else
+  {
+    return make_midi_in(base_conf, api_conf, midi1::available_backends);
+  }
+}
+
+/// MIDI 1 constructors
+LIBREMIDI_INLINE midi_in::midi_in(const input_configuration& base_conf) noexcept
+    : impl_{make_midi1_in(base_conf)}
+{
 }
 
 LIBREMIDI_INLINE
 midi_in::midi_in(input_configuration base_conf, std::any api_conf)
-    : impl_{make_midi_in(base_conf, api_conf, midi1::available_backends)}
+    : impl_{make_midi1_in(base_conf, api_conf)}
 {
   if (!impl_)
   {
@@ -128,20 +151,21 @@ midi_in::midi_in(input_configuration base_conf, std::any api_conf)
   }
 }
 
-LIBREMIDI_INLINE midi_in::midi_in(ump_input_configuration base_conf) noexcept
+/// MIDI 2 helpers
+static LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
+make_midi2_in(const ump_input_configuration& base_conf)
 {
   for (const auto& api : available_ump_apis())
   {
     try
     {
-      impl_ = make_midi_in(base_conf, midi_in_configuration_for(api), midi2::available_backends);
+      if (auto ret
+          = make_midi_in(base_conf, midi_in_configuration_for(api), midi2::available_backends))
+        return ret;
     }
     catch (const std::exception& e)
     {
     }
-
-    if (impl_)
-      return;
   }
 
   // No MIDI 2 backend, try the MIDI 1 ones with a wrap:
@@ -151,24 +175,44 @@ LIBREMIDI_INLINE midi_in::midi_in(ump_input_configuration base_conf) noexcept
     {
       try
       {
-        impl_ = make_midi_in(c2, midi_in_configuration_for(api), midi1::available_backends);
+        if (auto ret = make_midi_in(c2, midi_in_configuration_for(api), midi1::available_backends))
+          return ret;
       }
       catch (const std::exception& e)
       {
       }
-
-      if (impl_)
-        return;
     }
   }
 
-  if (!impl_)
-    impl_ = std::make_unique<midi_in_dummy>(input_configuration{}, dummy_configuration{});
+  return std::make_unique<midi_in_dummy>(ump_input_configuration{}, dummy_configuration{});
+}
+
+static LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
+make_midi2_in(const ump_input_configuration& base_conf, const std::any& api_conf)
+{
+  if (!api_conf.has_value())
+  {
+    return make_midi2_in(base_conf);
+  }
+  else if (auto api = std::any_cast<libremidi::API>(&api_conf))
+  {
+    return make_midi_in(base_conf, midi_in_configuration_for(*api), midi2::available_backends);
+  }
+  else
+  {
+    return make_midi_in(base_conf, api_conf, midi2::available_backends);
+  }
+}
+
+/// MIDI 2 constructors
+LIBREMIDI_INLINE midi_in::midi_in(ump_input_configuration base_conf) noexcept
+    : impl_{make_midi2_in(base_conf)}
+{
 }
 
 LIBREMIDI_INLINE
 midi_in::midi_in(ump_input_configuration base_conf, std::any api_conf)
-    : impl_{make_midi_in(base_conf, api_conf, midi2::available_backends)}
+    : impl_{make_midi2_in(base_conf, api_conf)}
 {
   if (!impl_)
   {
