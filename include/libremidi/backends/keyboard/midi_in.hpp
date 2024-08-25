@@ -44,37 +44,38 @@ public:
 
   void on_keypress(int scancode)
   {
+    using kevent = kbd_input_configuration::kbd_event;
+
     auto it = configuration.scancode_map.find(scancode);
     if (it == configuration.scancode_map.end())
       return;
 
-    using enum kbd_input_configuration::kbd_event;
-    if (it->second >= NOTE_0 && it->second < (NOTE_0 + 128))
+    if (it->second >= kevent::NOTE_0 && it->second < (kevent::NOTE_0 + 128))
     {
-      libremidi::channel_events::note_on(0, it->second - NOTE_0, m_current_velocity);
+      libremidi::channel_events::note_on(0, it->second - kevent::NOTE_0, m_current_velocity);
     }
-    else if (it->second >= VEL_0 && it->second < (VEL_0 + 128))
+    else if (it->second >= kevent::VEL_0 && it->second < (kevent::VEL_0 + 128))
     {
-      m_current_velocity = it->second - VEL_0;
+      m_current_velocity = it->second - kevent::VEL_0;
     }
-    else if (it->second >= OCT_0 && it->second < (OCT_0 + 128))
+    else if (it->second >= kevent::OCT_0 && it->second < (kevent::OCT_0 + 128))
     {
-      m_current_octave = it->second - OCT_0;
+      m_current_octave = it->second - kevent::OCT_0;
     }
     else
     {
       switch (it->second)
       {
-        case VELOCITY_MINUS:
+        case kevent::VELOCITY_MINUS:
           m_current_velocity = std::clamp(m_current_velocity - 10, 0, 127);
           break;
-        case VELOCITY_PLUS:
+        case kevent::VELOCITY_PLUS:
           m_current_velocity = std::clamp(m_current_velocity + 10, 0, 127);
           break;
-        case OCTAVE_MINUS:
+        case kevent::OCTAVE_MINUS:
           m_current_octave = std::clamp(m_current_octave - 10, 0, 127);
           break;
-        case OCTAVE_PLUS:
+        case kevent::OCTAVE_PLUS:
           m_current_octave = std::clamp(m_current_octave + 10, 0, 127);
           break;
       }
@@ -83,14 +84,15 @@ public:
 
   void on_keyrelease(int scancode)
   {
+    using kevent = kbd_input_configuration::kbd_event;
+
     auto it = configuration.scancode_map.find(scancode);
     if (it == configuration.scancode_map.end())
       return;
 
-    using enum kbd_input_configuration::kbd_event;
-    if (it->second >= NOTE_0 && it->second < (NOTE_0 + 128))
+    if (it->second >= kevent::NOTE_0 && it->second < (kevent::NOTE_0 + 128))
     {
-      libremidi::channel_events::note_off(0, it->second - NOTE_0, 0);
+      libremidi::channel_events::note_off(0, it->second - kevent::NOTE_0, 0);
     }
   }
 
