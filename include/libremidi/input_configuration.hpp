@@ -5,7 +5,6 @@
 #include <libremidi/ump.hpp>
 
 #include <functional>
-#include <string>
 
 namespace libremidi
 {
@@ -41,13 +40,17 @@ enum timestamp_mode
 
 using timestamp = int64_t;
 using message_callback = std::function<void(message&& message)>;
-using raw_callback = std::function<void(std::span<uint8_t>, timestamp)>;
+using raw_callback = std::function<void(std::span<const uint8_t>, timestamp)>;
 using timestamp_callback = std::function<timestamp(timestamp)>;
 struct input_configuration
 {
   //! Set a callback function to be invoked for incoming MIDI messages.
-  //! Mandatory!
+  //! Either this or on_raw_message must be set
   message_callback on_message;
+
+  //! Invoked for incoming MIDI bytes. No transformation, no filtering, no packetization,
+  //! just the MIDI data straight from the source.
+  raw_callback on_raw_data;
 
   //! Set a custom callback function to be invoked for timestamping MIDI messages.
   //! Input: the API provided timestamp in nanoseconds, if available, for reference.
@@ -81,10 +84,16 @@ struct input_configuration
 };
 
 using ump_callback = std::function<void(ump&&)>;
+using raw_ump_callback = std::function<void(std::span<const uint32_t>, timestamp)>;
 struct ump_input_configuration
 {
   //! Set a callback function to be invoked for incoming UMP messages.
+  //! Either this or on_raw_message must be set
   ump_callback on_message;
+
+  //! Invoked for incoming UMP bytes. No transformation, no filtering, no packetization,
+  //! just the UMP data straight from the source.
+  raw_ump_callback on_raw_data;
 
   //! Set a custom callback function to be invoked for timestamping MIDI messages.
   //! Input: the API provided timestamp in nanoseconds, if available, for reference.

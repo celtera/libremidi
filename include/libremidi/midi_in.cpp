@@ -60,11 +60,12 @@ convert_midi2_to_midi1_input_configuration(const ump_input_configuration& base_c
   return c2;
 }
 
-LIBREMIDI_INLINE auto make_midi_in(auto base_conf, std::any api_conf, auto backends)
+static LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
+make_midi_in(auto base_conf, std::any api_conf, auto backends)
 {
   std::unique_ptr<midi_in_api> ptr;
 
-  assert(base_conf.on_message);
+  assert(base_conf.on_message || base_conf.on_raw_data);
 
   auto from_api = [&]<typename T>(T& /*backend*/) mutable {
     if (auto conf = std::any_cast<typename T::midi_in_configuration>(&api_conf))

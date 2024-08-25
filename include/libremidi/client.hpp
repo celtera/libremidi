@@ -115,9 +115,9 @@ public:
         port,
         input_configuration{
             .on_message
-            = [this, port](libremidi::message&& m) {
-      configuration.on_message(port, std::move(m));
-            },
+            = [this,
+               port](libremidi::message&& m) { configuration.on_message(port, std::move(m)); },
+            .on_raw_data = {},
             .get_timestamp = {},
 
             .on_error = configuration.on_error,

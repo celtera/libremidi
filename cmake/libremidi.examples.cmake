@@ -25,6 +25,7 @@ add_example(qmidiin)
 add_example(sysextest)
 add_example(minimal)
 add_example(midi2_echo)
+add_example(rawmidiin)
 
 if(LIBREMIDI_NI_MIDI2)
   add_example(midi2_interop)

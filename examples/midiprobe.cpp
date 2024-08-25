@@ -23,7 +23,9 @@ int main()
     // On Windows 10, apparently the MIDI devices aren't exactly available as soon as the app open...
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    libremidi::observer midi{{}, libremidi::observer_configuration_for(api)};
+    libremidi::observer midi{
+        {.track_hardware = true, .track_virtual = true},
+        libremidi::observer_configuration_for(api)};
     {
       // Check inputs.
       auto ports = midi.get_input_ports();

@@ -26,7 +26,7 @@ struct LIBREMIDI_EXPORT port_information
 
   // ALSA Raw: { uint16_t card, device, sub, padding; }
   // ALSA Seq: { uint32_t client, uint32_t port; }
-  // CoreMIDI: MidiObjectRef
+  // CoreMIDI: MidiObjectRef's kMIDIPropertyUniqueID (uint32_t)
   // WebMIDI: unused
   // JACK: jack_port_id_t
   // PipeWire: port.id

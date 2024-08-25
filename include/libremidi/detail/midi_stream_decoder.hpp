@@ -111,6 +111,26 @@ struct input_state_machine : input_state_machine_base<input_configuration>
   // MIDI events (CoreMIDI, ALSA Sequencer can work like this)
   void on_bytes_multi(std::span<const uint8_t> bytes, int64_t timestamp)
   {
+    if (this->configuration.on_message)
+      on_bytes_multi_segmented(this->configuration.on_message, bytes, timestamp);
+    if (this->configuration.on_raw_data)
+      this->configuration.on_raw_data(bytes, timestamp);
+  }
+
+  // Function to process bytes corresponding to at most one midi event
+  // e.g. a midi channel event or a single sysex
+  void on_bytes(std::span<const uint8_t> bytes, int64_t timestamp)
+  {
+    if (this->configuration.on_message)
+      on_bytes_segmented(this->configuration.on_message, bytes, timestamp);
+    if (this->configuration.on_raw_data)
+      this->configuration.on_raw_data(bytes, timestamp);
+  }
+
+private:
+  void on_bytes_multi_segmented(
+      const message_callback& cb, std::span<const uint8_t> bytes, int64_t timestamp)
+  {
     int64_t nBytes = bytes.size();
     int64_t iByte = 0;
 
@@ -118,7 +138,7 @@ struct input_state_machine : input_state_machine_base<input_configuration>
     switch (state)
     {
       case in_sysex: {
-        return on_continue_sysex(bytes, finished_sysex);
+        return on_continue_sysex(cb, bytes, finished_sysex);
       }
       case main: {
         while (iByte < nBytes)
@@ -214,7 +234,7 @@ struct input_state_machine : input_state_machine_base<input_configuration>
             message.assign(begin, begin + size);
             message.timestamp = timestamp;
 
-            this->configuration.on_message(std::move(message));
+            cb(std::move(message));
             message.clear();
 
             iByte += size;
@@ -224,7 +244,8 @@ struct input_state_machine : input_state_machine_base<input_configuration>
     }
   }
 
-  void on_continue_sysex(std::span<const uint8_t> bytes, bool finished_sysex)
+  void on_continue_sysex(
+      const message_callback& cb, std::span<const uint8_t> bytes, bool finished_sysex)
   {
     if (finished_sysex)
       state = main;
@@ -238,14 +259,16 @@ struct input_state_machine : input_state_machine_base<input_configuration>
       message.insert(message.end(), bytes.begin(), bytes.end());
       if (finished_sysex)
       {
-        this->configuration.on_message(std::move(message));
+        cb(std::move(message));
         message.clear();
       }
     }
     return;
   }
 
-  void on_main(std::span<const uint8_t> bytes, int64_t timestamp, bool finished_sysex)
+  void on_main(
+      const message_callback& cb, std::span<const uint8_t> bytes, int64_t timestamp,
+      bool finished_sysex)
   {
     switch (bytes[0])
     {
@@ -260,7 +283,7 @@ struct input_state_machine : input_state_machine_base<input_configuration>
           message.timestamp = timestamp;
           if (finished_sysex)
           {
-            this->configuration.on_message(std::move(message));
+            cb(std::move(message));
             message.clear();
           }
         }
@@ -286,13 +309,12 @@ struct input_state_machine : input_state_machine_base<input_configuration>
     message.assign(bytes.begin(), bytes.end());
     message.timestamp = timestamp;
 
-    this->configuration.on_message(std::move(message));
+    cb(std::move(message));
     message.clear();
   }
 
-  // Function to process bytes corresponding to at most one midi event
-  // e.g. a midi channel event or a single sysex
-  void on_bytes(std::span<const uint8_t> bytes, int64_t timestamp)
+  void
+  on_bytes_segmented(const message_callback& cb, std::span<const uint8_t> bytes, int64_t timestamp)
   {
     if (bytes.empty())
       return;
@@ -301,21 +323,22 @@ struct input_state_machine : input_state_machine_base<input_configuration>
     switch (state)
     {
       case in_sysex:
-        return on_continue_sysex(bytes, finished_sysex);
+        return on_continue_sysex(cb, bytes, finished_sysex);
 
       case main:
-        return on_main(bytes, timestamp, finished_sysex);
+        return on_main(cb, bytes, timestamp, finished_sysex);
     }
   }
 
+public:
   libremidi::message message;
 
+private:
   enum
   {
     main,
     in_sysex
   } state{main};
-
 };
 }
 
@@ -325,9 +348,7 @@ struct input_state_machine : input_state_machine_base<ump_input_configuration>
 {
   using input_state_machine_base::input_state_machine_base;
 
-  // Function to process a byte stream which may contain multiple successive
-  // MIDI events (CoreMIDI, ALSA Sequencer can work like this)
-
+public:
   void on_bytes_multi(std::span<const unsigned char> bytes, int64_t timestamp)
   {
     auto ptr = reinterpret_cast<const uint32_t*>(bytes.data());
@@ -336,6 +357,26 @@ struct input_state_machine : input_state_machine_base<ump_input_configuration>
   }
 
   void on_bytes_multi(std::span<const uint32_t> bytes, int64_t timestamp)
+  {
+    if (this->configuration.on_message)
+      on_bytes_multi_segmented(this->configuration.on_message, bytes, timestamp);
+    if (this->configuration.on_raw_data)
+      this->configuration.on_raw_data(bytes, timestamp);
+  }
+
+  void on_bytes(std::span<const uint32_t> bytes, int64_t timestamp)
+  {
+    if (this->configuration.on_message)
+      on_bytes_segmented(this->configuration.on_message, bytes, timestamp);
+    if (this->configuration.on_raw_data)
+      this->configuration.on_raw_data(bytes, timestamp);
+  }
+
+private:
+  // Function to process a byte stream which may contain multiple successive
+  // MIDI events (CoreMIDI, ALSA Sequencer can work like this)
+  void on_bytes_multi_segmented(
+      const ump_callback& cb, std::span<const uint32_t> bytes, int64_t timestamp)
   {
     auto count = bytes.size();
     auto ump_stream = bytes.data();
@@ -352,7 +393,7 @@ struct input_state_machine : input_state_machine_base<ump_input_configuration>
         break;
 
       const auto ump_uints = cmidi2_ump_get_num_bytes(ump_stream[0]) / 4;
-      on_bytes({ump_stream, ump_stream + ump_uints}, timestamp);
+      on_bytes_segmented(cb, {ump_stream, ump_stream + ump_uints}, timestamp);
 
       ump_stream += ump_uints;
       count -= ump_uints;
@@ -360,7 +401,8 @@ struct input_state_machine : input_state_machine_base<ump_input_configuration>
   }
 
   // Function to process bytes corresponding to at most one midi event
-  void on_bytes(std::span<const uint32_t> bytes, int64_t timestamp)
+  void
+  on_bytes_segmented(const ump_callback& cb, std::span<const uint32_t> bytes, int64_t timestamp)
   {
     // Filter according to message type
     switch(cmidi2_ump_get_message_type(bytes.data()))
@@ -408,7 +450,7 @@ struct input_state_machine : input_state_machine_base<ump_input_configuration>
     libremidi::ump msg;
     std::copy(bytes.begin(), bytes.end(), msg.data);
     msg.timestamp = timestamp;
-    configuration.on_message(std::move(msg));
+    cb(std::move(msg));
   }
 };
 }
