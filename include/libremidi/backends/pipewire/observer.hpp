@@ -39,18 +39,29 @@ public:
       this->add_callbacks(configuration);
       this->start_thread();
     }
+
+    if (configuration.notify_in_constructor)
+    {
+      if (configuration.input_added)
+        for (const auto& p : get_input_ports())
+          configuration.input_added(p);
+
+      if (configuration.output_added)
+        for (const auto& p : get_output_ports())
+          configuration.output_added(p);
+    }
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE; }
 
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
-    return get_ports<SPA_DIRECTION_OUTPUT>(*this->global_context);
+    return get_ports<SPA_DIRECTION_OUTPUT>(this->configuration, *this->global_context);
   }
 
   std::vector<libremidi::output_port> get_output_ports() const noexcept override
   {
-    return get_ports<SPA_DIRECTION_INPUT>(*this->global_context);
+    return get_ports<SPA_DIRECTION_INPUT>(this->configuration, *this->global_context);
   }
 
   ~observer_pipewire()

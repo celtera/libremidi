@@ -437,30 +437,34 @@ struct pipewire_helpers
   // Note: keep in mind that an "input" port for us (e.g. a keyboard that goes to the computer)
   // is an "output" port from the point of view of pipewire as data will come out of it
   template <spa_direction Direction>
-  static auto get_ports(const pipewire_context& ctx) noexcept -> std::vector<
-      std::conditional_t<Direction == SPA_DIRECTION_OUTPUT, input_port, output_port>>
+  static auto get_ports(const observer_configuration& conf, const pipewire_context& ctx) noexcept
+      -> std::vector<
+          std::conditional_t<Direction == SPA_DIRECTION_OUTPUT, input_port, output_port>>
   {
     std::vector<std::conditional_t<Direction == SPA_DIRECTION_OUTPUT, input_port, output_port>>
         ret;
 
     {
       std::lock_guard _{ctx.current_graph.mtx};
-      for (auto& node : ctx.current_graph.physical_midi)
-      {
-        for (auto& p :
-             (Direction == SPA_DIRECTION_INPUT ? node.second.inputs : node.second.outputs))
+      if (conf.track_any || conf.track_hardware)
+        for (auto& node : ctx.current_graph.physical_midi)
         {
-          ret.push_back(to_port_info<Direction>(p));
+          for (auto& port :
+               (Direction == SPA_DIRECTION_INPUT ? node.second.inputs : node.second.outputs))
+          {
+            ret.push_back(to_port_info<Direction>(port));
+          }
         }
-      }
-      for (auto& node : ctx.current_graph.software_midi)
-      {
-        for (auto& p :
-             (Direction == SPA_DIRECTION_INPUT ? node.second.inputs : node.second.outputs))
+
+      if (conf.track_any || conf.track_virtual)
+        for (auto& node : ctx.current_graph.software_midi)
         {
-          ret.push_back(to_port_info<Direction>(p));
+          for (auto& port :
+               (Direction == SPA_DIRECTION_INPUT ? node.second.inputs : node.second.outputs))
+          {
+            ret.push_back(to_port_info<Direction>(port));
+          }
         }
-      }
     }
 
     return ret;
