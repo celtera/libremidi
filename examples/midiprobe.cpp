@@ -30,16 +30,18 @@ int main()
       // Check inputs.
       auto ports = midi.get_input_ports();
       std::cout << ports.size() << " MIDI input sources:\n";
+      int i = 0;
       for (auto& port : ports)
-        std::cout << " - " << port << '\n';
+        std::cout << " - " << i++ << ": " << port << '\n';
     }
 
     {
       // Check outputs.
       auto ports = midi.get_output_ports();
       std::cout << ports.size() << " MIDI output sinks:\n";
+      int i = 0;
       for (auto& port : ports)
-        std::cout << " - " << port << '\n';
+        std::cout << " - " << i++ << ": " << port << '\n';
     }
 
     std::cout << "\n";
