@@ -3,6 +3,7 @@
 #include <libremidi/detail/midi_in.hpp>
 
 #include <chrono>
+#include <unordered_map>
 
 namespace libremidi
 {
@@ -21,7 +22,7 @@ public:
   explicit midi_in_kbd(input_configuration&& conf, kbd_input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
-    apiconf.set_input_scancode_callbacks(
+    configuration.set_input_scancode_callbacks(
         [this](int v) { on_keypress(v); }, [this](int v) { on_keyrelease(v); });
   }
 
@@ -52,7 +53,10 @@ public:
 
     if (it->second >= kevent::NOTE_0 && it->second < (kevent::NOTE_0 + 128))
     {
-      libremidi::channel_events::note_on(0, it->second - kevent::NOTE_0, m_current_velocity);
+      int note = it->second - kevent::NOTE_0 + 12 * m_current_octave;
+      this->configuration.on_message(
+          libremidi::channel_events::note_on(0, note, m_current_velocity));
+      m_current_notes_scancodes[scancode] = note;
     }
     else if (it->second >= kevent::VEL_0 && it->second < (kevent::VEL_0 + 128))
     {
@@ -73,10 +77,10 @@ public:
           m_current_velocity = std::clamp(m_current_velocity + 10, 0, 127);
           break;
         case kevent::OCTAVE_MINUS:
-          m_current_octave = std::clamp(m_current_octave - 10, 0, 127);
+          m_current_octave = std::clamp(m_current_octave - 1, 0, 127);
           break;
         case kevent::OCTAVE_PLUS:
-          m_current_octave = std::clamp(m_current_octave + 10, 0, 127);
+          m_current_octave = std::clamp(m_current_octave + 1, 0, 127);
           break;
       }
     }
@@ -92,11 +96,17 @@ public:
 
     if (it->second >= kevent::NOTE_0 && it->second < (kevent::NOTE_0 + 128))
     {
-      libremidi::channel_events::note_off(0, it->second - kevent::NOTE_0, 0);
+      if (auto note_it = m_current_notes_scancodes.find(scancode);
+          note_it != m_current_notes_scancodes.end())
+      {
+        this->configuration.on_message(libremidi::channel_events::note_off(0, note_it->second, 0));
+        m_current_notes_scancodes.erase(note_it);
+      }
     }
   }
 
-  int m_current_octave{2};
+  int m_current_octave{3};
   int m_current_velocity{80};
+  std::unordered_map<int, int> m_current_notes_scancodes;
 };
 }
