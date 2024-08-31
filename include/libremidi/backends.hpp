@@ -1,4 +1,7 @@
 #pragma once
+#include <libremidi/config.hpp>
+
+#include <any>
 #include <tuple>
 
 #if !__has_include(<weak_libjack.h>) && !__has_include(<jack/jack.h>)
@@ -179,5 +182,49 @@ auto for_backend(libremidi::API api, F&& f)
   midi2::for_backend(api, f);
 }
 
+void for_input_configuration(auto f, std::any& api_conf)
+{
+  auto from_api = [&]<typename T>(T& /*backend*/) mutable {
+    if (auto conf = std::any_cast<typename T::midi_in_configuration>(&api_conf))
+    {
+      f(*conf);
+      return true;
+    }
+    return false;
+  };
+  if (std::apply([&](auto&&... b) { return (from_api(b) || ...); }, midi1::available_backends))
+    return;
+  std::apply([&](auto&&... b) { return (from_api(b) || ...); }, midi2::available_backends);
+}
+
+void for_output_configuration(auto f, std::any& api_conf)
+{
+  auto from_api = [&]<typename T>(T& /*backend*/) mutable {
+    if (auto conf = std::any_cast<typename T::midi_out_configuration>(&api_conf))
+    {
+      f(*conf);
+      return true;
+    }
+    return false;
+  };
+  if (std::apply([&](auto&&... b) { return (from_api(b) || ...); }, midi1::available_backends))
+    return;
+  std::apply([&](auto&&... b) { return (from_api(b) || ...); }, midi2::available_backends);
+}
+
+void for_observer_configuration(auto f, std::any& api_conf)
+{
+  auto from_api = [&]<typename T>(T& /*backend*/) mutable {
+    if (auto conf = std::any_cast<typename T::midi_observer_configuration>(&api_conf))
+    {
+      f(*conf);
+      return true;
+    }
+    return false;
+  };
+  if (std::apply([&](auto&&... b) { return (from_api(b) || ...); }, midi1::available_backends))
+    return;
+  std::apply([&](auto&&... b) { return (from_api(b) || ...); }, midi2::available_backends);
+}
 }
 }

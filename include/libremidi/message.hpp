@@ -1,7 +1,9 @@
 #pragma once
 #include <libremidi/config.hpp>
 
+#include <algorithm>
 #include <span>
+#include <vector>
 
 namespace libremidi
 {

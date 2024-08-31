@@ -4,11 +4,6 @@
   #define NOMINMAX 1
   #define WIN32_LEAN_AND_MEAN
 #endif
-#include <algorithm>
-#include <cinttypes>
-#include <memory>
-#include <stdexcept>
-#include <vector>
 
 #if defined(LIBREMIDI_EXPORTS)
   #if defined(_MSC_VER)
@@ -51,6 +46,7 @@ using midi_bytes = boost::container::small_vector<unsigned char, small_vector_mi
 }
   #endif
 #else
+  #include <vector>
 namespace libremidi
 {
 using midi_bytes = std::vector<unsigned char>;

@@ -24,6 +24,7 @@
 #endif
 
 #include <libremidi/backends/jack/config.hpp>
+#include <libremidi/backends/keyboard/config.hpp>
 
 namespace libremidi
 {
@@ -31,5 +32,4 @@ namespace libremidi
 struct dummy_configuration
 {
 };
-
 }
