@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <span>
 #include <vector>
+#if defined(__cpp_exceptions)
+  #include <stdexcept>
+#endif
 
 namespace libremidi
 {
