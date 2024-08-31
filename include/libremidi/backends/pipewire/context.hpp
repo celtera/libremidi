@@ -476,7 +476,7 @@ struct pipewire_filter
             PW_KEY_MEDIA_TYPE, "Midi",
             PW_KEY_MEDIA_CATEGORY, "Filter",
             PW_KEY_MEDIA_ROLE, "DSP",
-            PW_KEY_MEDIA_NAME, "libremidi",
+            PW_KEY_MEDIA_NAME, "",
 #if defined(PW_KEY_NODE_LOCK_RATE)
             PW_KEY_NODE_LOCK_RATE, "true",
 #endif
