@@ -16,6 +16,7 @@ typedef UInt32 MIDIObjectRef;
 typedef MIDIObjectRef MIDIClientRef;
 #else
 using MIDIClientRef = uint32_t;
+using MIDIObjectRef = uint32_t;
 #endif
 namespace libremidi
 {
