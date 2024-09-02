@@ -94,7 +94,7 @@ int libremidi_midi_out_port_clone(
 
 int libremidi_midi_out_port_free(libremidi_midi_out_port* port)
 {
-  delete reinterpret_cast<libremidi::input_port*>(port);
+  delete reinterpret_cast<libremidi::output_port*>(port);
   return 0;
 }
 
