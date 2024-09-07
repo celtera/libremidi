@@ -61,13 +61,15 @@ void on_output_port_found(void* ctx, const libremidi_midi_out_port* port)
   e->out_port_count++;
 }
 
-void on_midi1_message(void* ctx, const midi1_symbol* msg, size_t len)
+void on_midi1_message(
+    void* ctx, libremidi_timestamp ts, const libremidi_midi1_symbol* msg, size_t len)
 {
   printf("%#02x %#02x %#02x \n", (int)msg[0], (int)msg[1], (int)msg[2]);
   fflush(stdout);
 }
 
-void on_midi2_message(void* ctx, const midi2_symbol* msg, size_t len)
+void on_midi2_message(
+    void* ctx, libremidi_timestamp ts, const libremidi_midi2_symbol* msg, size_t len)
 {
   printf("%#02x %#02x %#02x\n", (int)msg[0], (int)msg[1], (int)msg[2]);
   fflush(stdout);

@@ -1,5 +1,8 @@
+// clang-format off
 #include <libremidi/libremidi-c.h>
 #include <libremidi/libremidi.hpp>
+#include <libremidi/backends.hpp>
+// clang-format on
 
 #include <cerrno>
 #include <cstdlib>
@@ -36,6 +39,45 @@ static void assign_error_callback(const auto& src, auto& dst)
 }
 
 extern "C" {
+const char* libremidi_get_version(void)
+{
+  return LIBREMIDI_VERSION;
+}
+
+void libremidi_available_midi1_apis(void* ctx, void (*cb)(void* ctx, libremidi_api))
+{
+  if (!cb)
+    return;
+  libremidi::midi1::for_all_backends([=](auto b) { cb(ctx, b.API); });
+}
+
+void libremidi_available_midi2_apis(void* ctx, void (*cb)(void* ctx, libremidi_api))
+{
+  if (!cb)
+    return;
+  libremidi::midi2::for_all_backends([=](auto b) { cb(ctx, b.API); });
+}
+
+const char* libremidi_api_identifier(libremidi_api api)
+{
+  return libremidi::get_api_name(api).data();
+}
+
+const char* libremidi_api_display_name(libremidi_api api)
+{
+  return libremidi::get_api_display_name(api).data();
+}
+
+libremidi_api libremidi_get_compiled_api_by_identifier(const char* name)
+{
+  libremidi_api ret = libremidi_api::UNSPECIFIED;
+  libremidi::midi_any::for_all_backends([&](auto& b) {
+    if (name == b.name)
+      ret = b.API;
+  });
+  return ret;
+}
+
 int libremidi_midi_api_configuration_init(libremidi_api_configuration* conf)
 {
   memset(conf, 0, sizeof(*conf));
@@ -218,10 +260,8 @@ int libremidi_midi_in_new(
   // Create the MIDI object
   switch (c->version)
   {
-    case libremidi_midi_configuration::MIDI1: {
-      if (!c->on_midi1_message.callback)
-        return -EINVAL;
-
+    case libremidi_midi_configuration::MIDI1:
+    case libremidi_midi_configuration::MIDI1_RAW: {
       libremidi::input_configuration conf;
       libremidi::assign_error_callback(c->on_error, conf.on_error);
       libremidi::assign_error_callback(c->on_warning, conf.on_warning);
@@ -236,9 +276,20 @@ int libremidi_midi_in_new(
             = [cb = c->get_timestamp](int64_t msg) { return cb.callback(cb.context, msg); };
       }
 
-      conf.on_message = [cb = c->on_midi1_message](const libremidi::message& msg) {
-        cb.callback(cb.context, msg.bytes.data(), msg.size());
-      };
+      if (c->on_midi1_message.callback)
+        conf.on_message = [cb = c->on_midi1_message](const libremidi::message& msg) {
+          cb.callback(cb.context, msg.timestamp, msg.bytes.data(), msg.size());
+        };
+      else if (c->on_midi1_raw_data.callback)
+      {
+        conf.on_raw_data = [cb = c->on_midi1_raw_data](std::span<const uint8_t> msg, int64_t ts) {
+          cb.callback(cb.context, ts, msg.data(), msg.size());
+        };
+      }
+      else
+      {
+        return -EINVAL;
+      }
 
       try
       {
@@ -252,10 +303,8 @@ int libremidi_midi_in_new(
       }
       break;
     }
-    case libremidi_midi_configuration::MIDI2: {
-      if (!c->on_midi1_message.callback)
-        return -EINVAL;
-
+    case libremidi_midi_configuration::MIDI2:
+    case libremidi_midi_configuration::MIDI2_RAW: {
       libremidi::ump_input_configuration conf;
       libremidi::assign_error_callback(c->on_error, conf.on_error);
       libremidi::assign_error_callback(c->on_warning, conf.on_warning);
@@ -270,9 +319,20 @@ int libremidi_midi_in_new(
             = [cb = c->get_timestamp](int64_t msg) { return cb.callback(cb.context, msg); };
       }
 
-      conf.on_message = [cb = c->on_midi2_message](const libremidi::ump& msg) {
-        cb.callback(cb.context, msg.data, msg.size());
-      };
+      if (c->on_midi2_message.callback)
+        conf.on_message = [cb = c->on_midi2_message](const libremidi::ump& msg) {
+          cb.callback(cb.context, msg.timestamp, msg.data, msg.size());
+        };
+      else if (c->on_midi2_raw_data.callback)
+      {
+        conf.on_raw_data = [cb = c->on_midi2_raw_data](std::span<const uint32_t> msg, int64_t ts) {
+          cb.callback(cb.context, ts, msg.data(), msg.size());
+        };
+      }
+      else
+      {
+        return -EINVAL;
+      }
 
       try
       {
@@ -401,7 +461,7 @@ int libremidi_midi_out_is_connected(const libremidi_midi_out_handle* out)
 }
 
 int libremidi_midi_out_send_message(
-    libremidi_midi_out_handle* out, const midi1_symbol* msg, size_t sz)
+    libremidi_midi_out_handle* out, const libremidi_midi1_symbol* msg, size_t sz)
 {
   if (!out || !msg || sz > std::numeric_limits<int32_t>::max())
     return -EINVAL;
@@ -410,7 +470,7 @@ int libremidi_midi_out_send_message(
   return res != stdx::error{} ? -EIO : 0;
 }
 
-int libremidi_midi_out_send_ump(libremidi_midi_out_handle* out, const midi2_symbol* msg, size_t sz)
+int libremidi_midi_out_send_ump(libremidi_midi_out_handle* out, const libremidi_midi2_symbol* msg, size_t sz)
 {
   if (!out || !msg || sz > std::numeric_limits<int32_t>::max())
     return -EINVAL;
@@ -420,7 +480,7 @@ int libremidi_midi_out_send_ump(libremidi_midi_out_handle* out, const midi2_symb
 }
 
 int libremidi_midi_out_schedule_message(
-    libremidi_midi_out_handle* out, int64_t ts, const midi1_symbol* msg, size_t sz)
+    libremidi_midi_out_handle* out, int64_t ts, const libremidi_midi1_symbol* msg, size_t sz)
 {
   if (!out || !msg || sz > std::numeric_limits<int32_t>::max())
     return -EINVAL;
@@ -430,7 +490,7 @@ int libremidi_midi_out_schedule_message(
 }
 
 int libremidi_midi_out_schedule_ump(
-    libremidi_midi_out_handle* out, int64_t ts, const midi2_symbol* msg, size_t sz)
+    libremidi_midi_out_handle* out, int64_t ts, const libremidi_midi2_symbol* msg, size_t sz)
 {
   if (!out || !msg || sz > std::numeric_limits<int32_t>::max())
     return -EINVAL;

@@ -1,4 +1,6 @@
 #pragma once
+#include <libremidi/api-c.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -16,11 +18,11 @@
 #if __cplusplus
 extern "C" {
 #endif
-typedef unsigned char midi1_symbol;
-typedef unsigned char* midi1_message;
+typedef unsigned char libremidi_midi1_symbol;
+typedef libremidi_midi1_symbol* libremidi_midi1_message;
 
-typedef uint32_t midi2_symbol;
-typedef midi2_symbol* midi2_message;
+typedef uint32_t libremidi_midi2_symbol;
+typedef libremidi_midi2_symbol* libremidi_midi2_message;
 
 typedef int64_t libremidi_timestamp;
 
@@ -41,29 +43,6 @@ enum libremidi_timestamp_mode
   SystemMonotonic,
   AudioFrame,
   Custom
-};
-
-enum libremidi_api
-{
-  UNSPECIFIED, /*!< Search for a working compiled API. */
-
-  // MIDI 1.0 APIs
-  COREMIDI,    /*!< macOS CoreMidi API. */
-  ALSA_SEQ,    /*!< Linux ALSA Sequencer API. */
-  ALSA_RAW,    /*!< Linux Raw ALSA API. */
-  JACK_MIDI,   /*!< JACK Low-Latency MIDI Server API. */
-  WINDOWS_MM,  /*!< Microsoft Multimedia MIDI API. */
-  WINDOWS_UWP, /*!< Microsoft WinRT MIDI API. */
-  WEBMIDI,     /*!< Web MIDI API through Emscripten */
-  PIPEWIRE,    /*!< PipeWire */
-
-  // MIDI 2.0 APIs
-  ALSA_RAW_UMP,          /*!< Raw ALSA API for MIDI 2.0 */
-  ALSA_SEQ_UMP,          /*!< Linux ALSA Sequencer API for MIDI 2.0 */
-  COREMIDI_UMP,          /*!< macOS CoreMidi API for MIDI 2.0. Requires macOS 11+ */
-  WINDOWS_MIDI_SERVICES, /*!< Windows API for MIDI 2.0. Requires Windows 11 */
-
-  DUMMY /*!< A compilable but non-functional API. */
 };
 
 typedef struct libremidi_api_configuration
@@ -121,10 +100,13 @@ typedef struct libremidi_observer_configuration
 
 typedef struct libremidi_midi_configuration
 {
+  // Indicates the kind of callback requested, e.g. set MIDI1_RAW if you use the on_midi1_raw_data
   enum
   {
-    MIDI1,
-    MIDI2
+    MIDI1 = (1 << 1),
+    MIDI1_RAW = (1 << 2),
+    MIDI2 = (1 << 3),
+    MIDI2_RAW = (1 << 4)
   } version;
 
   union
@@ -138,13 +120,23 @@ typedef struct libremidi_midi_configuration
     struct
     {
       void* context;
-      void (*callback)(void* ctx, const midi1_symbol*, size_t len);
+      void (*callback)(void* ctx, libremidi_timestamp, const libremidi_midi1_symbol*, size_t len);
     } on_midi1_message;
     struct
     {
       void* context;
-      void (*callback)(void* ctx, const midi2_symbol*, size_t len);
+      void (*callback)(void* ctx, libremidi_timestamp, const libremidi_midi1_symbol*, size_t len);
+    } on_midi1_raw_data;
+    struct
+    {
+      void* context;
+      void (*callback)(void* ctx, libremidi_timestamp, const libremidi_midi2_symbol*, size_t len);
     } on_midi2_message;
+    struct
+    {
+      void* context;
+      void (*callback)(void* ctx, libremidi_timestamp, const libremidi_midi2_symbol*, size_t len);
+    } on_midi2_raw_data;
   };
 
   struct
@@ -174,6 +166,22 @@ typedef struct libremidi_midi_configuration
   enum libremidi_timestamp_mode timestamps;
 } libremidi_midi_configuration;
 
+/// API utilities
+LIBREMIDI_EXPORT
+const char* libremidi_get_version(void);
+
+LIBREMIDI_EXPORT
+void libremidi_midi1_available_apis(void* ctx, void (*)(void*, libremidi_api));
+LIBREMIDI_EXPORT
+void libremidi_midi2_available_apis(void* ctx, void (*)(void*, libremidi_api));
+LIBREMIDI_EXPORT
+const char* libremidi_api_identifier(libremidi_api);
+LIBREMIDI_EXPORT
+const char* libremidi_api_display_name(libremidi_api);
+LIBREMIDI_EXPORT
+libremidi_api libremidi_get_compiled_api_by_identifier(const char*);
+
+/// Create configurations
 LIBREMIDI_EXPORT
 int libremidi_midi_api_configuration_init(libremidi_api_configuration*);
 
@@ -183,6 +191,7 @@ int libremidi_midi_observer_configuration_init(libremidi_observer_configuration*
 LIBREMIDI_EXPORT
 int libremidi_midi_configuration_init(libremidi_midi_configuration*);
 
+/// Read information about port objects
 LIBREMIDI_EXPORT
 int libremidi_midi_in_port_clone(const libremidi_midi_in_port* port, libremidi_midi_in_port** dst);
 
@@ -204,6 +213,7 @@ LIBREMIDI_EXPORT
 int libremidi_midi_out_port_name(
     const libremidi_midi_out_port* port, const char** name, size_t* len);
 
+/// Observer API
 LIBREMIDI_EXPORT
 int libremidi_midi_observer_new(
     const libremidi_observer_configuration*, libremidi_api_configuration*,
@@ -222,6 +232,7 @@ int libremidi_midi_observer_enumerate_output_ports(
 LIBREMIDI_EXPORT
 int libremidi_midi_observer_free(libremidi_midi_observer_handle*);
 
+/// MIDI input API (read MIDI messages)
 LIBREMIDI_EXPORT
 int libremidi_midi_in_new(
     const libremidi_midi_configuration*, const libremidi_api_configuration*,
@@ -236,6 +247,7 @@ libremidi_timestamp libremidi_midi_in_absolute_timestamp(libremidi_midi_in_handl
 LIBREMIDI_EXPORT
 int libremidi_midi_in_free(libremidi_midi_in_handle*);
 
+/// MIDI output API (send MIDI messages)
 LIBREMIDI_EXPORT
 int libremidi_midi_out_new(
     const libremidi_midi_configuration*, const libremidi_api_configuration*,
@@ -245,18 +257,19 @@ LIBREMIDI_EXPORT
 int libremidi_midi_out_is_connected(const libremidi_midi_out_handle*);
 
 LIBREMIDI_EXPORT
-int libremidi_midi_out_send_message(libremidi_midi_out_handle*, const midi1_symbol*, size_t);
+int libremidi_midi_out_send_message(
+    libremidi_midi_out_handle*, const libremidi_midi1_symbol*, size_t);
 
 LIBREMIDI_EXPORT
-int libremidi_midi_out_send_ump(libremidi_midi_out_handle*, const midi2_symbol*, size_t);
+int libremidi_midi_out_send_ump(libremidi_midi_out_handle*, const libremidi_midi2_symbol*, size_t);
 
 LIBREMIDI_EXPORT
 int libremidi_midi_out_schedule_message(
-    libremidi_midi_out_handle*, int64_t ts, const midi1_symbol*, size_t);
+    libremidi_midi_out_handle*, int64_t ts, const libremidi_midi1_symbol*, size_t);
 
 LIBREMIDI_EXPORT
 int libremidi_midi_out_schedule_ump(
-    libremidi_midi_out_handle*, int64_t ts, const midi2_symbol*, size_t);
+    libremidi_midi_out_handle*, int64_t ts, const libremidi_midi2_symbol*, size_t);
 
 LIBREMIDI_EXPORT
 int libremidi_midi_out_free(libremidi_midi_out_handle*);

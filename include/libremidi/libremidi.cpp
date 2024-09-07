@@ -7,9 +7,6 @@
 
 #include <cmath>
 
-#include <array>
-#include <thread>
-
 namespace libremidi
 {
 
