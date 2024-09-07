@@ -45,18 +45,26 @@ int main()
   {
     midiin.emplace_back(
         libremidi::input_configuration{
-            .on_message
-            = [=](const libremidi::message& msg) {
+            .on_message =
+                [=](const libremidi::message& msg) {
       std::cout << "Port " << i + 1 << " : ";
       callback(i, msg);
-            }},
+    }},
         libremidi::alsa_seq::input_configuration{
             .context = clt,
-            .manual_poll = [&, i](const libremidi::alsa_seq::poll_parameters& params) {
-              addresses.push_back(params.addr);
-              callbacks.push_back(params.callback);
-              return true;
-            }});
+            .manual_poll =
+                [&, i](const libremidi::alsa_seq::poll_parameters& params) {
+      addresses.push_back(params.addr);
+      callbacks.push_back(params.callback);
+      return true;
+    },
+            .stop_poll = [&](snd_seq_addr_t addr) -> bool {
+      auto it = std::find(addresses.begin(), addresses.end(), addr);
+      auto dist = std::distance(addresses.begin(), it);
+      addresses.erase(it);
+      callbacks.erase(callbacks.begin() + dist);
+      return true;
+    }});
     midiin[i].open_virtual_port("Input: " + std::to_string(i + 1));
 
     midiout.emplace_back(
