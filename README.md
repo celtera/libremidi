@@ -22,8 +22,8 @@ Read the documentation [here](https://celtera.github.io/libremidi).
 * Hunt exceptions down
 * Basic I/O & observer with the Windows MIDI Services.
   * Using Developer Preview 5, currently the most recent: https://github.com/microsoft/MIDI/releases/tag/dev-preview-5
-
-libremidi finally supports MIDI 2 on all desktop platforms 🎉!
+* C API for bindings to other languages ([libremidi-c.h](https://github.com/celtera/libremidi/blob/master/include/libremidi/libremidi-c.h)).
+* libremidi finally supports MIDI 2 on all desktop platforms 🎉!
 
 ### Since v4.5
 * Input logic refactored across all backends.
