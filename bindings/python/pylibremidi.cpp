@@ -184,7 +184,10 @@ struct midi_out_poll_wrapper {
 
 NB_MODULE(pylibremidi, m) {
   namespace nb = nanobind;
-  nb::class_<stdx::error>(m, "Error");
+  nb::class_<stdx::error>(m, "Error")
+      .def("__bool__", [](stdx::error e) { return e != stdx::error{}; })
+      .def("__str__", [](stdx::error e) { return e.message().data(); })
+      .def("__repr__", [](stdx::error e) { return e.message().data(); });
   nb::enum_<libremidi::API>(m, "API")
       .value("UNSPECIFIED", libremidi::API::UNSPECIFIED)
       .value("COREMIDI", libremidi::API::COREMIDI)
@@ -203,13 +206,52 @@ NB_MODULE(pylibremidi, m) {
       .value("KEYBOARD_UMP", libremidi::API::KEYBOARD_UMP)
       .value("DUMMY", libremidi::API::DUMMY)
       .export_values();
-  nb::class_<libremidi::message>(m, "Message").def(nb::init<>()).def_rw("bytes", &libremidi::message::bytes).def_rw("timestamp", &libremidi::message::timestamp);
+
+  m.def("available_apis", libremidi::available_apis);
+  m.def("available_ump_apis", libremidi::available_ump_apis);
+  m.def("get_version", libremidi::get_version);
+  m.def("get_api_name", libremidi::get_api_name);
+  m.def("get_api_display_name", libremidi::get_api_display_name);
+  m.def("get_compiled_api_by_name", libremidi::get_compiled_api_by_name);
+  m.def("midi1_default_api", libremidi::midi1::default_api);
+  m.def("midi2_default_api", libremidi::midi2::default_api);
+
+  nb::class_<libremidi::message>(m, "Message")
+      .def(nb::init<>())
+      .def_rw("bytes", &libremidi::message::bytes)
+      .def_rw("timestamp", &libremidi::message::timestamp)
+      .def("__len__", [](const libremidi::message &m, int idx) { return m.size(); })
+      .def("__getitem__", [](const libremidi::message &m, int idx) { return m[idx]; })
+      .def("__setitem__", [](libremidi::message &m, int idx, uint8_t res) { return m[idx] = res; })
+      .def("__repr__", [](const libremidi::message &m) {
+        std::stringstream str;
+        str << m.timestamp << ": ";
+        str << std::hex;
+        str << "[ ";
+        for (int val : m)
+          str << val << ' ';
+        str << ']';
+        return str.str();
+      });
   nb::class_<libremidi::ump>(m, "Ump")
       .def(nb::init<>())
       .def_prop_rw(
           "data", [](const libremidi::ump &obj) { return std::array<uint32_t, 4>{obj.data[0], obj.data[1], obj.data[2], obj.data[3]}; },
           [](libremidi::ump &obj, std::array<uint32_t, 4> v) { std::copy_n(v.begin(), 4, obj.data); })
-      .def_rw("timestamp", &libremidi::ump::timestamp);
+      .def_rw("timestamp", &libremidi::ump::timestamp)
+      .def("__len__", [](const libremidi::ump &m, int idx) { return m.size(); })
+      .def("__getitem__", [](const libremidi::ump &m, int idx) { return m[idx]; })
+      .def("__setitem__", [](libremidi::ump &m, int idx, uint32_t res) { return m[idx] = res; })
+      .def("__repr__", [](const libremidi::ump &m) {
+        std::stringstream str;
+        str << m.timestamp << ": ";
+        str << std::hex;
+        str << "[ ";
+        for (uint32_t val : m)
+          str << val << ' ';
+        str << ']';
+        return str.str();
+      });
 
   nb::class_<libremidi::port_information>(m, "PortInformation")
       .def(nb::init<>())
