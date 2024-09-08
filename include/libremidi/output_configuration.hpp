@@ -3,8 +3,6 @@
 #include <libremidi/error.hpp>
 #include <libremidi/input_configuration.hpp>
 
-#include <string>
-
 namespace libremidi
 {
 struct output_configuration

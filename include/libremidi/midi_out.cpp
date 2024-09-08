@@ -221,6 +221,12 @@ stdx::error midi_out::send_message(const unsigned char* message, size_t size) co
 }
 
 LIBREMIDI_INLINE
+int64_t midi_out::current_time()
+{
+  return impl_->current_time();
+}
+
+LIBREMIDI_INLINE
 stdx::error midi_out::schedule_message(int64_t ts, const unsigned char* message, size_t size) const
 {
 #if defined(LIBREMIDI_ASSERTIONS)

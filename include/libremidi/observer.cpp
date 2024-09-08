@@ -7,7 +7,37 @@
 
 namespace libremidi
 {
-LIBREMIDI_INLINE auto make_observer(auto base_conf, std::any api_conf)
+
+static LIBREMIDI_INLINE std::unique_ptr<observer_api> make_observer(auto base_conf)
+{
+  for (const auto& api : available_apis())
+  {
+    try
+    {
+      if (auto impl_ = make_observer(base_conf, observer_configuration_for(api)))
+        return impl_;
+    }
+    catch (const std::exception& e)
+    {
+    }
+  }
+
+  for (const auto& api : available_ump_apis())
+  {
+    try
+    {
+      if (auto impl_ = make_observer(base_conf, observer_configuration_for(api)))
+        return impl_;
+    }
+    catch (const std::exception& e)
+    {
+    }
+  }
+
+  return std::make_unique<observer_dummy>(observer_configuration{}, dummy_configuration{});
+}
+
+LIBREMIDI_INLINE auto make_observer_impl(auto base_conf, std::any api_conf)
 {
   std::unique_ptr<observer_api> ptr;
   auto from_api = [&]<typename T>(T& /*backend*/) mutable {
@@ -23,24 +53,25 @@ LIBREMIDI_INLINE auto make_observer(auto base_conf, std::any api_conf)
   return ptr;
 }
 
-LIBREMIDI_INLINE observer::observer(const observer_configuration& base_conf) noexcept
+LIBREMIDI_INLINE auto make_observer(auto base_conf, std::any api_conf)
 {
-  for (const auto& api : available_apis())
+  if (!api_conf.has_value())
   {
-    try
-    {
-      impl_ = make_observer(base_conf, observer_configuration_for(api));
-    }
-    catch (const std::exception& e)
-    {
-    }
-
-    if (impl_)
-      return;
+    return make_observer(base_conf);
   }
+  else if (auto api = std::any_cast<libremidi::API>(&api_conf))
+  {
+    return make_observer_impl(base_conf, observer_configuration_for(*api));
+  }
+  else
+  {
+    return make_observer_impl(base_conf, api_conf);
+  }
+}
 
-  if (!impl_)
-    impl_ = std::make_unique<observer_dummy>(observer_configuration{}, dummy_configuration{});
+LIBREMIDI_INLINE observer::observer(const observer_configuration& base_conf) noexcept
+    : impl_{make_observer(base_conf)}
+{
 }
 
 LIBREMIDI_INLINE observer::observer(observer_configuration base_conf, std::any api_conf)

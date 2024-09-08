@@ -21,9 +21,7 @@ try
     err.throw_exception();
 
   // Create a midi in
-  std::mutex out_mutex;
   auto on_ump = [&](const libremidi::ump& message) {
-    std::lock_guard _{out_mutex};
     if (midiout.is_port_connected())
       midiout.send_ump(message);
   };
