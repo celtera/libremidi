@@ -53,15 +53,30 @@ LIBREMIDI_INLINE auto make_observer_impl(auto base_conf, std::any api_conf)
   return ptr;
 }
 
-LIBREMIDI_INLINE auto make_observer(auto base_conf, std::any api_conf)
+LIBREMIDI_INLINE std::unique_ptr<observer_api> make_observer(auto base_conf, std::any api_conf)
 {
   if (!api_conf.has_value())
   {
     return make_observer(base_conf);
   }
-  else if (auto api = std::any_cast<libremidi::API>(&api_conf))
+  else if (auto api_p = std::any_cast<libremidi::API>(&api_conf))
   {
-    return make_observer_impl(base_conf, observer_configuration_for(*api));
+    if (*api_p == libremidi::API::UNSPECIFIED)
+    {
+      if (auto backend = make_observer_impl(
+              base_conf, observer_configuration_for(libremidi::midi1::default_api())))
+        return backend;
+
+      if (auto backend = make_observer_impl(
+              base_conf, observer_configuration_for(libremidi::midi2::default_api())))
+        return backend;
+
+      return std::make_unique<observer_dummy>(observer_configuration{}, dummy_configuration{});
+    }
+    else
+    {
+      return make_observer_impl(base_conf, observer_configuration_for(*api_p));
+    }
   }
   else
   {

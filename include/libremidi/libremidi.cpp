@@ -59,7 +59,7 @@ libremidi::API midi_api(const std::any& conf)
   libremidi::API ret = libremidi::API::UNSPECIFIED;
   midi_any::for_all_backends([&]<typename T>(T) {
     if (std::any_cast<typename T::midi_in_configuration>(&conf)
-        || std::any_cast<typename T::midi_out_configuration>(&conf)
+        || std::any_cast<typename T::midi_out_configuration>(&conf)
         || std::any_cast<typename T::midi_observer_configuration>(&conf))
     {
       ret = T::API;
