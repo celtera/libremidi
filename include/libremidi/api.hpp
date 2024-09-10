@@ -2,6 +2,7 @@
 #include <libremidi/api-c.h>
 #include <libremidi/config.hpp>
 
+#include <any>
 #include <string_view>
 #include <vector>
 
@@ -30,6 +31,9 @@ LIBREMIDI_EXPORT std::vector<libremidi::API> available_apis() noexcept;
 */
 LIBREMIDI_EXPORT std::vector<libremidi::API> available_ump_apis() noexcept;
 
+LIBREMIDI_EXPORT
+libremidi::API midi_api(const std::any& conf);
+
 //! A static function to determine the current version.
 LIBREMIDI_EXPORT std::string_view get_version() noexcept;
 
@@ -39,6 +43,17 @@ LIBREMIDI_EXPORT std::string_view get_api_name(libremidi::API api);
 LIBREMIDI_EXPORT std::string_view get_api_display_name(libremidi::API api);
 //! Look-up an API through its name
 LIBREMIDI_EXPORT libremidi::API get_compiled_api_by_name(std::string_view api);
+
+inline constexpr bool is_midi1(libremidi::API api)
+{
+  return (static_cast<int>(api) >= 0x1 && static_cast<int>(api) < 0x1000)
+         || api == libremidi::API::DUMMY;
+}
+
+inline constexpr bool is_midi2(libremidi::API api)
+{
+  return static_cast<int>(api) >= 0x1000;
+}
 
 namespace midi1
 {

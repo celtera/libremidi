@@ -29,7 +29,7 @@ typedef enum libremidi_api
   WINDOWS_MIDI_SERVICES, /*!< Windows API for MIDI 2.0. Requires Windows 11 */
   KEYBOARD_UMP,          /*!< Computer keyboard input */
 
-  DUMMY /*!< A compilable but non-functional API. */
+  DUMMY = 0xFFFF /*!< A compilable but non-functional API. */
 } libremidi_api;
 
 #if __cplusplus

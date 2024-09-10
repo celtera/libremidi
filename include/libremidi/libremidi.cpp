@@ -53,7 +53,20 @@ LIBREMIDI_INLINE libremidi::API get_compiled_api_by_name(std::string_view name)
   midi2::for_all_backends([&](auto b) { apis.push_back(b.API); });
   return apis;
 }
-
+LIBREMIDI_INLINE
+libremidi::API midi_api(const std::any& conf)
+{
+  libremidi::API ret = libremidi::API::UNSPECIFIED;
+  midi_any::for_all_backends([&]<typename T>(T) {
+    if (std::any_cast<typename T::midi_in_configuration>(&conf)
+        || std::any_cast<typename T::midi_out_configuration>(&conf)
+        || std::any_cast<typename T::midi_observer_configuration>(&conf))
+    {
+      ret = T::API;
+    }
+  });
+  return ret;
+}
 LIBREMIDI_INLINE
 std::any midi_in_configuration_for(libremidi::API api)
 {
