@@ -68,15 +68,7 @@ make_midi_out(const output_configuration& base_conf, const std::any& api_conf)
   {
     if (*api_p == libremidi::API::UNSPECIFIED)
     {
-      if (auto backend = make_midi_out_impl(
-              base_conf, midi_out_configuration_for(libremidi::midi1::default_api())))
-        return backend;
-
-      if (auto backend = make_midi_out_impl(
-              base_conf, midi_out_configuration_for(libremidi::midi2::default_api())))
-        return backend;
-
-      return std::make_unique<midi_out_dummy>(output_configuration{}, dummy_configuration{});
+      return make_midi_out(base_conf);
     }
     else
     {
@@ -85,7 +77,10 @@ make_midi_out(const output_configuration& base_conf, const std::any& api_conf)
   }
   else
   {
-    return make_midi_out_impl(base_conf, api_conf);
+    if (auto api = libremidi::midi_api(api_conf); api == libremidi::API::UNSPECIFIED)
+      return make_midi_out(base_conf);
+    else
+      return make_midi_out_impl(base_conf, api_conf);
   }
 }
 

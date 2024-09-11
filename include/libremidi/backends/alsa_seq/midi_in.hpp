@@ -104,7 +104,13 @@ public:
       snd.seq.close(this->seq);
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_SEQ; }
+  libremidi::API get_current_api() const noexcept override
+  {
+    if constexpr (ConfigurationImpl::midi_version == 1)
+      return libremidi::API::ALSA_SEQ;
+    else
+      return libremidi::API::ALSA_SEQ_UMP;
+  }
 
   [[nodiscard]] int create_port(std::string_view portName)
   {

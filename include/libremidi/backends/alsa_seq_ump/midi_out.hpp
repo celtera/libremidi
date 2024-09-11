@@ -52,7 +52,7 @@ public:
     client_open_ = std::errc::not_connected;
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_SEQ; }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_SEQ_UMP; }
 
   [[nodiscard]] int create_port(std::string_view portName)
   {

@@ -118,6 +118,21 @@ make_midi1_in(const input_configuration& base_conf)
 }
 
 static LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
+make_midi1_in(const input_configuration& base_conf, const std::any& api_conf, libremidi::API api)
+{
+  if (libremidi::is_midi1(api))
+  {
+    return make_midi_in(base_conf, api_conf, midi1::available_backends);
+  }
+  else if (libremidi::is_midi2(api))
+  {
+    auto c2 = convert_midi1_to_midi2_input_configuration(base_conf);
+    return make_midi_in(c2, api_conf, midi2::available_backends);
+  }
+  return {};
+}
+
+static LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
 make_midi1_in(const input_configuration& base_conf, const std::any& api_conf)
 {
   if (!api_conf.has_value())
@@ -128,43 +143,20 @@ make_midi1_in(const input_configuration& base_conf, const std::any& api_conf)
   {
     if (*api_p == libremidi::API::UNSPECIFIED)
     {
-      if (auto backend = make_midi_in(
-              base_conf, midi_in_configuration_for(libremidi::midi1::default_api()),
-              midi1::available_backends))
-        return backend;
-
-      auto c2 = convert_midi1_to_midi2_input_configuration(base_conf);
-      if (auto backend = make_midi_in(
-              c2, midi_in_configuration_for(libremidi::midi2::default_api()),
-              midi2::available_backends))
-        return backend;
+      return make_midi1_in(base_conf);
     }
-    else if (is_midi1(*api_p))
+    else
     {
-      // all good
-      return make_midi_in(base_conf, midi_in_configuration_for(*api_p), midi1::available_backends);
-    }
-    else if (is_midi2(*api_p))
-    {
-      auto c2 = convert_midi1_to_midi2_input_configuration(base_conf);
-      return make_midi_in(c2, midi_in_configuration_for(*api_p), midi2::available_backends);
+      return make_midi1_in(base_conf, midi_in_configuration_for(*api_p), *api_p);
     }
   }
   else
   {
-    const auto api = libremidi::midi_api(api_conf);
-    if (libremidi::is_midi1(api))
-    {
-      return make_midi_in(base_conf, api_conf, midi1::available_backends);
-    }
-    else if (libremidi::is_midi2(api))
-    {
-      auto c2 = convert_midi1_to_midi2_input_configuration(base_conf);
-      return make_midi_in(c2, api_conf, midi2::available_backends);
-    }
+    if (auto api = libremidi::midi_api(api_conf); api == libremidi::API::UNSPECIFIED)
+      return {};
+    else
+      return make_midi1_in(base_conf, api_conf, libremidi::midi_api(api_conf));
   }
-
-  return std::make_unique<midi_in_dummy>(input_configuration{}, dummy_configuration{});
 }
 
 /// MIDI 1 constructors
@@ -218,7 +210,23 @@ make_midi2_in(const ump_input_configuration& base_conf)
     }
   }
 
-  return std::make_unique<midi_in_dummy>(ump_input_configuration{}, dummy_configuration{});
+  return {};
+}
+
+static LIBREMIDI_INLINE std::unique_ptr<midi_in_api> make_midi2_in(
+    const ump_input_configuration& base_conf, const std::any& api_conf, libremidi::API api)
+{
+  if (is_midi2(api))
+  {
+    return make_midi_in(base_conf, api_conf, midi2::available_backends);
+  }
+  else if (is_midi1(api))
+  {
+    auto c2 = convert_midi2_to_midi1_input_configuration(base_conf);
+    return make_midi_in(c2, api_conf, midi1::available_backends);
+  }
+
+  return {};
 }
 
 static LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
@@ -232,43 +240,20 @@ make_midi2_in(const ump_input_configuration& base_conf, const std::any& api_conf
   {
     if (*api_p == libremidi::API::UNSPECIFIED)
     {
-      if (auto backend = make_midi_in(
-              base_conf, midi_in_configuration_for(libremidi::midi2::default_api()),
-              midi2::available_backends))
-        return backend;
-
-      auto c2 = convert_midi2_to_midi1_input_configuration(base_conf);
-      if (auto backend = make_midi_in(
-              c2, midi_in_configuration_for(libremidi::midi1::default_api()),
-              midi1::available_backends))
-        return backend;
+      return make_midi2_in(base_conf);
     }
-    else if (is_midi2(*api_p))
+    else
     {
-      // all good
-      return make_midi_in(base_conf, midi_in_configuration_for(*api_p), midi2::available_backends);
-    }
-    else if (is_midi1(*api_p))
-    {
-      auto c2 = convert_midi2_to_midi1_input_configuration(base_conf);
-      return make_midi_in(c2, midi_in_configuration_for(*api_p), midi1::available_backends);
+      return make_midi2_in(base_conf, midi_in_configuration_for(*api_p), *api_p);
     }
   }
   else
   {
-    const auto api = libremidi::midi_api(api_conf);
-    if (libremidi::is_midi2(api))
-    {
-      return make_midi_in(base_conf, api_conf, midi2::available_backends);
-    }
-    else if (libremidi::is_midi1(api))
-    {
-      auto c2 = convert_midi2_to_midi1_input_configuration(base_conf);
-      return make_midi_in(c2, api_conf, midi1::available_backends);
-    }
+    if (auto api = libremidi::midi_api(api_conf); api == libremidi::API::UNSPECIFIED)
+      return {};
+    else
+      return make_midi2_in(base_conf, api_conf, libremidi::midi_api(api_conf));
   }
-
-  return std::make_unique<midi_in_dummy>(input_configuration{}, dummy_configuration{});
 }
 
 /// MIDI 2 constructors

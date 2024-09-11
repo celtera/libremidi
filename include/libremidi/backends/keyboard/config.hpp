@@ -15,7 +15,8 @@ struct kbd_input_configuration
 {
   using scancode_callback = std::function<void(int)>;
   // First argument is on key press, second on key release
-  std::function<void(scancode_callback, scancode_callback)> set_input_scancode_callbacks;
+  std::function<void(scancode_callback, scancode_callback)> set_input_scancode_callbacks
+      = [](scancode_callback, scancode_callback) {};
 
   enum kbd_event
   {
