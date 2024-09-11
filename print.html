@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="foreword.html"><strong aria-hidden="true">1.</strong> Foreword</a></li><li class="chapter-item expanded affix "><li class="part-title">Getting started</li><li class="chapter-item expanded "><a href="compiling.html"><strong aria-hidden="true">2.</strong> Compiling</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="header-only.html"><strong aria-hidden="true">2.1.</strong> Header-only support</a></li></ol></li><li class="chapter-item expanded "><a href="enumerating.html"><strong aria-hidden="true">3.</strong> Enumerating ports</a></li><li class="chapter-item expanded "><a href="midi-1-in.html"><strong aria-hidden="true">4.</strong> MIDI 1 in</a></li><li class="chapter-item expanded "><a href="midi-1-out.html"><strong aria-hidden="true">5.</strong> MIDI 1 out</a></li><li class="chapter-item expanded "><a href="midi-2-in.html"><strong aria-hidden="true">6.</strong> MIDI 2 in</a></li><li class="chapter-item expanded "><a href="midi-2-out.html"><strong aria-hidden="true">7.</strong> MIDI 2 out</a></li><li class="chapter-item expanded "><a href="file.html"><strong aria-hidden="true">8.</strong> MIDI file support</a></li><li class="chapter-item expanded affix "><li class="part-title">Advanced features</li><li class="chapter-item expanded "><a href="midi-2-integrations.html"><strong aria-hidden="true">9.</strong> MIDI 2 integrations</a></li><li class="chapter-item expanded "><a href="hotplug.html"><strong aria-hidden="true">10.</strong> Hotplug support</a></li><li class="chapter-item expanded "><a href="error-handling.html"><strong aria-hidden="true">11.</strong> Error handling</a></li><li class="chapter-item expanded "><a href="configuration.html"><strong aria-hidden="true">12.</strong> Custom configuration</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="context-sharing.html"><strong aria-hidden="true">12.1.</strong> Context sharing</a></li><li class="chapter-item expanded "><a href="polling.html"><strong aria-hidden="true">12.2.</strong> External polling</a></li><li class="chapter-item expanded "><a href="timestamping.html"><strong aria-hidden="true">12.3.</strong> Timestamping</a></li></ol></li><li class="chapter-item expanded "><a href="queue.html"><strong aria-hidden="true">13.</strong> Queue vs callbacks</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="backends.html"><strong aria-hidden="true">14.</strong> Backends</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="foreword.html"><strong aria-hidden="true">1.</strong> Foreword</a></li><li class="chapter-item expanded affix "><li class="part-title">Getting started</li><li class="chapter-item expanded "><a href="compiling.html"><strong aria-hidden="true">2.</strong> Compiling</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="header-only.html"><strong aria-hidden="true">2.1.</strong> Header-only support</a></li></ol></li><li class="chapter-item expanded "><a href="enumerating.html"><strong aria-hidden="true">3.</strong> Enumerating ports</a></li><li class="chapter-item expanded "><a href="midi-1-in.html"><strong aria-hidden="true">4.</strong> MIDI 1 in</a></li><li class="chapter-item expanded "><a href="midi-1-out.html"><strong aria-hidden="true">5.</strong> MIDI 1 out</a></li><li class="chapter-item expanded "><a href="midi-2-in.html"><strong aria-hidden="true">6.</strong> MIDI 2 in</a></li><li class="chapter-item expanded "><a href="midi-2-out.html"><strong aria-hidden="true">7.</strong> MIDI 2 out</a></li><li class="chapter-item expanded "><a href="file.html"><strong aria-hidden="true">8.</strong> MIDI file support</a></li><li class="chapter-item expanded affix "><li class="part-title">Advanced features</li><li class="chapter-item expanded "><a href="midi-2-integrations.html"><strong aria-hidden="true">9.</strong> MIDI 2 integrations</a></li><li class="chapter-item expanded "><a href="hotplug.html"><strong aria-hidden="true">10.</strong> Hotplug support</a></li><li class="chapter-item expanded "><a href="error-handling.html"><strong aria-hidden="true">11.</strong> Error handling</a></li><li class="chapter-item expanded "><a href="configuration.html"><strong aria-hidden="true">12.</strong> Custom configuration</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="context-sharing.html"><strong aria-hidden="true">12.1.</strong> Context sharing</a></li><li class="chapter-item expanded "><a href="polling.html"><strong aria-hidden="true">12.2.</strong> External polling</a></li><li class="chapter-item expanded "><a href="timestamping.html"><strong aria-hidden="true">12.3.</strong> Timestamping</a></li></ol></li><li class="chapter-item expanded "><a href="queue.html"><strong aria-hidden="true">13.</strong> Queue vs callbacks</a></li><li class="chapter-item expanded "><a href="keyboard.html"><strong aria-hidden="true">14.</strong> Computer keyboard input</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="backends.html"><strong aria-hidden="true">15.</strong> Backends</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -205,6 +205,7 @@ Real-time I/O supports MIDI 2 on macOS (11+) and Linux (Kernel 6.5+), and soon o
 <li>Windows UWP.</li>
 <li>WebMIDI in Emscripten.</li>
 <li>JACK support on all platforms where it is available.</li>
+<li>Computer keyboard input.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="compiling-the-library"><a class="header" href="#compiling-the-library">Compiling the library</a></h1>
 <p>libremidi uses CMake as build system.
@@ -248,7 +249,7 @@ systemd-libs
 e.g. <code>-DCMAKE_OSX_DEPLOYMENT_TARGET=11</code> or more recent needs to be passed to CMake.</p>
 <h2 id="advanced-features"><a class="header" href="#advanced-features">Advanced features</a></h2>
 <ul>
-<li>Ability to set a fixed message size for zero-allocation scenarios, with -DLIBREMIDI_SLIM_MESSAGE=<NBytes> (in CMake or directly to the compiler)</li>
+<li>For MIDI 1: ability to set a fixed message size upper-bound for zero-allocation scenarios, with <code>-DLIBREMIDI_SLIM_MESSAGE=&lt;NBytes&gt;</code> (in CMake or directly to the compiler)</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="using-libremidi-in-header-only-mode"><a class="header" href="#using-libremidi-in-header-only-mode">Using libremidi in header-only mode</a></h1>
 <p>The library can be used header-only, with minimal modifications to your build system if you aren't using CMake:</p>
@@ -565,9 +566,35 @@ libremidi::midi_in midi{conf};
 <p>Ditto for <code>midi_out</code> and <code>midi_observer</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="advanced-configuration"><a class="header" href="#advanced-configuration">Advanced configuration</a></h1>
 <p>The <code>midi_in</code>, <code>midi_out</code> and <code>midi_observer</code> objects are configured through a <code>input_configuration</code> (resp. <code>output_</code>, etc.) object passed in argument to the constructor.</p>
+<p>Example:</p>
+<pre><code class="language-cpp">#include &lt;libremidi/configurations.hpp&gt;
+
+...
+
+libremidi::midi_in in{
+    libremidi::input_configuration{
+      .on_message = ...
+    , .ignore_sysex = false
+    , .ignore_sensing = true
+    }
+};
+</code></pre>
 <h2 id="custom-back-end-configuration"><a class="header" href="#custom-back-end-configuration">Custom back-end configuration</a></h2>
 <p>Additionnally, each back-end supports back-end specific configuration options, to enable users to tap into advanced features of a given API while retaining the general C++ abstraction.</p>
 <p>For instance, this enables to set output buffer sizes, chunking parameters, etc. for back-ends which support the feature.</p>
+<pre><code class="language-cpp">#include &lt;libremidi/backends.hpp&gt;
+
+...
+
+libremidi::midi_in in{
+    libremidi::input_configuration{
+      .on_message = ...
+    },
+    libremidi::pipewire_input_configuration{
+      .client_name = "My app"
+    }
+};
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="context-sharing"><a class="header" href="#context-sharing">Context sharing</a></h1>
 <p>This allows to share a single context across multiple MIDI objects (such as a <code>jack_client_t</code> with JACK, a PipeWire main loop &amp; filter, or a <code>MIDIClientRef</code> on macOS with CoreMIDI).
 If no context is passed, each object will create one as they used to.</p>
@@ -601,6 +628,7 @@ libremidi::midi_out out{
   , libremidi::midi_out_configuration_for(obs) 
 };
 </code></pre>
+<p>In that case, note that the <code>obs</code> has ownership of for instance the JACK context object: it must outlive <code>in</code> and <code>out</code>.</p>
 <p>The relevant examples are:</p>
 <ul>
 <li><code>coremidi_share.cpp</code> for a complete example for CoreMIDI.</li>
@@ -658,6 +686,33 @@ For instance, it will return the time at which the timestamping queue was create
 <div style="break-before: page; page-break-before: always;"></div><h1 id="queue-input"><a class="header" href="#queue-input">Queue input</a></h1>
 <p>The old queued input mechanism present in RtMidi and previous versions of the library has been moved out of the code as it can be built entirely on the callback mechanism and integrated with the user application's event processing queue instead.</p>
 <p>A basic example is provided in <code>qmidiin.cpp</code>.</p>
+<p>We recommend if possible to instead use an asynchronous runtime in order to keep an imperative behaviour while benefiting from the non-blocking properties of async programming.</p>
+<p>An example based on C++20 coroutines with Boost.Cobalt is provided in <code>coroutines.cpp</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="computer-keyboard-input"><a class="header" href="#computer-keyboard-input">Computer keyboard input</a></h1>
+<p>This backend allwos to use the computer keys to play MIDI.
+The backend does not directly read the key events as this would require making the library much more complex.
+Instead, it provides a callback that you can plug into your favourite GUI toolkit to process scan codes.</p>
+<p>The mapping is customizable. By default:</p>
+<pre><code> ,---,---,---,---,---,---,---,---,---,---,---,---,---,-------,
+ | V0| V1| V2| V3| V4| V5| V6| V7| V8| V9|V10|V11|V12| &lt;-    |
+ |---'-,-'-,-'-,-'-,-'-,-'-,-'-,-'-,-'-,-'-,-'-,-'-,-'-,-----|
+ | -&gt;| |   | C#| D#|   | F#| G#| A#|   | C#| D#|   | F#|     |
+ |-----',--',--',--',--',--',--',--',--',--',--',--',--'|    |
+ | Caps | C | D | E | F | G | A | B | C | D | E | F | G |    |
+ |----,-'-,-'-,-'-,-'-,-'-,-'-,-'-,-'-,-'-,-'-,-'-,-'---'----|
+ | -^ |   | O-| O+| V-| V+|   |   |   |   |   |   |   ----^  |
+ |----'-,-',--'--,'---'---'---'---'---'---'-,-'---',--,------|
+ | ctrl |  | alt |                          |altgr |  | ctrl |
+ '------'  '-----'--------------------------'------'  '------'
+</code></pre>
+<p>Where V0 to V12 set the velocity between 0 and 127 in steps of ~10, O- / O+ increase or decrease the octave and V- / V+ increase or decrease the velocity by 10.</p>
+<p>Example:</p>
+<pre><code>#include &lt;libremidi/backends/keyboard/config.hpp&gt;
+
+libremidi::kbd_input_configuration api_conf;
+api_conf.set_input_scancode_callbacks(
+[] )
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="feature-matrix"><a class="header" href="#feature-matrix">Feature matrix</a></h1>
 <p>This table shows which feature is supported by which backend so far, for advanced features.</p>
 <p>It may be because the backend does not provide the ability at all (N/A),
@@ -665,7 +720,7 @@ or because it has not been implemented yet.</p>
 <h2 id="linux--bsd"><a class="header" href="#linux--bsd">Linux &amp; BSD</a></h2>
 <div class="table-wrapper"><table><thead><tr><th></th><th>ALSA Raw</th><th>ALSA Seq</th><th>PipeWire</th></tr></thead><tbody>
 <tr><td>MIDI 1</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
-<tr><td>MIDI 2</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+<tr><td>MIDI 2</td><td>Yes</td><td>Yes</td><td>N/A</td></tr>
 <tr><td>Virtual ports</td><td>N/A</td><td>Yes</td><td>Yes</td></tr>
 <tr><td>Observer</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
 <tr><td>Scheduling</td><td>No</td><td>No</td><td>No</td></tr>
@@ -687,9 +742,9 @@ without preventing application loading if the end user does not use it.</p>
 <h2 id="windows"><a class="header" href="#windows">Windows</a></h2>
 <div class="table-wrapper"><table><thead><tr><th></th><th>WinMM</th><th>UWP</th><th>WinMIDI</th></tr></thead><tbody>
 <tr><td>MIDI 1</td><td>Yes</td><td>Yes</td><td>No</td></tr>
-<tr><td>MIDI 2</td><td>N/A</td><td>N/A</td><td>No</td></tr>
+<tr><td>MIDI 2</td><td>N/A</td><td>N/A</td><td>Yes</td></tr>
 <tr><td>Virtual ports</td><td>N/A</td><td>No</td><td>No</td></tr>
-<tr><td>Observer</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+<tr><td>Observer</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
 <tr><td>Scheduling</td><td>No</td><td>No</td><td>No</td></tr>
 </tbody></table>
 </div>
@@ -714,7 +769,7 @@ without preventing application loading if the end user does not use it.</p>
 <h2 id="shared-backends"><a class="header" href="#shared-backends">Shared backends</a></h2>
 <div class="table-wrapper"><table><thead><tr><th></th><th>JACK</th></tr></thead><tbody>
 <tr><td>MIDI 1</td><td>Yes</td></tr>
-<tr><td>MIDI 2</td><td>No</td></tr>
+<tr><td>MIDI 2</td><td>N/A</td></tr>
 <tr><td>Virtual ports</td><td>Yes</td></tr>
 <tr><td>Observer</td><td>Yes</td></tr>
 <tr><td>Scheduling</td><td>No</td></tr>
