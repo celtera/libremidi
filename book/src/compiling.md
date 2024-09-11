@@ -53,4 +53,4 @@ e.g. `-DCMAKE_OSX_DEPLOYMENT_TARGET=11` or more recent needs to be passed to CMa
 
 ## Advanced features
 
-- Ability to set a fixed message size for zero-allocation scenarios, with -DLIBREMIDI_SLIM_MESSAGE=<NBytes> (in CMake or directly to the compiler)
+- For MIDI 1: ability to set a fixed message size upper-bound for zero-allocation scenarios, with `-DLIBREMIDI_SLIM_MESSAGE=<NBytes>` (in CMake or directly to the compiler)

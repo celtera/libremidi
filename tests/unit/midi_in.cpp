@@ -1,15 +1,98 @@
 #include "../include_catch.hpp"
 
+#include <libremidi/backends/keyboard/config.hpp>
 #include <libremidi/libremidi.hpp>
 
 #include <chrono>
 #include <thread>
 
 #if __has_include(<jack/jack.h>)
+  #include <libremidi/backends/jack/config.hpp>
+
   #include <jack/jack.h>
 #endif
 
-#include <libremidi/backends/jack/config.hpp>
+TEST_CASE("creation", "[midi_in]")
+{
+  GIVEN("A default midi input")
+  {
+    libremidi::midi_in in(libremidi::input_configuration{.on_message = [](auto) {}});
+    THEN("created with the default MIDI 1 api for the platform")
+    {
+      REQUIRE(in.get_current_api() == libremidi::midi1::default_api());
+    }
+  }
+
+  GIVEN("A default ump input")
+  {
+    libremidi::ump_input_configuration conf{.on_message = [](auto) {}};
+    libremidi::midi_in in(conf);
+    THEN("created with the default MIDI 2 api for the platform")
+    {
+      REQUIRE(in.get_current_api() == libremidi::midi2::default_api());
+    }
+  }
+
+  GIVEN("A midi input with an explicitly unspecified API")
+  {
+    libremidi::midi_in in(
+        libremidi::input_configuration{.on_message = [](auto) {}}, libremidi::API::UNSPECIFIED);
+    THEN("created with the default api")
+    {
+      REQUIRE(in.get_current_api() == libremidi::midi1::default_api());
+    }
+  }
+
+  GIVEN("A midi input with an empty API")
+  {
+    libremidi::midi_in in(libremidi::input_configuration{.on_message = [](auto) {}}, std::any{});
+    THEN("created with defaultapi")
+    {
+      REQUIRE(in.get_current_api() == libremidi::midi1::default_api());
+    }
+  }
+  GIVEN("A midi input with an explicit API")
+  {
+    libremidi::midi_in in(
+        libremidi::input_configuration{.on_message = [](auto) {}}, libremidi::API::KEYBOARD);
+    THEN("created with that api")
+    {
+      REQUIRE(in.get_current_api() == libremidi::API::KEYBOARD);
+    }
+  }
+
+  GIVEN("A midi input with a wrong API")
+  {
+    libremidi::midi_in in(libremidi::input_configuration{.on_message = [](auto) {}}, float(1.23f));
+    THEN("created with dummy api")
+    {
+      REQUIRE(in.get_current_api() == libremidi::API::DUMMY);
+    }
+  }
+
+  GIVEN("A midi input with a proper API")
+  {
+    libremidi::midi_in in(
+        libremidi::input_configuration{.on_message = [](auto) {}},
+        libremidi::kbd_input_configuration{});
+    THEN("created with the correct api")
+    {
+      REQUIRE(in.get_current_api() == libremidi::API::KEYBOARD);
+    }
+  }
+
+  GIVEN("A midi 2 input with a proper midi1 API")
+  {
+    libremidi::midi_in in(
+        libremidi::ump_input_configuration{.on_message = [](auto) {}},
+        libremidi::kbd_input_configuration{});
+    THEN("created with the correct api")
+    {
+      REQUIRE(in.get_current_api() == libremidi::API::KEYBOARD);
+    }
+  }
+}
+
 TEST_CASE("poly aftertouch", "[midi_in]")
 {
 #if __has_include(<jack/jack.h>)

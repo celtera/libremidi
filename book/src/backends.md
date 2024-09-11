@@ -11,7 +11,7 @@ or because it has not been implemented yet.
 |               | ALSA Raw | ALSA Seq | PipeWire |
 |---------------|----------|----------|----------|
 | MIDI 1        | Yes      | Yes      | Yes      |
-| MIDI 2        | Yes      | Yes      | No       |
+| MIDI 2        | Yes      | Yes      | N/A      |
 | Virtual ports | N/A      | Yes      | Yes      |
 | Observer      | Yes      | Yes      | Yes      |
 | Scheduling    | No       | No       | No       |
@@ -32,9 +32,9 @@ without preventing application loading if the end user does not use it.
 |               | WinMM | UWP | WinMIDI |
 |---------------|-------|-----|---------|
 | MIDI 1        | Yes   | Yes | No      |
-| MIDI 2        | N/A   | N/A | No      |
+| MIDI 2        | N/A   | N/A | Yes     |
 | Virtual ports | N/A   | No  | No      |
-| Observer      | Yes   | Yes | No      |
+| Observer      | Yes   | Yes | Yes     |
 | Scheduling    | No    | No  | No      |
 
 ## Mac & iOS
@@ -62,7 +62,7 @@ without preventing application loading if the end user does not use it.
 |               | JACK |
 |---------------|------|
 | MIDI 1        | Yes  |
-| MIDI 2        | No   |
+| MIDI 2        | N/A  |
 | Virtual ports | Yes  |
 | Observer      | Yes  |
 | Scheduling    | No   |

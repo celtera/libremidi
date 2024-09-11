@@ -27,3 +27,4 @@ It also features some new & improved backends:
 - Windows UWP.
 - WebMIDI in Emscripten.
 - JACK support on all platforms where it is available.
+- Computer keyboard input.

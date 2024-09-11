@@ -20,6 +20,7 @@
   - [External polling](./polling.md)
   - [Timestamping](./timestamping.md)
 - [Queue vs callbacks](./queue.md)
+- [Computer keyboard input](./keyboard.md)
 
 # Reference
 - [Backends](./backends.md)

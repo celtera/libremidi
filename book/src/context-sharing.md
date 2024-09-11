@@ -39,6 +39,8 @@ libremidi::midi_out out{
 };
 ```
 
+In that case, note that the `obs` has ownership of for instance the JACK context object: it must outlive `in` and `out`.
+
 The relevant examples are:
 - `coremidi_share.cpp` for a complete example for CoreMIDI.
 - `jack_share.cpp` for a complete example for JACK.
