@@ -15,6 +15,19 @@ Additionnally, for MIDI 2 parsing support we use [cmidi2](https://github.com/ats
 
 Read the documentation [here](https://celtera.github.io/libremidi).
 
+## Citation
+
+If you use this work as part of academic research, please kindly cite the [paper](https://smcnetwork.org/smc2024/papers/SMC2024_paper_id104.pdf): 
+```bibtex
+@inproceedings{celerier2024libremidi,
+  title={libremidi: a cross-platform library for real-time MIDI 1 and 2},
+  author={Celerier, Jean-Micha{\"e}l},
+  booktitle={Proceedings of the Sound and Music Computing Conference (SMC)},
+  year={2024},
+  address={Porto, Portugal}
+}
+```
+
 ## Changelog 
 
 ### Since v5
