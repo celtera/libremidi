@@ -5,6 +5,53 @@
 
 #include <set>
 
+TEST_CASE("creation", "[midi_out]")
+{
+  GIVEN("A default midi output")
+  {
+    libremidi::midi_out out;
+    THEN("created with the default MIDI 1 api for the platform")
+    {
+      REQUIRE(out.get_current_api() == libremidi::midi1::default_api());
+    }
+  }
+
+  GIVEN("A midi output with an explicitly unspecified API")
+  {
+    libremidi::midi_out out({}, libremidi::API::UNSPECIFIED);
+    THEN("created with the default api")
+    {
+      REQUIRE(out.get_current_api() == libremidi::midi1::default_api());
+    }
+  }
+
+  GIVEN("A midi output with an empty API")
+  {
+    libremidi::midi_out out({}, std::any{});
+    THEN("created with defaultapi")
+    {
+      REQUIRE(out.get_current_api() == libremidi::midi1::default_api());
+    }
+  }
+  GIVEN("A midi output with an explicit API")
+  {
+    libremidi::midi_out out({}, libremidi::API::JACK_MIDI);
+    THEN("created with that api")
+    {
+      REQUIRE(out.get_current_api() == libremidi::API::JACK_MIDI);
+    }
+  }
+
+  GIVEN("A midi output with a wrong API")
+  {
+    libremidi::midi_out out({}, float(1.23f));
+    THEN("created with dummy api")
+    {
+      REQUIRE(out.get_current_api() == libremidi::API::DUMMY);
+    }
+  }
+}
+
 TEST_CASE("sending messages with span", "[midi_out]")
 {
   libremidi::midi_out midi{{}, libremidi::dummy_configuration{}};

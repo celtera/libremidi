@@ -7,7 +7,7 @@
 #include <iostream>
 #include <thread>
 
-int main(int argc, char**)
+int main(int argc, char** argv)
 {
   libremidi::observer obs;
   auto inputs = obs.get_input_ports();
