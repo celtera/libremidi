@@ -4,6 +4,7 @@
 #include <libremidi/libremidi.hpp>
 
 #include <chrono>
+#include <mutex>
 #include <thread>
 
 #if __has_include(<jack/jack.h>)
