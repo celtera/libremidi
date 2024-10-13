@@ -26,106 +26,35 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #if !defined(LIBREMIDI_HEADER_ONLY)
   #include <libremidi/writer.hpp>
 #endif
-#include <numeric>
+#include <algorithm>
+#include <bit>
 #include <ostream>
 #include <string>
-#include <utility>
 
 namespace libremidi
 {
 namespace util
 {
-static LIBREMIDI_INLINE std::ostream& write_uint16_be(std::ostream& out, uint16_t value)
+template <typename T>
+static LIBREMIDI_INLINE std::ostream& write_be(std::ostream& out, T value)
 {
-  union
+  static_assert(
+      std::endian::native == std::endian::big || std::endian::native == std::endian::little);
+  if constexpr (std::endian::native == std::endian::big)
   {
-    uint8_t bytes[2];
-    uint16_t v;
-  } data;
-  data.v = value;
-  out << data.bytes[1];
-  out << data.bytes[0];
-  return out;
-}
-
-[[maybe_unused]] static LIBREMIDI_INLINE std::ostream&
-write_int16_be(std::ostream& out, int16_t value)
-{
-  union
+    out << value;
+  }
+  else
   {
-    uint8_t bytes[2];
-    int16_t v;
-  } data;
-  data.v = value;
-  out << data.bytes[1];
-  out << data.bytes[0];
-  return out;
-}
-
-static LIBREMIDI_INLINE std::ostream& write_uint32_be(std::ostream& out, uint32_t value)
-{
-  union
-  {
-    uint8_t bytes[4];
-    uint32_t v;
-  } data;
-  data.v = value;
-  out << data.bytes[3];
-  out << data.bytes[2];
-  out << data.bytes[1];
-  out << data.bytes[0];
-  return out;
-}
-
-[[maybe_unused]] static LIBREMIDI_INLINE std::ostream&
-write_int32_be(std::ostream& out, int32_t value)
-{
-  union
-  {
-    uint8_t bytes[4];
-    int32_t v;
-  } data;
-  data.v = value;
-  out << data.bytes[3];
-  out << data.bytes[2];
-  out << data.bytes[1];
-  out << data.bytes[0];
-  return out;
-}
-
-[[maybe_unused]] static LIBREMIDI_INLINE std::ostream&
-write_float_be(std::ostream& out, float value)
-{
-  union
-  {
-    uint8_t bytes[4];
-    float v;
-  } data;
-  data.v = value;
-  out << data.bytes[3];
-  out << data.bytes[2];
-  out << data.bytes[1];
-  out << data.bytes[0];
-  return out;
-}
-
-[[maybe_unused]] static LIBREMIDI_INLINE std::ostream&
-write_double_be(std::ostream& out, double value)
-{
-  union
-  {
-    uint8_t bytes[8];
-    double v;
-  } data;
-  data.v = value;
-  out << data.bytes[7];
-  out << data.bytes[6];
-  out << data.bytes[5];
-  out << data.bytes[4];
-  out << data.bytes[3];
-  out << data.bytes[2];
-  out << data.bytes[1];
-  out << data.bytes[0];
+    static constexpr auto N = sizeof(value);
+    struct storage
+    {
+      uint8_t bytes[N];
+    };
+    auto data = std::bit_cast<storage>(value);
+    std::reverse(data.bytes, data.bytes + N);
+    out.write(reinterpret_cast<const char*>(data.bytes), static_cast<std::streamsize>(N));
+  }
   return out;
 }
 
@@ -140,7 +69,7 @@ static LIBREMIDI_INLINE void write_variable_length(uint32_t aValue, std::vector<
   bytes[1] = static_cast<uint8_t>((aValue >> 21) & 0x7F); // next largest 7 bits
   bytes[2] = static_cast<uint8_t>((aValue >> 14) & 0x7F);
   bytes[3] = static_cast<uint8_t>((aValue >> 7) & 0x7F);
-  bytes[4] = static_cast<uint8_t>((aValue)&0x7F); // least significant 7 bits
+  bytes[4] = static_cast<uint8_t>((aValue) & 0x7F); // least significant 7 bits
 
   int start = 0;
   while (start < 5 && bytes[start] == 0)
@@ -195,14 +124,11 @@ LIBREMIDI_INLINE
 void writer::write(std::ostream& out) const
 {
   // MIDI File Header
-  out << 'M';
-  out << 'T';
-  out << 'h';
-  out << 'd';
-  util::write_uint32_be(out, 6);
-  util::write_uint16_be(out, (tracks.size() == 1) ? 0 : 1);
-  util::write_uint16_be(out, static_cast<uint16_t>(tracks.size()));
-  util::write_uint16_be(out, ticksPerQuarterNote);
+  out.write("MThd", 4);
+  util::write_be<uint32_t>(out, 6);
+  util::write_be<uint16_t>(out, (tracks.size() == 1) ? 0 : 1);
+  util::write_be<uint16_t>(out, static_cast<uint16_t>(tracks.size()));
+  util::write_be<uint16_t>(out, ticksPerQuarterNote);
 
   std::vector<uint8_t> trackRawData;
   for (const auto& event_list : tracks)
@@ -261,11 +187,8 @@ void writer::write(std::ostream& out) const
     }
 
     // Write the track ID marker "MTrk":
-    out << 'M';
-    out << 'T';
-    out << 'r';
-    out << 'k';
-    util::write_uint32_be(out, static_cast<uint32_t>(trackRawData.size()));
+    out.write("MTrk", 4);
+    util::write_be<uint32_t>(out, static_cast<uint32_t>(trackRawData.size()));
     out.write(
         reinterpret_cast<char*>(trackRawData.data()),
         static_cast<std::streamsize>(trackRawData.size()));
