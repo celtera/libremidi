@@ -7,7 +7,7 @@
 #include <mutex>
 #include <thread>
 
-#if __has_include(<jack/jack.h>)
+#if defined(LIBREMIDI_JACK)
   #include <libremidi/backends/jack/config.hpp>
 
   #include <jack/jack.h>
@@ -100,7 +100,7 @@ TEST_CASE("creation", "[midi_in]")
 
 TEST_CASE("poly aftertouch", "[midi_in]")
 {
-#if __has_include(<jack/jack.h>)
+#if defined(LIBREMIDI_JACK)
   #if defined(LIBREMIDI_CI)
   SKIP("GH runners do not have MIDI support");
   #endif
