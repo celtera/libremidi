@@ -7,6 +7,10 @@
 
 TEST_CASE("creation", "[midi_out]")
 {
+#if defined(LIBREMIDI_CI)
+  SKIP("GH runners do not have MIDI support");
+#endif
+
   GIVEN("A default midi output")
   {
     libremidi::midi_out out;
@@ -61,11 +65,14 @@ TEST_CASE("sending messages with span", "[midi_out]")
   midi.send_message(std::span<unsigned char>(data, 3));
 }
 
-#if !defined(LIBREMIDI_CI)
-  #if defined(__linux__)
-    #include <libremidi/backends/alsa_raw/config.hpp>
+#if defined(__linux__)
+  #include <libremidi/backends/alsa_raw/config.hpp>
 TEST_CASE("sending chunked messages", "[midi_out]")
 {
+  #if defined(LIBREMIDI_CI)
+  SKIP("GH runners do not have MIDI support");
+  #endif
+
   std::set<int> written_bytes;
 
   libremidi::midi_out midi{
@@ -75,9 +82,9 @@ TEST_CASE("sending chunked messages", "[midi_out]")
               .interval = std::chrono::milliseconds(100),
               .size = 4096, // 4kb
               .wait = [&](const std::chrono::microseconds&, int sz) {
-                written_bytes.insert(sz);
-                return true;
-              }}}};
+    written_bytes.insert(sz);
+    return true;
+  }}}};
 
   if (auto ports
       = libremidi::observer{{}, libremidi::alsa_raw_observer_configuration{}}.get_output_ports();
@@ -95,5 +102,4 @@ TEST_CASE("sending chunked messages", "[midi_out]")
     WARN("No MIDI output found, skipping test");
   }
 }
-  #endif
 #endif

@@ -14,6 +14,10 @@
 
 TEST_CASE("creation", "[midi_in]")
 {
+#if defined(LIBREMIDI_CI)
+  SKIP("GH runners do not have MIDI support");
+#endif
+
   GIVEN("A default midi input")
   {
     libremidi::midi_in in(libremidi::input_configuration{.on_message = [](auto) {}});
@@ -96,7 +100,10 @@ TEST_CASE("creation", "[midi_in]")
 TEST_CASE("poly aftertouch", "[midi_in]")
 {
 #if __has_include(<jack/jack.h>)
-  #if !defined(LIBREMIDI_CI)
+  #if defined(LIBREMIDI_CI)
+  SKIP("GH runners do not have MIDI support");
+  #endif
+
   std::vector<libremidi::message> queue;
   std::mutex qmtx;
 
@@ -106,11 +113,11 @@ TEST_CASE("poly aftertouch", "[midi_in]")
 
   libremidi::midi_in midi{
       libremidi::input_configuration{
-          .on_message
-          = [&](libremidi::message&& msg) {
+          .on_message =
+              [&](libremidi::message&& msg) {
     std::lock_guard _{qmtx};
     queue.push_back(std::move(msg));
-          }},
+  }},
       libremidi::jack_input_configuration{.client_name = "libremidi-test"}};
   midi.open_virtual_port("port");
 
@@ -143,6 +150,5 @@ TEST_CASE("poly aftertouch", "[midi_in]")
     libremidi::message mess = queue.back();
     REQUIRE(mess.bytes == libremidi::channel_events::poly_pressure(0, 60, 100).bytes);
   }
-#endif
 #endif
 }
