@@ -23,7 +23,8 @@ if(LIBREMIDI_NO_BOOST AND LIBREMIDI_FIND_BOOST)
 endif()
 
 if(LIBREMIDI_FIND_BOOST)
-  find_package(Boost REQUIRED OPTIONAL_COMPONENTS cobalt)
+  find_package(Boost REQUIRED)
+  find_package(Boost OPTIONAL_COMPONENTS cobalt)
 endif()
 
 # readerwriterqueue

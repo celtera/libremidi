@@ -31,6 +31,22 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ostream>
 #include <string>
 
+#if !defined(__cpp_lib_bit_cast)
+namespace std
+{
+template <typename R, typename T>
+[[nodiscard]]
+constexpr R bit_cast(const T& v) noexcept
+{
+  union
+  {
+    R res;
+    T init;
+  } u{.init = v};
+  return u.res;
+}
+}
+#endif
 namespace libremidi
 {
 namespace util
