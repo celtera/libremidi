@@ -35,7 +35,7 @@ namespace libremidi
 struct LIBREMIDI_EXPORT writer
 {
 public:
-  int ticksPerQuarterNote{120};
+  uint16_t ticksPerQuarterNote{120};
   std::vector<midi_track> tracks;
 
   void add_event(int tick, int track, const message& m);
