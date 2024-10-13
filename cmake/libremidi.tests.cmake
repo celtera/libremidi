@@ -37,8 +37,8 @@ target_link_libraries(midifile_write_tracks_test PRIVATE libremidi Catch2::Catch
 
 include(CTest)
 add_test(NAME error_test COMMAND error_test)
-add_test(NAME midiin_test COMMAND midiin_test)
-add_test(NAME midiout_test COMMAND midiout_test)
+add_test(NAME midiin_test COMMAND midiin_test --allow-running-no-tests)
+add_test(NAME midiout_test COMMAND midiout_test --allow-running-no-tests)
 add_test(NAME midifile_read_test COMMAND midifile_read_test)
 add_test(NAME midifile_write_test COMMAND midifile_write_test)
 add_test(NAME midifile_write_tracks_test COMMAND midifile_write_tracks_test)
