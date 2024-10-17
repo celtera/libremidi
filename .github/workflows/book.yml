@@ -20,6 +20,7 @@ jobs:
           mdbook-version: 'latest'
 
       - run: mdbook build book/ -d $PWD/output
+      - run: cp -rf $PWD/.well-known $PWD/output/
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
