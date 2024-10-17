@@ -21,6 +21,8 @@ jobs:
 
       - run: mdbook build book/ -d $PWD/output
       - run: cp -rf $PWD/.well-known $PWD/output/
+      - run: touch .nojekyll
+      - run: touch ./output/.nojekyll
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
