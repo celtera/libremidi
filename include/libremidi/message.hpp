@@ -245,7 +245,9 @@ struct meta_events
         static_cast<uint8_t>(mpqn)};
   }
 
-  static message time_signature(int numerator, int denominator)
+  static message time_signature(
+      int numerator, int denominator, int clocks_per_click = 1,
+      int notated_32nd_notes_per_beat = 96)
   {
     int n = 1;
     int powTwo = 0;
@@ -256,8 +258,14 @@ struct meta_events
       ++powTwo;
     }
 
-    return {0xff, 0x58, 0x04, static_cast<uint8_t>(numerator), static_cast<uint8_t>(powTwo),
-            1,    96};
+    return {
+        0xff,
+        0x58,
+        0x04,
+        static_cast<uint8_t>(numerator),
+        static_cast<uint8_t>(powTwo),
+        static_cast<uint8_t>(clocks_per_click),
+        static_cast<uint8_t>(notated_32nd_notes_per_beat)};
   }
 
   // Where key index goes from -7 (7 flats, C♭ Major) to +7 (7 sharps, C♯
