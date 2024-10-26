@@ -1,8 +1,6 @@
 #pragma once
 #include <libremidi/config.hpp>
 
-#include <boost/asio.hpp>
-
 #include <string>
 namespace boost::asio
 {

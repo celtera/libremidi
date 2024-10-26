@@ -1,6 +1,9 @@
 #pragma once
-#include <memory>
+#include <libremidi/config.hpp>
 
+#include <boost/asio.hpp>
+
+#include <memory>
 namespace stdx
 { /*
 
