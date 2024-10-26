@@ -219,12 +219,6 @@ public:
   stdx::error send_message(unsigned char b0, unsigned char b1, unsigned char b2) const;
 
   // Avoid silly mistakes:
-  stdx::error send_message(int16_t b0) const noexcept = delete;
-  stdx::error send_message(int32_t b0) const noexcept = delete;
-  stdx::error send_message(int64_t b0) const noexcept = delete;
-  stdx::error send_message(uint16_t b0) const noexcept = delete;
-  stdx::error send_message(uint32_t b0) const noexcept = delete;
-  stdx::error send_message(uint64_t b0) const noexcept = delete;
   stdx::error send_message(auto* message) const noexcept = delete;
   stdx::error send_message(const auto* message) const noexcept = delete;
 

@@ -164,7 +164,7 @@ struct arguments
       return false;
     }
 
-    if (index >= 0 && index < ports.size())
+    if (index >= 0 && index < std::ssize(ports))
     {
       std::cout << "Opening " << ports[index].display_name << std::endl;
       const auto err = midi.open_port(ports[index]);

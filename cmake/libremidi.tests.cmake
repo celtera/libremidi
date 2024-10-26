@@ -15,6 +15,9 @@ if(LIBREMIDI_CI)
     target_compile_definitions(libremidi ${_public} LIBREMIDI_CI)
 endif()
 
+add_executable(conversion_test tests/unit/conversion.cpp)
+target_link_libraries(conversion_test PRIVATE libremidi Catch2::Catch2WithMain)
+
 add_executable(error_test tests/unit/error.cpp)
 target_link_libraries(error_test PRIVATE libremidi Catch2::Catch2WithMain)
 
@@ -36,6 +39,7 @@ add_executable(midifile_write_tracks_test tests/integration/midifile_write_track
 target_link_libraries(midifile_write_tracks_test PRIVATE libremidi Catch2::Catch2WithMain)
 
 include(CTest)
+add_test(NAME conversion_test COMMAND conversion_test)
 add_test(NAME error_test COMMAND error_test)
 add_test(NAME midiin_test COMMAND midiin_test --allow-running-no-tests)
 add_test(NAME midiout_test COMMAND midiout_test --allow-running-no-tests)

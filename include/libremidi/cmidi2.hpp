@@ -2559,6 +2559,7 @@ enum cmidi2_midi_conversion_result
   CMIDI2_CONVERSION_RESULT_INVALID_DTE_SEQUENCE = 0x11,
   CMIDI2_CONVERSION_RESULT_INVALID_STATUS = 0x13,
   CMIDI2_CONVERSION_RESULT_INCOMPLETE_SYSEX7 = 0x20,
+  CMIDI2_CONVERSION_RESULT_INVALID_INPUT = 0x40,
 };
 
 static inline void
@@ -2686,7 +2687,11 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
     else
     {
       // fixed sized message
-      size_t len = cmidi2_midi1_get_message_size(context->midi1 + *sIdx, sLen - *sIdx);
+      size_t remaining = sLen - *sIdx;
+      size_t len = cmidi2_midi1_get_message_size(context->midi1 + *sIdx, remaining);
+      if (len > remaining)
+        return CMIDI2_CONVERSION_RESULT_INVALID_INPUT;
+
       uint8_t byte2 = context->midi1[*sIdx + 1];
       uint8_t byte3 = len > 2 ? context->midi1[*sIdx + 2] : 0;
       uint8_t channel = context->midi1[*sIdx] & 0xF;

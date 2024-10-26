@@ -47,7 +47,7 @@ int main(int argc, const char** argv)
   {
     message.clear();
     message.push_back(240);
-    for (auto i = 0U; i < args.count; i++)
+    for (int i = 0; i < args.count; i++)
       message.push_back(i % 128);
 
     message.push_back(247);
