@@ -218,6 +218,16 @@ public:
   stdx::error send_message(unsigned char b0, unsigned char b1) const;
   stdx::error send_message(unsigned char b0, unsigned char b1, unsigned char b2) const;
 
+  // Avoid silly mistakes:
+  stdx::error send_message(int16_t b0) const noexcept = delete;
+  stdx::error send_message(int32_t b0) const noexcept = delete;
+  stdx::error send_message(int64_t b0) const noexcept = delete;
+  stdx::error send_message(uint16_t b0) const noexcept = delete;
+  stdx::error send_message(uint32_t b0) const noexcept = delete;
+  stdx::error send_message(uint64_t b0) const noexcept = delete;
+  stdx::error send_message(auto* message) const noexcept = delete;
+  stdx::error send_message(const auto* message) const noexcept = delete;
+
   //! Current time in the timestamp referential
   int64_t current_time();
 
@@ -233,6 +243,10 @@ public:
   stdx::error send_ump(uint32_t b0, uint32_t b1) const;
   stdx::error send_ump(uint32_t b0, uint32_t b1, uint32_t b2) const;
   stdx::error send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b3) const;
+  // Better compat with cmidi2
+  stdx::error send_ump(int32_t b0) const;
+  stdx::error send_ump(int64_t b01) const;
+  stdx::error send_ump(uint64_t b01) const;
 
 // Interop with ni-midi2
 #if LIBREMIDI_NI_MIDI2_COMPAT

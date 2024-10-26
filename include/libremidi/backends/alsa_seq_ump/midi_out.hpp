@@ -140,8 +140,5 @@ public:
     snd.seq.drain_output(this->seq);
     return stdx::error{};
   }
-
-private:
-  unsigned int bufferSize{32};
 };
 }

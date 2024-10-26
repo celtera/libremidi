@@ -9,39 +9,76 @@ namespace boost::asio
 struct io_context;
 }
 
-namespace libremidi
+namespace libremidi::net
 {
-enum class net_protocol
+enum class protocol
 {
-  RTPMIDI,
-  APPLEMIDI,
-  LIBREMIDI_DGRAM_MIDI1,
-  LIBREMIDI_DGRAM_MIDI2
+  OSC_MIDI,
 };
 
-struct net_dgram_input_configuration
+struct dgram_input_configuration
 {
   std::string client_name = "libremidi client";
 
-  net_protocol protocol = net_protocol::LIBREMIDI_DGRAM_MIDI1;
+  enum protocol protocol = protocol::OSC_MIDI;
   std::string accept = "0.0.0.0";
   int port{};
 
   boost::asio::io_context* io_context{};
 };
 
-struct net_dgram_output_configuration
+struct dgram_output_configuration
 {
   std::string client_name = "libremidi client";
 
-  net_protocol protocol = net_protocol::LIBREMIDI_DGRAM_MIDI1;
+  enum protocol protocol = protocol::OSC_MIDI;
   std::string host = "127.0.0.1";
+  int port{};
+  bool broadcast{};
+
+  boost::asio::io_context* io_context{};
+};
+
+struct dgram_observer_configuration
+{
+  std::string client_name = "libremidi client";
+
+  boost::asio::io_context* io_context{};
+};
+
+}
+
+namespace libremidi::net_ump
+{
+enum class protocol
+{
+  OSC_MIDI2,
+};
+
+struct dgram_input_configuration
+{
+  std::string client_name = "libremidi client";
+
+  enum protocol protocol = protocol::OSC_MIDI2;
+  std::string accept = "0.0.0.0";
   int port{};
 
   boost::asio::io_context* io_context{};
 };
 
-struct net_dgram_observer_configuration
+struct dgram_output_configuration
+{
+  std::string client_name = "libremidi client";
+
+  enum protocol protocol = protocol::OSC_MIDI2;
+  std::string host = "127.0.0.1";
+  int port{};
+  bool broadcast{};
+
+  boost::asio::io_context* io_context{};
+};
+
+struct dgram_observer_configuration
 {
   std::string client_name = "libremidi client";
 

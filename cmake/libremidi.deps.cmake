@@ -27,7 +27,6 @@ if(LIBREMIDI_FIND_BOOST)
 endif()
 
 # readerwriterqueue
-
 if(NOT LIBREMIDI_NO_PIPEWIRE AND NOT TARGET readerwriterqueue)
   FetchContent_Declare(
       readerwriterqueue

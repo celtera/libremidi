@@ -9,6 +9,7 @@
 #include <libremidi/backends/emscripten/config.hpp>
 #include <libremidi/backends/jack/config.hpp>
 #include <libremidi/backends/keyboard/config.hpp>
+#include <libremidi/backends/net/config.hpp>
 #include <libremidi/backends/pipewire/config.hpp>
 #include <libremidi/backends/winmidi/config.hpp>
 #include <libremidi/backends/winmm/config.hpp>

@@ -34,20 +34,26 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/coremidi_ump/midi_out.hpp
     include/libremidi/backends/coremidi_ump/observer.hpp
 
+    include/libremidi/backends/emscripten/config.hpp
+    include/libremidi/backends/emscripten/helpers.hpp
+    include/libremidi/backends/emscripten/midi_access.cpp
+    include/libremidi/backends/emscripten/midi_access.hpp
+    include/libremidi/backends/emscripten/midi_in.cpp
+    include/libremidi/backends/emscripten/midi_in.hpp
+    include/libremidi/backends/emscripten/midi_out.cpp
+    include/libremidi/backends/emscripten/midi_out.hpp
+    include/libremidi/backends/emscripten/observer.cpp
+    include/libremidi/backends/emscripten/observer.hpp
+
     include/libremidi/backends/jack/config.hpp
     include/libremidi/backends/jack/helpers.hpp
-    include/libremidi/backends/jack/midi_out.hpp
     include/libremidi/backends/jack/midi_in.hpp
+    include/libremidi/backends/jack/midi_out.hpp
     include/libremidi/backends/jack/observer.hpp
     include/libremidi/backends/jack/shared_handler.hpp
 
-    include/libremidi/backends/pipewire/config.hpp
-    include/libremidi/backends/pipewire/context.hpp
-    include/libremidi/backends/pipewire/helpers.hpp
-    include/libremidi/backends/pipewire/midi_out.hpp
-    include/libremidi/backends/pipewire/midi_in.hpp
-    include/libremidi/backends/pipewire/observer.hpp
-    include/libremidi/backends/pipewire/shared_handler.hpp
+    include/libremidi/backends/keyboard/config.hpp
+    include/libremidi/backends/keyboard/midi_in.hpp
 
     include/libremidi/backends/linux/alsa.hpp
     include/libremidi/backends/linux/dylib_loader.hpp
@@ -55,21 +61,24 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/linux/pipewire.hpp
     include/libremidi/backends/linux/udev.hpp
 
-    include/libremidi/backends/emscripten/config.hpp
-    include/libremidi/backends/emscripten/helpers.hpp
-    include/libremidi/backends/emscripten/midi_access.hpp
-    include/libremidi/backends/emscripten/midi_access.cpp
-    include/libremidi/backends/emscripten/midi_in.hpp
-    include/libremidi/backends/emscripten/midi_in.cpp
-    include/libremidi/backends/emscripten/midi_out.hpp
-    include/libremidi/backends/emscripten/midi_out.cpp
-    include/libremidi/backends/emscripten/observer.hpp
-    include/libremidi/backends/emscripten/observer.cpp
+    include/libremidi/backends/net/config.hpp
+    include/libremidi/backends/net/helpers.hpp
+    include/libremidi/backends/net/midi_in.hpp
+    include/libremidi/backends/net/midi_out.hpp
+    include/libremidi/backends/net/observer.hpp
+
+    include/libremidi/backends/pipewire/config.hpp
+    include/libremidi/backends/pipewire/context.hpp
+    include/libremidi/backends/pipewire/helpers.hpp
+    include/libremidi/backends/pipewire/midi_in.hpp
+    include/libremidi/backends/pipewire/midi_out.hpp
+    include/libremidi/backends/pipewire/observer.hpp
+    include/libremidi/backends/pipewire/shared_handler.hpp
 
     include/libremidi/backends/winmidi/config.hpp
     include/libremidi/backends/winmidi/helpers.hpp
-    include/libremidi/backends/winmidi/midi_out.hpp
     include/libremidi/backends/winmidi/midi_in.hpp
+    include/libremidi/backends/winmidi/midi_out.hpp
     include/libremidi/backends/winmidi/observer.hpp
 
     include/libremidi/backends/winmm/config.hpp
@@ -80,14 +89,14 @@ target_sources(libremidi PRIVATE
 
     include/libremidi/backends/winuwp/config.hpp
     include/libremidi/backends/winuwp/helpers.hpp
-    include/libremidi/backends/winuwp/midi_out.hpp
     include/libremidi/backends/winuwp/midi_in.hpp
+    include/libremidi/backends/winuwp/midi_out.hpp
     include/libremidi/backends/winuwp/observer.hpp
 
-    include/libremidi/backends/alsa_seq.hpp
-    include/libremidi/backends/alsa_seq_ump.hpp
     include/libremidi/backends/alsa_raw.hpp
     include/libremidi/backends/alsa_raw_ump.hpp
+    include/libremidi/backends/alsa_seq.hpp
+    include/libremidi/backends/alsa_seq_ump.hpp
     include/libremidi/backends/coremidi.hpp
     include/libremidi/backends/coremidi_ump.hpp
     include/libremidi/backends/dummy.hpp
@@ -106,8 +115,8 @@ target_sources(libremidi PRIVATE
     include/libremidi/detail/ump_stream.hpp
 
     include/libremidi/api.hpp
-    include/libremidi/client.hpp
     include/libremidi/client.cpp
+    include/libremidi/client.hpp
     include/libremidi/config.hpp
     include/libremidi/configurations.hpp
     include/libremidi/error.hpp

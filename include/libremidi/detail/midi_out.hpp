@@ -51,7 +51,7 @@ public:
   stdx::error send_ump(const uint32_t* message, std::size_t size)
   {
     return converter.convert(
-        message, size, 0, [this](const unsigned char* midi, std::size_t n, int64_t ts) {
+        message, size, 0, [this](const unsigned char* midi, std::size_t n, int64_t /* ts */) {
       return send_message(midi, n);
     });
   }
@@ -72,7 +72,7 @@ public:
   stdx::error send_message(const unsigned char* message, std::size_t size)
   {
     return converter.convert(
-        message, size, 0, [this](const uint32_t* ump, std::size_t count, int64_t ts) {
+        message, size, 0, [this](const uint32_t* ump, std::size_t count, int64_t /* ts */) {
       return send_ump(ump, count);
     });
   }

@@ -1,6 +1,7 @@
 #pragma once
 #include <libremidi/backends/net/config.hpp>
 #include <libremidi/backends/net/helpers.hpp>
+#include <libremidi/cmidi2.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
 #include <boost/asio/io_context.hpp>
@@ -10,52 +11,93 @@
 namespace libremidi::net
 {
 
-class midi1_out_impl final
+struct osc_midi1_packet
+{
+  stdx::error init_packet(std::string_view osc_pattern)
+  {
+    int i = 0;
+    for (; i < std::ssize(osc_pattern); i++)
+      if (osc_pattern.data()[i] != 0)
+        bytes[i] = osc_pattern.data()[i];
+      else
+        break;
+    bytes[i] = 0;
+    while (i % 4 != 3)
+    {
+      ++i;
+      bytes[i] = 0;
+    }
+
+    bytes[++i] = ',';
+    bytes[++i] = 'm';
+    bytes[++i] = 0;
+    bytes[++i] = 0;
+
+    // MIDI message (m) spec: port n°, status byte, data 1, data 2
+    bytes[++i] = 0;
+    message_size = ++i + 3;
+
+    return stdx::error{}; // FIXME
+  }
+
+  stdx::error deinit()
+  {
+    message_size = 0;
+    return stdx::error{};
+  }
+
+  stdx::error set_packet_content(const unsigned char* message, size_t size)
+  {
+    if (message_size == 0)
+      return std::errc::not_connected;
+
+    if (size != 3)
+      return std::errc::message_size;
+
+    std::memcpy(this->bytes + message_size - 3, message, 3);
+
+    return stdx::error{};
+  }
+
+  std::span<const char> get_data() { return std::span(this->bytes, this->message_size); }
+  char bytes[512 + 8 + 8];
+  int message_size{};
+};
+
+class midi_out final
     : public midi1::out_api
     , public error_handler
 {
 public:
   struct
       : output_configuration
-      , net_dgram_output_configuration
+      , dgram_output_configuration
   {
   } configuration;
 
-  midi1_out_impl(output_configuration&& conf, net_dgram_output_configuration&& apiconf)
+  midi_out(output_configuration&& conf, dgram_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-      , ctx{new boost::asio::io_context}
+      , ctx{configuration.io_context ? configuration.io_context : new boost::asio::io_context}
+      , m_socket{*ctx}
   {
     m_socket.open(boost::asio::ip::udp::v4());
     m_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
     m_socket.set_option(boost::asio::socket_base::broadcast(true));
+
+    m_endpoint
+        = {boost::asio::ip::make_address(this->configuration.host),
+           static_cast<unsigned short>(this->configuration.port)};
+
+    this->client_open_ = stdx::error{};
   }
 
-  ~midi_out_impl() override
+  ~midi_out() override { close_port(); }
+
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::NETWORK; }
+
+  stdx::error open_port(const output_port& /* port */, std::string_view portName) override
   {
-    close_port();
-
-    disconnect(*this);
-  }
-
-  stdx::error open_port(const output_port& port, std::string_view portName) override
-  {
-    const char* host = "127.0.0.1:1234";
-    const char* port = "/midi";
-    /*
-    if (auto err = create_local_port(*this, portName, JackPortIsOutput); err != stdx::error{})
-      return err;
-    
-    // Connecting to the output
-    if (int err = jack_connect(this->client, jack_port_name(this->port), port.port_name.c_str());
-        err != 0 && err != EEXIST)
-    {
-      libremidi_handle_error(
-          configuration, "could not connect to port" + port.port_name);
-      return from_errc(err);
-    }
-    */
-
-    return stdx::error{};
+    return open_virtual_port(portName);
   }
 
   stdx::error open_virtual_port(std::string_view portName) override
@@ -64,66 +106,183 @@ public:
     if (portName.size() >= 512)
       return std::errc::invalid_argument;
 
-    int i = 0;
-    for (; i < portName.size(); i++)
-      if (portName.data()[i] != 0)
-        bytes.data[i] = portName.data()[i];
-      else
-        break;
-    bytes.data[i] = 0;
-    while (i % 4 != 3)
-    {
-      ++i;
-      bytes.data[i] = 0;
-    }
-
-    bytes.data[++i] = ',';
-    bytes.data[++i] = 'm';
-    bytes.data[++i] = 0;
-    bytes.data[++i] = 0;
-    osc_header_size = i;
+    pkt.init_packet(portName);
 
     return stdx::error{};
   }
 
-  stdx::error close_port() override { osc_header_size = 0; }
+  stdx::error close_port() override
+  {
+    pkt.deinit();
+    // FIXME async close
+    if (m_socket.is_open())
+      m_socket.close();
+    return {};
+  }
 
   stdx::error send_message(const unsigned char* message, size_t size) override
   {
-    if (osc_header_size == 0)
-      return std::errc::not_connected;
+    if (auto err = pkt.set_packet_content(message, size); err != stdx::error{})
+      return err;
 
-    int ret = 0;
-    if (size > 65507)
-      return std::errc::message_size;
-
-    auto time = std::chrono::system_clock::now();
-
-    std::memcpy(this->msg.data + osc_header_size, message, size);
-    bytes.byte_size = size + osc_header_size;
-
-    return from_errc(ret);
+    auto dat = pkt.get_data();
+    boost::system::error_code ec;
+    m_socket.send_to(boost::asio::const_buffer(dat.data(), dat.size()), m_endpoint, 0, ec);
+    return stdx::error{}; // FIXME
   }
 
-  struct msg
-  {
-    char bundle_text[8] = "\0#bundle";
-    boost::endian::big_int64_t timestamp = 0;
-    boost::endian::big_int32_t byte_size = 0;
-    char data[65535];
-  };
-  static_assert(sizeof(msg) == 8 + 8 + 4 + 65535);
-
-  stdx::error schedule_message(int64_t ts, const unsigned char* message, size_t size) override
+  stdx::error schedule_message(int64_t, const unsigned char*, size_t) override
   {
     int ret = 0;
     return from_errc(ret);
   }
 
   boost::asio::io_context* ctx{};
-  boost::asio::ip::udp::socket sock;
-  msg bytes;
-  int osc_header_size{};
+  boost::asio::ip::udp::endpoint m_endpoint;
+  boost::asio::ip::udp::socket m_socket;
+
+  osc_midi1_packet pkt;
+};
+
+}
+
+namespace libremidi::net_ump
+{
+struct osc_midi2_packet
+{
+  stdx::error init_packet(std::string_view osc_pattern)
+  {
+    int i = 0;
+    for (; i < std::ssize(osc_pattern); i++)
+      if (osc_pattern.data()[i] != 0)
+        bytes[i] = osc_pattern.data()[i];
+      else
+        break;
+    bytes[i] = 0;
+    while (i % 4 != 3)
+    {
+      ++i;
+      bytes[i] = 0;
+    }
+
+    bytes[++i] = ',';
+    bytes[++i] = 'M';
+    bytes[++i] = 0;
+    bytes[++i] = 0;
+
+    // MIDI 2 message (M) spec: an UMP
+    header_size = ++i;
+
+    return stdx::error{}; // FIXME
+  }
+
+  stdx::error deinit()
+  {
+    header_size = 0;
+    return stdx::error{};
+  }
+
+  stdx::error set_packet_content(const uint32_t* message, size_t size)
+  {
+    if (header_size == 0)
+      return std::errc::not_connected;
+
+    if (size > 4)
+      return std::errc::message_size;
+
+    message_size = 4 * size;
+
+    std::memcpy(this->bytes + header_size, message, message_size);
+
+    return stdx::error{};
+  }
+
+  std::span<const char> get_data()
+  {
+    return std::span(this->bytes, this->header_size + this->message_size);
+  }
+  char bytes[512 + 8 + 64];
+  int header_size{};
+  int message_size{};
+};
+
+class midi_out final
+    : public midi2::out_api
+    , public error_handler
+{
+public:
+  struct
+      : output_configuration
+      , dgram_output_configuration
+  {
+  } configuration;
+
+  midi_out(output_configuration&& conf, dgram_output_configuration&& apiconf)
+      : configuration{std::move(conf), std::move(apiconf)}
+      , ctx{configuration.io_context ? configuration.io_context : new boost::asio::io_context}
+      , m_socket{*ctx}
+  {
+    m_socket.open(boost::asio::ip::udp::v4());
+    m_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+    m_socket.set_option(boost::asio::socket_base::broadcast(true));
+
+    m_endpoint
+        = {boost::asio::ip::make_address(this->configuration.host),
+           static_cast<unsigned short>(this->configuration.port)};
+
+    this->client_open_ = stdx::error{};
+  }
+
+  ~midi_out() override { close_port(); }
+
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::NETWORK_UMP; }
+
+  stdx::error open_port(const output_port& /* port */, std::string_view portName) override
+  {
+    return open_virtual_port(portName);
+  }
+
+  stdx::error open_virtual_port(std::string_view portName) override
+  {
+    // Random arbitrary limit to avoid abuse
+    if (portName.size() >= 512)
+      return std::errc::invalid_argument;
+
+    pkt.init_packet(portName);
+
+    return stdx::error{};
+  }
+
+  stdx::error close_port() override
+  {
+    pkt.deinit();
+    if (m_socket.is_open())
+      m_socket.close();
+    return {};
+  }
+
+  stdx::error send_ump(const uint32_t* message, size_t size) override
+  {
+    if (auto err = pkt.set_packet_content(message, size); err != stdx::error{})
+      return err;
+
+    auto dat = pkt.get_data();
+    boost::system::error_code ec;
+    m_socket.send_to(boost::asio::const_buffer(dat.data(), dat.size()), m_endpoint, 0, ec);
+    return stdx::error{}; // FIXME
+  }
+
+  stdx::error schedule_ump(int64_t, const uint32_t*, size_t) override
+  {
+    int ret = 0;
+    return from_errc(ret);
+  }
+
+  boost::asio::io_context* ctx{};
+  boost::asio::ip::udp::endpoint m_endpoint;
+  boost::asio::ip::udp::socket m_socket;
+
+  osc_midi2_packet pkt;
 };
 
 }

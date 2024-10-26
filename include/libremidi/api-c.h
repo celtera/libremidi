@@ -21,6 +21,7 @@ typedef enum libremidi_api
   WEBMIDI,        /*!< Web MIDI API through Emscripten */
   PIPEWIRE,       /*!< PipeWire */
   KEYBOARD,       /*!< Computer keyboard input */
+  NETWORK,        /*!< MIDI over IP */
 
   // MIDI 2.0 APIs
   ALSA_RAW_UMP = 0x1000, /*!< Raw ALSA API for MIDI 2.0 */
@@ -28,6 +29,7 @@ typedef enum libremidi_api
   COREMIDI_UMP,          /*!< macOS CoreMidi API for MIDI 2.0. Requires macOS 11+ */
   WINDOWS_MIDI_SERVICES, /*!< Windows API for MIDI 2.0. Requires Windows 11 */
   KEYBOARD_UMP,          /*!< Computer keyboard input */
+  NETWORK_UMP,           /*!< MIDI2 over IP */
 
   DUMMY = 0xFFFF /*!< A compilable but non-functional API. */
 } libremidi_api;

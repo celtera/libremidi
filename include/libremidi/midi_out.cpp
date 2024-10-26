@@ -293,6 +293,28 @@ stdx::error midi_out::send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b
 }
 
 LIBREMIDI_INLINE
+stdx::error midi_out::send_ump(int32_t b0) const
+{
+  return send_ump(reinterpret_cast<uint32_t*>(&b0), 1);
+}
+
+LIBREMIDI_INLINE
+stdx::error midi_out::send_ump(int64_t b01) const
+{
+  auto ptr = reinterpret_cast<uint32_t*>(&b01);
+  uint32_t msg[2]{ptr[1], ptr[0]};
+  return send_ump(msg, 2);
+}
+
+LIBREMIDI_INLINE
+stdx::error midi_out::send_ump(uint64_t b01) const
+{
+  auto ptr = reinterpret_cast<uint32_t*>(&b01);
+  uint32_t msg[2]{ptr[1], ptr[0]};
+  return send_ump(msg, 2);
+}
+
+LIBREMIDI_INLINE
 stdx::error midi_out::schedule_ump(int64_t ts, const uint32_t* message, size_t size) const
 {
 #if defined(LIBREMIDI_ASSERTIONS)

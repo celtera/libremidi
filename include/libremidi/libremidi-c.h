@@ -98,6 +98,18 @@ typedef struct libremidi_observer_configuration
   bool notify_in_constructor;
 } libremidi_observer_configuration;
 
+typedef struct libremidi_midi1_callback
+{
+  void* context;
+  void (*callback)(void* ctx, libremidi_timestamp, const libremidi_midi1_symbol*, size_t len);
+} libremidi_midi1_callback;
+
+typedef struct libremidi_midi2_callback
+{
+  void* context;
+  void (*callback)(void* ctx, libremidi_timestamp, const libremidi_midi2_symbol*, size_t len);
+} libremidi_midi2_callback;
+
 typedef struct libremidi_midi_configuration
 {
   // Indicates the kind of callback requested, e.g. set MIDI1_RAW if you use the on_midi1_raw_data
@@ -117,26 +129,10 @@ typedef struct libremidi_midi_configuration
 
   union
   {
-    struct
-    {
-      void* context;
-      void (*callback)(void* ctx, libremidi_timestamp, const libremidi_midi1_symbol*, size_t len);
-    } on_midi1_message;
-    struct
-    {
-      void* context;
-      void (*callback)(void* ctx, libremidi_timestamp, const libremidi_midi1_symbol*, size_t len);
-    } on_midi1_raw_data;
-    struct
-    {
-      void* context;
-      void (*callback)(void* ctx, libremidi_timestamp, const libremidi_midi2_symbol*, size_t len);
-    } on_midi2_message;
-    struct
-    {
-      void* context;
-      void (*callback)(void* ctx, libremidi_timestamp, const libremidi_midi2_symbol*, size_t len);
-    } on_midi2_raw_data;
+    libremidi_midi1_callback on_midi1_message;
+    libremidi_midi1_callback on_midi1_raw_data;
+    libremidi_midi2_callback on_midi2_message;
+    libremidi_midi2_callback on_midi2_raw_data;
   };
 
   struct

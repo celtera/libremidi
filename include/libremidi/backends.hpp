@@ -58,7 +58,15 @@
 #endif
 
 #include <libremidi/backends/dummy.hpp>
-#include <libremidi/backends/keyboard.hpp>
+
+#if defined(LIBREMIDI_KEYBOARD)
+  #include <libremidi/backends/keyboard.hpp>
+#endif
+
+#if defined(LIBREMIDI_NETWORK)
+  #include <libremidi/backends/network.hpp>
+  #include <libremidi/backends/network_ump.hpp>
+#endif
 
 namespace libremidi
 {
@@ -106,8 +114,16 @@ static constexpr auto available_backends = make_tl(
     ,
     pipewire::backend{}
 #endif
+#if defined(LIBREMIDI_KEYBOARD)
     ,
-    kbd_backend{}, dummy_backend{});
+    kbd_backend{}
+#endif
+#if defined(LIBREMIDI_NETWORK)
+    ,
+    net::backend{}
+#endif
+    ,
+    dummy_backend{});
 
 // There should always be at least one back-end.
 static_assert(std::tuple_size_v<decltype(available_backends)> >= 1);
@@ -143,6 +159,10 @@ static constexpr auto available_backends = make_tl(
 #if defined(LIBREMIDI_WINMIDI)
     ,
     winmidi::backend{}
+#endif
+#if defined(LIBREMIDI_NETWORK)
+    ,
+    net_ump::backend{}
 #endif
     ,
     dummy_backend{});

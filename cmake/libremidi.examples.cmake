@@ -80,11 +80,14 @@ if(LIBREMIDI_HAS_WINMIDI)
   add_backend_example(midi2_in_winmidi)
 endif()
 
+if(LIBREMIDI_HAS_NETWORK)
+  add_example(network)
+endif()
+
 if(Boost_cobalt_FOUND)
   add_example(coroutines)
   target_link_libraries(coroutines PRIVATE Boost::cobalt)
 endif()
-
 
 add_executable(libremidi_c_api examples/c_api.c)
 target_link_libraries(libremidi_c_api PRIVATE libremidi)
