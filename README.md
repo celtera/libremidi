@@ -38,6 +38,8 @@ If you use this work as part of academic research, please kindly cite the [paper
 * C API for bindings to other languages ([libremidi-c.h](https://github.com/celtera/libremidi/blob/master/include/libremidi/libremidi-c.h)).
 * [Python binding](https://github.com/celtera/libremidi/tree/master/bindings/python).
 * Support for getting raw, unfiltered MIDI data (e.g. no SYSEX recombination logic).
+* Computer Keyboard backend to easily map scancodes to keyboard-like MIDI maps ⌨.
+* [Network backend](https://github.com/celtera/libremidi/blob/master/examples/network.cpp) to send MIDI 1 and UMP packets over OSC 🛜.
 * libremidi finally supports MIDI 2 on all desktop platforms 🎉!
 
 ### Since v4.5
