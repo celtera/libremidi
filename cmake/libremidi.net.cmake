@@ -2,6 +2,12 @@ if(NOT TARGET Boost::boost)
   return()
 endif()
 
+# Old boost versions:
+# /usr/include/boost/asio/awaitable.hpp:68:19: error: 'exchange' is not a member of 'std'; did you mean 'std::__atomic_impl::exchange'?
+if(Boost_VERSION VERSION_LESS 1.85)
+  return()
+endif()
+
 if(NOT LIBREMIDI_HAS_STD_STOP_TOKEN)
   return()
 endif()
@@ -27,14 +33,6 @@ if(APPLE)
         ${_public} BOOST_ASIO_DISABLE_STD_ALIGNED_ALLOC=1)
     endif()
   endif()
-endif()
-
-# Incompetent versions
-if(Boost_VERSION VERSION_LESS 1.81)
-  target_compile_definitions(libremidi
-    ${_public}
-      BOOST_ASIO_DISABLE_CONCEPTS=1
-  )
 endif()
 
 # Workaround for boost being broken with clang 13
