@@ -115,15 +115,25 @@ if(CMAKE_THREAD_LIBS_INIT)
   target_link_libraries(libremidi ${_public} ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-target_include_directories(libremidi SYSTEM ${_public}
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
-)
+if(PROJECT_IS_TOP_LEVEL)
+  target_include_directories(libremidi ${_public}
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  )
+  target_include_directories(libremidi SYSTEM ${_public}
+    $<INSTALL_INTERFACE:include>
+  )
+else()
+  target_include_directories(libremidi SYSTEM ${_public}
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
+endif()
+
 if(NOT LIBREMIDI_HEADER_ONLY)
-	target_include_directories(libremidi ${_private} # Makes any above set warnings apply normally, without leaking out to clients
-		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-		$<INSTALL_INTERFACE:include>
-	)
+  target_include_directories(libremidi ${_private} # Makes any above set warnings apply normally, without leaking out to clients
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
 endif()
 
 ### Backends ###
