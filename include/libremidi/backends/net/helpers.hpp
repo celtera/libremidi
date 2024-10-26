@@ -1,7 +1,7 @@
 #pragma once
 #include <libremidi/config.hpp>
 
-#include <boost/asio.hpp>
+#include <boost/asio/ip/udp.hpp>
 
 #include <memory>
 namespace stdx
@@ -59,23 +59,22 @@ public:
 
   ~optionally_owned()
   {
-    if (ownership == owned)
-      std::destroy_at(storage.object);
+    if (is_owned())
+      std::destroy_at(reinterpret_cast<T*>(storage.object));
   }
 
-  T& get() noexcept
-  {
-    return *((ownership == owned) ? reinterpret_cast<T*>(&storage.object) : storage.ref);
-  }
+  T& get() noexcept { return *(is_owned() ? reinterpret_cast<T*>(&storage.object) : storage.ref); }
   const T& get() const noexcept
   {
-    return *((ownership == owned) ? reinterpret_cast<T*>(&storage.object) : storage.ref);
+    return *(is_owned() ? reinterpret_cast<T*>(&storage.object) : storage.ref);
   }
 
   optionally_owned(const optionally_owned&) = delete;
   optionally_owned(optionally_owned&&) noexcept = delete;
   optionally_owned& operator=(const optionally_owned&) = delete;
   optionally_owned& operator=(optionally_owned&&) noexcept = delete;
+
+  bool is_owned() const noexcept { return ownership == owned; }
 
 private:
   union

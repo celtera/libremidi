@@ -6,7 +6,6 @@
 
 namespace libremidi
 {
-
 template <typename Impl, typename F>
 struct osc_parser
 {
@@ -150,8 +149,8 @@ public:
 
   explicit midi_in(input_configuration&& conf, dgram_input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-      , ctx{configuration.io_context}
-      , m_socket{ctx.get()}
+      , m_ctx{configuration.io_context}
+      , m_socket{m_ctx.get()}
   {
     m_socket.open(boost::asio::ip::udp::v4());
     m_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
@@ -171,7 +170,7 @@ public:
     client_open_ = stdx::error{};
   }
 
-  ~midi_in() override { }
+  ~midi_in() override { close_port(); }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::NETWORK; }
 
@@ -185,6 +184,14 @@ public:
     m_portname = std::string(port);
 
     receive();
+
+    if (m_ctx.is_owned())
+    {
+      m_thread = std::jthread{[this, &ctx = m_ctx.get()] {
+        auto wg = boost::asio::make_work_guard(m_ctx);
+        ctx.run();
+      }};
+    }
 
     return stdx::error{};
   }
@@ -247,10 +254,11 @@ public:
 
   midi1::input_state_machine m_processing{this->configuration};
 
-  libremidi::optionally_owned<boost::asio::io_context> ctx;
+  libremidi::optionally_owned<boost::asio::io_context> m_ctx;
   boost::asio::ip::udp::endpoint m_endpoint;
   boost::asio::ip::udp::socket m_socket;
-  bool m_owned_context{};
+
+  std::jthread m_thread;
 
   std::string m_portname;
   alignas(16) unsigned char m_data[65535];
@@ -314,8 +322,8 @@ public:
 
   explicit midi_in(ump_input_configuration&& conf, dgram_input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-      , ctx{configuration.io_context}
-      , m_socket{ctx.get()}
+      , m_ctx{configuration.io_context}
+      , m_socket{m_ctx.get()}
   {
     m_socket.open(boost::asio::ip::udp::v4());
     m_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
@@ -335,7 +343,7 @@ public:
     client_open_ = stdx::error{};
   }
 
-  ~midi_in() override { }
+  ~midi_in() override { close_port(); }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::NETWORK_UMP; }
 
@@ -350,6 +358,13 @@ public:
 
     receive();
 
+    if (m_ctx.is_owned())
+    {
+      m_thread = std::jthread{[this, &ctx = m_ctx.get()] {
+        auto wg = boost::asio::make_work_guard(m_ctx);
+        ctx.run();
+      }};
+    }
     return stdx::error{};
   }
 
@@ -371,6 +386,9 @@ public:
   stdx::error close_port() override
   {
     // FIXME async close
+    if (m_ctx.is_owned())
+      m_ctx.get().stop();
+
     if (m_socket.is_open())
       m_socket.close();
     return {};
@@ -410,10 +428,11 @@ public:
 
   midi2::input_state_machine m_processing{this->configuration};
 
-  libremidi::optionally_owned<boost::asio::io_context> ctx;
+  libremidi::optionally_owned<boost::asio::io_context> m_ctx;
   boost::asio::ip::udp::endpoint m_endpoint;
   boost::asio::ip::udp::socket m_socket;
-  bool m_owned_context{};
+
+  std::jthread m_thread;
 
   std::string m_portname;
   alignas(16) unsigned char m_data[65535];

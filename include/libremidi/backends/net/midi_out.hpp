@@ -77,8 +77,8 @@ public:
 
   midi_out(output_configuration&& conf, dgram_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-      , ctx{configuration.io_context ? configuration.io_context : new boost::asio::io_context}
-      , m_socket{*ctx}
+      , ctx{configuration.io_context}
+      , m_socket{ctx.get()}
   {
     m_socket.open(boost::asio::ip::udp::v4());
     m_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
@@ -137,7 +137,7 @@ public:
     return from_errc(ret);
   }
 
-  boost::asio::io_context* ctx{};
+  libremidi::optionally_owned<boost::asio::io_context> ctx;
   boost::asio::ip::udp::endpoint m_endpoint;
   boost::asio::ip::udp::socket m_socket;
 
@@ -219,8 +219,8 @@ public:
 
   midi_out(output_configuration&& conf, dgram_output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-      , ctx{configuration.io_context ? configuration.io_context : new boost::asio::io_context}
-      , m_socket{*ctx}
+      , ctx{configuration.io_context}
+      , m_socket{ctx.get()}
   {
     m_socket.open(boost::asio::ip::udp::v4());
     m_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
@@ -278,7 +278,7 @@ public:
     return from_errc(ret);
   }
 
-  boost::asio::io_context* ctx{};
+  libremidi::optionally_owned<boost::asio::io_context> ctx;
   boost::asio::ip::udp::endpoint m_endpoint;
   boost::asio::ip::udp::socket m_socket;
 

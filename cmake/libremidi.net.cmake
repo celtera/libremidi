@@ -2,6 +2,10 @@ if(NOT TARGET Boost::boost)
   return()
 endif()
 
+if(NOT LIBREMIDI_HAS_STD_STOP_TOKEN)
+  return()
+endif()
+
 message(STATUS "libremidi: Network support using Boost.ASIO")
 set(LIBREMIDI_HAS_BOOST_ASIO 1)
 set(LIBREMIDI_HAS_NETWORK 1)
