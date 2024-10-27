@@ -2,6 +2,10 @@ if(LIBREMIDI_NO_WINMM)
   return()
 endif()
 
+if(${CMAKE_SYSTEM_NAME} MATCHES WindowsStore)
+  return()
+endif()
+
 message(STATUS "libremidi: using WinMM")
 set(LIBREMIDI_HAS_WINMM 1)
 target_compile_definitions(libremidi
