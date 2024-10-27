@@ -1,3 +1,7 @@
+if(LIBREMIDI_NO_JACK)
+  return()
+endif()
+
 if(NOT LIBREMIDI_HAS_STD_SEMAPHORE)
   message(STATUS "libremidi: std::binary_semaphore not available, skipping JACK backend")
   set(LIBREMIDI_HAS_JACK 0)

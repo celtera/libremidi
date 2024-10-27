@@ -27,8 +27,8 @@ struct pipewire_input_configuration
 
   pw_main_loop* context{};
   pw_filter* filter{};
-  std::function<void(pipewire_callback)> set_process_func;
-  std::function<void(int64_t)> clear_process_func;
+  std::function<void(pipewire_callback)> set_process_func{};
+  std::function<void(int64_t)> clear_process_func{};
 };
 
 struct pipewire_output_configuration
@@ -37,8 +37,8 @@ struct pipewire_output_configuration
 
   pw_main_loop* context{};
   pw_filter* filter{};
-  std::function<void(pipewire_callback)> set_process_func;
-  std::function<void(int64_t)> clear_process_func;
+  std::function<void(pipewire_callback)> set_process_func{};
+  std::function<void(int64_t)> clear_process_func{};
 
   int64_t output_buffer_size{65536};
 };

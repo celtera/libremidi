@@ -1,3 +1,7 @@
+if(LIBREMIDI_NO_WINMM)
+  return()
+endif()
+
 message(STATUS "libremidi: using WinMM")
 set(LIBREMIDI_HAS_WINMM 1)
 target_compile_definitions(libremidi

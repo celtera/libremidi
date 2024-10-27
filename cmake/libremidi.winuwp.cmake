@@ -1,27 +1,13 @@
-if(NOT LIBREMIDI_NO_WINMIDI)
-  file(DOWNLOAD
-    https://github.com/microsoft/MIDI/releases/download/dev-preview-5/all-headers-sdk-10.0.22621.0-plus-dp5.zip
-    "${CMAKE_BINARY_DIR}/cppwinrt-headers.zip"
-  )
-  file(ARCHIVE_EXTRACT 
-    INPUT "${CMAKE_BINARY_DIR}/cppwinrt-headers.zip"
-    DESTINATION "${CMAKE_BINARY_DIR}/cppwinrt/winrt/"
-  )
+if(LIBREMIDI_NO_WINUWP)
+  return()
+endif()
 
-  target_include_directories(libremidi SYSTEM ${_public}
-    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/cppwinrt>
-  )
-  target_compile_definitions(libremidi ${_public} LIBREMIDI_WINMIDI)
-  set(LIBREMIDI_HAS_WINMIDI 1)
-  target_link_libraries(libremidi INTERFACE RuntimeObject)
+if(LIBREMIDI_HAS_WINMIDI)
+  set(LIBREMIDI_HAS_WINUWP 1)
+  message(STATUS "libremidi: using WinUWP")
 
-  if(NOT LIBREMIDI_NO_WINUWP)
-    set(LIBREMIDI_HAS_WINUWP 1)
-    message(STATUS "libremidi: using WinUWP")
-
-    target_compile_options(libremidi ${_public} /EHsc /await:strict)
-    target_compile_definitions(libremidi ${_public} LIBREMIDI_WINUWP)
-  endif()
+  target_compile_options(libremidi ${_public} /EHsc /await:strict)
+  target_compile_definitions(libremidi ${_public} LIBREMIDI_WINUWP)
   return()
 endif()
 
@@ -39,12 +25,14 @@ foreach(dir ${WINSDK_GLOB})
 endforeach()
 
 find_path(CPPWINRT_PATH "winrt/base.h"
-    PATHS
-        "${WINSDK_PATH}"
-    PATH_SUFFIXES
-        "${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt"
-        "Include/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt"
-        ${WINSDK_LIST})
+  PATHS
+    "${WINSDK_PATH}"
+  PATH_SUFFIXES
+    "${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt"
+    "Include/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/cppwinrt"
+    ${WINSDK_LIST}
+)
+
 if(CPPWINRT_PATH)
   message(STATUS "libremidi: using WinUWP")
   set(LIBREMIDI_HAS_WINUWP 1)

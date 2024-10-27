@@ -1,3 +1,10 @@
+if(NOT APPLE)
+  return()
+endif()
+if(LIBREMIDI_NO_COREMIDI)
+  return()
+endif()
+
 message(STATUS "libremidi: using CoreMIDI")
 find_library(COREMIDI_LIBRARY CoreMIDI)
 find_library(COREAUDIO_LIBRARY CoreAudio)

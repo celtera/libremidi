@@ -33,8 +33,6 @@ try
 
       //std::this_thread::sleep_for(std::chrono::seconds(60));
     }
-
-    const auto& pw = libremidi::libpipewire::instance();
   }
   return 0;
 }

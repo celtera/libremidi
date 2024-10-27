@@ -34,10 +34,10 @@ struct LIBREMIDI_EXPORT port_information
   // WinUWP: unused
   port_handle port = static_cast<port_handle>(-1);
 
-  std::string manufacturer;
-  std::string device_name;
-  std::string port_name;
-  std::string display_name;
+  std::string manufacturer{};
+  std::string device_name{};
+  std::string port_name{};
+  std::string display_name{};
 
   bool operator==(const port_information& other) const noexcept = default;
   std::strong_ordering operator<=>(const port_information& other) const noexcept = default;
@@ -61,10 +61,10 @@ struct observer_configuration
   midi_error_callback on_error{};
   midi_warning_callback on_warning{};
 
-  input_port_callback input_added;
-  input_port_callback input_removed;
-  output_port_callback output_added;
-  output_port_callback output_removed;
+  input_port_callback input_added{};
+  input_port_callback input_removed{};
+  output_port_callback output_added{};
+  output_port_callback output_removed{};
 
   // Observe hardware ports
   uint32_t track_hardware : 1 = true;

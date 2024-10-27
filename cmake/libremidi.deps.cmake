@@ -3,6 +3,15 @@ check_cxx_source_compiles("#include <thread>\nint main() { std::jthread t; }" LI
 check_cxx_source_compiles("#include <semaphore>\nint main() { std::binary_semaphore t{0}; }" LIBREMIDI_HAS_STD_SEMAPHORE)
 check_cxx_source_compiles("#include <stop_token>\n#include <thread>\nint main() { std::jthread t; }" LIBREMIDI_HAS_STD_STOP_TOKEN)
 
+if(NOT WIN32)
+  check_include_file_cxx("sys/eventfd.h" LIBREMIDI_HAS_EVENTFD)
+  check_include_file_cxx("sys/timerfd.h" LIBREMIDI_HAS_TIMERFD)
+endif()
+
+check_cxx_compiler_flag(-Werror=return-type LIBREMIDI_CXX_HAS_WERROR_RETURN_TYPE)
+check_cxx_compiler_flag(-Wno-gnu-statement-expression-from-macro-expansion LIBREMIDI_CXX_HAS_WNO_GNU_STATEMENT)
+check_cxx_compiler_flag(-Wno-c99-extensions LIBREMIDI_CXX_HAS_WNO_C99_EXTENSIONS)
+
 ### Dependencies ###
 find_package(Threads)
 

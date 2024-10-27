@@ -53,7 +53,7 @@ int main()
         libremidi::alsa_seq::input_configuration{
             .context = clt,
             .manual_poll =
-                [&, i](const libremidi::alsa_seq::poll_parameters& params) {
+                [&addresses, &callbacks](const libremidi::alsa_seq::poll_parameters& params) {
       addresses.push_back(params.addr);
       callbacks.push_back(params.callback);
       return true;

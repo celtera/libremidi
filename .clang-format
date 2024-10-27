@@ -81,6 +81,7 @@ SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
 Standard: Latest
+StatementMacros: ['LIBREMIDI_SYMBOL_DEF', 'LIBREMIDI_SYMBOL_INIT']
 TabWidth: 2
 UseTab: Never
 WhitespaceSensitiveMacros:

@@ -1,3 +1,7 @@
+if(LIBREMIDI_NO_NETWORK)
+  return()
+endif()
+
 if(NOT TARGET Boost::boost)
   return()
 endif()

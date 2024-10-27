@@ -23,16 +23,16 @@ struct libudev
       return;
     }
 
-    LIBREMIDI_SYMBOL_INIT(udev, device_get_action);
-    LIBREMIDI_SYMBOL_INIT(udev, device_get_subsystem);
-    LIBREMIDI_SYMBOL_INIT(udev, device_unref);
-    LIBREMIDI_SYMBOL_INIT(udev, monitor_enable_receiving);
-    LIBREMIDI_SYMBOL_INIT(udev, monitor_get_fd);
-    LIBREMIDI_SYMBOL_INIT(udev, monitor_new_from_netlink);
-    LIBREMIDI_SYMBOL_INIT(udev, monitor_receive_device);
-    LIBREMIDI_SYMBOL_INIT(udev, monitor_unref);
-    LIBREMIDI_SYMBOL_INIT2(udev, new, create);
-    LIBREMIDI_SYMBOL_INIT(udev, unref);
+    LIBREMIDI_SYMBOL_INIT(udev, device_get_action)
+    LIBREMIDI_SYMBOL_INIT(udev, device_get_subsystem)
+    LIBREMIDI_SYMBOL_INIT(udev, device_unref)
+    LIBREMIDI_SYMBOL_INIT(udev, monitor_enable_receiving)
+    LIBREMIDI_SYMBOL_INIT(udev, monitor_get_fd)
+    LIBREMIDI_SYMBOL_INIT(udev, monitor_new_from_netlink)
+    LIBREMIDI_SYMBOL_INIT(udev, monitor_receive_device)
+    LIBREMIDI_SYMBOL_INIT(udev, monitor_unref)
+    LIBREMIDI_SYMBOL_INIT2(udev, new, create)
+    LIBREMIDI_SYMBOL_INIT(udev, unref)
   }
 
   static const libudev& instance()
@@ -44,16 +44,16 @@ struct libudev
   dylib_loader library;
   bool available{true};
 
-  LIBREMIDI_SYMBOL_DEF(udev, device_get_action);
-  LIBREMIDI_SYMBOL_DEF(udev, device_get_subsystem);
-  LIBREMIDI_SYMBOL_DEF(udev, device_unref);
-  LIBREMIDI_SYMBOL_DEF(udev, monitor_enable_receiving);
-  LIBREMIDI_SYMBOL_DEF(udev, monitor_get_fd);
-  LIBREMIDI_SYMBOL_DEF(udev, monitor_new_from_netlink);
-  LIBREMIDI_SYMBOL_DEF(udev, monitor_receive_device);
-  LIBREMIDI_SYMBOL_DEF(udev, monitor_unref);
-  LIBREMIDI_SYMBOL_DEF2(udev, new, create);
-  LIBREMIDI_SYMBOL_DEF(udev, unref);
+  LIBREMIDI_SYMBOL_DEF(udev, device_get_action)
+  LIBREMIDI_SYMBOL_DEF(udev, device_get_subsystem)
+  LIBREMIDI_SYMBOL_DEF(udev, device_unref)
+  LIBREMIDI_SYMBOL_DEF(udev, monitor_enable_receiving)
+  LIBREMIDI_SYMBOL_DEF(udev, monitor_get_fd)
+  LIBREMIDI_SYMBOL_DEF(udev, monitor_new_from_netlink)
+  LIBREMIDI_SYMBOL_DEF(udev, monitor_receive_device)
+  LIBREMIDI_SYMBOL_DEF(udev, monitor_unref)
+  LIBREMIDI_SYMBOL_DEF2(udev, new, create)
+  LIBREMIDI_SYMBOL_DEF(udev, unref)
 };
 
 struct udev_helper

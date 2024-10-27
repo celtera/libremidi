@@ -1,3 +1,7 @@
+if(LIBREMIDI_NO_WARNINGS)
+  return()
+endif()
+
 if(MSVC)
   target_compile_options(libremidi PRIVATE
       /W4
@@ -7,7 +11,6 @@ if(MSVC)
       # Too many... $<$<BOOL:${LIBREMIDI_CI}>:/WX>
   )
 else()
-  check_cxx_compiler_flag(-Werror=return-type LIBREMIDI_CXX_HAS_WERROR_RETURN_TYPE)
   target_compile_options(libremidi PRIVATE
       -Wall
       -Wextra

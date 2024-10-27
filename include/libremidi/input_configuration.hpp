@@ -46,17 +46,17 @@ struct input_configuration
 {
   //! Set a callback function to be invoked for incoming MIDI messages.
   //! Either this or on_raw_message must be set
-  message_callback on_message;
+  message_callback on_message{};
 
   //! Invoked for incoming MIDI bytes. No transformation, no filtering, no packetization,
   //! just the MIDI data straight from the source.
-  raw_callback on_raw_data;
+  raw_callback on_raw_data{};
 
   //! Set a custom callback function to be invoked for timestamping MIDI messages.
   //! Input: the API provided timestamp in nanoseconds, if available, for reference.
   //! (e.g. the same as "Absolute").
   //! Mandatory if timestamps == timestamp_mode::Custom, unused otherwise.
-  timestamp_callback get_timestamp;
+  timestamp_callback get_timestamp{};
 
   //! Set an error callback function to be invoked when an error has occured.
   /*!
@@ -89,17 +89,17 @@ struct ump_input_configuration
 {
   //! Set a callback function to be invoked for incoming UMP messages.
   //! Either this or on_raw_message must be set
-  ump_callback on_message;
+  ump_callback on_message{};
 
   //! Invoked for incoming UMP bytes. No transformation, no filtering, no packetization,
   //! just the UMP data straight from the source.
-  raw_ump_callback on_raw_data;
+  raw_ump_callback on_raw_data{};
 
   //! Set a custom callback function to be invoked for timestamping MIDI messages.
   //! Input: the API provided timestamp in nanoseconds, if available, for reference.
   //! (e.g. the same as "Absolute").
   //! Mandatory if timestamps == timestamp_mode::Custom, unused otherwise.
-  timestamp_callback get_timestamp;
+  timestamp_callback get_timestamp{};
 
   //! Set an error callback function to be invoked when an error has occured.
   /*!

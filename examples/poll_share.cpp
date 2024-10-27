@@ -47,7 +47,7 @@ int main()
     // so you need to keep track of which fds are for which midi_in...
     // In practice it seems that ALSA only uses one FD so it's simply the index
     // in the array but not sure how future-proof this is
-    for (int i = 0; i < fds.size(); i++)
+    for (int i = 0; i < std::ssize(fds); i++)
     {
       if (fds[i].revents & POLLIN)
       {

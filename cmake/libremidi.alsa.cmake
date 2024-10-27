@@ -1,7 +1,14 @@
-## ALSA support ##
+if(NOT UNIX)
+  return()
+endif()
+if(EMSCRIPTEN OR APPLE)
+  return()
+endif()
+if(LIBREMIDI_NO_ALSA)
+  return()
+endif()
+
 find_package(ALSA)
-check_include_file_cxx("sys/eventfd.h" LIBREMIDI_HAS_EVENTFD)
-check_include_file_cxx("sys/timerfd.h" LIBREMIDI_HAS_TIMERFD)
 
 if(ALSA_FOUND AND LIBREMIDI_HAS_EVENTFD AND LIBREMIDI_HAS_TIMERFD)
   set(LIBREMIDI_HAS_ALSA 1)

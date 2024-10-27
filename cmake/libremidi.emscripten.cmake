@@ -1,3 +1,7 @@
+if(NOT EMSCRIPTEN)
+  return()
+endif()
+
 message(STATUS "libremidi: using Emscripten MIDI")
 set(LIBREMIDI_HAS_EMSCRIPTEN 1)
 
