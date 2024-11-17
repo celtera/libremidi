@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Header-only support - libremidi documentation</title>
+        <title>Adding libremidi in a project - libremidi documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -152,56 +152,81 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="using-libremidi-in-header-only-mode"><a class="header" href="#using-libremidi-in-header-only-mode">Using libremidi in header-only mode</a></h1>
-<p>The library can be used header-only, with minimal modifications to your build system if you aren't using CMake:</p>
-<ul>
-<li>
-<p>Define <code>LIBREMIDI_HEADER_ONLY=1</code></p>
-</li>
-<li>
-<p>Define macros for the APIs you wish to build. The possible macros are as follows:</p>
-<ul>
-<li>macOS: <code>LIBREMIDI_COREMIDI=1</code> and link against <code>-framework CoreMIDI -framework CoreAudio -framework CoreFoundation</code>.</li>
-<li>Linux: <code>LIBREMIDI_ALSA=1</code> and link against <code>-lasound -phtread</code>.</li>
-<li>Windows (WinMM): <code>LIBREMIDI_WINMM=1</code> and link against <code>winmm</code>.</li>
-<li>Windows (UWP): <code>LIBREMIDI_WINUWP=1</code> ; note that there is complex linking logic detailed in the CMakeLists.txt when using UWP.</li>
-<li>emscripten: <code>LIBREMIDI_EMSCRIPTEN=1</code>.</li>
-<li>Any platform with JACK: <code>LIBREMIDI_JACK=1</code>.</li>
-</ul>
-</li>
-<li>
-<p>Add the <code>include</code> folder to your include path.</p>
-</li>
-<li>
-<p><code>#include &lt;libremidi/libremidi.hpp&gt;</code> in your source code.</p>
-</li>
-</ul>
-<p>For instance, to build the <code>midiprobe</code> example on Linux with only ALSA support, one would run:</p>
-<pre><code>$ g++ ~/libremidi/tests/midiprobe.cpp \
-      -std=c++20 \
-      -DLIBREMIDI_ALSA=1 \
-      -DLIBREMIDI_HEADER_ONLY=1 \
-      -I ~/libremidi/include \
-      -lasound -pthread
+                        <h1 id="adding-libremidi-to-your-project"><a class="header" href="#adding-libremidi-to-your-project">Adding libremidi to your project</a></h1>
+<h2 id="through-cmake"><a class="header" href="#through-cmake">Through CMake</a></h2>
+<p>Consider the following existing CMake project for you application:</p>
+<pre><code class="language-cmake">project(my_app)
+
+add_executable(my_app src/main.cpp)
 </code></pre>
-<p>To build it on macOS, one would run:</p>
-<pre><code>$ clang++ ~/libremidi/tests/midiprobe.cpp \
-      -std=c++20 \
-      -DLIBREMIDI_COREMIDI=1 \
-      -DLIBREMIDI_HEADER_ONLY=1 \
-      -I ~/libremidi/include \
-      -framework CoreMIDI -framework CoreAudio -framework CoreFoundation
+<p>Then you can add libremidi either directly for instance through a git submodule:</p>
+<pre><code class="language-cmake">project(my_app)
+
+# example of folder structure
+add_subdirectory(3rdparty/libremidi)
+
+add_executable(my_app src/main.cpp)
+
+target_link_libraries(my_app PRIVATE libremidi)
+</code></pre>
+<p>Or through FetchContent:</p>
+<pre><code class="language-cmake">project(my_app)
+
+FetchContent_Declare(
+    libremidi
+    GIT_REPOSITORY https://github.com/celtera/libremidi
+    GIT_TAG        main
+)
+
+FetchContent_MakeAvailable(libremidi)
+
+add_executable(my_app src/main.cpp)
+
+target_link_libraries(my_app PRIVATE libremidi)
+</code></pre>
+<h2 id="through-a-custom-build-system"><a class="header" href="#through-a-custom-build-system">Through a custom build-system</a></h2>
+<p>If using a custom build-system, the main thing to be aware of that
+CMake does automatically for you is passing the relevant flags which will enable each backend
+and linking with the correct libraries.</p>
+<p>For instance on Linux with ALSA:</p>
+<pre><code class="language-sh">$ g++ \
+  main.cpp \
+  -std=c++20 \
+  -I3rdparty/libremidi/include \
+  -DLIBREMIDI_ALSA=1 \
+  -DLIBREMIDI_HAS_UDEV=1
+  -ldl
+</code></pre>
+<p>or on macOS with CoreMIDI:</p>
+<pre><code class="language-sh">$ clang++ \
+  main.cpp \
+  -std=c++20 \
+  -I3rdparty/libremidi/include \
+  -DLIBREMIDI_COREMIDI=1 \
+  -framework CoreFoundation \
+  -framework CoreAudio \
+  -framework CoreMIDI
+</code></pre>
+<p>or on Win32 with WinMM:</p>
+<pre><code class="language-batch">&gt; cl.exe ^
+  main.cpp ^
+  /std:c++latest ^
+  /I c:\libs\3rdparty\libremidi\include ^
+  /DLIBREMIDI_WINMM=1 ^
+  /DUNICODE=1 ^
+  /D_UNICODE=1 ^
+  path/to/winmm.lib
 </code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="compiling.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="file.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="enumerating.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="midi-2-integrations.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -211,11 +236,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="compiling.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="file.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="enumerating.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="midi-2-integrations.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
