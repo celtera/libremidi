@@ -10,6 +10,7 @@
 - [MIDI 2 in](./midi-2-in.md)
 - [MIDI 2 out](./midi-2-out.md)
 - [MIDI file support](./file.md)
+- [Adding libremidi in a project](./cmake.md)
 
 # Advanced features
 - [MIDI 2 integrations](./midi-2-integrations.md)
