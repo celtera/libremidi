@@ -4,13 +4,13 @@
 # Getting started
 - [Compiling](./compiling.md)
   - [Header-only support](./header-only.md)
+  - [Adding to a project](./cmake.md)
 - [Enumerating ports](./enumerating.md)
 - [MIDI 1 in](./midi-1-in.md)
 - [MIDI 1 out](./midi-1-out.md)
 - [MIDI 2 in](./midi-2-in.md)
 - [MIDI 2 out](./midi-2-out.md)
 - [MIDI file support](./file.md)
-- [Adding libremidi in a project](./cmake.md)
 
 # Advanced features
 - [MIDI 2 integrations](./midi-2-integrations.md)
