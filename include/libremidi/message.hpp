@@ -2,6 +2,7 @@
 #include <libremidi/config.hpp>
 
 #include <algorithm>
+#include <cstdint>
 #include <span>
 #include <vector>
 #if defined(__cpp_exceptions)
