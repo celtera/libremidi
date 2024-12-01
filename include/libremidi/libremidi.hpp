@@ -131,6 +131,7 @@ public:
   [[nodiscard]] libremidi::API get_current_api() const noexcept;
 
   //! Open a MIDI input connection
+  [[nodiscard]]
   stdx::error
   open_port(const input_port& pt, std::string_view local_port_name = "libremidi input");
 
@@ -139,11 +140,14 @@ public:
   //!
   //! \param portName An optional name for the application port that is
   //!                 used to connect to portId can be specified.
+  [[nodiscard]]
   stdx::error open_virtual_port(std::string_view portName = "libremidi virtual port");
 
+  [[nodiscard]]
   stdx::error set_port_name(std::string_view portName);
 
   //! Close an open MIDI connection (if one exists).
+  [[nodiscard]]
   stdx::error close_port();
 
   //! Returns true if a port has been opened successfully with open_port or open_virtual_port
@@ -154,7 +158,7 @@ public:
   [[nodiscard]] bool is_port_connected() const noexcept;
 
   //! Returns the current timestamp for absolute ticks.
-  timestamp absolute_timestamp() const noexcept;
+  [[nodiscard]] timestamp absolute_timestamp() const noexcept;
 
 private:
   std::unique_ptr<class midi_in_api> impl_;
@@ -182,11 +186,11 @@ public:
   [[nodiscard]] libremidi::API get_current_api() const noexcept;
 
   //! Open a MIDI output connection.
-  stdx::error
+  [[nodiscard]] stdx::error
   open_port(const output_port& pt, std::string_view local_port_name = "libremidi output") const;
 
   //! Close an open MIDI connection (if one exists).
-  stdx::error close_port() const;
+  [[nodiscard]] stdx::error close_port() const;
 
   //! Returns true if a port has been opened successfully with open_port or open_virtual_port
   [[nodiscard]] bool is_port_open() const noexcept;
@@ -200,23 +204,25 @@ public:
   //!
   //! \param portName An optional name for the application port that is
   //!                 used to connect to portId can be specified.
-  stdx::error open_virtual_port(std::string_view portName = "libremidi virtual port") const;
+  [[nodiscard]] stdx::error
+  open_virtual_port(std::string_view portName = "libremidi virtual port") const;
 
-  stdx::error set_port_name(std::string_view portName) const;
+  [[nodiscard]] stdx::error set_port_name(std::string_view portName) const;
 
   //! Immediately send a single message out an open MIDI output port.
   /*!
       An exception is thrown if an error occurs during output or an
       output connection was not previously established.
   */
-  stdx::error send_message(const libremidi::message& message) const;
+  [[nodiscard]] stdx::error send_message(const libremidi::message& message) const;
 
   //! Immediately send a single message to an open MIDI output port.
-  stdx::error send_message(const unsigned char* message, size_t size) const;
-  stdx::error send_message(std::span<const unsigned char>) const;
-  stdx::error send_message(unsigned char b0) const;
-  stdx::error send_message(unsigned char b0, unsigned char b1) const;
-  stdx::error send_message(unsigned char b0, unsigned char b1, unsigned char b2) const;
+  [[nodiscard]] stdx::error send_message(const unsigned char* message, size_t size) const;
+  [[nodiscard]] stdx::error send_message(std::span<const unsigned char>) const;
+  [[nodiscard]] stdx::error send_message(unsigned char b0) const;
+  [[nodiscard]] stdx::error send_message(unsigned char b0, unsigned char b1) const;
+  [[nodiscard]] stdx::error
+  send_message(unsigned char b0, unsigned char b1, unsigned char b2) const;
 
   // Avoid silly mistakes:
   stdx::error send_message(auto* message) const noexcept = delete;
@@ -230,26 +236,29 @@ public:
   stdx::error schedule_message(int64_t timestamp, const unsigned char* message, size_t size) const;
 
   //! Immediately send a single UMP packet to an open MIDI output port.
-  stdx::error send_ump(const uint32_t* message, size_t size) const;
-  stdx::error send_ump(const libremidi::ump&) const;
-  stdx::error send_ump(std::span<const uint32_t>) const;
-  stdx::error send_ump(uint32_t b0) const;
-  stdx::error send_ump(uint32_t b0, uint32_t b1) const;
-  stdx::error send_ump(uint32_t b0, uint32_t b1, uint32_t b2) const;
-  stdx::error send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b3) const;
+  [[nodiscard]] stdx::error send_ump(const uint32_t* message, size_t size) const;
+  [[nodiscard]] stdx::error send_ump(const libremidi::ump&) const;
+  [[nodiscard]] stdx::error send_ump(std::span<const uint32_t>) const;
+  [[nodiscard]] stdx::error send_ump(uint32_t b0) const;
+  [[nodiscard]] stdx::error send_ump(uint32_t b0, uint32_t b1) const;
+  [[nodiscard]] stdx::error send_ump(uint32_t b0, uint32_t b1, uint32_t b2) const;
+  [[nodiscard]] stdx::error send_ump(uint32_t b0, uint32_t b1, uint32_t b2, uint32_t b3) const;
   // Better compat with cmidi2
-  stdx::error send_ump(int32_t b0) const;
-  stdx::error send_ump(int64_t b01) const;
-  stdx::error send_ump(uint64_t b01) const;
+  [[nodiscard]] stdx::error send_ump(int32_t b0) const;
+  [[nodiscard]] stdx::error send_ump(int64_t b01) const;
+  [[nodiscard]] stdx::error send_ump(uint64_t b01) const;
 
 // Interop with ni-midi2
 #if LIBREMIDI_NI_MIDI2_COMPAT
-  stdx::error send_ump(const midi::universal_packet& pkt) const { send_ump(pkt.data, pkt.size()); }
-  stdx::error send_ump(const midi::sysex7& msg, int group = 0)
+  [[nodiscard]] stdx::error send_ump(const midi::universal_packet& pkt) const
+  {
+    send_ump(pkt.data, pkt.size());
+  }
+  [[nodiscard]] stdx::error send_ump(const midi::sysex7& msg, int group = 0)
   {
     midi::send_sysex7(msg, group, [&](const midi::sysex7_packet& x) { send_ump(x.data); });
   }
-  stdx::error send_ump(const midi::sysex8& msg, int stream, int group = 0)
+  [[nodiscard]] stdx::error send_ump(const midi::sysex8& msg, int stream, int group = 0)
   {
     midi::send_sysex8(msg, stream, group, [&](const midi::sysex8_packet& x) { send_ump(x.data); });
   }
