@@ -1,15 +1,16 @@
 macro(setup_example _example)
-  target_link_libraries(${_example} PRIVATE libremidi)
+  target_link_libraries("${_example}" PRIVATE libremidi)
 endmacro()
 
 macro(add_example _example)
-  add_executable(${_example} examples/${_example}.cpp)
-  setup_example(${_example})
+  string(REPLACE "/" "_" _exampleName "${_example}")
+  add_executable("${_exampleName}" "examples/${_example}.cpp")
+  setup_example("${_exampleName}")
 endmacro()
 
 macro(add_backend_example _example)
-    add_executable(${_example} examples/backends/${_example}.cpp)
-    setup_example(${_example})
+    add_executable("${_example}" "examples/backends/${_example}.cpp")
+    setup_example("${_example}")
 endmacro()
 
 add_example(midiobserve)
@@ -26,6 +27,8 @@ add_example(sysextest)
 add_example(minimal)
 add_example(midi2_echo)
 add_example(rawmidiin)
+
+add_example(protocols/remote_control)
 
 if(LIBREMIDI_NI_MIDI2)
   add_example(midi2_interop)
