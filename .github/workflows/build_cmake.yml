@@ -23,7 +23,7 @@ jobs:
             name: "Windows (MSVC)",
             os: windows-latest,
             generator: "",
-            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_86_0",
+            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_86_0 -DCMAKE_GENERATOR_PLATFORM=version=10.0.26100.0",
             test_target: "RUN_TESTS",
             tests: 1,
             examples: 1
