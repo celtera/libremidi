@@ -92,7 +92,7 @@ jobs:
 
     - name: Get latest release version number
       id: get_version
-      uses: battila7/get-version-action@v2
+      uses: dhkatz/get-version-action@main
 
     - uses: maxim-lobanov/setup-xcode@v1
       if: runner.os == 'macOS'
