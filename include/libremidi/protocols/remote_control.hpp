@@ -5,6 +5,9 @@
 
 #include <cmath>
 
+#include <array>
+#include <cinttypes>
+#include <cstdint>
 #include <cstdio>
 #include <functional>
 #include <span>
