@@ -5,6 +5,8 @@
 #include <libremidi/backends/alsa_seq_ump/config.hpp>
 #include <libremidi/backends/alsa_seq_ump/midi_out.hpp>
 
+#include <string_view>
+
 namespace libremidi
 {
 template <>
@@ -50,8 +52,8 @@ struct backend
   using midi_out_configuration = alsa_seq_ump::output_configuration;
   using midi_observer_configuration = alsa_seq_ump::observer_configuration;
   static const constexpr auto API = libremidi::API::ALSA_SEQ_UMP;
-  static const constexpr auto name = "alsa_seq_ump";
-  static const constexpr auto display_name = "ALSA (sequencer, UMP)";
+  static const constexpr std::string_view name = "alsa_seq_ump";
+  static const constexpr std::string_view display_name = "ALSA (sequencer, UMP)";
 
   static inline bool available() noexcept
   {

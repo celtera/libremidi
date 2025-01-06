@@ -5,6 +5,8 @@
 #include <libremidi/backends/alsa_raw_ump/observer.hpp>
 #include <libremidi/backends/dummy.hpp>
 
+#include <string_view>
+
 namespace libremidi::alsa_raw_ump
 {
 struct backend
@@ -18,8 +20,8 @@ struct backend
   {
   };
   static const constexpr auto API = libremidi::API::ALSA_RAW_UMP;
-  static const constexpr auto name = "alsa_raw_ump";
-  static const constexpr auto display_name = "ALSA (raw UMP)";
+  static const constexpr std::string_view name = "alsa_raw_ump";
+  static const constexpr std::string_view display_name = "ALSA (raw UMP)";
 
   static inline bool available() noexcept
   {

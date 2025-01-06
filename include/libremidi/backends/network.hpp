@@ -5,6 +5,8 @@
 #include <libremidi/backends/net/midi_out.hpp>
 #include <libremidi/backends/net/observer.hpp>
 
+#include <string_view>
+
 namespace libremidi::net
 {
 struct backend
@@ -16,8 +18,8 @@ struct backend
   using midi_out_configuration = libremidi::net::dgram_output_configuration;
   using midi_observer_configuration = libremidi::net::net_observer_configuration;
   static const constexpr auto API = libremidi::API::NETWORK;
-  static const constexpr auto name = "network";
-  static const constexpr auto display_name = "Network";
+  static const constexpr std::string_view name = "network";
+  static const constexpr std::string_view display_name = "Network";
 
   static inline bool available() noexcept { return true; }
 };

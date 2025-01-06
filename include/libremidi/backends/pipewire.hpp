@@ -7,6 +7,8 @@
 #include <libremidi/backends/pipewire/midi_out.hpp>
 #include <libremidi/backends/pipewire/observer.hpp>
 
+#include <string_view>
+
 namespace libremidi::pipewire
 {
 struct backend
@@ -18,8 +20,8 @@ struct backend
   using midi_out_configuration = pipewire_output_configuration;
   using midi_observer_configuration = pipewire_observer_configuration;
   static const constexpr auto API = libremidi::API::PIPEWIRE;
-  static const constexpr auto name = "pipewire";
-  static const constexpr auto display_name = "PipeWire";
+  static const constexpr std::string_view name = "pipewire";
+  static const constexpr std::string_view display_name = "PipeWire";
 
   static inline bool available() noexcept
   {

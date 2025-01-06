@@ -16,6 +16,8 @@
 #include <libremidi/backends/alsa_seq/midi_out.hpp>
 #include <libremidi/backends/alsa_seq/observer.hpp>
 
+#include <string_view>
+
 namespace libremidi::alsa_seq
 {
 
@@ -29,8 +31,8 @@ struct backend
   using midi_out_configuration = alsa_seq::output_configuration;
   using midi_observer_configuration = alsa_seq::observer_configuration;
   static const constexpr auto API = libremidi::API::ALSA_SEQ;
-  static const constexpr auto name = "alsa_seq";
-  static const constexpr auto display_name = "ALSA (sequencer)";
+  static const constexpr std::string_view name = "alsa_seq";
+  static const constexpr std::string_view display_name = "ALSA (sequencer)";
 
   static inline bool available() noexcept
   {

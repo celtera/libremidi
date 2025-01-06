@@ -3,6 +3,8 @@
 #include <libremidi/backends/coremidi_ump/midi_out.hpp>
 #include <libremidi/backends/coremidi_ump/observer.hpp>
 
+#include <string_view>
+
 namespace libremidi::coremidi_ump
 {
 struct backend
@@ -14,8 +16,8 @@ struct backend
   using midi_out_configuration = coremidi_ump::output_configuration;
   using midi_observer_configuration = coremidi_ump::observer_configuration;
   static const constexpr auto API = libremidi::API::COREMIDI_UMP;
-  static const constexpr auto name = "core_ump";
-  static const constexpr auto display_name = "CoreMIDI UMP";
+  static const constexpr std::string_view name = "core_ump";
+  static const constexpr std::string_view display_name = "CoreMIDI UMP";
 
   static constexpr inline bool available() noexcept { return true; /* todo? */ }
 };

@@ -3,6 +3,8 @@
 #include <libremidi/backends/jack/midi_out.hpp>
 #include <libremidi/backends/jack/observer.hpp>
 
+#include <string_view>
+
 //*********************************************************************//
 //  API: UNIX JACK
 //
@@ -22,8 +24,8 @@ struct jack_backend
   using midi_out_configuration = jack_output_configuration;
   using midi_observer_configuration = jack_observer_configuration;
   static const constexpr auto API = libremidi::API::JACK_MIDI;
-  static const constexpr auto name = "jack";
-  static const constexpr auto display_name = "JACK";
+  static const constexpr std::string_view name = "jack";
+  static const constexpr std::string_view display_name = "JACK";
 
   static inline bool available() noexcept
   {
