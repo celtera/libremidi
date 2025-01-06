@@ -5,6 +5,8 @@
 #include <libremidi/detail/midi_out.hpp>
 #include <libremidi/detail/observer.hpp>
 
+#include <string_view>
+
 namespace libremidi
 {
 class observer_dummy : public observer_api
@@ -97,8 +99,8 @@ struct dummy_backend
   using midi_out_configuration = dummy_configuration;
   using midi_observer_configuration = dummy_configuration;
   static const constexpr auto API = libremidi::API::DUMMY;
-  static const constexpr auto name = "dummy";
-  static const constexpr auto display_name = "Dummy";
+  static const constexpr std::string_view name = "dummy";
+  static const constexpr std::string_view display_name = "Dummy";
 
   static constexpr inline bool available() noexcept { return true; }
 };

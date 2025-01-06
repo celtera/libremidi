@@ -4,6 +4,8 @@
 #include <libremidi/backends/net/midi_out.hpp>
 #include <libremidi/backends/net/observer.hpp>
 
+#include <string_view>
+
 namespace libremidi::net_ump
 {
 struct backend
@@ -15,8 +17,8 @@ struct backend
   using midi_out_configuration = libremidi::net_ump::dgram_output_configuration;
   using midi_observer_configuration = libremidi::net_ump::net_observer_configuration;
   static const constexpr auto API = libremidi::API::NETWORK_UMP;
-  static const constexpr auto name = "network (UMP)";
-  static const constexpr auto display_name = "Network (UMP)";
+  static const constexpr std::string_view name = "network (UMP)";
+  static const constexpr std::string_view display_name = "Network (UMP)";
 
   static inline bool available() noexcept { return true; }
 };

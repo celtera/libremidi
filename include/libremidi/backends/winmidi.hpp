@@ -3,6 +3,8 @@
 #include <libremidi/backends/winmidi/midi_out.hpp>
 #include <libremidi/backends/winmidi/observer.hpp>
 
+#include <string_view>
+
 namespace libremidi::winmidi
 {
 struct backend
@@ -14,8 +16,8 @@ struct backend
   using midi_out_configuration = winmidi::output_configuration;
   using midi_observer_configuration = winmidi::observer_configuration;
   static const constexpr auto API = libremidi::API::WINDOWS_MIDI_SERVICES;
-  static const constexpr auto name = "winmidi";
-  static const constexpr auto display_name = "Windows MIDI Services";
+  static const constexpr std::string_view name = "winmidi";
+  static const constexpr std::string_view display_name = "Windows MIDI Services";
 
   static constexpr inline bool available() noexcept { return true; }
 };

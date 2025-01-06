@@ -3,6 +3,8 @@
 #include <libremidi/backends/winuwp/midi_out.hpp>
 #include <libremidi/backends/winuwp/observer.hpp>
 
+#include <string_view>
+
 namespace libremidi
 {
 struct winuwp_backend
@@ -14,8 +16,8 @@ struct winuwp_backend
   using midi_out_configuration = winuwp_output_configuration;
   using midi_observer_configuration = winuwp_observer_configuration;
   static const constexpr auto API = libremidi::API::WINDOWS_UWP;
-  static const constexpr auto name = "winuwp";
-  static const constexpr auto display_name = "Windows UWP";
+  static const constexpr std::string_view name = "winuwp";
+  static const constexpr std::string_view display_name = "Windows UWP";
 
   static constexpr inline bool available() noexcept { return true; }
 };
