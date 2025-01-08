@@ -37,6 +37,7 @@ If you use this work as part of academic research, please kindly cite the [paper
   * Using Developer Preview 5, currently the most recent: https://github.com/microsoft/MIDI/releases/tag/dev-preview-5
 * C API for bindings to other languages ([libremidi-c.h](https://github.com/celtera/libremidi/blob/master/include/libremidi/libremidi-c.h)).
 * [Python binding](https://github.com/celtera/libremidi/tree/master/bindings/python).
+* [Haskell binding](https://github.com/ejconlon/libremidi-haskell) courtesy of @ejconlon λ!
 * Support for getting raw, unfiltered MIDI data (e.g. no SYSEX recombination logic).
 * Computer Keyboard backend to easily map scancodes to keyboard-like MIDI maps ⌨.
 * [Network backend](https://github.com/celtera/libremidi/blob/master/examples/network.cpp) to send MIDI 1 and UMP packets over OSC 🛜.
