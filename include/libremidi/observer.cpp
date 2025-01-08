@@ -37,11 +37,11 @@ static LIBREMIDI_INLINE std::unique_ptr<observer_api> make_observer(auto base_co
   return std::make_unique<observer_dummy>(observer_configuration{}, dummy_configuration{});
 }
 
-LIBREMIDI_INLINE auto make_observer_impl(auto base_conf, std::any api_conf)
+LIBREMIDI_INLINE auto make_observer_impl(auto base_conf, observer_api_configuration api_conf)
 {
   std::unique_ptr<observer_api> ptr;
   auto from_api = [&]<typename T>(T& /*backend*/) mutable {
-    if (auto conf = std::any_cast<typename T::midi_observer_configuration>(&api_conf))
+    if (auto conf = std::get_if<typename T::midi_observer_configuration>(&api_conf))
     {
       ptr = libremidi::make<typename T::midi_observer>(std::move(base_conf), std::move(*conf));
       return true;
@@ -53,13 +53,14 @@ LIBREMIDI_INLINE auto make_observer_impl(auto base_conf, std::any api_conf)
   return ptr;
 }
 
-LIBREMIDI_INLINE std::unique_ptr<observer_api> make_observer(auto base_conf, std::any api_conf)
+LIBREMIDI_INLINE std::unique_ptr<observer_api>
+make_observer(auto base_conf, observer_api_configuration api_conf)
 {
-  if (!api_conf.has_value())
+  if (std::get_if<unspecified_configuration>(&api_conf))
   {
     return make_observer(base_conf);
   }
-  else if (auto api_p = std::any_cast<libremidi::API>(&api_conf))
+  else if (auto api_p = std::get_if<libremidi::API>(&api_conf))
   {
     if (*api_p == libremidi::API::UNSPECIFIED)
     {
@@ -84,7 +85,8 @@ LIBREMIDI_INLINE observer::observer(const observer_configuration& base_conf) noe
 {
 }
 
-LIBREMIDI_INLINE observer::observer(observer_configuration base_conf, std::any api_conf)
+LIBREMIDI_INLINE
+observer::observer(observer_configuration base_conf, observer_api_configuration api_conf)
     : impl_{make_observer(base_conf, api_conf)}
 {
   if (!impl_)

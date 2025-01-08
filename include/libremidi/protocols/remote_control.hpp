@@ -703,7 +703,7 @@ struct remote_control_processor : libremidi::error_handler
     switch (message.get_message_type())
     {
       case libremidi::message_type::SYSTEM_EXCLUSIVE:
-        if (int N = message.size(); N >= 7)
+        if (auto N = message.size(); N >= 7)
         {
           const uint8_t* bytes = message.bytes.data();
           // strip 0xF0 & 0xF7

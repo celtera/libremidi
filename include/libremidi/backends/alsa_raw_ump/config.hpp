@@ -18,8 +18,7 @@ struct output_configuration
   std::optional<chunking_parameters> chunking;
 };
 
-struct observer_configuration
+struct observer_configuration : public alsa_raw_observer_configuration
 {
-  std::chrono::milliseconds poll_period{100};
 };
 }

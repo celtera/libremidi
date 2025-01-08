@@ -11,11 +11,11 @@
 namespace libremidi
 {
 static LIBREMIDI_INLINE std::unique_ptr<midi_out_api>
-make_midi_out_impl(auto base_conf, std::any api_conf)
+make_midi_out_impl(auto base_conf, output_api_configuration api_conf)
 {
   std::unique_ptr<midi_out_api> ptr;
   auto from_api = [&]<typename T>(T& /*backend*/) mutable {
-    if (auto conf = std::any_cast<typename T::midi_out_configuration>(&api_conf))
+    if (auto conf = std::get_if<typename T::midi_out_configuration>(&api_conf))
     {
       ptr = libremidi::make<typename T::midi_out>(std::move(base_conf), std::move(*conf));
       return true;
@@ -58,13 +58,13 @@ make_midi_out(const output_configuration& base_conf)
 }
 
 static LIBREMIDI_INLINE std::unique_ptr<midi_out_api>
-make_midi_out(const output_configuration& base_conf, const std::any& api_conf)
+make_midi_out(const output_configuration& base_conf, const output_api_configuration& api_conf)
 {
-  if (!api_conf.has_value())
+  if (std::get_if<unspecified_configuration>(&api_conf))
   {
     return make_midi_out(base_conf);
   }
-  else if (auto api_p = std::any_cast<libremidi::API>(&api_conf))
+  else if (auto api_p = std::get_if<libremidi::API>(&api_conf))
   {
     if (*api_p == libremidi::API::UNSPECIFIED)
     {
@@ -90,7 +90,7 @@ LIBREMIDI_INLINE midi_out::midi_out(const output_configuration& base_conf) noexc
 }
 
 LIBREMIDI_INLINE
-midi_out::midi_out(output_configuration base_conf, std::any api_conf)
+midi_out::midi_out(output_configuration base_conf, output_api_configuration api_conf)
     : impl_{make_midi_out(base_conf, api_conf)}
 {
   if (!impl_)

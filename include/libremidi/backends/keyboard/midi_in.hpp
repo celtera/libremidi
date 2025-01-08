@@ -45,7 +45,7 @@ public:
 
   void on_keypress(int scancode)
   {
-    using kevent = kbd_input_configuration::kbd_event;
+    using kevent = libremidi::kbd_event;
 
     auto it = configuration.scancode_map.find(scancode);
     if (it == configuration.scancode_map.end())
@@ -88,7 +88,7 @@ public:
 
   void on_keyrelease(int scancode)
   {
-    using kevent = kbd_input_configuration::kbd_event;
+    using kevent = libremidi::kbd_event;
 
     auto it = configuration.scancode_map.find(scancode);
     if (it == configuration.scancode_map.end())
