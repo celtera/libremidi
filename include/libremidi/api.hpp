@@ -2,7 +2,6 @@
 #include <libremidi/api-c.h>
 #include <libremidi/config.hpp>
 
-#include <any>
 #include <string_view>
 #include <vector>
 
@@ -30,9 +29,6 @@ LIBREMIDI_EXPORT std::vector<libremidi::API> available_apis() noexcept;
   API compiled for certain operating systems.
 */
 LIBREMIDI_EXPORT std::vector<libremidi::API> available_ump_apis() noexcept;
-
-LIBREMIDI_EXPORT
-libremidi::API midi_api(const std::any& conf);
 
 //! A static function to determine the current version.
 LIBREMIDI_EXPORT std::string_view get_version() noexcept;

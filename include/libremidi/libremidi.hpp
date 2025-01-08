@@ -58,6 +58,7 @@
 */
 
 #include <libremidi/api.hpp>
+#include <libremidi/configurations.hpp>
 #include <libremidi/defaults.hpp>
 #include <libremidi/input_configuration.hpp>
 #include <libremidi/message.hpp>
@@ -68,7 +69,6 @@
   #include <midi/sysex.h>
   #include <midi/universal_packet.h>
 #endif
-#include <any>
 
 namespace libremidi
 {
@@ -84,7 +84,7 @@ public:
   //!   such as jack_observer_configuration, winmm_observer_configuration, etc...
   //! * if no callbacks are passed, no secondary thread will be created unless absolutely necessary
   explicit observer(const observer_configuration& conf = {}) noexcept;
-  explicit observer(observer_configuration conf, std::any api_conf);
+  explicit observer(observer_configuration conf, observer_api_configuration api_conf);
   observer(const observer&) = delete;
   observer(observer&& other) noexcept;
   observer& operator=(const observer&) = delete;
@@ -111,7 +111,7 @@ public:
   //! Construct a midi_in object with a configuration object for a specific MIDI 1 back-end
   //! see configuration.hpp for the available configuration types.
   //! An exception will be thrown if the requested back-end cannot be opened.
-  explicit midi_in(input_configuration conf, std::any api_conf);
+  explicit midi_in(input_configuration conf, input_api_configuration api_conf);
 
   //! Construct a midi_in object with the default MIDI 2 back-end for the platform
   explicit midi_in(ump_input_configuration conf) noexcept;
@@ -119,7 +119,7 @@ public:
   //! Construct a midi_in object with a configuration object for a specific MIDI 2 back-end
   //! see configuration.hpp for the available configuration types.
   //! An exception will be thrown if the requested back-end cannot be opened.
-  explicit midi_in(ump_input_configuration conf, std::any api_conf);
+  explicit midi_in(ump_input_configuration conf, input_api_configuration api_conf);
 
   midi_in(const midi_in&) = delete;
   midi_in(midi_in&& other) noexcept;
@@ -170,7 +170,7 @@ public:
   //! Construct a midi_out object with a configuration object for a specific back-end
   //! see configuration.hpp for the available configuration types.
   //! An exception will be thrown if the requested back-end cannot be opened.
-  explicit midi_out(output_configuration conf, std::any api_conf);
+  explicit midi_out(output_configuration conf, output_api_configuration api_conf);
 
   midi_out(const midi_out&) = delete;
   midi_out(midi_out&& other) noexcept;
