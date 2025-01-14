@@ -17,6 +17,7 @@ else()
   )
 endif()
 add_library(libremidi::libremidi ALIAS libremidi)
+target_compile_features(libremidi ${_public} cxx_std_${CMAKE_CXX_STANDARD})
 
 ### Library configuration ###
 include(libremidi.warnings)
