@@ -7,11 +7,15 @@ pi = observer.get_input_ports()
 if len(pi) == 0:
     print("No input available")
     exit(1)
+else:
+    print(f"Found input: {pi[0]}")
 
 po = observer.get_output_ports()
 if len(po) == 0:
-    print("No input available")
+    print("No output available")
     exit(1)
+else:
+    print(f"Found output: {po[0]}")
 
 midi_out = lm.MidiOut()
 err = midi_out.open_port(po[0])
