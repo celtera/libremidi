@@ -13,4 +13,4 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(nanobind)
 nanobind_add_module(pylibremidi pylibremidi.cpp)
-target_link_libraries(pylibremidi PRIVATE libremidi)
+target_link_libraries(pylibremidi PUBLIC libremidi)

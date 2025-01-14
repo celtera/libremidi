@@ -52,7 +52,7 @@ struct observer_poll_wrapper {
   observer observer;
   explicit observer_poll_wrapper(observer_configuration conf = {}) noexcept : conf{conf}, observer{this->process(std::move(conf))} {}
 
-  explicit observer_poll_wrapper(observer_configuration conf, std::any api_conf) : conf{conf}, observer{process(std::move(conf)), std::move(api_conf)} {}
+  explicit observer_poll_wrapper(observer_configuration conf, libremidi::observer_api_configuration api_conf) : conf{conf}, observer{process(std::move(conf)), std::move(api_conf)} {}
 
   observer_configuration process(observer_configuration &&obs) {
     if (obs.on_error)
@@ -94,9 +94,9 @@ struct midi_in_poll_wrapper {
   midi_in midi_in;
 
   explicit midi_in_poll_wrapper(const input_configuration &conf) noexcept : orig_callbacks{conf}, midi_in{this->process(std::move(conf))} {}
-  explicit midi_in_poll_wrapper(input_configuration conf, std::any api_conf) : orig_callbacks{conf}, midi_in{this->process(std::move(conf)), std::move(api_conf)} {}
+  explicit midi_in_poll_wrapper(input_configuration conf, input_api_configuration api_conf) : orig_callbacks{conf}, midi_in{this->process(std::move(conf)), std::move(api_conf)} {}
   explicit midi_in_poll_wrapper(ump_input_configuration conf) noexcept : ump_callbacks{conf}, midi_in{this->process(std::move(conf))} {}
-  explicit midi_in_poll_wrapper(ump_input_configuration conf, std::any api_conf) : ump_callbacks{conf}, midi_in{this->process(std::move(conf)), std::move(api_conf)} {}
+  explicit midi_in_poll_wrapper(ump_input_configuration conf, input_api_configuration api_conf) : ump_callbacks{conf}, midi_in{this->process(std::move(conf)), std::move(api_conf)} {}
 
   input_configuration process(input_configuration obs) {
     orig_callbacks = obs;
@@ -159,7 +159,7 @@ struct midi_out_poll_wrapper {
   explicit midi_out_poll_wrapper() noexcept : midi_out{} {}
 
   explicit midi_out_poll_wrapper(const output_configuration &conf) noexcept : orig_callbacks{conf}, midi_out{this->process(std::move(conf))} {}
-  explicit midi_out_poll_wrapper(output_configuration conf, std::any api_conf) : orig_callbacks{conf}, midi_out{this->process(std::move(conf)), std::move(api_conf)} {}
+  explicit midi_out_poll_wrapper(output_configuration conf, output_api_configuration api_conf) : orig_callbacks{conf}, midi_out{this->process(std::move(conf)), std::move(api_conf)} {}
 
   output_configuration process(output_configuration obs) {
     orig_callbacks = obs;
