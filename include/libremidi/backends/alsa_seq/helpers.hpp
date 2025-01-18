@@ -58,7 +58,7 @@ inline constexpr std::pair<int, int> seq_from_port_handle(port_handle p) noexcep
 
 inline void for_all_ports(
     const libasound& snd, snd_seq_t* seq,
-    std::function<void(snd_seq_client_info_t&, snd_seq_port_info_t&)> func)
+    const std::function<void(snd_seq_client_info_t&, snd_seq_port_info_t&)>& func)
 {
   snd_seq_client_info_t* cinfo{};
   snd_seq_client_info_alloca(&cinfo);

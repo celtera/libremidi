@@ -2,6 +2,7 @@
 #include <libremidi/config.hpp>
 
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <optional>
 #include <span>

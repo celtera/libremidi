@@ -251,12 +251,12 @@ struct meta_events
       int notated_32nd_notes_per_beat = 96)
   {
     int n = 1;
-    int powTwo = 0;
+    int pow_two = 0;
 
     while (n < denominator)
     {
       n <<= 1;
-      ++powTwo;
+      ++pow_two;
     }
 
     return {
@@ -264,7 +264,7 @@ struct meta_events
         0x58,
         0x04,
         static_cast<uint8_t>(numerator),
-        static_cast<uint8_t>(powTwo),
+        static_cast<uint8_t>(pow_two),
         static_cast<uint8_t>(clocks_per_click),
         static_cast<uint8_t>(notated_32nd_notes_per_beat)};
   }

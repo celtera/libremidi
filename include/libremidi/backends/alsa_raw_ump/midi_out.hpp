@@ -1,12 +1,17 @@
 #pragma once
 #include <libremidi/backends/alsa_raw_ump/config.hpp>
 #include <libremidi/backends/alsa_raw_ump/helpers.hpp>
+#include <libremidi/backends/linux/alsa.hpp>
 #include <libremidi/detail/midi_out.hpp>
+#include <libremidi/error_handler.hpp>
+#include <libremidi/output_configuration.hpp>
 
 #include <alsa/asoundlib.h>
 
-#include <atomic>
-#include <thread>
+#include <cassert>
+#include <cstdint>
+#include <system_error>
+#include <utility>
 
 namespace libremidi::alsa_raw_ump
 {

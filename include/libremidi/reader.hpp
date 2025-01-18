@@ -66,7 +66,7 @@ public:
   std::vector<midi_track> tracks;
 
 private:
-  bool useAbsoluteTicks{};
+  bool m_useAbsoluteTicks{};
 };
 }
 

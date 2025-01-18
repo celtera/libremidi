@@ -128,7 +128,7 @@ class midi_out_jack_queued final : public midi_out_jack
 public:
   midi_out_jack_queued(output_configuration&& conf, jack_output_configuration&& apiconf)
       : midi_out_jack{std::move(conf), std::move(apiconf)}
-      , queue{configuration.ringbuffer_size}
+      , m_queue{configuration.ringbuffer_size}
   {
     auto status = connect(*this);
     if (!this->client)
@@ -150,7 +150,7 @@ public:
 
   stdx::error send_message(const unsigned char* message, std::size_t size) override
   {
-    return queue.write(message, size);
+    return m_queue.write(message, size);
   }
 
   int process(jack_nframes_t nframes)
@@ -158,13 +158,13 @@ public:
     void* buff = jack_port_get_buffer(this->port, nframes);
     jack_midi_clear_buffer(buff);
 
-    this->queue.read(buff);
+    this->m_queue.read(buff);
 
     return 0;
   }
 
 private:
-  jack_queue queue;
+  jack_queue m_queue;
 };
 
 class midi_out_jack_direct final : public midi_out_jack

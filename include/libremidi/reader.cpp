@@ -521,7 +521,7 @@ LIBREMIDI_INLINE
 reader::reader(bool useAbsolute)
     : ticksPerBeat(480)
     , startingTempo(120)
-    , useAbsoluteTicks(useAbsolute)
+    , m_useAbsoluteTicks(useAbsolute)
 {
 }
 
@@ -549,12 +549,12 @@ try
     return parse_result::invalid;
   }
 
-  const uint8_t* const dataEnd = dataPtr + size;
+  const uint8_t* const data_end = dataPtr + size;
 
-  uint32_t headerId = read_checked::read_uint32_be(dataPtr, dataEnd);
-  uint32_t headerLength = read_checked::read_uint32_be(dataPtr, dataEnd);
+  uint32_t header_id = read_checked::read_uint32_be(dataPtr, data_end);
+  uint32_t header_length = read_checked::read_uint32_be(dataPtr, data_end);
 
-  if (static_cast<int>(headerId) != str_to_headerid("MThd") || headerLength != 6)
+  if (static_cast<int>(header_id) != str_to_headerid("MThd") || header_length != 6)
   {
 #if defined(__LIBREMIDI_DEBUG__)
     std::cerr << "couldn't parse header" << std::endl;
@@ -563,7 +563,7 @@ try
   }
 
   format = read_checked::read_uint16_be(
-      dataPtr, dataEnd); //@tofix format type -> save for later eventually
+      dataPtr, data_end); //@tofix format type -> save for later eventually
   if (format > 2)
   {
 #if defined(__LIBREMIDI_DEBUG__)
@@ -571,12 +571,12 @@ try
 #endif
     return parse_result::invalid;
   }
-  int trackCount = read_checked::read_uint16_be(dataPtr, dataEnd);
-  uint16_t timeDivision = read_checked::read_uint16_be(dataPtr, dataEnd);
+  int track_count = read_checked::read_uint16_be(dataPtr, data_end);
+  uint16_t time_division = read_checked::read_uint16_be(dataPtr, data_end);
 
   // CBB: deal with the SMPTE style time coding
   // timeDivision is described here http://www.sonicspot.com/guide/midifiles.html
-  if (timeDivision & 0x8000)
+  if (time_division & 0x8000)
   {
 #if defined(__LIBREMIDI_DEBUG__)
     std::cerr << "found SMPTE time frames (unsupported)" << std::endl;
@@ -590,18 +590,18 @@ try
   }
 
   startingTempo = 120.0f;             // midi default
-  ticksPerBeat = float(timeDivision); // ticks per beat (a beat is defined as a quarter note)
+  ticksPerBeat = float(time_division); // ticks per beat (a beat is defined as a quarter note)
 
   parse_result result = parse_result::validated;
 
-  for (int i = 0; i < trackCount; ++i)
+  for (int i = 0; i < track_count; ++i)
   {
     midi_track track;
 
-    headerId = read_checked::read_uint32_be(dataPtr, dataEnd);
-    headerLength = read_checked::read_uint32_be(dataPtr, dataEnd);
+    header_id = read_checked::read_uint32_be(dataPtr, data_end);
+    header_length = read_checked::read_uint32_be(dataPtr, data_end);
 
-    if (headerId != str_to_headerid("MTrk"))
+    if (header_id != str_to_headerid("MTrk"))
     {
 #if defined(__LIBREMIDI_DEBUG__)
       std::cerr << "couldn't find track header" << std::endl;
@@ -609,8 +609,8 @@ try
       return parse_result::incomplete;
     }
 
-    int64_t available = dataEnd - dataPtr;
-    if (available < headerLength)
+    int64_t available = data_end - dataPtr;
+    if (available < header_length)
     {
 #if defined(__LIBREMIDI_DEBUG__)
       std::cerr << "not enough data available" << std::endl;
@@ -618,35 +618,35 @@ try
       return parse_result::incomplete;
     }
 
-    track.reserve(headerLength / 3);
+    track.reserve(header_length / 3);
 
-    const uint8_t* const trackEnd = dataPtr + headerLength;
+    const uint8_t* const track_end = dataPtr + header_length;
 
-    auto runningEvent = message_type::INVALID;
+    auto running_event = message_type::INVALID;
 
-    std::size_t tickCount = 0;
+    std::size_t tick_count = 0;
 
-    while (dataPtr < trackEnd)
+    while (dataPtr < track_end)
     {
-      const auto tick = read_checked::read_variable_length(dataPtr, trackEnd);
-      if (useAbsoluteTicks)
+      const auto tick = read_checked::read_variable_length(dataPtr, track_end);
+      if (m_useAbsoluteTicks)
       {
-        tickCount += tick;
+        tick_count += tick;
       }
       else
       {
-        tickCount = tick;
+        tick_count = tick;
       }
 
       try
       {
         track_event ev
-            = parse_event(static_cast<int>(tickCount), i, dataPtr, trackEnd, runningEvent);
+            = parse_event(static_cast<int>(tick_count), i, dataPtr, track_end, running_event);
         if (!ev.m.empty())
         {
           if (!ev.m.is_meta_event())
           {
-            runningEvent = static_cast<message_type>(ev.m.bytes[0]);
+            running_event = static_cast<message_type>(ev.m.bytes[0]);
           }
         }
         else
@@ -654,7 +654,7 @@ try
 #if defined(__LIBREMIDI_DEBUG__)
           std::cerr << "could not read event" << std::endl;
 #endif
-          dataPtr = trackEnd;
+          dataPtr = track_end;
           result = parse_result::incomplete;
           continue;
         }
@@ -666,7 +666,7 @@ try
 #if defined(__LIBREMIDI_DEBUG__)
         std::cerr << "" << e.what() << std::endl;
 #endif
-        dataPtr = trackEnd;
+        dataPtr = track_end;
         result = parse_result::incomplete;
         continue;
       }
@@ -684,7 +684,7 @@ try
 
   if (result == parse_result::validated)
   {
-    if (dataPtr != dataEnd)
+    if (dataPtr != data_end)
     {
 #if defined(__LIBREMIDI_DEBUG__)
       std::cerr << "midifile has junk at end: " << std::intptr_t(dataEnd - dataPtr) << std::endl;
@@ -706,33 +706,33 @@ catch (const std::exception& e)
 LIBREMIDI_INLINE
 double reader::get_end_time() const noexcept
 {
-  if (useAbsoluteTicks)
+  if (m_useAbsoluteTicks)
   {
-    double totalLength = 0.;
+    double total_length = 0.;
     for (const auto& t : tracks)
     {
       if (!t.empty())
       {
         const auto& last_event = t.back();
-        if (last_event.tick > totalLength)
-          totalLength = last_event.tick;
+        if (last_event.tick > total_length)
+          total_length = last_event.tick;
       }
     }
-    return totalLength;
+    return total_length;
   }
   else
   {
-    double totalLength = 0.;
+    double total_length = 0.;
     for (const auto& t : tracks)
     {
-      double trackLength = 0.;
+      double track_length = 0.;
       for (const auto& e : t)
-        trackLength += e.tick;
+        track_length += e.tick;
 
-      if (trackLength > totalLength)
-        totalLength = trackLength;
+      if (track_length > total_length)
+        total_length = track_length;
     }
-    return totalLength;
+    return total_length;
   }
 }
 

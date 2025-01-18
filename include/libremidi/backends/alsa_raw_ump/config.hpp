@@ -1,6 +1,9 @@
 #pragma once
 #include <libremidi/backends/alsa_raw/config.hpp>
 
+#include <chrono>
+#include <functional>
+
 namespace libremidi::alsa_raw_ump
 {
 struct input_configuration

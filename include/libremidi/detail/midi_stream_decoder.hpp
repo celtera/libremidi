@@ -107,12 +107,12 @@ struct input_state_machine : input_state_machine_base<input_configuration>
   {
     message.bytes.clear();
     message.timestamp = {};
-    state = main;
+    m_state = main;
   }
 
   bool has_finished_sysex(std::span<const uint8_t> bytes) const noexcept
   {
-    return (((bytes.front() == 0xF0) || (state == in_sysex)) && (bytes.back() == 0xF7));
+    return (((bytes.front() == 0xF0) || (m_state == in_sysex)) && (bytes.back() == 0xF7));
   }
 
   // Function to process a byte stream which may contain multiple successive
@@ -139,22 +139,22 @@ private:
   void on_bytes_multi_segmented(
       const message_callback& cb, std::span<const uint8_t> bytes, int64_t timestamp)
   {
-    int64_t nBytes = bytes.size();
-    int64_t iByte = 0;
+    int64_t n_bytes = bytes.size();
+    int64_t i_byte = 0;
 
     const bool finished_sysex = has_finished_sysex(bytes);
-    switch (state)
+    switch (m_state)
     {
       case in_sysex: {
         return on_continue_sysex(cb, bytes, finished_sysex);
       }
       case main: {
-        while (iByte < nBytes)
+        while (i_byte < n_bytes)
         {
           int64_t size = 1;
           // We are expecting that the next byte in the packet is a status
           // byte.
-          const auto status = bytes[iByte];
+          const auto status = bytes[i_byte];
           if (!(status & 0x80))
             break;
 
@@ -170,17 +170,17 @@ private:
             if (configuration.ignore_sysex)
             {
               size = 0;
-              iByte = nBytes;
+              i_byte = n_bytes;
             }
             else
             {
-              size = nBytes - iByte;
+              size = n_bytes - i_byte;
             }
 
-            if (bytes[nBytes - 1] != 0xF7)
+            if (bytes[n_bytes - 1] != 0xF7)
             {
               // We know per CoreMIDI API there can't be anything else in this packet
-              state = in_sysex;
+              m_state = in_sysex;
               message.assign(bytes.begin(), bytes.begin() + size);
               message.timestamp = timestamp;
               return;
@@ -192,7 +192,7 @@ private:
             if (configuration.ignore_timing)
             {
               size = 0;
-              iByte += 2;
+              i_byte += 2;
             }
             else
             {
@@ -209,7 +209,7 @@ private:
             if (configuration.ignore_timing)
             {
               size = 0;
-              iByte += 1;
+              i_byte += 1;
             }
             else
             {
@@ -222,7 +222,7 @@ private:
             if (configuration.ignore_sensing)
             {
               size = 0;
-              iByte += 1;
+              i_byte += 1;
             }
             else
             {
@@ -238,14 +238,14 @@ private:
           // Now process the actual bytes of the message
           if (size > 0)
           {
-            auto begin = bytes.begin() + iByte;
+            auto begin = bytes.begin() + i_byte;
             message.assign(begin, begin + size);
             message.timestamp = timestamp;
 
             cb(std::move(message));
             message.clear();
 
-            iByte += size;
+            i_byte += size;
           }
         }
       }
@@ -256,7 +256,7 @@ private:
       const message_callback& cb, std::span<const uint8_t> bytes, bool finished_sysex)
   {
     if (finished_sysex)
-      state = main;
+      m_state = main;
 
     if (configuration.ignore_sysex)
     {
@@ -283,7 +283,7 @@ private:
       // SYSEX start
       case 0xF0: {
         if (!finished_sysex)
-          state = in_sysex;
+          m_state = in_sysex;
 
         if (!this->configuration.ignore_sysex)
         {
@@ -328,7 +328,7 @@ private:
       return;
 
     const bool finished_sysex = has_finished_sysex(bytes);
-    switch (state)
+    switch (m_state)
     {
       case in_sysex:
         return on_continue_sysex(cb, bytes, finished_sysex);
@@ -346,7 +346,7 @@ private:
   {
     main,
     in_sysex
-  } state{main};
+  } m_state{main};
 };
 }
 

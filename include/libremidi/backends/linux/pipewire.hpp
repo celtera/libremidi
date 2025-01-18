@@ -67,12 +67,12 @@ public:
   bool available{true};
 
 private:
-  dylib_loader library;
+  dylib_loader m_library;
 
   libpipewire()
-      : library("libpipewire-0.3.so.0")
+      : m_library("libpipewire-0.3.so.0")
   {
-    if (!library)
+    if (!m_library)
     {
       available = false;
       return;
@@ -81,52 +81,54 @@ private:
     // in terms of regex:
     // decltype\(&::([a-z_]+)\) [a-z_]+{};
     // \1 = library.symbol<decltype(&::\1)>("\1");
-    init = library.symbol<decltype(&::pw_init)>("pw_init");
-    deinit = library.symbol<decltype(&::pw_deinit)>("pw_deinit");
+    init = m_library.symbol<decltype(&::pw_init)>("pw_init");
+    deinit = m_library.symbol<decltype(&::pw_deinit)>("pw_deinit");
 
-    context_new = library.symbol<decltype(&::pw_context_new)>("pw_context_new");
-    context_connect = library.symbol<decltype(&::pw_context_connect)>("pw_context_connect");
-    context_destroy = library.symbol<decltype(&::pw_context_destroy)>("pw_context_destroy");
+    context_new = m_library.symbol<decltype(&::pw_context_new)>("pw_context_new");
+    context_connect = m_library.symbol<decltype(&::pw_context_connect)>("pw_context_connect");
+    context_destroy = m_library.symbol<decltype(&::pw_context_destroy)>("pw_context_destroy");
 
-    core_disconnect = library.symbol<decltype(&::pw_core_disconnect)>("pw_core_disconnect");
+    core_disconnect = m_library.symbol<decltype(&::pw_core_disconnect)>("pw_core_disconnect");
 
     proxy_add_listener
-        = library.symbol<decltype(&::pw_proxy_add_listener)>("pw_proxy_add_listener");
-    proxy_destroy = library.symbol<decltype(&::pw_proxy_destroy)>("pw_proxy_destroy");
+        = m_library.symbol<decltype(&::pw_proxy_add_listener)>("pw_proxy_add_listener");
+    proxy_destroy = m_library.symbol<decltype(&::pw_proxy_destroy)>("pw_proxy_destroy");
 
-    main_loop_new = library.symbol<decltype(&::pw_main_loop_new)>("pw_main_loop_new");
-    main_loop_destroy = library.symbol<decltype(&::pw_main_loop_destroy)>("pw_main_loop_destroy");
-    main_loop_quit = library.symbol<decltype(&::pw_main_loop_quit)>("pw_main_loop_quit");
-    main_loop_run = library.symbol<decltype(&::pw_main_loop_run)>("pw_main_loop_run");
+    main_loop_new = m_library.symbol<decltype(&::pw_main_loop_new)>("pw_main_loop_new");
+    main_loop_destroy
+        = m_library.symbol<decltype(&::pw_main_loop_destroy)>("pw_main_loop_destroy");
+    main_loop_quit = m_library.symbol<decltype(&::pw_main_loop_quit)>("pw_main_loop_quit");
+    main_loop_run = m_library.symbol<decltype(&::pw_main_loop_run)>("pw_main_loop_run");
     main_loop_get_loop
-        = library.symbol<decltype(&::pw_main_loop_get_loop)>("pw_main_loop_get_loop");
+        = m_library.symbol<decltype(&::pw_main_loop_get_loop)>("pw_main_loop_get_loop");
 
-    properties_new = library.symbol<decltype(&::pw_properties_new)>("pw_properties_new");
-    properties_free = library.symbol<decltype(&::pw_properties_free)>("pw_properties_free");
-    properties_get = library.symbol<decltype(&::pw_properties_get)>("pw_properties_get");
+    properties_new = m_library.symbol<decltype(&::pw_properties_new)>("pw_properties_new");
+    properties_free = m_library.symbol<decltype(&::pw_properties_free)>("pw_properties_free");
+    properties_get = m_library.symbol<decltype(&::pw_properties_get)>("pw_properties_get");
 
-    filter_new_simple = library.symbol<decltype(&::pw_filter_new_simple)>("pw_filter_new_simple");
+    filter_new_simple
+        = m_library.symbol<decltype(&::pw_filter_new_simple)>("pw_filter_new_simple");
     filter_get_node_id
-        = library.symbol<decltype(&::pw_filter_get_node_id)>("pw_filter_get_node_id");
+        = m_library.symbol<decltype(&::pw_filter_get_node_id)>("pw_filter_get_node_id");
     filter_get_properties
-        = library.symbol<decltype(&::pw_filter_get_properties)>("pw_filter_get_properties");
-    filter_add_port = library.symbol<decltype(&::pw_filter_add_port)>("pw_filter_add_port");
+        = m_library.symbol<decltype(&::pw_filter_get_properties)>("pw_filter_get_properties");
+    filter_add_port = m_library.symbol<decltype(&::pw_filter_add_port)>("pw_filter_add_port");
     filter_remove_port
-        = library.symbol<decltype(&::pw_filter_remove_port)>("pw_filter_remove_port");
-    filter_update_properties
-        = library.symbol<decltype(&::pw_filter_update_properties)>("pw_filter_update_properties");
+        = m_library.symbol<decltype(&::pw_filter_remove_port)>("pw_filter_remove_port");
+    filter_update_properties = m_library.symbol<decltype(&::pw_filter_update_properties)>(
+        "pw_filter_update_properties");
     filter_update_params
-        = library.symbol<decltype(&::pw_filter_update_params)>("pw_filter_update_params");
-    filter_get_time = library.symbol<decltype(&::pw_filter_get_time)>("pw_filter_get_time");
-    filter_destroy = library.symbol<decltype(&::pw_filter_destroy)>("pw_filter_destroy");
-    filter_connect = library.symbol<decltype(&::pw_filter_connect)>("pw_filter_connect");
+        = m_library.symbol<decltype(&::pw_filter_update_params)>("pw_filter_update_params");
+    filter_get_time = m_library.symbol<decltype(&::pw_filter_get_time)>("pw_filter_get_time");
+    filter_destroy = m_library.symbol<decltype(&::pw_filter_destroy)>("pw_filter_destroy");
+    filter_connect = m_library.symbol<decltype(&::pw_filter_connect)>("pw_filter_connect");
     filter_get_dsp_buffer
-        = library.symbol<decltype(&::pw_filter_get_dsp_buffer)>("pw_filter_get_dsp_buffer");
+        = m_library.symbol<decltype(&::pw_filter_get_dsp_buffer)>("pw_filter_get_dsp_buffer");
     filter_dequeue_buffer
-        = library.symbol<decltype(&::pw_filter_dequeue_buffer)>("pw_filter_dequeue_buffer");
+        = m_library.symbol<decltype(&::pw_filter_dequeue_buffer)>("pw_filter_dequeue_buffer");
     filter_queue_buffer
-        = library.symbol<decltype(&::pw_filter_queue_buffer)>("pw_filter_queue_buffer");
-    filter_flush = library.symbol<decltype(&::pw_filter_flush)>("pw_filter_flush");
+        = m_library.symbol<decltype(&::pw_filter_queue_buffer)>("pw_filter_queue_buffer");
+    filter_flush = m_library.symbol<decltype(&::pw_filter_flush)>("pw_filter_flush");
 
     assert(init);
     assert(deinit);

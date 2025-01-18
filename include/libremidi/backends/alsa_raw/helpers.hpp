@@ -2,10 +2,17 @@
 #include <libremidi/backends/linux/alsa.hpp>
 #include <libremidi/config.hpp>
 #include <libremidi/detail/observer.hpp>
+#include <libremidi/observer_configuration.hpp>
 
-#include <functional>
+#include <alsa/asoundlib.h>
+
+#include <cerrno>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 // Credits: greatly inspired from

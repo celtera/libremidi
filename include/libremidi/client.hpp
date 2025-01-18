@@ -4,6 +4,7 @@
 #include <libremidi/shared_context.hpp>
 
 #include <map>
+#include <utility>
 
 namespace libremidi::midi1
 {
@@ -66,8 +67,8 @@ public:
   }
 
   explicit client(const client_configuration& conf, shared_configurations ctx)
-      : configuration{conf}
-      , context{ctx}
+      : m_configuration{conf}
+      , m_context{std::move(ctx)}
       , m_observer{
             observer_configuration{
                 .on_error = conf.on_error,
@@ -81,10 +82,10 @@ public:
                 .track_hardware = conf.track_hardware,
                 .track_virtual = conf.track_virtual,
                 .notify_in_constructor = false},
-            context.observer}
+            m_context.observer}
   {
-    if (context.context)
-      context.context->start_processing();
+    if (m_context.context)
+      m_context.context->start_processing();
   }
 
   ~client()
@@ -92,8 +93,8 @@ public:
     m_inputs.clear();
     m_outputs.clear();
 
-    if (context.context)
-      context.context->stop_processing();
+    if (m_context.context)
+      m_context.context->stop_processing();
   }
 
   std::vector<libremidi::input_port> get_input_ports() const noexcept
@@ -116,19 +117,19 @@ public:
         input_configuration{
             .on_message
             = [this,
-               port](libremidi::message&& m) { configuration.on_message(port, std::move(m)); },
+               port](libremidi::message&& m) { m_configuration.on_message(port, std::move(m)); },
             .on_raw_data = {},
             .get_timestamp = {},
 
-            .on_error = configuration.on_error,
-            .on_warning = configuration.on_warning,
+            .on_error = m_configuration.on_error,
+            .on_warning = m_configuration.on_warning,
 
-            .ignore_sysex = configuration.ignore_sysex,
-            .ignore_timing = configuration.ignore_timing,
-            .ignore_sensing = configuration.ignore_sensing,
+            .ignore_sysex = m_configuration.ignore_sysex,
+            .ignore_timing = m_configuration.ignore_timing,
+            .ignore_sensing = m_configuration.ignore_sensing,
 
-            .timestamps = configuration.timestamps},
-        context.in);
+            .timestamps = m_configuration.timestamps},
+        m_context.in);
 
     res.first->second.open_port(port, name);
   }
@@ -141,11 +142,11 @@ public:
     auto res = m_outputs.try_emplace(
         port,
         output_configuration{
-            .on_error = configuration.on_error,
-            .on_warning = configuration.on_warning,
+            .on_error = m_configuration.on_error,
+            .on_warning = m_configuration.on_warning,
 
-            .timestamps = configuration.timestamps},
-        context.out);
+            .timestamps = m_configuration.timestamps},
+        m_context.out);
 
     res.first->second.open_port(port, name);
   }
@@ -190,8 +191,8 @@ public:
   }
 
 private:
-  client_configuration configuration;
-  shared_configurations context;
+  client_configuration m_configuration;
+  shared_configurations m_context;
 
   std::map<input_port, midi_in> m_inputs;
   std::map<output_port, midi_out> m_outputs;

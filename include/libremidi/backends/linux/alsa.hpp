@@ -2,7 +2,7 @@
 
 #include <libremidi/backends/linux/dylib_loader.hpp>
 
-#include <alsa/asoundlib.h>
+#include <alsa/asoundlib.h> // IWYU pragma: export
 
 #if defined(SND_LIB_VERSION)
   #if __has_include(<alsa/rawmidi.h>) && SND_LIB_VERSION >= ((1 << 16) | (2 << 8) | 6)
