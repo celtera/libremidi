@@ -64,8 +64,9 @@ public:
 
   stdx::error open_port(const output_port& p, std::string_view portName) override
   {
-    unsigned int nSrc = this->get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
-    if (nSrc < 1)
+    unsigned int n_src
+        = this->get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
+    if (n_src < 1)
     {
       libremidi_handle_error(this->configuration, "no MIDI output sources found!");
       return make_error_code(std::errc::no_such_device);
@@ -133,7 +134,8 @@ public:
         libremidi_handle_warning(this->configuration, "error sending MIDI message to port.");
         return static_cast<std::errc>(-ret);
       }
-      return std::errc{0};
+      static_assert(std::errc{0} == std::errc{});
+      return std::errc{};
     };
     segment_ump_stream(ump_stream, count, write_func, []() {});
 

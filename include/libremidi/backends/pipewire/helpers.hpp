@@ -9,8 +9,6 @@
 #include <libremidi/detail/semaphore.hpp>
 
 #include <atomic>
-#include <semaphore>
-#include <stop_token>
 #include <thread>
 
 namespace libremidi

@@ -5,17 +5,19 @@
 #include <libremidi/backends.hpp>
 #include <libremidi/detail/midi_api.hpp>
 
+#include <utility>
+
 namespace libremidi
 {
 
-static LIBREMIDI_INLINE std::unique_ptr<observer_api> make_observer(auto base_conf)
+static LIBREMIDI_INLINE std::unique_ptr<observer_api> make_observer(const auto& base_conf)
 {
   for (const auto& api : available_apis())
   {
     try
     {
-      if (auto impl_ = make_observer(base_conf, observer_configuration_for(api)))
-        return impl_;
+      if (auto impl = make_observer(base_conf, observer_configuration_for(api)))
+        return impl;
     }
     catch (const std::exception& e)
     {
@@ -26,8 +28,8 @@ static LIBREMIDI_INLINE std::unique_ptr<observer_api> make_observer(auto base_co
   {
     try
     {
-      if (auto impl_ = make_observer(base_conf, observer_configuration_for(api)))
-        return impl_;
+      if (auto impl = make_observer(base_conf, observer_configuration_for(api)))
+        return impl;
     }
     catch (const std::exception& e)
     {
@@ -49,12 +51,13 @@ LIBREMIDI_INLINE auto make_observer_impl(auto base_conf, observer_api_configurat
     return false;
   };
   std::apply([&](auto&&... b) { (from_api(b) || ...); }, midi1::available_backends);
-  std::apply([&](auto&&... b) { (from_api(b) || ...); }, midi2::available_backends);
+  if (!ptr)
+    std::apply([&](auto&&... b) { (from_api(b) || ...); }, midi2::available_backends);
   return ptr;
 }
 
 LIBREMIDI_INLINE std::unique_ptr<observer_api>
-make_observer(auto base_conf, observer_api_configuration api_conf)
+make_observer(const auto& base_conf, observer_api_configuration api_conf)
 {
   if (std::get_if<unspecified_configuration>(&api_conf))
   {
@@ -81,33 +84,33 @@ make_observer(auto base_conf, observer_api_configuration api_conf)
 }
 
 LIBREMIDI_INLINE observer::observer(const observer_configuration& base_conf) noexcept
-    : impl_{make_observer(base_conf)}
+    : m_impl{make_observer(base_conf)}
 {
 }
 
 LIBREMIDI_INLINE
-observer::observer(observer_configuration base_conf, observer_api_configuration api_conf)
-    : impl_{make_observer(base_conf, api_conf)}
+observer::observer(const observer_configuration& base_conf, observer_api_configuration api_conf)
+    : m_impl{make_observer(base_conf, std::move(api_conf))}
 {
-  if (!impl_)
+  if (!m_impl)
   {
     error_handler e;
     e.libremidi_handle_error(base_conf, "Could not open observer for the given api");
-    impl_ = std::make_unique<observer_dummy>(observer_configuration{}, dummy_configuration{});
+    m_impl = std::make_unique<observer_dummy>(observer_configuration{}, dummy_configuration{});
   }
 }
 
 LIBREMIDI_INLINE observer::observer(observer&& other) noexcept
-    : impl_{std::move(other.impl_)}
+    : m_impl{std::move(other.m_impl)}
 {
-  other.impl_ = std::make_unique<libremidi::observer_dummy>(
+  other.m_impl = std::make_unique<libremidi::observer_dummy>(
       observer_configuration{}, dummy_configuration{});
 }
 
 LIBREMIDI_INLINE observer& observer::operator=(observer&& other) noexcept
 {
-  this->impl_ = std::move(other.impl_);
-  other.impl_ = std::make_unique<libremidi::observer_dummy>(
+  this->m_impl = std::move(other.m_impl);
+  other.m_impl = std::make_unique<libremidi::observer_dummy>(
       observer_configuration{}, dummy_configuration{});
   return *this;
 }
@@ -118,18 +121,18 @@ observer::~observer() = default;
 LIBREMIDI_INLINE
 libremidi::API observer::get_current_api() const noexcept
 {
-  return impl_->get_current_api();
+  return m_impl->get_current_api();
 }
 
 LIBREMIDI_INLINE
 std::vector<libremidi::input_port> observer::get_input_ports() const noexcept
 {
-  return impl_->get_input_ports();
+  return m_impl->get_input_ports();
 }
 
 LIBREMIDI_INLINE
 std::vector<libremidi::output_port> observer::get_output_ports() const noexcept
 {
-  return impl_->get_output_ports();
+  return m_impl->get_output_ports();
 }
 }

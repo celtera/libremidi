@@ -5,7 +5,9 @@
 #include <libremidi/detail/semaphore.hpp>
 
 #include <atomic>
-#include <semaphore>
+#include <cstdint>
+#include <cstring>
+#include <memory>
 
 namespace libremidi
 {
@@ -132,7 +134,7 @@ struct jack_helpers : jack_client
           {.token = this_instance,
            .callback = [&self, p = std::weak_ptr{this->port.impl}](jack_nframes_t nf) -> int {
              if (auto pt = p.lock())
-               if (auto ppt = pt->load())
+               if (pt->load())
                  self.process(nf);
 
              self.thread_lock.check_client_released();

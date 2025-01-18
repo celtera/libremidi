@@ -28,6 +28,6 @@ public:
   stdx::error send_message(const unsigned char* message, size_t size) override;
 
 private:
-  int portNumber_{-1};
+  int m_portNumber{-1};
 };
 }

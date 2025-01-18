@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <semaphore>
 
 struct semaphore_pair_lock

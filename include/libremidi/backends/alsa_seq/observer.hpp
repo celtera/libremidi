@@ -131,7 +131,7 @@ public:
   }
 
   template <bool Input>
-  auto to_port_info(port_info p) const noexcept
+  auto to_port_info(const port_info& p) const noexcept
       -> std::conditional_t<Input, input_port, output_port>
   {
     static_assert(sizeof(this->seq) <= sizeof(libremidi::client_handle));
@@ -200,7 +200,7 @@ public:
     if (p.client == snd.seq.client_id(seq))
       return;
 
-    knownClients_[{p.client, p.port}] = p;
+    m_knownClients[{p.client, p.port}] = p;
     if (p.isInput && configuration.input_added)
     {
       configuration.input_added(to_port_info<true>(p));
@@ -214,11 +214,11 @@ public:
 
   void unregister_port(int client, int port)
   {
-    auto it = knownClients_.find({client, port});
-    if (it != knownClients_.end())
+    auto it = m_knownClients.find({client, port});
+    if (it != m_knownClients.end())
     {
       auto p = it->second;
-      knownClients_.erase(it);
+      m_knownClients.erase(it);
 
       if (p.isInput && configuration.input_removed)
       {
@@ -263,7 +263,7 @@ public:
   }
 
 private:
-  std::map<std::pair<int, int>, port_info> knownClients_;
+  std::map<std::pair<int, int>, port_info> m_knownClients;
 };
 
 template <typename ConfigurationImpl>
@@ -275,9 +275,9 @@ public:
   {
     // Create relevant descriptors
     auto& snd = alsa_data::snd;
-    const auto N = snd.seq.poll_descriptors_count(this->seq, POLLIN);
-    descriptors_.resize(N + 1);
-    snd.seq.poll_descriptors(this->seq, descriptors_.data(), N, POLLIN);
+    const auto n = snd.seq.poll_descriptors_count(this->seq, POLLIN);
+    descriptors_.resize(n + 1);
+    snd.seq.poll_descriptors(this->seq, descriptors_.data(), n, POLLIN);
     descriptors_.back() = this->termination_event;
 
     // Start the listening thread

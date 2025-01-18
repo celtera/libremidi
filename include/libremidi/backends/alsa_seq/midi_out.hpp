@@ -30,7 +30,7 @@ public:
       return;
     }
 
-    if (snd.midi.event_new(this->bufferSize, &this->coder) < 0)
+    if (snd.midi.event_new(this->m_bufferSize, &this->coder) < 0)
     {
       libremidi_handle_error(this->configuration, "error initializing MIDI event parser.");
       return;
@@ -68,8 +68,9 @@ public:
 
   stdx::error open_port(const output_port& p, std::string_view portName) override
   {
-    unsigned int nSrc = this->get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
-    if (nSrc < 1)
+    unsigned int n_src
+        = this->get_port_count(SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE);
+    if (n_src < 1)
     {
       libremidi_handle_error(this->configuration, "no MIDI output sources found!");
       return make_error_code(std::errc::no_such_device);
@@ -122,9 +123,9 @@ public:
   stdx::error send_message(const unsigned char* message, std::size_t size) override
   {
     int64_t result{};
-    if (size > this->bufferSize)
+    if (size > this->m_bufferSize)
     {
-      this->bufferSize = size;
+      this->m_bufferSize = size;
       result = snd.midi.event_resize_buffer(this->coder, size);
       if (result != 0)
       {
@@ -146,8 +147,8 @@ public:
       // FIXME direct is set but snd_seq_event_output_direct is not used...
       snd_seq_ev_set_direct(&ev);
 
-      const int64_t nBytes = size; // signed to avoir potential overflow with size - offset below
-      result = snd.midi.event_encode(this->coder, message + offset, (long)(nBytes - offset), &ev);
+      const int64_t n_bytes = size; // signed to avoir potential overflow with size - offset below
+      result = snd.midi.event_encode(this->coder, message + offset, (long)(n_bytes - offset), &ev);
       if (result < 0)
       {
         libremidi_handle_warning(this->configuration, "event parsing error!");
@@ -174,6 +175,6 @@ public:
   }
 
 private:
-  uint64_t bufferSize{32};
+  uint64_t m_bufferSize{32};
 };
 }

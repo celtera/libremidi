@@ -31,7 +31,7 @@ public:
   void on_input(double ts, unsigned char* begin, unsigned char* end);
 
 private:
-  int portNumber_{};
+  int m_portNumber{};
 
   midi1::input_state_machine m_processing{this->configuration};
 };

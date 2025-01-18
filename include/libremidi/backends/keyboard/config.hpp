@@ -141,7 +141,7 @@ struct kbd_input_configuration
 
   // First argument is on key press, second on key release
   std::function<void(scancode_callback, scancode_callback)> set_input_scancode_callbacks
-      = [](scancode_callback, scancode_callback) { };
+      = [](const scancode_callback&, const scancode_callback&) { };
 
   std::map<int, int> scancode_map
 #if defined(__APPLE__)

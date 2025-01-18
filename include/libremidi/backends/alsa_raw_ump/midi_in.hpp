@@ -194,7 +194,7 @@ public:
       libremidi::ump_input_configuration&& conf, alsa_raw_ump::input_configuration&& apiconf)
       : midi_in_impl{std::move(conf), std::move(apiconf)}
   {
-    if (this->termination_event < 0)
+    if (this->m_termination_event < 0)
     {
       libremidi_handle_error(this->configuration, "error creating eventfd.");
       return;
@@ -206,14 +206,14 @@ public:
   ~midi_in_impl_threaded()
   {
     // Close a connection if it exists.
-    this->close_port();
+    midi_in_impl_threaded::close_port();
     client_open_ = std::errc::not_connected;
   }
 
 private:
   void run_thread(auto parse_func)
   {
-    fds_.push_back(this->termination_event);
+    fds_.push_back(this->m_termination_event);
     const auto period
         = std::chrono::duration_cast<std::chrono::milliseconds>(this->configuration.poll_period)
               .count();
@@ -226,7 +226,7 @@ private:
         continue;
       else if (err < 0)
         return;
-      else if (termination_event.ready(fds_.back()))
+      else if (m_termination_event.ready(fds_.back()))
         break;
 
       err = do_read_events(parse_func, {fds_.data(), fds_.size() - 1});
@@ -243,11 +243,11 @@ private:
     {
       if (configuration.timestamps == timestamp_mode::NoTimestamp)
       {
-        this->thread_ = std::thread{[this] { run_thread(&midi_in_impl::read_input_buffer); }};
+        this->m_thread = std::thread{[this] { run_thread(&midi_in_impl::read_input_buffer); }};
       }
       else
       {
-        this->thread_ = std::thread{
+        this->m_thread = std::thread{
             [this] { run_thread(&midi_in_impl::read_input_buffer_with_timestamps); }};
       }
       return stdx::error{};
@@ -275,16 +275,16 @@ private:
 
   stdx::error close_port() override
   {
-    termination_event.notify();
-    if (thread_.joinable())
-      thread_.join();
-    termination_event.consume(); // Reset to zero
+    m_termination_event.notify();
+    if (m_thread.joinable())
+      m_thread.join();
+    m_termination_event.consume(); // Reset to zero
 
     return midi_in_impl::close_port();
   }
 
-  std::thread thread_;
-  eventfd_notifier termination_event{};
+  std::thread m_thread;
+  eventfd_notifier m_termination_event{};
 };
 
 class midi_in_impl_manual : public midi_in_impl
@@ -299,7 +299,7 @@ public:
   ~midi_in_impl_manual()
   {
     // Close a connection if it exists.
-    this->close_port();
+    midi_in_impl_manual::close_port();
 
     client_open_ = std::errc::not_connected;
   }

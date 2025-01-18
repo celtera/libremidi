@@ -18,6 +18,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <spa/param/audio/format-utils.h>
@@ -123,7 +124,7 @@ struct pipewire_context
   }
 
   explicit pipewire_context(std::shared_ptr<pipewire_instance> inst)
-      : global_instance{inst}
+      : global_instance{std::move(inst)}
       , owns_main_loop{true}
   {
     this->main_loop = pw.main_loop_new(nullptr);
@@ -453,12 +454,12 @@ struct pipewire_filter
   }* port{};
 
   explicit pipewire_filter(std::shared_ptr<pipewire_context> loop)
-      : loop{loop}
+      : loop{std::move(loop)}
   {
   }
 
   explicit pipewire_filter(std::shared_ptr<pipewire_context> loop, pw_filter* filter)
-      : loop{loop}
+      : loop{std::move(loop)}
       , filter{filter}
   {
   }

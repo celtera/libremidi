@@ -62,14 +62,14 @@ static LIBREMIDI_INLINE std::ostream& write_be(std::ostream& out, T value)
   }
   else
   {
-    static constexpr auto N = sizeof(value);
+    static constexpr auto n = sizeof(value);
     struct storage
     {
-      uint8_t bytes[N];
+      uint8_t bytes[n];
     };
     auto data = std::bit_cast<storage>(value);
-    std::reverse(data.bytes, data.bytes + N);
-    out.write(reinterpret_cast<const char*>(data.bytes), static_cast<std::streamsize>(N));
+    std::reverse(data.bytes, data.bytes + n);
+    out.write(reinterpret_cast<const char*>(data.bytes), static_cast<std::streamsize>(n));
   }
   return out;
 }
@@ -146,12 +146,12 @@ void writer::write(std::ostream& out) const
   util::write_be<uint16_t>(out, static_cast<uint16_t>(tracks.size()));
   util::write_be<uint16_t>(out, ticksPerQuarterNote);
 
-  std::vector<uint8_t> trackRawData;
+  std::vector<uint8_t> track_raw_data;
   for (const auto& event_list : tracks)
   {
-    trackRawData.clear();
+    track_raw_data.clear();
     // Rough estimation of the memory to allocate
-    trackRawData.reserve(event_list.size() * 3);
+    track_raw_data.reserve(event_list.size() * 3);
 
     for (const auto& event : event_list)
     {
@@ -164,7 +164,7 @@ void writer::write(std::ostream& out) const
       if (msg.get_meta_event_type() == meta_event_type::END_OF_TRACK)
         continue;
 
-      util::write_variable_length(static_cast<uint32_t>(event.tick), trackRawData);
+      util::write_variable_length(static_cast<uint32_t>(event.tick), track_raw_data);
 
       if ((msg.get_message_type() == message_type::SYSTEM_EXCLUSIVE)
           || (event.m.get_message_type() == message_type::EOX))
@@ -176,38 +176,38 @@ void writer::write(std::ostream& out) const
         // In other words, when creating a 0xf0 or 0xf7 MIDI message,
         // do not insert the VLV byte length yourself, as this code will
         // do it for you automatically.
-        trackRawData.emplace_back(msg.bytes[0]); // 0xf0 or 0xf7;
+        track_raw_data.emplace_back(msg.bytes[0]); // 0xf0 or 0xf7;
 
-        util::write_variable_length(static_cast<uint32_t>(msg.size()) - 1, trackRawData);
+        util::write_variable_length(static_cast<uint32_t>(msg.size()) - 1, track_raw_data);
 
-        trackRawData.insert(
-            trackRawData.end(), msg.bytes.data() + 1, msg.bytes.data() + msg.bytes.size());
+        track_raw_data.insert(
+            track_raw_data.end(), msg.bytes.data() + 1, msg.bytes.data() + msg.bytes.size());
       }
       else
       {
         // Non-sysex type of message, so just output the bytes of the message:
-        trackRawData.insert(
-            trackRawData.end(), msg.bytes.data(), msg.bytes.data() + msg.bytes.size());
+        track_raw_data.insert(
+            track_raw_data.end(), msg.bytes.data(), msg.bytes.data() + msg.bytes.size());
       }
     }
 
-    auto size = trackRawData.size();
+    auto size = track_raw_data.size();
     const auto eot = meta_events::end_of_track();
 
-    if ((size < 3) || !((trackRawData[size - 3] == 0xFF) && (trackRawData[size - 2] == 0x2F)))
+    if ((size < 3) || !((track_raw_data[size - 3] == 0xFF) && (track_raw_data[size - 2] == 0x2F)))
     {
-      trackRawData.emplace_back(0x0); // tick
-      trackRawData.emplace_back(eot[0]);
-      trackRawData.emplace_back(eot[1]);
-      trackRawData.emplace_back(eot[2]);
+      track_raw_data.emplace_back(0x0); // tick
+      track_raw_data.emplace_back(eot[0]);
+      track_raw_data.emplace_back(eot[1]);
+      track_raw_data.emplace_back(eot[2]);
     }
 
     // Write the track ID marker "MTrk":
     out.write("MTrk", 4);
-    util::write_be<uint32_t>(out, static_cast<uint32_t>(trackRawData.size()));
+    util::write_be<uint32_t>(out, static_cast<uint32_t>(track_raw_data.size()));
     out.write(
-        reinterpret_cast<char*>(trackRawData.data()),
-        static_cast<std::streamsize>(trackRawData.size()));
+        reinterpret_cast<char*>(track_raw_data.data()),
+        static_cast<std::streamsize>(track_raw_data.size()));
   }
 }
 }

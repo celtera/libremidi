@@ -42,31 +42,34 @@ struct optionally_owned
 {
 public:
   explicit optionally_owned(T* maybe_existing)
-      : storage{.ref = maybe_existing}
+      : m_storage{.ref = maybe_existing}
   {
-    if (storage.ref)
+    if (m_storage.ref)
     {
-      ownership = unowned;
+      m_ownership = unowned;
       return;
     }
     else
     {
-      std::destroy_at(&storage.ref);
-      std::construct_at<T>(reinterpret_cast<T*>(storage.object));
-      ownership = owned;
+      std::destroy_at(&m_storage.ref);
+      std::construct_at<T>(reinterpret_cast<T*>(m_storage.object));
+      m_ownership = owned;
     }
   }
 
   ~optionally_owned()
   {
     if (is_owned())
-      std::destroy_at(reinterpret_cast<T*>(storage.object));
+      std::destroy_at(reinterpret_cast<T*>(m_storage.object));
   }
 
-  T& get() noexcept { return *(is_owned() ? reinterpret_cast<T*>(&storage.object) : storage.ref); }
+  T& get() noexcept
+  {
+    return *(is_owned() ? reinterpret_cast<T*>(&m_storage.object) : m_storage.ref);
+  }
   const T& get() const noexcept
   {
-    return *(is_owned() ? reinterpret_cast<T*>(&storage.object) : storage.ref);
+    return *(is_owned() ? reinterpret_cast<T*>(&m_storage.object) : m_storage.ref);
   }
 
   optionally_owned(const optionally_owned&) = delete;
@@ -74,18 +77,18 @@ public:
   optionally_owned& operator=(const optionally_owned&) = delete;
   optionally_owned& operator=(optionally_owned&&) noexcept = delete;
 
-  bool is_owned() const noexcept { return ownership == owned; }
+  bool is_owned() const noexcept { return m_ownership == owned; }
 
 private:
   union
   {
     alignas(T) unsigned char object[sizeof(T)];
     T* ref;
-  } storage;
+  } m_storage;
   enum
   {
     owned,
     unowned
-  } ownership{};
+  } m_ownership{};
 };
 }

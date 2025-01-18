@@ -31,24 +31,24 @@ public:
     if (!configuration.has_callbacks())
       return;
 
-    fds[0] = this->udev;
-    fds[1] = termination_event;
-    fds[2] = timer_fd;
+    m_fds[0] = this->m_udev;
+    m_fds[1] = m_termination_event;
+    m_fds[2] = m_timer_fd;
 
     // Set-up initial state
     if (configuration.notify_in_constructor)
       this->check_devices();
 
     // Start thread
-    thread = std::thread{[this] { this->run(); }};
+    m_thread = std::thread{[this] { this->run(); }};
   }
 
   ~observer_impl_base()
   {
-    termination_event.notify();
+    m_termination_event.notify();
 
-    if (thread.joinable())
-      thread.join();
+    if (m_thread.joinable())
+      m_thread.join();
   }
 
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
@@ -82,7 +82,7 @@ private:
   {
     for (;;)
     {
-      if (int err = poll(fds, 3, -1); err < 0)
+      if (int err = poll(m_fds, 3, -1); err < 0)
       {
         if (err == -EAGAIN)
           continue;
@@ -91,41 +91,41 @@ private:
       }
 
       // Check udev
-      if (fds[0].revents & POLLIN)
+      if (m_fds[0].revents & POLLIN)
       {
-        udev_device* dev = udev.udev.monitor_receive_device(udev.monitor);
+        udev_device* dev = m_udev.udev.monitor_receive_device(m_udev.monitor);
         if (!dev)
           continue;
 
-        std::string_view act = udev.udev.device_get_action(dev);
-        std::string_view ss = udev.udev.device_get_subsystem(dev);
+        std::string_view act = m_udev.udev.device_get_action(dev);
+        std::string_view ss = m_udev.udev.device_get_subsystem(dev);
         if (!act.empty() && ss == "snd_seq")
         {
           if (act == "add" || act == "remove")
           {
             // Check every 100 milliseconds for ten seconds
-            this->timer_fd.restart(configuration.poll_period.count());
-            timer_check_counts = 100;
+            this->m_timer_fd.restart(configuration.poll_period.count());
+            m_timer_check_counts = 100;
           }
         }
 
-        udev.udev.device_unref(dev);
+        m_udev.udev.device_unref(dev);
 
-        fds[0].revents = 0;
+        m_fds[0].revents = 0;
       }
 
       // Check eventfd
-      if (fds[1].revents & POLLIN)
+      if (m_fds[1].revents & POLLIN)
       {
         break;
       }
 
       // Check timer
-      if (fds[2].revents & POLLIN)
+      if (m_fds[2].revents & POLLIN)
       {
-        if (this->timer_check_counts-- <= 0)
-          this->timer_fd.cancel();
-        fds[2].revents = 0;
+        if (this->m_timer_check_counts-- <= 0)
+          this->m_timer_fd.cancel();
+        m_fds[2].revents = 0;
 
         check_devices();
       }
@@ -133,7 +133,7 @@ private:
   }
 
   template <bool Input>
-  auto to_port_info(alsa_raw::alsa_raw_port_info p) const noexcept
+  auto to_port_info(const alsa_raw::alsa_raw_port_info& p) const noexcept
       -> std::conditional_t<Input, input_port, output_port>
   {
     return {
@@ -151,7 +151,7 @@ private:
 
     new_devs.enumerate_cards();
 
-    for (auto& in_prev : current_inputs)
+    for (auto& in_prev : m_current_inputs)
     {
       if (auto it = std::find(new_devs.inputs.begin(), new_devs.inputs.end(), in_prev);
           it == new_devs.inputs.end())
@@ -165,8 +165,8 @@ private:
 
     for (auto& in_next : new_devs.inputs)
     {
-      if (auto it = std::find(current_inputs.begin(), current_inputs.end(), in_next);
-          it == current_inputs.end())
+      if (auto it = std::find(m_current_inputs.begin(), m_current_inputs.end(), in_next);
+          it == m_current_inputs.end())
       {
         if (auto& cb = this->configuration.input_added)
         {
@@ -175,7 +175,7 @@ private:
       }
     }
 
-    for (auto& out_prev : current_outputs)
+    for (auto& out_prev : m_current_outputs)
     {
       if (auto it = std::find(new_devs.outputs.begin(), new_devs.outputs.end(), out_prev);
           it == new_devs.outputs.end())
@@ -189,8 +189,8 @@ private:
 
     for (auto& out_next : new_devs.outputs)
     {
-      if (auto it = std::find(current_outputs.begin(), current_outputs.end(), out_next);
-          it == current_outputs.end())
+      if (auto it = std::find(m_current_outputs.begin(), m_current_outputs.end(), out_next);
+          it == m_current_outputs.end())
       {
         if (auto& cb = this->configuration.output_added)
         {
@@ -198,19 +198,19 @@ private:
         }
       }
     }
-    current_inputs = std::move(new_devs.inputs);
-    current_outputs = std::move(new_devs.outputs);
+    m_current_inputs = std::move(new_devs.inputs);
+    m_current_outputs = std::move(new_devs.outputs);
   }
 
-  udev_helper udev{};
-  eventfd_notifier termination_event{};
-  timerfd_timer timer_fd{};
-  int timer_check_counts = 0;
-  std::thread thread;
-  std::vector<alsa_raw_port_info> current_inputs;
-  std::vector<alsa_raw_port_info> current_outputs;
+  udev_helper m_udev{};
+  eventfd_notifier m_termination_event{};
+  timerfd_timer m_timer_fd{};
+  int m_timer_check_counts = 0;
+  std::thread m_thread;
+  std::vector<alsa_raw_port_info> m_current_inputs;
+  std::vector<alsa_raw_port_info> m_current_outputs;
 
-  pollfd fds[3]{};
+  pollfd m_fds[3]{};
 };
 }
 #else

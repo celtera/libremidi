@@ -84,7 +84,7 @@ public:
   //!   such as jack_observer_configuration, winmm_observer_configuration, etc...
   //! * if no callbacks are passed, no secondary thread will be created unless absolutely necessary
   explicit observer(const observer_configuration& conf = {}) noexcept;
-  explicit observer(observer_configuration conf, observer_api_configuration api_conf);
+  explicit observer(const observer_configuration& conf, observer_api_configuration api_conf);
   observer(const observer&) = delete;
   observer(observer&& other) noexcept;
   observer& operator=(const observer&) = delete;
@@ -98,7 +98,7 @@ public:
   [[nodiscard]] std::vector<libremidi::output_port> get_output_ports() const noexcept;
 
 private:
-  std::unique_ptr<class observer_api> impl_;
+  std::unique_ptr<class observer_api> m_impl;
 };
 
 //! Main class for receiving MIDI 1.0 and 2.0 messages.
@@ -111,15 +111,15 @@ public:
   //! Construct a midi_in object with a configuration object for a specific MIDI 1 back-end
   //! see configuration.hpp for the available configuration types.
   //! An exception will be thrown if the requested back-end cannot be opened.
-  explicit midi_in(input_configuration conf, input_api_configuration api_conf);
+  explicit midi_in(const input_configuration& conf, const input_api_configuration& api_conf);
 
   //! Construct a midi_in object with the default MIDI 2 back-end for the platform
-  explicit midi_in(ump_input_configuration conf) noexcept;
+  explicit midi_in(const ump_input_configuration& conf) noexcept;
 
   //! Construct a midi_in object with a configuration object for a specific MIDI 2 back-end
   //! see configuration.hpp for the available configuration types.
   //! An exception will be thrown if the requested back-end cannot be opened.
-  explicit midi_in(ump_input_configuration conf, input_api_configuration api_conf);
+  explicit midi_in(const ump_input_configuration& conf, const input_api_configuration& api_conf);
 
   midi_in(const midi_in&) = delete;
   midi_in(midi_in&& other) noexcept;
@@ -157,7 +157,7 @@ public:
   timestamp absolute_timestamp() const noexcept;
 
 private:
-  std::unique_ptr<class midi_in_api> impl_;
+  std::unique_ptr<class midi_in_api> m_impl;
 };
 
 //! Main class for sending MIDI 1.0 and 2.0 messages.
@@ -170,7 +170,7 @@ public:
   //! Construct a midi_out object with a configuration object for a specific back-end
   //! see configuration.hpp for the available configuration types.
   //! An exception will be thrown if the requested back-end cannot be opened.
-  explicit midi_out(output_configuration conf, output_api_configuration api_conf);
+  explicit midi_out(const output_configuration& conf, const output_api_configuration& api_conf);
 
   midi_out(const midi_out&) = delete;
   midi_out(midi_out&& other) noexcept;
@@ -260,7 +260,7 @@ public:
   stdx::error schedule_ump(int64_t timestamp, const uint32_t* message, size_t size) const;
 
 private:
-  std::unique_ptr<class midi_out_api> impl_;
+  std::unique_ptr<class midi_out_api> m_impl;
 };
 }
 

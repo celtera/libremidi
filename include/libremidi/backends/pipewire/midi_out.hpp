@@ -5,8 +5,6 @@
 
 #include <readerwriterqueue.h>
 
-#include <semaphore>
-
 namespace libremidi
 {
 class midi_out_pipewire

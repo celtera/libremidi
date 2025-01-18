@@ -4,8 +4,6 @@
 #include <libremidi/detail/midi_in.hpp>
 #include <libremidi/detail/midi_stream_decoder.hpp>
 
-#include <chrono>
-
 namespace libremidi
 {
 class midi_in_jack final
@@ -96,8 +94,8 @@ public:
         this->client, &current_frames, &current_usecs, &next_usecs, &period_usecs);
 
     // We have midi events in buffer
-    uint32_t evCount = jack_midi_get_event_count(buff);
-    for (uint32_t j = 0; j < evCount; j++)
+    uint32_t ev_count = jack_midi_get_event_count(buff);
+    for (uint32_t j = 0; j < ev_count; j++)
     {
       jack_midi_event_t event{};
       jack_midi_event_get(&event, buff, j);
