@@ -36,7 +36,10 @@ if(LIBREMIDI_FIND_BOOST)
 endif()
 
 # readerwriterqueue
-if(NOT LIBREMIDI_NO_PIPEWIRE AND NOT TARGET readerwriterqueue)
+if(NOT LIBREMIDI_NO_PIPEWIRE)
+  set(LIBREMIDI_NEEDS_READERWRITERQUEUE 1)
+endif()
+if(LIBREMIDI_NEEDS_READERWRITERQUEUE AND NOT TARGET readerwriterqueue)
   FetchContent_Declare(
       readerwriterqueue
       GIT_REPOSITORY https://github.com/cameron314/readerwriterqueue
