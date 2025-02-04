@@ -34,7 +34,7 @@ LIBREMIDI_INLINE stdx::error midi_out_emscripten::open_port(int portNumber, std:
     return std::errc::invalid_argument;
   }
 
-  portNumber_ = portNumber;
+  m_portNumber = portNumber;
   return stdx::error{};
 }
 
@@ -49,14 +49,14 @@ LIBREMIDI_INLINE stdx::error midi_out_emscripten::close_port() {
 
 LIBREMIDI_INLINE stdx::error midi_out_emscripten::send_message(const unsigned char* message, size_t size)
 {
-  if (portNumber_ < 0)
+  if (m_portNumber < 0)
     libremidi_handle_error(
         this->configuration,
         "trying to send a message without an open "
         "port.");
 
   webmidi_helpers::midi_access_emscripten::instance().send_message(
-      portNumber_, reinterpret_cast<const char*>(message), size);
+      m_portNumber, reinterpret_cast<const char*>(message), size);
   return stdx::error{};
 }
 }

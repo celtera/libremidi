@@ -38,7 +38,7 @@ LIBREMIDI_INLINE stdx::error midi_in_emscripten::open_port(int portNumber, std::
   }
 
   midi.open_input(portNumber, *this);
-  portNumber_ = portNumber;
+  m_portNumber = portNumber;
   return stdx::error{};
 }
 
@@ -52,7 +52,7 @@ LIBREMIDI_INLINE stdx::error midi_in_emscripten::close_port()
 {
   auto& midi = webmidi_helpers::midi_access_emscripten::instance();
 
-  midi.close_input(portNumber_, *this);
+  midi.close_input(m_portNumber, *this);
 
   return stdx::error{};
 }
