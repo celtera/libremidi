@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(MSC_VER)
+#if defined(_MSC_VER)
   #define NOMINMAX 1
   #define WIN32_LEAN_AND_MEAN
 #endif
