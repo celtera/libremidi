@@ -23,6 +23,13 @@ static constexpr auto to_underlying(auto e)
 // Thanks https://github.com/NicoG60/TouchMCU !
 struct remote_control_protocol
 {
+  enum class device_type : uint8_t
+  {
+    logic_control = 0x10,
+    logic_control_xt = 0x11,
+    mackie_control = 0x14
+  };
+
   enum class command_to_device : uint8_t
   {
     device_query = 0x00,
@@ -295,6 +302,8 @@ struct remote_control_protocol
   template <std::size_t N>
   using arr = std::array<uint8_t, N>;
 
+  device_type type = device_type::mackie_control;
+
   static libremidi::message make_command_impl(auto&&... data)
   {
     using namespace std;
@@ -304,18 +313,19 @@ struct remote_control_protocol
     return m;
   }
 
-  static libremidi::message make_command(command_to_device c, auto&&... data)
+  libremidi::message make_command(command_to_device c, auto&&... data)
   {
     using namespace std;
+    const auto type = to_underlying(this->type);
     const auto cmd = to_underlying(c);
-    const uint8_t header[6]{0xF0, 0x00, 0x00, 0x66, 0x14, cmd};
+    const uint8_t header[6]{0xF0, 0x00, 0x00, 0x66, type, cmd};
     const uint8_t footer[1]{0xF7};
     return make_command_impl(header, data..., footer);
   }
 
-  static auto device_query() { return make_command(command_to_device::device_query); }
+  auto device_query() { return make_command(command_to_device::device_query); }
 
-  static auto response_to_challenge(arr<4> c)
+  auto response_to_challenge(arr<4> c)
   {
     arr<4> r;
 
@@ -327,51 +337,51 @@ struct remote_control_protocol
     return r;
   }
 
-  static auto host_connection_reply(arr<7> serial, arr<4> challenge_code)
+  auto host_connection_reply(arr<7> serial, arr<4> challenge_code)
   {
     const auto res = response_to_challenge(challenge_code);
     return make_command(command_to_device::host_connection_reply, serial, res);
   }
 
-  static auto transport_click(bool enabled)
+  auto transport_click(bool enabled)
   {
     return make_command(
         command_to_device::transport_click, arr<1>{uint8_t(enabled ? 0x01 : 0x00)});
   }
 
-  static auto lcd_backlight_save(uint8_t timeout)
+  auto lcd_backlight_save(uint8_t timeout)
   {
     // 0: instant off otherwise timeout in minutes
     return make_command(command_to_device::lcd_backlight_save, arr<1>{timeout});
   }
 
-  static auto touchless_movable_fader(bool enabled)
+  auto touchless_movable_fader(bool enabled)
   {
     return make_command(
         command_to_device::touchless_movable_fader, arr<1>{uint8_t(enabled ? 0x01 : 0x00)});
   }
 
-  static auto faders_touch_sensitivity(uint8_t fader_id, fader_sensitivity sens)
+  auto faders_touch_sensitivity(uint8_t fader_id, fader_sensitivity sens)
   {
     return make_command(
         command_to_device::faders_touch_sensitivity, arr<2>{fader_id, to_underlying(sens)});
   }
 
-  static auto go_offline() { return make_command(command_to_device::go_offline, arr<1>{0x7F}); }
+  auto go_offline() { return make_command(command_to_device::go_offline, arr<1>{0x7F}); }
 
-  static auto update_tc_display()
+  auto update_tc_display()
   {
     // FIXME 1 .. 10
     return make_command(command_to_device::update_tc_display, arr<10>{});
   }
 
-  static auto update_assignment_display()
+  auto update_assignment_display()
   {
     // FIXME 1 .. 2
     return make_command(command_to_device::update_assignment_display, arr<2>{});
   }
 
-  static auto update_lcd(std::string_view txt, int pos)
+  auto update_lcd(std::string_view txt, int pos)
   {
     // FIXME
     if (pos < 0 || pos >= 112)
@@ -399,7 +409,7 @@ struct remote_control_protocol
     return make_command(command_to_device::update_lcd, arr<1>{cmd_pos}, std::span(buf + pos, len));
   }
 
-  static auto update_lcd(std::string_view txt)
+  auto update_lcd(std::string_view txt)
   {
     uint8_t buf[112] = {};
     for (int i = 0; i < std::min(int(std::ssize(txt)), 112); i++)
@@ -411,18 +421,17 @@ struct remote_control_protocol
     return make_command(command_to_device::update_lcd, arr<1>{0}, std::span(buf, 112));
   }
 
-  static auto firmware_version_request()
+  auto firmware_version_request()
   {
     return make_command(command_to_device::firmware_version_request, arr<1>{0});
   }
 
-  static auto firmware_update(std::span<uint8_t> firmware)
+  auto firmware_update(std::span<uint8_t> firmware)
   {
     return make_command(command_to_device::firmware_update, firmware);
   }
 
-  static auto
-  channel_meter_mode(uint8_t fader_id, bool level_meter, bool peak_hold, bool signal_led)
+  auto channel_meter_mode(uint8_t fader_id, bool level_meter, bool peak_hold, bool signal_led)
   {
     uint8_t mode = 0;
 
@@ -436,16 +445,16 @@ struct remote_control_protocol
     return make_command(command_to_device::channel_meter_mode, arr<2>{fader_id, mode});
   }
 
-  static auto global_lcd_meter_mode(lcd_meter_mode mode)
+  auto global_lcd_meter_mode(lcd_meter_mode mode)
   {
     return make_command(command_to_device::global_lcd_meter_mode, arr<1>{to_underlying(mode)});
   }
 
-  static auto faders_to_minimum() { return make_command(command_to_device::faders_to_minimum); }
+  auto faders_to_minimum() { return make_command(command_to_device::faders_to_minimum); }
 
-  static auto all_leds_off() { return make_command(command_to_device::all_leds_off); }
+  auto all_leds_off() { return make_command(command_to_device::all_leds_off); }
 
-  static auto reset() { return make_command(command_to_device::reset); }
+  auto reset() { return make_command(command_to_device::reset); }
 
   static auto timecode(int hi, int mi, int si, int framei)
   {
@@ -657,6 +666,7 @@ struct rcp_configuration
   //! by storing the message in an event queue.
   std::function<void(libremidi::message&&)> midi_out;
 
+  std::function<void(libremidi::remote_control_protocol::device_type)> on_connected;
   std::function<void(libremidi::remote_control_protocol::mixer_command, bool)> on_command;
   std::function<void(libremidi::remote_control_protocol::mixer_control, int)> on_control;
   std::function<void(libremidi::remote_control_protocol::fader, uint16_t)> on_fader;
@@ -668,6 +678,7 @@ struct remote_control_processor : libremidi::error_handler
 {
   using rcp = libremidi::remote_control_protocol;
   rcp_configuration configuration;
+  rcp impl;
 
   explicit remote_control_processor(rcp_configuration conf)
       : configuration{std::move(conf)}
@@ -678,6 +689,10 @@ struct remote_control_processor : libremidi::error_handler
       configuration.on_error = [](std::string_view s, auto&&...) {
         std::fprintf(stderr, "libremidi: rcp error: %s\n", s.data());
       };
+
+    if (!configuration.on_connected)
+      configuration.on_connected
+          = [this](auto&&...) { libremidi_handle_error(configuration, "Unhandled on_connected"); };
 
     if (!configuration.on_command)
       configuration.on_command
@@ -695,7 +710,7 @@ struct remote_control_processor : libremidi::error_handler
   void start()
   {
     current_state = waiting_for_query;
-    configuration.midi_out(rcp::device_query());
+    configuration.midi_out(impl.device_query());
   }
 
   void on_midi(const libremidi::message& message)
@@ -706,14 +721,21 @@ struct remote_control_processor : libremidi::error_handler
         if (auto N = message.size(); N >= 7)
         {
           const uint8_t* bytes = message.bytes.data();
+
           // strip 0xF0 & 0xF7
           bytes += 1;
           N -= 2;
 
-          // strip header
-          bytes += 4;
-          N -= 4;
-          on_rcp_command(std::span(bytes, N));
+          // Mackie manufacturer ID check
+          if (bytes[0] == 0x00 && bytes[1] == 0x00 && bytes[2] == 0x66)
+          {
+            impl.type = static_cast<rcp::device_type>(bytes[3]);
+
+            // strip header
+            bytes += 4;
+            N -= 4;
+            on_rcp_command(std::span(bytes, N));
+          }
         }
         else
         {
@@ -760,7 +782,7 @@ struct remote_control_processor : libremidi::error_handler
           std::copy_n(cmd.data(), 7, serial.begin());
           std::copy_n(cmd.data() + 7, 4, challenge.begin());
 
-          configuration.midi_out(rcp::host_connection_reply(serial, challenge));
+          configuration.midi_out(impl.host_connection_reply(serial, challenge));
         }
         else
           libremidi_handle_error(configuration, "host_connection_query: invalid size");
@@ -768,6 +790,7 @@ struct remote_control_processor : libremidi::error_handler
       }
       case rcp::command_from_device::host_connection_confirmation:
         current_state = connected;
+        configuration.on_connected(impl.type);
         break;
       case rcp::command_from_device::host_connection_error:
         current_state = errored;
@@ -790,14 +813,14 @@ struct remote_control_processor : libremidi::error_handler
 
   void update_lcd(std::string_view v)
   {
-    auto res = rcp::update_lcd(v);
+    auto res = impl.update_lcd(v);
     if (!res.empty())
       configuration.midi_out(std::move(res));
   }
 
   void update_lcd(std::string_view v, int pos)
   {
-    auto res = rcp::update_lcd(v, pos);
+    auto res = impl.update_lcd(v, pos);
     if (!res.empty())
       configuration.midi_out(std::move(res));
   }
