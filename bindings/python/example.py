@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.13
+#!/usr/bin/env python
 import pylibremidi as lm
 observer_config = lm.ObserverConfiguration()
 observer = lm.Observer(observer_config, lm.midi2_default_api())
