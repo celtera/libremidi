@@ -190,6 +190,7 @@ NB_MODULE(pylibremidi, m) {
       .def("__repr__", [](stdx::error e) { return e.message().data(); });
   nb::enum_<libremidi::API>(m, "API")
       .value("UNSPECIFIED", libremidi::API::UNSPECIFIED)
+
       .value("COREMIDI", libremidi::API::COREMIDI)
       .value("ALSA_SEQ", libremidi::API::ALSA_SEQ)
       .value("ALSA_RAW", libremidi::API::ALSA_RAW)
@@ -199,11 +200,15 @@ NB_MODULE(pylibremidi, m) {
       .value("WEBMIDI", libremidi::API::WEBMIDI)
       .value("PIPEWIRE", libremidi::API::PIPEWIRE)
       .value("KEYBOARD", libremidi::API::KEYBOARD)
+      .value("NETWORK", libremidi::API::NETWORK)
+
       .value("ALSA_RAW_UMP", libremidi::API::ALSA_RAW_UMP)
       .value("ALSA_SEQ_UMP", libremidi::API::ALSA_SEQ_UMP)
       .value("COREMIDI_UMP", libremidi::API::COREMIDI_UMP)
       .value("WINDOWS_MIDI_SERVICES", libremidi::API::WINDOWS_MIDI_SERVICES)
       .value("KEYBOARD_UMP", libremidi::API::KEYBOARD_UMP)
+      .value("NETWORK_UMP", libremidi::API::NETWORK_UMP)
+
       .value("DUMMY", libremidi::API::DUMMY)
       .export_values();
 
