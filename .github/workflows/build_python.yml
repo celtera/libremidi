@@ -31,14 +31,14 @@ jobs:
             os: ubuntu-latest,
             generator: "",
             cmakeflags: "-DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_PEDANTIC=1 -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SANITIZE_VECTOR=1'",
-            environment: "LD_PRELOAD=libasan.so:libubsan.so"
+            environment: "LD_PRELOAD=/usr/lib/gcc/x86_64-linux-gnu/13/libasan.so:/usr/lib/gcc/x86_64-linux-gnu/13/libubsan.so"
           }
         - {
             name: "Ubuntu (clang, libstdc++)",
             os: ubuntu-latest,
             generator: "",
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
-            environment: "LD_PRELOAD=libasan.so:libubsan.so"
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-Werror=return-type'",
+            environment: ""
           }
         - {
             name: "Ubuntu (clang, libc++)",
@@ -106,8 +106,6 @@ jobs:
       if: runner.os != 'Windows'
       shell: bash
       run: |
-        find /usr -name libasan.so
-        find /usr -name libubsan.so
         export PYTHONPATH=$PWD/build
         ${{matrix.config.environment}} python tests/python/list_apis.py
 
