@@ -106,6 +106,8 @@ jobs:
       if: runner.os != 'Windows'
       shell: bash
       run: |
+        find /usr -name libasan.so
+        find /usr -name libubsan.so
         export PYTHONPATH=$PWD/build
         ${{matrix.config.environment}} python tests/python/list_apis.py
 
