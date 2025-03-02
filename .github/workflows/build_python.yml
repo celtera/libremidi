@@ -86,6 +86,7 @@ jobs:
         cmake -S ./bindings/python -B build \
           ${{ matrix.config.generator }} \
           ${{ matrix.config.cmakeflags }} \
+          -DCMAKE_BUILD_TYPE=Debug \
           -DLIBREMIDI_FIND_BOOST=1 \
           -DLIBREMIDI_HEADER_ONLY=${{ matrix.header_only }} \
           -DLIBREMIDI_CI=1 \
@@ -94,13 +95,14 @@ jobs:
     - name: Build
       run: |
         cmake --build build --config Debug
+        cmake --install build --config Debug
 
     - name: Test
       shell: bash
       run: |
         export PYTHONPATH=$PWD/install
         ${{matrix.environment}} python tests/python/list_apis.py
-        
+
 
 
 
