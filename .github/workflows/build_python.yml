@@ -38,7 +38,7 @@ jobs:
             os: ubuntu-latest,
             generator: "",
             cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
-            environment: ""
+            environment: "LD_PRELOAD=libasan.so:libubsan.so"
           }
         - {
             name: "Ubuntu (clang, libc++)",
@@ -96,12 +96,16 @@ jobs:
         cmake --build build --config Debug
 
     - name: Test
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        export PYTHONPATH=$PWD/build/Debug
+        ${{matrix.config.environment}} python tests/python/list_apis.py
+
+    - name: Test
+      if: runner.os != 'Windows'
       shell: bash
       run: |
         export PYTHONPATH=$PWD/build
-        ${{matrix.environment}} python tests/python/list_apis.py
-
-
-
-
+        ${{matrix.config.environment}} python tests/python/list_apis.py
 
