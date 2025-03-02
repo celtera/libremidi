@@ -49,10 +49,10 @@ using midi_out_msg = boost::variant2::variant<error_message, warning_message>;
 struct observer_poll_wrapper {
   moodycamel::ReaderWriterQueue<poll_queue::observer_msg> queue{};
   observer_configuration conf;
-  observer observer;
-  explicit observer_poll_wrapper(observer_configuration conf = {}) noexcept : conf{conf}, observer{this->process(std::move(conf))} {}
+  observer impl;
+  explicit observer_poll_wrapper(observer_configuration conf = {}) noexcept : conf{conf}, impl{this->process(std::move(conf))} {}
 
-  explicit observer_poll_wrapper(observer_configuration conf, libremidi::observer_api_configuration api_conf) : conf{conf}, observer{process(std::move(conf)), std::move(api_conf)} {}
+  explicit observer_poll_wrapper(observer_configuration conf, libremidi::observer_api_configuration api_conf) : conf{conf}, impl{process(std::move(conf)), std::move(api_conf)} {}
 
   observer_configuration process(observer_configuration &&obs) {
     if (obs.on_error)
@@ -91,12 +91,12 @@ struct midi_in_poll_wrapper {
 
   input_configuration orig_callbacks;
   ump_input_configuration ump_callbacks;
-  midi_in midi_in;
+  midi_in impl;
 
-  explicit midi_in_poll_wrapper(const input_configuration &conf) noexcept : orig_callbacks{conf}, midi_in{this->process(std::move(conf))} {}
-  explicit midi_in_poll_wrapper(input_configuration conf, input_api_configuration api_conf) : orig_callbacks{conf}, midi_in{this->process(std::move(conf)), std::move(api_conf)} {}
-  explicit midi_in_poll_wrapper(ump_input_configuration conf) noexcept : ump_callbacks{conf}, midi_in{this->process(std::move(conf))} {}
-  explicit midi_in_poll_wrapper(ump_input_configuration conf, input_api_configuration api_conf) : ump_callbacks{conf}, midi_in{this->process(std::move(conf)), std::move(api_conf)} {}
+  explicit midi_in_poll_wrapper(const input_configuration &conf) noexcept : orig_callbacks{conf}, impl{this->process(std::move(conf))} {}
+  explicit midi_in_poll_wrapper(input_configuration conf, input_api_configuration api_conf) : orig_callbacks{conf}, impl{this->process(std::move(conf)), std::move(api_conf)} {}
+  explicit midi_in_poll_wrapper(ump_input_configuration conf) noexcept : ump_callbacks{conf}, impl{this->process(std::move(conf))} {}
+  explicit midi_in_poll_wrapper(ump_input_configuration conf, input_api_configuration api_conf) : ump_callbacks{conf}, impl{this->process(std::move(conf)), std::move(api_conf)} {}
 
   input_configuration process(input_configuration obs) {
     orig_callbacks = obs;
@@ -155,11 +155,11 @@ struct midi_in_poll_wrapper {
 struct midi_out_poll_wrapper {
   moodycamel::ReaderWriterQueue<poll_queue::midi_out_msg> queue{};
   output_configuration orig_callbacks;
-  midi_out midi_out;
-  explicit midi_out_poll_wrapper() noexcept : midi_out{} {}
+  midi_out impl;
+  explicit midi_out_poll_wrapper() noexcept : impl{} {}
 
-  explicit midi_out_poll_wrapper(const output_configuration &conf) noexcept : orig_callbacks{conf}, midi_out{this->process(std::move(conf))} {}
-  explicit midi_out_poll_wrapper(output_configuration conf, output_api_configuration api_conf) : orig_callbacks{conf}, midi_out{this->process(std::move(conf)), std::move(api_conf)} {}
+  explicit midi_out_poll_wrapper(const output_configuration &conf) noexcept : orig_callbacks{conf}, impl{this->process(std::move(conf))} {}
+  explicit midi_out_poll_wrapper(output_configuration conf, output_api_configuration api_conf) : orig_callbacks{conf}, impl{this->process(std::move(conf)), std::move(api_conf)} {}
 
   output_configuration process(output_configuration obs) {
     orig_callbacks = obs;
@@ -389,9 +389,9 @@ NB_MODULE(pylibremidi, m) {
       .def(nb::init<>())
       .def(nb::init<libremidi::observer_configuration>())
       .def(nb::init<libremidi::observer_configuration, libremidi::API>())
-      .def("get_current_api", [](libremidi::observer_poll_wrapper &self) { return self.observer.get_current_api(); })
-      .def("get_input_ports", [](libremidi::observer_poll_wrapper &self) { return self.observer.get_input_ports(); })
-      .def("get_output_ports", [](libremidi::observer_poll_wrapper &self) { return self.observer.get_output_ports(); })
+      .def("get_current_api", [](libremidi::observer_poll_wrapper &self) { return self.impl.get_current_api(); })
+      .def("get_input_ports", [](libremidi::observer_poll_wrapper &self) { return self.impl.get_input_ports(); })
+      .def("get_output_ports", [](libremidi::observer_poll_wrapper &self) { return self.impl.get_output_ports(); })
       .def("poll", [](libremidi::observer_poll_wrapper &self) { return self.poll(); });
 
   nb::class_<libremidi::midi_in_poll_wrapper>(m, "MidiIn")
@@ -399,16 +399,16 @@ NB_MODULE(pylibremidi, m) {
       .def(nb::init<libremidi::input_configuration, libremidi::API>())
       .def(nb::init<libremidi::ump_input_configuration>())
       .def(nb::init<libremidi::ump_input_configuration, libremidi::API>())
-      .def("get_current_api", [](libremidi::midi_in_poll_wrapper &self) { return self.midi_in.get_current_api(); })
-      .def("open_port", [](libremidi::midi_in_poll_wrapper &self, const libremidi::input_port &p) { return self.midi_in.open_port(p); })
-      .def("open_port", [](libremidi::midi_in_poll_wrapper &self, const libremidi::input_port &p, std::string_view name) { return self.midi_in.open_port(p, name); })
-      .def("open_virtual_port", [](libremidi::midi_in_poll_wrapper &self) { return self.midi_in.open_virtual_port(); })
-      .def("open_virtual_port", [](libremidi::midi_in_poll_wrapper &self, std::string_view name) { return self.midi_in.open_virtual_port(name); })
-      .def("set_port_name", [](libremidi::midi_in_poll_wrapper &self, std::string_view name) { return self.midi_in.set_port_name(name); })
-      .def("close_port", [](libremidi::midi_in_poll_wrapper &self) { return self.midi_in.close_port(); })
-      .def("is_port_open", [](libremidi::midi_in_poll_wrapper &self) { return self.midi_in.is_port_open(); })
-      .def("is_port_connected", [](libremidi::midi_in_poll_wrapper &self) { return self.midi_in.is_port_connected(); })
-      .def("absolute_timestamp", [](libremidi::midi_in_poll_wrapper &self) { return self.midi_in.absolute_timestamp(); })
+      .def("get_current_api", [](libremidi::midi_in_poll_wrapper &self) { return self.impl.get_current_api(); })
+      .def("open_port", [](libremidi::midi_in_poll_wrapper &self, const libremidi::input_port &p) { return self.impl.open_port(p); })
+      .def("open_port", [](libremidi::midi_in_poll_wrapper &self, const libremidi::input_port &p, std::string_view name) { return self.impl.open_port(p, name); })
+      .def("open_virtual_port", [](libremidi::midi_in_poll_wrapper &self) { return self.impl.open_virtual_port(); })
+      .def("open_virtual_port", [](libremidi::midi_in_poll_wrapper &self, std::string_view name) { return self.impl.open_virtual_port(name); })
+      .def("set_port_name", [](libremidi::midi_in_poll_wrapper &self, std::string_view name) { return self.impl.set_port_name(name); })
+      .def("close_port", [](libremidi::midi_in_poll_wrapper &self) { return self.impl.close_port(); })
+      .def("is_port_open", [](libremidi::midi_in_poll_wrapper &self) { return self.impl.is_port_open(); })
+      .def("is_port_connected", [](libremidi::midi_in_poll_wrapper &self) { return self.impl.is_port_connected(); })
+      .def("absolute_timestamp", [](libremidi::midi_in_poll_wrapper &self) { return self.impl.absolute_timestamp(); })
       .def("poll", &libremidi::midi_in_poll_wrapper::poll);
 
   nb::class_<libremidi::midi_out>(m, "MidiOutBase");
@@ -416,36 +416,36 @@ NB_MODULE(pylibremidi, m) {
       .def(nb::init<>())
       .def(nb::init<libremidi::output_configuration>())
       .def(nb::init<libremidi::output_configuration, libremidi::API>())
-      .def("get_current_api", [](libremidi::midi_out_poll_wrapper &self) { return self.midi_out.get_current_api(); })
-      .def("open_port", [](libremidi::midi_out_poll_wrapper &self, const libremidi::output_port &p) { return self.midi_out.open_port(p); })
-      .def("open_port", [](libremidi::midi_out_poll_wrapper &self, const libremidi::output_port &p, std::string_view name) { return self.midi_out.open_port(p, name); })
-      .def("open_virtual_port", [](libremidi::midi_out_poll_wrapper &self) { return self.midi_out.open_virtual_port(); })
-      .def("open_virtual_port", [](libremidi::midi_out_poll_wrapper &self, std::string_view name) { return self.midi_out.open_virtual_port(name); })
-      .def("set_port_name", [](libremidi::midi_out_poll_wrapper &self, std::string_view name) { return self.midi_out.set_port_name(name); })
-      .def("close_port", [](libremidi::midi_out_poll_wrapper &self) { return self.midi_out.close_port(); })
-      .def("is_port_open", [](libremidi::midi_out_poll_wrapper &self) { return self.midi_out.is_port_open(); })
-      .def("is_port_connected", [](libremidi::midi_out_poll_wrapper &self) { return self.midi_out.is_port_connected(); })
-      .def("absolute_timestamp", [](libremidi::midi_out_poll_wrapper &self) { return self.midi_out.current_time(); })
+      .def("get_current_api", [](libremidi::midi_out_poll_wrapper &self) { return self.impl.get_current_api(); })
+      .def("open_port", [](libremidi::midi_out_poll_wrapper &self, const libremidi::output_port &p) { return self.impl.open_port(p); })
+      .def("open_port", [](libremidi::midi_out_poll_wrapper &self, const libremidi::output_port &p, std::string_view name) { return self.impl.open_port(p, name); })
+      .def("open_virtual_port", [](libremidi::midi_out_poll_wrapper &self) { return self.impl.open_virtual_port(); })
+      .def("open_virtual_port", [](libremidi::midi_out_poll_wrapper &self, std::string_view name) { return self.impl.open_virtual_port(name); })
+      .def("set_port_name", [](libremidi::midi_out_poll_wrapper &self, std::string_view name) { return self.impl.set_port_name(name); })
+      .def("close_port", [](libremidi::midi_out_poll_wrapper &self) { return self.impl.close_port(); })
+      .def("is_port_open", [](libremidi::midi_out_poll_wrapper &self) { return self.impl.is_port_open(); })
+      .def("is_port_connected", [](libremidi::midi_out_poll_wrapper &self) { return self.impl.is_port_connected(); })
+      .def("absolute_timestamp", [](libremidi::midi_out_poll_wrapper &self) { return self.impl.current_time(); })
 
       // clang-format off
-      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, const libremidi::message& m) { return self.midi_out.send_message(m); })
-      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, const unsigned char* m, size_t size) { return self.midi_out.send_message(m, size); })
-      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, std::span<const unsigned char> m)  { return self.midi_out.send_message(m); })
-      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, unsigned char b0)  { return self.midi_out.send_message(b0); })
-      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, unsigned char b0, unsigned char  b1)  { return self.midi_out.send_message(b0, b1); })
-      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, unsigned char b0, unsigned char  b1, unsigned char b2)  { return self.midi_out.send_message(b0, b1, b2); })
+      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, const libremidi::message& m) { return self.impl.send_message(m); })
+      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, const unsigned char* m, size_t size) { return self.impl.send_message(m, size); })
+      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, std::span<const unsigned char> m)  { return self.impl.send_message(m); })
+      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, unsigned char b0)  { return self.impl.send_message(b0); })
+      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, unsigned char b0, unsigned char  b1)  { return self.impl.send_message(b0, b1); })
+      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, unsigned char b0, unsigned char  b1, unsigned char b2)  { return self.impl.send_message(b0, b1, b2); })
 
-      .def("schedule_message", [](libremidi::midi_out_poll_wrapper &self, int64_t t, const unsigned char* m, size_t size) { return self.midi_out.schedule_message(t, m, size); })
+      .def("schedule_message", [](libremidi::midi_out_poll_wrapper &self, int64_t t, const unsigned char* m, size_t size) { return self.impl.schedule_message(t, m, size); })
 
-      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, const libremidi::ump& m) { return self.midi_out.send_ump(m); })
-      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, const uint32_t* ump, size_t size) { return self.midi_out.send_ump(ump, size); })
-      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, std::span<const uint32_t> m) { return self.midi_out.send_ump(m); })
-      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0) { return self.midi_out.send_ump(u0); })
-      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0, uint32_t u1) { return self.midi_out.send_ump(u0, u1); })
-      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0, uint32_t u1, uint32_t u2) { return self.midi_out.send_ump(u0, u1, u2); })
-      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0, uint32_t u1, uint32_t u2, uint32_t u3) { return self.midi_out.send_ump(u0, u1, u2, u3); })
+      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, const libremidi::ump& m) { return self.impl.send_ump(m); })
+      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, const uint32_t* ump, size_t size) { return self.impl.send_ump(ump, size); })
+      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, std::span<const uint32_t> m) { return self.impl.send_ump(m); })
+      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0) { return self.impl.send_ump(u0); })
+      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0, uint32_t u1) { return self.impl.send_ump(u0, u1); })
+      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0, uint32_t u1, uint32_t u2) { return self.impl.send_ump(u0, u1, u2); })
+      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0, uint32_t u1, uint32_t u2, uint32_t u3) { return self.impl.send_ump(u0, u1, u2, u3); })
 
-      .def("schedule_message", [](libremidi::midi_out_poll_wrapper &self, int64_t t, const uint32_t* m, size_t size) { return self.midi_out.schedule_ump(t, m, size); })
+      .def("schedule_message", [](libremidi::midi_out_poll_wrapper &self, int64_t t, const uint32_t* m, size_t size) { return self.impl.schedule_ump(t, m, size); })
       // clang-format on
 
       .def("poll", &libremidi::midi_out_poll_wrapper::poll);
