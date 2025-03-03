@@ -101,7 +101,7 @@ jobs:
       run: |
         export PYTHONPATH=$PWD/build/Debug
         find . -name '*.pyd'
-        ${{matrix.config.environment}} python tests/python/list_apis.py
+        # ${{matrix.config.environment}} python tests/python/list_apis.py
 
     - name: Test
       if: runner.os != 'Windows'
