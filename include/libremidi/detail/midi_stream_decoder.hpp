@@ -3,9 +3,10 @@
 #include <libremidi/cmidi2.hpp>
 #include <libremidi/detail/midi_in.hpp>
 
+#include <cmath>
+
 #include <chrono>
 #include <cstdint>
-#include <iostream>
 #include <span>
 
 static inline void cmidi2_reverse(int64_t v, cmidi2_ump* output)
