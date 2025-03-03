@@ -28,11 +28,11 @@ public:
   MidiEndpointDeviceWatcher::Removed_revoker m_delHandler;
   std::map<hstring, std::vector<input_port>> m_known_input_devices;
   std::map<hstring, std::vector<output_port>> m_known_output_devices;
+  std::mutex m_devices_mtx;
 
   explicit observer_impl(
       libremidi::observer_configuration&& conf, winmidi::observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-      , session{MidiSession::Create(to_hstring(configuration.client_name))}
   {
     if (!configuration.has_callbacks())
       return;
@@ -154,13 +154,19 @@ public:
           if (configuration.input_added)
           {
             auto ip = to_port_info<true>(ep, gp);
-            m_known_input_devices[ep.EndpointDeviceId()].push_back(ip);
+            {
+              std::lock_guard _{m_devices_mtx};
+              m_known_input_devices[ep.EndpointDeviceId()].push_back(ip);
+            }
             configuration.input_added(std::move(ip));
           }
           if (configuration.output_added)
           {
             auto op = to_port_info<false>(ep, gp);
-            m_known_output_devices[ep.EndpointDeviceId()].push_back(op);
+            {
+              std::lock_guard _{m_devices_mtx};
+              m_known_output_devices[ep.EndpointDeviceId()].push_back(op);
+            }
             configuration.output_added(std::move(op));
           }
           break;
@@ -169,7 +175,10 @@ public:
           if (configuration.input_added)
           {
             auto ip = to_port_info<true>(ep, gp);
-            m_known_input_devices[ep.EndpointDeviceId()].push_back(ip);
+            {
+              std::lock_guard _{m_devices_mtx};
+              m_known_input_devices[ep.EndpointDeviceId()].push_back(ip);
+            }
             configuration.input_added(std::move(ip));
           }
           break;
@@ -177,7 +186,10 @@ public:
           if (configuration.output_added)
           {
             auto op = to_port_info<false>(ep, gp);
-            m_known_output_devices[ep.EndpointDeviceId()].push_back(op);
+            {
+              std::lock_guard _{m_devices_mtx};
+              m_known_output_devices[ep.EndpointDeviceId()].push_back(op);
+            }
             configuration.output_added(std::move(op));
           }
           break;
@@ -196,30 +208,38 @@ public:
       const MidiEndpointDeviceWatcher& sender,
       const MidiEndpointDeviceInformationRemovedEventArgs& result)
   {
-    if (auto it = m_known_input_devices.find(result.EndpointDeviceId());
-        it != m_known_input_devices.end())
-    {
-      for (auto& ip : it->second)
-      {
-        if (configuration.input_removed)
-          configuration.input_removed(ip);
-      }
-      m_known_input_devices.erase(it);
-    }
-    if (auto it = m_known_output_devices.find(result.EndpointDeviceId());
-        it != m_known_output_devices.end())
-    {
-      for (auto& ip : it->second)
-      {
-        if (configuration.output_removed)
-          configuration.output_removed(ip);
-      }
-      m_known_output_devices.erase(it);
-    }
-  }
+    std::vector<input_port> to_remove_in;
+    std::vector<output_port> to_remove_out;
 
-private:
-  MidiSession session;
+    {
+      std::lock_guard _{m_devices_mtx};
+      if (auto it = m_known_input_devices.find(result.EndpointDeviceId());
+          it != m_known_input_devices.end())
+      {
+        for (auto& ip : it->second)
+        {
+          to_remove_in.push_back(ip);
+        }
+        m_known_input_devices.erase(it);
+      }
+      if (auto it = m_known_output_devices.find(result.EndpointDeviceId());
+          it != m_known_output_devices.end())
+      {
+        for (auto& op : it->second)
+        {
+          to_remove_out.push_back(op);
+        }
+        m_known_output_devices.erase(it);
+      }
+    }
+
+    if (configuration.input_removed)
+      for (auto& port : to_remove_in)
+        configuration.input_removed(port);
+    if (configuration.output_removed)
+      for (auto& port : to_remove_out)
+        configuration.output_removed(port);
+  }
 };
 
 }

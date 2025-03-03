@@ -18,7 +18,8 @@ try
   auto ports = obs.get_input_ports();
   for (const auto& port : ports)
   {
-    std::cerr << "Port: " << port.display_name << " : " << port.port_name << "\n";
+    std::cerr << "Port: " << port.display_name << " : " << port.port_name << "; "
+              << port.device_name << "\n";
   }
 
   {
@@ -30,9 +31,34 @@ try
     if (!ports.empty())
     {
       midiin.open_port(ports[0]);
-      std::this_thread::sleep_for(std::chrono::seconds(10));
+      std::this_thread::sleep_for(std::chrono::seconds(5));
     }
   }
+
+  // Bring your own shared MidiSession:
+  {
+    using namespace winrt::Microsoft::Windows::Devices::Midi2;
+    auto my_session = MidiSession::Create(L"my app");
+
+    std::vector<std::optional<libremidi::midi_in>> vec;
+    vec.reserve(ports.size());
+    static std::mutex mtx;
+
+    for (int i = 0; i < ports.size(); i++)
+    {
+      libremidi::ump_input_configuration in_config;
+      in_config.on_message = [i, ports](const libremidi::ump& m) {
+        std::lock_guard _{mtx};
+        std::cerr << ports[i].display_name << "(" << i << "): " << m << "\n";
+      };
+      api::midi_in_configuration in_api_config;
+      in_api_config.context = &my_session;
+      vec.emplace_back(std::in_place, in_config, in_api_config);
+      vec.back()->open_port(ports[i]);
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(25));
+  }
+
   return 0;
 }
 catch (const std::exception& error)

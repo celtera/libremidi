@@ -50,6 +50,7 @@ inline bool ichar_equals(char a, char b)
   return std::tolower(static_cast<unsigned char>(a)) ==
          std::tolower(static_cast<unsigned char>(b));
 }
+
 inline bool iequals(std::string_view lhs, std::string_view rhs)
 {
   return std::ranges::equal(lhs, rhs, ichar_equals);

@@ -22,7 +22,9 @@ public:
   explicit midi_in_impl(
       libremidi::ump_input_configuration&& conf, winmidi::input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-      , m_session{MidiSession::Create(to_hstring(configuration.client_name))}
+      , m_session{
+            configuration.context ? *configuration.context
+                                  : MidiSession::Create(to_hstring(configuration.client_name))}
   {
     this->client_open_ = stdx::error{};
   }
@@ -44,10 +46,13 @@ public:
     if (!ep || !gp)
       return std::errc::address_not_available;
 
+    m_group_filter = port.port - 1;
+
     m_endpoint = m_session.CreateEndpointConnection(ep.EndpointDeviceId());
 
     m_revoke_token = m_endpoint.MessageReceived(
-        [&](const foundation::IInspectable&,
+        [this](
+            const winrt::Microsoft::Windows::Devices::Midi2::IMidiMessageReceivedEventSource& src,
             const winrt::Microsoft::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& args) {
       process_message(args);
     });
@@ -66,8 +71,15 @@ public:
     };
 
     const auto& ump = msg.GetMessagePacket();
+    auto pk = msg.PeekFirstWord();
+    if (m_group_filter >= 0)
+    {
+      int group = cmidi2_ump_get_group(&pk);
+      if (group != m_group_filter)
+        return;
+    }
+
     const auto& b = ump.GetAllWords();
-    // FIXME right now we're getting umps from all the groups - likely we only want one per port
 
     uint32_t ump_space[64];
     array_view<uint32_t> ref{ump_space};
@@ -92,5 +104,6 @@ private:
   winrt::event_token m_revoke_token{};
   winrt::Microsoft::Windows::Devices::Midi2::MidiEndpointConnection m_endpoint{nullptr};
   midi2::input_state_machine m_processing{this->configuration};
+  int m_group_filter = -1;
 };
 }

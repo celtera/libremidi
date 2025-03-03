@@ -22,7 +22,9 @@ public:
 
   midi_out_impl(libremidi::output_configuration&& conf, winmidi::output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-      , m_session{MidiSession::Create(to_hstring(configuration.client_name))}
+      , m_session{
+            configuration.context ? *configuration.context
+                                  : MidiSession::Create(to_hstring(configuration.client_name))}
   {
     this->client_open_ = stdx::error{};
   }
