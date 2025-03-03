@@ -12,29 +12,32 @@ using port_handle = std::uint64_t;
 
 struct LIBREMIDI_EXPORT port_information
 {
-  // Handle to the client object:
-
+  /// Handle to the API client object if the API provides one
   // ALSA Raw: unused
   // ALSA Seq: snd_seq_t*
   // CoreMIDI: MidiClientRef
   // WebMIDI: unused
   // JACK: jack_client_t*
-  // PipeWire: unused
+  // PipeWire: unused // FIXME: pw_context? pw_main_loop?
   // WinMM: unused
   // WinUWP: unused
   client_handle client = static_cast<client_handle>(-1);
 
+  /// Handle to the port identifier if the API provides one
   // ALSA Raw: { uint16_t card, device, sub, padding; }
-  // ALSA Seq: { uint32_t client, uint32_t port; }
+  // ALSA Seq: { uint32_t client, port; }
   // CoreMIDI: MidiObjectRef's kMIDIPropertyUniqueID (uint32_t)
   // WebMIDI: unused
   // JACK: jack_port_id_t
   // PipeWire: port.id
+  // WinMIDI: { uint64_t terminal_block_number; } (MidiGroupTerminalBlock::Number())
   // WinMM: unset, identified by port_name
   // WinUWP: unused
   port_handle port = static_cast<port_handle>(-1);
 
   std::string manufacturer{};
+
+  // WinMIDI: EndpointDeviceId
   std::string device_name{};
   std::string port_name{};
   std::string display_name{};

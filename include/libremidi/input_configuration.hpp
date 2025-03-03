@@ -123,5 +123,10 @@ struct ump_input_configuration
   uint32_t ignore_sensing : 1 = true;
 
   uint32_t timestamps : 3 = timestamp_mode::Absolute;
+
+  //! Upscale MIDI 1 channel events to MIDI 2 channel events.
+  //! Note that this only has an effect on Windows with MIDI Services
+  //! as other platforms already do this by default.
+  uint32_t midi1_channel_events_to_midi2 : 1 = true;
 };
 }
