@@ -5,14 +5,12 @@
 #include <libremidi/detail/midi_in.hpp>
 #include <libremidi/detail/midi_stream_decoder.hpp>
 
-#include <iostream>
-
 namespace libremidi::winmidi
 {
-
 class midi_in_impl final
     : public midi2::in_api
     , public error_handler
+    , public winmidi_shared_data
 {
 public:
   struct
@@ -24,7 +22,7 @@ public:
   explicit midi_in_impl(
       libremidi::ump_input_configuration&& conf, winmidi::input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-      , m_session{MidiSession::CreateSession(L"libremidi session")}
+      , m_session{MidiSession::Create(to_hstring(configuration.client_name))}
   {
     this->client_open_ = stdx::error{};
   }
@@ -42,15 +40,15 @@ public:
 
   stdx::error open_port(const input_port& port, std::string_view) override
   {
-    auto ep = get_port_by_name(port.port_name);
-    if (!ep)
+    auto [ep, gp] = get_port(port.device_name, port.port);
+    if (!ep || !gp)
       return std::errc::address_not_available;
 
-    m_endpoint = m_session.CreateEndpointConnection(ep.Id());
+    m_endpoint = m_session.CreateEndpointConnection(ep.EndpointDeviceId());
 
     m_revoke_token = m_endpoint.MessageReceived(
-        [&](const foundation::IInspectable& sender,
-            const winrt::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& args) {
+        [&](const foundation::IInspectable&,
+            const winrt::Microsoft::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& args) {
       process_message(args);
     });
 
@@ -59,7 +57,7 @@ public:
     return stdx::error{};
   }
 
-  void process_message(const winrt::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& msg)
+  void process_message(const winrt::Microsoft::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& msg)
   {
     static constexpr timestamp_backend_info timestamp_info{
         .has_absolute_timestamps = true,
@@ -69,6 +67,7 @@ public:
 
     const auto& ump = msg.GetMessagePacket();
     const auto& b = ump.GetAllWords();
+    // FIXME right now we're getting umps from all the groups - likely we only want one per port
 
     uint32_t ump_space[64];
     array_view<uint32_t> ref{ump_space};
@@ -91,7 +90,7 @@ public:
 private:
   MidiSession m_session;
   winrt::event_token m_revoke_token{};
-  winrt::Windows::Devices::Midi2::MidiEndpointConnection m_endpoint{nullptr};
+  winrt::Microsoft::Windows::Devices::Midi2::MidiEndpointConnection m_endpoint{nullptr};
   midi2::input_state_machine m_processing{this->configuration};
 };
 }

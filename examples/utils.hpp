@@ -28,24 +28,61 @@ inline std::ostream& operator<<(std::ostream& s, const libremidi::ump& message)
 {
   const cmidi2_ump* b = message;
   int bytes = cmidi2_ump_get_num_bytes(message.data[0]);
+  int mode = cmidi2_ump_get_message_type(b);
   int group = cmidi2_ump_get_group(b);
   int status = cmidi2_ump_get_status_code(b);
   int channel = cmidi2_ump_get_channel(b);
-  s << "[ " << bytes << " | " << group;
+  auto mode_to_str = [mode]() {
+    switch (mode)
+    {
+      case CMIDI2_MESSAGE_TYPE_UTILITY:
+        return "0=utility";
+      case CMIDI2_MESSAGE_TYPE_SYSTEM:
+        return "1=system";
+      case CMIDI2_MESSAGE_TYPE_MIDI_1_CHANNEL:
+        return "2=m1channel";
+      case CMIDI2_MESSAGE_TYPE_SYSEX7:
+        return "3=sysex7";
+      case CMIDI2_MESSAGE_TYPE_MIDI_2_CHANNEL:
+        return "4=m2channel";
+      case CMIDI2_MESSAGE_TYPE_SYSEX8_MDS:
+        return "5=sysex8";
+      case CMIDI2_MESSAGE_TYPE_FLEX_DATA:
+        return "D=flexdata";
+      case CMIDI2_MESSAGE_TYPE_UMP_STREAM:
+        return "F=stream";
+      default:
+        return "unknown";
+    }
+  };
+  s << "[ b:" << bytes << " | m:" << mode_to_str() << " | g:" << group;
 
   switch ((libremidi::message_type)status)
   {
     case libremidi::message_type::NOTE_ON:
-      s << " | note on: " << channel << (int)cmidi2_ump_get_midi2_note_note(b) << " | "
+      s << " | note on: c" << channel << " n" << (int)cmidi2_ump_get_midi2_note_note(b) << " v"
         << cmidi2_ump_get_midi2_note_velocity(b);
       break;
     case libremidi::message_type::NOTE_OFF:
-      s << " | note off: " << channel << (int)cmidi2_ump_get_midi2_note_note(b) << " | "
+      s << " | note off: c" << channel << " n" << (int)cmidi2_ump_get_midi2_note_note(b) << " v"
         << cmidi2_ump_get_midi2_note_velocity(b);
       break;
     case libremidi::message_type::CONTROL_CHANGE:
-      s << " | cc: " << channel << (int)cmidi2_ump_get_midi2_cc_index(b) << " | "
+      s << " | cc: c" << channel << " i" << (int)cmidi2_ump_get_midi2_cc_index(b) << " v"
         << cmidi2_ump_get_midi2_cc_data(b);
+      break;
+    case libremidi::message_type::PITCH_BEND:
+      s << " | pb: c" << channel << " v" << (int)cmidi2_ump_get_midi2_pitch_bend_data(b);
+      break;
+    case libremidi::message_type::POLY_PRESSURE:
+      s << " | pp: c" << channel << " n" << (int)cmidi2_ump_get_midi2_paf_note(b) << " v"
+        << (int)cmidi2_ump_get_midi2_paf_data(b);
+      break;
+    case libremidi::message_type::AFTERTOUCH:
+      s << " | at: c" << channel << " v" << (int)cmidi2_ump_get_midi2_caf_data(b);
+      break;
+    case libremidi::message_type::PROGRAM_CHANGE:
+      s << " | pc: c" << channel << " v" << (int)cmidi2_ump_get_midi2_program_program(b);
       break;
 
     default:

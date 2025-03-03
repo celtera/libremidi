@@ -311,7 +311,7 @@ enum cmidi2_ump_chord_name_tonic_note
   CMIDI2_UMP_CHORD_NAME_G = 7,
 };
 
-enum cmidi2_ump_chor_name_chord_type
+enum cmidi2_ump_chord_name_chord_type
 {
   CMIDI2_UMP_CHORD_TYPE_UNKNOWN = 0,
   CMIDI2_UMP_CHORD_TYPE_MAJOR = 1,
@@ -1494,7 +1494,7 @@ static inline uint32_t cmidi2_ump_get_midi2_pnacc_data(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_32_to_64(ump);
 }
-static inline uint32_t cmidi2_ump_get_midi2_pn_management_note(const cmidi2_ump* ump)
+static inline uint8_t cmidi2_ump_get_midi2_pn_management_note(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }

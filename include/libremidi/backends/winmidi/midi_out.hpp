@@ -11,6 +11,7 @@ namespace libremidi::winmidi
 class midi_out_impl final
     : public midi2::out_api
     , public error_handler
+    , public winmidi_shared_data
 {
 public:
   struct
@@ -21,7 +22,7 @@ public:
 
   midi_out_impl(libremidi::output_configuration&& conf, winmidi::output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-      , m_session{MidiSession::CreateSession(L"libremidi session")}
+      , m_session{MidiSession::Create(to_hstring(configuration.client_name))}
   {
     this->client_open_ = stdx::error{};
   }
@@ -35,11 +36,11 @@ public:
 
   stdx::error open_port(const output_port& port, std::string_view) override
   {
-    auto ep = get_port_by_name(port.port_name);
-    if (!ep)
+    auto [ep, gp] = get_port(port.device_name, port.port);
+    if (!ep || !gp)
       return std::errc::address_not_available;
 
-    m_endpoint = m_session.CreateEndpointConnection(ep.Id());
+    m_endpoint = m_session.CreateEndpointConnection(ep.EndpointDeviceId());
     m_endpoint.Open();
 
     return stdx::error{};
@@ -83,7 +84,7 @@ public:
 
 private:
   MidiSession m_session;
-  winrt::Windows::Devices::Midi2::MidiEndpointConnection m_endpoint{nullptr};
+  winrt::Microsoft::Windows::Devices::Midi2::MidiEndpointConnection m_endpoint{nullptr};
 };
 
 }
