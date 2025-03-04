@@ -48,11 +48,12 @@ public:
 
     m_group_filter = port.port - 1;
 
+    // TODO use a MidiGroupEndpointListener for the filtering
     m_endpoint = m_session.CreateEndpointConnection(ep.EndpointDeviceId());
 
     m_revoke_token = m_endpoint.MessageReceived(
         [this](
-            const winrt::Microsoft::Windows::Devices::Midi2::IMidiMessageReceivedEventSource& src,
+            const winrt::Microsoft::Windows::Devices::Midi2::IMidiMessageReceivedEventSource&,
             const winrt::Microsoft::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& args) {
       process_message(args);
     });

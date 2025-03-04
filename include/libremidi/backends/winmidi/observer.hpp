@@ -141,8 +141,7 @@ public:
 
   // Note: these callbacks are called from some random thread!
   void on_device_added(
-      const MidiEndpointDeviceWatcher& sender,
-      const MidiEndpointDeviceInformationAddedEventArgs& result)
+      const MidiEndpointDeviceWatcher&, const MidiEndpointDeviceInformationAddedEventArgs& result)
   {
     const auto& ep = result.AddedDevice();
     for (const auto& gp : ep.GetGroupTerminalBlocks())
@@ -198,14 +197,13 @@ public:
   }
 
   void on_device_updated(
-      const MidiEndpointDeviceWatcher& sender,
-      const MidiEndpointDeviceInformationUpdatedEventArgs& result)
+      const MidiEndpointDeviceWatcher&, const MidiEndpointDeviceInformationUpdatedEventArgs&)
   {
     // FIXME
   }
 
   void on_device_removed(
-      const MidiEndpointDeviceWatcher& sender,
+      const MidiEndpointDeviceWatcher&,
       const MidiEndpointDeviceInformationRemovedEventArgs& result)
   {
     std::vector<input_port> to_remove_in;

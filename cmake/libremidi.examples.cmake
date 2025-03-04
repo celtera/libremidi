@@ -81,6 +81,7 @@ endif()
 
 if(LIBREMIDI_HAS_WINMIDI)
   add_backend_example(midi2_in_winmidi)
+  add_backend_example(midi2_out_winmidi)
 endif()
 
 if(LIBREMIDI_HAS_NETWORK)
