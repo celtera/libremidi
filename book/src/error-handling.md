@@ -1,7 +1,10 @@
 # Error handling
 
-The default error handling is done with exceptions.
-If exceptions are undesirable, it is also possible to set a callback function which will be invoked upon error, for the `midi_in` and `midi_out` classes.
+The default error handling in the real-time API is done with an error type inspired from the proposed [std::error](https://github.com/charles-salvia/std_error). It has the advantage of working correctly in a header-only library and easily allows to turn the error into an exception if needed, as well as getting back the original host API error code if any, for instance an ALSA or WinMM error code.
+
+## Error callbacks
+
+It is also possible to set a callback function which will be invoked upon error, for the `midi_in`, `observer` `midi_out` classes.
 
 (Some classes may still throw, such as when creating invalid MIDI messages with the `libremidi::message` helpers, or the `observer` classes).
 
@@ -21,4 +24,8 @@ libremidi::input_configuration conf{
 libremidi::midi_in midi{conf};
 ```
 
-Ditto for `midi_out` and `midi_observer`.
+Ditto for `midi_out` and `observer`.
+
+## Error handling in the MIDI file API
+
+In this case, due to the non-realtime nature of the code, and to make the implementation legible, error handling is done with exceptions.

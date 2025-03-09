@@ -3,8 +3,7 @@
 libremidi uses CMake as build system.
 The easiest way to compile the library is to take inspiration from the CI scripts as they will install the required dependencies.
 
-Some backends require an up-to-date C++20 compiler: JACK and PipeWire, as we leverage 
-the C++20 semaphore support.
+Some backends require an up-to-date C++20 compiler: JACK and PipeWire, as we leverage the C++20 semaphore support.
 
 Compiling the library and examples is as simple as:
 
@@ -17,14 +16,14 @@ $ cmake -Wno-dev \
 $ cmake --build build_folder
 ```
 
-libremidi is also available on `vcpkg` and `Nixpkgs`.
+libremidi is also available on [vcpkg](https://vcpkg.link/ports/libremidi) and [Nixpkgs](https://mynixos.com/nixpkgs/package/libremidi).
 
 ## On Linux & BSD
 
 Note that the ALSA and PipeWire back-end rely on timerfd and eventfd which 
 may not be available on very, very, very old Linux kernels (< 3.x) or some BSD kernels.
 
-Note that the ALSA Raw back-end also needs udev access to scan the USB peripherals.
+Note that the ALSA Raw back-end also needs udev access to support hotplug for USB peripherals.
 
 - Debian & Ubuntu packages for all the back-ends: 
 ```

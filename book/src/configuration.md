@@ -2,7 +2,6 @@
 
 The `midi_in`, `midi_out` and `midi_observer` objects are configured through a `input_configuration` (resp. `output_`, etc.) object passed in argument to the constructor.
 
-
 Example:
 
 ```cpp
@@ -18,6 +17,8 @@ libremidi::midi_in in{
     }
 };
 ```
+
+Note that by default, sysex are ignored and have to be enabled with `ignore_sysex = false` if desired.
 
 ## Custom back-end configuration
 
