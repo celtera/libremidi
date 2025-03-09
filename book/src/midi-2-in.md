@@ -1,8 +1,11 @@
 # Reading MIDI 2 messages from a device through callbacks
 
-Note that MIDI 2 support is still experimental and subject to change.
-Note also that the MIDI 1 and MIDI 2 send functions (not yet receive) are useable no matter 
+Note that the MIDI 1 and MIDI 2 send and receive functions are useable no matter 
 the kind of backend used (e.g. one can send UMPs to MIDI 1 backends and MIDI 1 messages to MIDI 2 backends). This conversion is done in a best-effort way.
+
+Note also that libremidi by default will upscale MIDI 1 to MIDI 2 channel events when coming from user-code: it is safe to assume than when using UMP input, only MIDI 2 channel events have to be processed, not MIDI 1 channel events encapsulated into UMPs.
+
+For Windows MIDI Services, a toggle allows to change this behaviour.
 
 ```cpp
 // Set the configuration of our MIDI port, same warnings apply than for MIDI 1.
@@ -11,9 +14,9 @@ the kind of backend used (e.g. one can send UMPs to MIDI 1 backends and MIDI 1 m
 // which is definitely small enough to be passed by value.
 // Note that libremidi::ump is entirely constexpr.
 auto my_callback = [](libremidi::ump message) {
-  // how many bytes
+  // how many 32-bit UMP base elements (e.g. at least 1 uint32_t)
   message.size();
-  // access to the individual bytes
+  // access to the individual UMP 
   message[i];
   // access to the timestamp
   message.timestamp;

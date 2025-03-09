@@ -46,6 +46,8 @@ Note that when targetting Windows Store, WinMM APIs are not available, only UWP 
 
 Both MSVC and MSYS2 are supported (on all MSYS2 toolchains).
 
+Note that for MIDI 2 support it is currently necessary for the end-user to install the [Windows MIDI Services](https://github.com/microsoft/MIDI/releases) on their computer. As of version 5, libremidi has been tested on Windows 10 and 11 with the DP9 NAMM Preview 4 release.
+
 ## On macOS & iOS
 Note that for MIDI 2 support, the application needs to target at least macOS 11.0.
 e.g. `-DCMAKE_OSX_DEPLOYMENT_TARGET=11` or more recent needs to be passed to CMake.

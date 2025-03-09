@@ -7,7 +7,7 @@ which can then be injected into your app's main loop.
 
 Thus, this enables complete control over threading (and can also remove the need for synchronisation as this allows to make a callback-based yet single-threaded app, for simple applications which do not wish to reimplement MIDI filtering & parsing for back-ends such as ALSA Sequencer or RawMidi).
 
-Since this feature is pretty complicated to implement, we recommend checking the examples: 
+Since this feature is pretty complicated to implement correctly, we recommend checking the examples: 
 
 See:
 - `poll_share.cpp` for a complete example for ALSA RawMidi (recommended).

@@ -7,7 +7,7 @@ libremidi integrates with the existing MIDI 2 ecosystem.
 We ship Atsushi Eno's [cmidi2](https://github.com/atsushieno/cmidi2) header-only MIDI 2 implementation as part of the library.
 This allows to quickly match incoming messages with MIDI 2 types. A lot of useful utility functions are provided.
   
-See the `midi2_echo.cpp` example: it uses the following printing function:
+See a basic `midi2_echo.cpp` example: it uses the following printing function:
 
 ```cpp
 std::ostream& operator<<(std::ostream& s, const libremidi::ump& message)

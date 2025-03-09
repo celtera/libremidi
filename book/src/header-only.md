@@ -9,8 +9,11 @@ The library can be used header-only, with minimal modifications to your build sy
   * Linux: `LIBREMIDI_ALSA=1` and link against `-lasound -phtread`.
   * Windows (WinMM): `LIBREMIDI_WINMM=1` and link against `winmm`.
   * Windows (UWP): `LIBREMIDI_WINUWP=1` ; note that there is complex linking logic detailed in the CMakeLists.txt when using UWP.
+  * Windows (MIDI services): `LIBREMIDI_WINMIDI=1`. Windows SDK headers and Windows MIDI headers are required.
   * emscripten: `LIBREMIDI_EMSCRIPTEN=1`.
   * Any platform with JACK: `LIBREMIDI_JACK=1`.
+  * Network API: `LIBREMIDI_NETWORK=1` and include boost.
+  * Keyboard API: `LIBREMIDI_KEYBOARD=1`.
 
 * Add the `include` folder to your include path.
 * `#include <libremidi/libremidi.hpp>` in your source code.
