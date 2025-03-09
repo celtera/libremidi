@@ -4,6 +4,7 @@
 #include <libremidi/detail/midi_in.hpp>
 #include <libremidi/detail/midi_stream_decoder.hpp>
 
+#include <thread>
 namespace libremidi
 {
 template <typename Impl, typename F>
@@ -219,8 +220,6 @@ public:
     return {};
   }
 
-  stdx::error set_port_name(std::string_view) override { return stdx::error{}; }
-
   timestamp absolute_timestamp() const noexcept override
   {
     return std::chrono::steady_clock::now().time_since_epoch().count();
@@ -393,8 +392,6 @@ public:
       m_socket.close();
     return {};
   }
-
-  stdx::error set_port_name(std::string_view) override { return stdx::error{}; }
 
   timestamp absolute_timestamp() const noexcept override
   {

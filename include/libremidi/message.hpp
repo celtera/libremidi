@@ -122,12 +122,8 @@ struct message
   auto rbegin() noexcept { return bytes.rbegin(); }
   auto rend() noexcept { return bytes.rend(); }
 
-  bool uses_channel(int channel) const
+  bool uses_channel(int channel) const LIBREMIDI_PRECONDITION(channel > 0 && channel <= 16)
   {
-#if defined(__cpp_exceptions)
-    if (channel <= 0 || channel > 16)
-      throw std::range_error("out of range");
-#endif
     return ((bytes[0] & 0xF) == channel - 1) && ((bytes[0] & 0xF0) != 0xF0);
   }
 

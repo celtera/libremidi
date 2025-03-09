@@ -62,3 +62,9 @@ using midi_bytes = std::vector<unsigned char>;
 #else
   #define LIBREMIDI_INLINE
 #endif
+
+#if __cpp_contracts >= 202502L
+  #define LIBREMIDI_PRECONDITION(...) pre(__VA_ARGS__)
+#else
+  #define LIBREMIDI_PRECONDITION(...)
+#endif
