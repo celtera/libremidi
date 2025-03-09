@@ -6,7 +6,8 @@
 #if LIBREMIDI_HAS_UDEV
   #include <libremidi/backends/linux/helpers.hpp>
   #include <libremidi/backends/linux/udev.hpp>
-  #include <libremidi/detail/observer.hpp>
+#endif
+#include <libremidi/detail/observer.hpp>
 
 namespace libremidi::alsa_raw
 {
@@ -31,24 +32,30 @@ public:
     if (!configuration.has_callbacks())
       return;
 
+#if LIBREMIDI_HAS_UDEV
     m_fds[0] = this->m_udev;
     m_fds[1] = m_termination_event;
     m_fds[2] = m_timer_fd;
+#endif
 
     // Set-up initial state
     if (configuration.notify_in_constructor)
       this->check_devices();
 
+#if LIBREMIDI_HAS_UDEV
     // Start thread
     m_thread = std::thread{[this] { this->run(); }};
+#endif
   }
 
   ~observer_impl_base()
   {
+#if LIBREMIDI_HAS_UDEV
     m_termination_event.notify();
 
     if (m_thread.joinable())
       m_thread.join();
+#endif
   }
 
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
@@ -78,6 +85,7 @@ public:
   }
 
 private:
+#if LIBREMIDI_HAS_UDEV
   void run()
   {
     for (;;)
@@ -131,6 +139,7 @@ private:
       }
     }
   }
+#endif
 
   template <bool Input>
   auto to_port_info(const alsa_raw::alsa_raw_port_info& p) const noexcept
@@ -202,33 +211,19 @@ private:
     m_current_outputs = std::move(new_devs.outputs);
   }
 
+#if LIBREMIDI_HAS_UDEV
   udev_helper m_udev{};
   eventfd_notifier m_termination_event{};
   timerfd_timer m_timer_fd{};
   int m_timer_check_counts = 0;
   std::thread m_thread;
+  pollfd m_fds[3]{};
+#endif
+
   std::vector<alsa_raw_port_info> m_current_inputs;
   std::vector<alsa_raw_port_info> m_current_outputs;
-
-  pollfd m_fds[3]{};
 };
 }
-#else
-  #include <libremidi/backends/dummy.hpp>
-namespace libremidi::alsa_raw
-{
-template <typename Enumerator>
-struct observer_impl_base : observer_dummy
-{
-  explicit observer_impl_base(
-      [[maybe_unused]] observer_configuration&& conf,
-      [[maybe_unused]] alsa_raw_observer_configuration&& apiconf)
-      : observer_dummy{dummy_configuration{}, dummy_configuration{}}
-  {
-  }
-};
-}
-#endif
 
 namespace libremidi::alsa_raw
 {
