@@ -155,8 +155,7 @@
                         <h1 id="compiling-the-library"><a class="header" href="#compiling-the-library">Compiling the library</a></h1>
 <p>libremidi uses CMake as build system.
 The easiest way to compile the library is to take inspiration from the CI scripts as they will install the required dependencies.</p>
-<p>Some backends require an up-to-date C++20 compiler: JACK and PipeWire, as we leverage
-the C++20 semaphore support.</p>
+<p>Some backends require an up-to-date C++20 compiler: JACK and PipeWire, as we leverage the C++20 semaphore support.</p>
 <p>Compiling the library and examples is as simple as:</p>
 <pre><code class="language-bash">$ cmake -Wno-dev \
   -S path/to/libremidi \
@@ -165,11 +164,11 @@ the C++20 semaphore support.</p>
 
 $ cmake --build build_folder
 </code></pre>
-<p>libremidi is also available on <code>vcpkg</code> and <code>Nixpkgs</code>.</p>
+<p>libremidi is also available on <a href="https://vcpkg.link/ports/libremidi">vcpkg</a> and <a href="https://mynixos.com/nixpkgs/package/libremidi">Nixpkgs</a>.</p>
 <h2 id="on-linux--bsd"><a class="header" href="#on-linux--bsd">On Linux &amp; BSD</a></h2>
 <p>Note that the ALSA and PipeWire back-end rely on timerfd and eventfd which
 may not be available on very, very, very old Linux kernels (&lt; 3.x) or some BSD kernels.</p>
-<p>Note that the ALSA Raw back-end also needs udev access to scan the USB peripherals.</p>
+<p>Note that the ALSA Raw back-end also needs udev access to support hotplug for USB peripherals.</p>
 <ul>
 <li>Debian &amp; Ubuntu packages for all the back-ends:</li>
 </ul>
@@ -189,6 +188,7 @@ systemd-libs
 <h2 id="on-windows"><a class="header" href="#on-windows">On Windows</a></h2>
 <p>Note that when targetting Windows Store, WinMM APIs are not available, only UWP ones.</p>
 <p>Both MSVC and MSYS2 are supported (on all MSYS2 toolchains).</p>
+<p>Note that for MIDI 2 support it is currently necessary for the end-user to install the <a href="https://github.com/microsoft/MIDI/releases">Windows MIDI Services</a> on their computer. As of version 5, libremidi has been tested on Windows 10 and 11 with the DP9 NAMM Preview 4 release.</p>
 <h2 id="on-macos--ios"><a class="header" href="#on-macos--ios">On macOS &amp; iOS</a></h2>
 <p>Note that for MIDI 2 support, the application needs to target at least macOS 11.0.
 e.g. <code>-DCMAKE_OSX_DEPLOYMENT_TARGET=11</code> or more recent needs to be passed to CMake.</p>

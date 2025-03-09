@@ -155,15 +155,15 @@
                     <main>
                         <h1 id="funky-midi-with-libremidi"><a class="header" href="#funky-midi-with-libremidi">Funky MIDI with <a href="https://github.com/celtera/libremidi">libremidi</a></a></h1>
 <p>libremidi is an all-in-one cross-platform C++20 MIDI library for both file and real-time output.
-Real-time I/O supports MIDI 2 on macOS (11+) and Linux (Kernel 6.5+), and soon on Windows (the OS does not support it yet).</p>
-<p>It is a fork / rewrite originally based on two libraries, but has since then almost been entirely rewritten:</p>
+Real-time I/O supports MIDI 2 on macOS (11+) and Linux (Kernel 6.5+), and on Windows (currently on Windows 11 Insiders builds or Windows 10 with an explicit install of the new <a href="https://github.com/microsoft/MIDI/releases">Windows MIDI Services</a>).</p>
+<p>It is a fork / rewrite originally based on two libraries, but has since then been almost entirely rewritten:</p>
 <ul>
 <li><a href="https://github.com/theSTK/RtMidi">RtMidi</a></li>
 <li><a href="https://github.com/ddiakopoulos/ModernMIDI">ModernMIDI</a></li>
 </ul>
 <p>Compared to its origins, it features a lot of changes and improvements:</p>
 <ul>
-<li><code>libremidi::observer</code> provides hotplug support.</li>
+<li><code>libremidi::observer</code> allows to enumerate MIDI devices and provides hotplug support on every back-end.</li>
 <li>Ports are identified not with a number but with a handle which enables more stability when unplugging / replugging.</li>
 <li>Memory allocations and virtual function calls are greatly reduced when compared to the RtMidi base-line.
 <ul>
@@ -171,7 +171,7 @@ Real-time I/O supports MIDI 2 on macOS (11+) and Linux (Kernel 6.5+), and soon o
 <li>Ability to use boost::small_vector to cover most cases.</li>
 </ul>
 </li>
-<li>Integer timestamps everywhere, by default in nanoseconds.</li>
+<li>Integer timestamps everywhere, by default in nanoseconds. This avoids precision issues for instance when doing precise computations over long-running art installations mixing short and long timescales: in double-precision, the assertion "number of nanoseconds in a year + 1 == number of nanoseconds in a year" holds.</li>
 <li>Ability to choose different timestamping methods (e.g. relative, absolute monotonic clock, sample-based or custom timestamping...).</li>
 <li>Integration of modern C++20 types (for instance std::span instead of std::vector, std::function for callbacks, etc.)</li>
 <li>Standard C++ threading primitives (std::thread, std::jthread) are now used, as well as modern Linux facilities for polling control (eventfd, timerfd).</li>
@@ -185,12 +185,12 @@ Real-time I/O supports MIDI 2 on macOS (11+) and Linux (Kernel 6.5+), and soon o
 <li>WebMIDI in Emscripten.</li>
 <li>JACK support on all platforms where it is available.</li>
 <li>Computer keyboard input.</li>
+<li>Network input and output.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="compiling-the-library"><a class="header" href="#compiling-the-library">Compiling the library</a></h1>
 <p>libremidi uses CMake as build system.
 The easiest way to compile the library is to take inspiration from the CI scripts as they will install the required dependencies.</p>
-<p>Some backends require an up-to-date C++20 compiler: JACK and PipeWire, as we leverage
-the C++20 semaphore support.</p>
+<p>Some backends require an up-to-date C++20 compiler: JACK and PipeWire, as we leverage the C++20 semaphore support.</p>
 <p>Compiling the library and examples is as simple as:</p>
 <pre><code class="language-bash">$ cmake -Wno-dev \
   -S path/to/libremidi \
@@ -199,11 +199,11 @@ the C++20 semaphore support.</p>
 
 $ cmake --build build_folder
 </code></pre>
-<p>libremidi is also available on <code>vcpkg</code> and <code>Nixpkgs</code>.</p>
+<p>libremidi is also available on <a href="https://vcpkg.link/ports/libremidi">vcpkg</a> and <a href="https://mynixos.com/nixpkgs/package/libremidi">Nixpkgs</a>.</p>
 <h2 id="on-linux--bsd"><a class="header" href="#on-linux--bsd">On Linux &amp; BSD</a></h2>
 <p>Note that the ALSA and PipeWire back-end rely on timerfd and eventfd which
 may not be available on very, very, very old Linux kernels (&lt; 3.x) or some BSD kernels.</p>
-<p>Note that the ALSA Raw back-end also needs udev access to scan the USB peripherals.</p>
+<p>Note that the ALSA Raw back-end also needs udev access to support hotplug for USB peripherals.</p>
 <ul>
 <li>Debian &amp; Ubuntu packages for all the back-ends:</li>
 </ul>
@@ -223,6 +223,7 @@ systemd-libs
 <h2 id="on-windows"><a class="header" href="#on-windows">On Windows</a></h2>
 <p>Note that when targetting Windows Store, WinMM APIs are not available, only UWP ones.</p>
 <p>Both MSVC and MSYS2 are supported (on all MSYS2 toolchains).</p>
+<p>Note that for MIDI 2 support it is currently necessary for the end-user to install the <a href="https://github.com/microsoft/MIDI/releases">Windows MIDI Services</a> on their computer. As of version 5, libremidi has been tested on Windows 10 and 11 with the DP9 NAMM Preview 4 release.</p>
 <h2 id="on-macos--ios"><a class="header" href="#on-macos--ios">On macOS &amp; iOS</a></h2>
 <p>Note that for MIDI 2 support, the application needs to target at least macOS 11.0.
 e.g. <code>-DCMAKE_OSX_DEPLOYMENT_TARGET=11</code> or more recent needs to be passed to CMake.</p>
@@ -243,8 +244,11 @@ e.g. <code>-DCMAKE_OSX_DEPLOYMENT_TARGET=11</code> or more recent needs to be pa
 <li>Linux: <code>LIBREMIDI_ALSA=1</code> and link against <code>-lasound -phtread</code>.</li>
 <li>Windows (WinMM): <code>LIBREMIDI_WINMM=1</code> and link against <code>winmm</code>.</li>
 <li>Windows (UWP): <code>LIBREMIDI_WINUWP=1</code> ; note that there is complex linking logic detailed in the CMakeLists.txt when using UWP.</li>
+<li>Windows (MIDI services): <code>LIBREMIDI_WINMIDI=1</code>. Windows SDK headers and Windows MIDI headers are required.</li>
 <li>emscripten: <code>LIBREMIDI_EMSCRIPTEN=1</code>.</li>
 <li>Any platform with JACK: <code>LIBREMIDI_JACK=1</code>.</li>
+<li>Network API: <code>LIBREMIDI_NETWORK=1</code> and include boost.</li>
+<li>Keyboard API: <code>LIBREMIDI_KEYBOARD=1</code>.</li>
 </ul>
 </li>
 <li>
@@ -405,18 +409,19 @@ midi.send_message(libremidi::channel_events::pitch_bend(channel, value));
 midi.send_message(libremidi::message{ /* a message */ });
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="reading-midi-2-messages-from-a-device-through-callbacks"><a class="header" href="#reading-midi-2-messages-from-a-device-through-callbacks">Reading MIDI 2 messages from a device through callbacks</a></h1>
-<p>Note that MIDI 2 support is still experimental and subject to change.
-Note also that the MIDI 1 and MIDI 2 send functions (not yet receive) are useable no matter
+<p>Note that the MIDI 1 and MIDI 2 send and receive functions are useable no matter
 the kind of backend used (e.g. one can send UMPs to MIDI 1 backends and MIDI 1 messages to MIDI 2 backends). This conversion is done in a best-effort way.</p>
+<p>Note also that libremidi by default will upscale MIDI 1 to MIDI 2 channel events when coming from user-code: it is safe to assume than when using UMP input, only MIDI 2 channel events have to be processed, not MIDI 1 channel events encapsulated into UMPs.</p>
+<p>For Windows MIDI Services, a toggle allows to change this behaviour.</p>
 <pre><code class="language-cpp">// Set the configuration of our MIDI port, same warnings apply than for MIDI 1.
 // Note that an UMP message is always at most 4 * 32 bits = 16 bytes.
 // Added to the 64-bit timestamp this is 24 bytes for a libremidi::ump 
 // which is definitely small enough to be passed by value.
 // Note that libremidi::ump is entirely constexpr.
 auto my_callback = [](libremidi::ump message) {
-  // how many bytes
+  // how many 32-bit UMP base elements (e.g. at least 1 uint32_t)
   message.size();
-  // access to the individual bytes
+  // access to the individual UMP 
   message[i];
   // access to the timestamp
   message.timestamp;
@@ -514,7 +519,7 @@ writer.write(output);
 <h2 id="cmidi2"><a class="header" href="#cmidi2">cmidi2</a></h2>
 <p>We ship Atsushi Eno's <a href="https://github.com/atsushieno/cmidi2">cmidi2</a> header-only MIDI 2 implementation as part of the library.
 This allows to quickly match incoming messages with MIDI 2 types. A lot of useful utility functions are provided.</p>
-<p>See the <code>midi2_echo.cpp</code> example: it uses the following printing function:</p>
+<p>See a basic <code>midi2_echo.cpp</code> example: it uses the following printing function:</p>
 <pre><code class="language-cpp">std::ostream&amp; operator&lt;&lt;(std::ostream&amp; s, const libremidi::ump&amp; message)
 {
   // Automatic conversion from libremidi::ump&amp; to cmidi2_ump*
@@ -590,8 +595,17 @@ libremidi::observer obs{std::move(conf)};
 </code></pre>
 <p>See <code>midiobserve.cpp</code> or <code>emscripten_midiin.cpp</code> for an example.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="error-handling"><a class="header" href="#error-handling">Error handling</a></h1>
-<p>The default error handling is done with exceptions.
-If exceptions are undesirable, it is also possible to set a callback function which will be invoked upon error, for the <code>midi_in</code> and <code>midi_out</code> classes.</p>
+<p>The default error handling in the real-time API is done with an error type inspired from the proposed <a href="https://github.com/charles-salvia/std_error">std::error</a>. It has the advantage of working correctly in a header-only library unlike standard <code>std::error_code</code> and easily allows turning the error into an exception if needed, as well as getting back the original host API error code if any, for instance an ALSA or WinMM error code.</p>
+<p>Example:</p>
+<pre><code class="language-cpp">if (auto err = midiin.open_port(pi[0]); err != stdx::error{}) {
+  std::print("{}", err.message());
+  if(err == std::errc::bad_argument)
+    err.throw_exception();
+  // etc.
+}
+</code></pre>
+<p>## Error callbacks</p>
+<p>It is also possible to set a callback function which will be invoked upon error, for the <code>midi_in</code>, <code>observer</code> <code>midi_out</code> classes.</p>
 <p>(Some classes may still throw, such as when creating invalid MIDI messages with the <code>libremidi::message</code> helpers, or the <code>observer</code> classes).</p>
 <pre><code class="language-cpp">// Create the configuration
 libremidi::input_configuration conf{
@@ -607,7 +621,9 @@ libremidi::input_configuration conf{
 // Create the midi object
 libremidi::midi_in midi{conf};
 </code></pre>
-<p>Ditto for <code>midi_out</code> and <code>midi_observer</code>.</p>
+<p>Ditto for <code>midi_out</code> and <code>observer</code>.</p>
+<p>## Error handling in the MIDI file API</p>
+<p>In this case, due to the non-realtime nature of the code, and to make the implementation legible, error handling is done with exceptions.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="advanced-configuration"><a class="header" href="#advanced-configuration">Advanced configuration</a></h1>
 <p>The <code>midi_in</code>, <code>midi_out</code> and <code>midi_observer</code> objects are configured through a <code>input_configuration</code> (resp. <code>output_</code>, etc.) object passed in argument to the constructor.</p>
 <p>Example:</p>
@@ -623,6 +639,7 @@ libremidi::midi_in in{
     }
 };
 </code></pre>
+<p>Note that by default, sysex are ignored and have to be enabled with <code>ignore_sysex = false</code> if desired.</p>
 <h2 id="custom-back-end-configuration"><a class="header" href="#custom-back-end-configuration">Custom back-end configuration</a></h2>
 <p>Additionnally, each back-end supports back-end specific configuration options, to enable users to tap into advanced features of a given API while retaining the general C++ abstraction.</p>
 <p>For instance, this enables to set output buffer sizes, chunking parameters, etc. for back-ends which support the feature.</p>
@@ -684,7 +701,7 @@ libremidi::midi_out out{
 <p>If your app is based on an event loop that can poll file descriptors, such as <code>poll()</code>, the relevant back-ends will allow to instead control polling manually by providing you with the file descriptors,
 which can then be injected into your app's main loop.</p>
 <p>Thus, this enables complete control over threading (and can also remove the need for synchronisation as this allows to make a callback-based yet single-threaded app, for simple applications which do not wish to reimplement MIDI filtering &amp; parsing for back-ends such as ALSA Sequencer or RawMidi).</p>
-<p>Since this feature is pretty complicated to implement, we recommend checking the examples:</p>
+<p>Since this feature is pretty complicated to implement correctly, we recommend checking the examples:</p>
 <p>See:</p>
 <ul>
 <li><code>poll_share.cpp</code> for a complete example for ALSA RawMidi (recommended).</li>

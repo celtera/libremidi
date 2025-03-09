@@ -157,7 +157,7 @@
 <h2 id="cmidi2"><a class="header" href="#cmidi2">cmidi2</a></h2>
 <p>We ship Atsushi Eno's <a href="https://github.com/atsushieno/cmidi2">cmidi2</a> header-only MIDI 2 implementation as part of the library.
 This allows to quickly match incoming messages with MIDI 2 types. A lot of useful utility functions are provided.</p>
-<p>See the <code>midi2_echo.cpp</code> example: it uses the following printing function:</p>
+<p>See a basic <code>midi2_echo.cpp</code> example: it uses the following printing function:</p>
 <pre><code class="language-cpp">std::ostream&amp; operator&lt;&lt;(std::ostream&amp; s, const libremidi::ump&amp; message)
 {
   // Automatic conversion from libremidi::ump&amp; to cmidi2_ump*

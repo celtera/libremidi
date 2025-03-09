@@ -157,7 +157,7 @@
 <p>If your app is based on an event loop that can poll file descriptors, such as <code>poll()</code>, the relevant back-ends will allow to instead control polling manually by providing you with the file descriptors,
 which can then be injected into your app's main loop.</p>
 <p>Thus, this enables complete control over threading (and can also remove the need for synchronisation as this allows to make a callback-based yet single-threaded app, for simple applications which do not wish to reimplement MIDI filtering &amp; parsing for back-ends such as ALSA Sequencer or RawMidi).</p>
-<p>Since this feature is pretty complicated to implement, we recommend checking the examples:</p>
+<p>Since this feature is pretty complicated to implement correctly, we recommend checking the examples:</p>
 <p>See:</p>
 <ul>
 <li><code>poll_share.cpp</code> for a complete example for ALSA RawMidi (recommended).</li>

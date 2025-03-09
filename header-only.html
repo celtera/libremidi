@@ -165,8 +165,11 @@
 <li>Linux: <code>LIBREMIDI_ALSA=1</code> and link against <code>-lasound -phtread</code>.</li>
 <li>Windows (WinMM): <code>LIBREMIDI_WINMM=1</code> and link against <code>winmm</code>.</li>
 <li>Windows (UWP): <code>LIBREMIDI_WINUWP=1</code> ; note that there is complex linking logic detailed in the CMakeLists.txt when using UWP.</li>
+<li>Windows (MIDI services): <code>LIBREMIDI_WINMIDI=1</code>. Windows SDK headers and Windows MIDI headers are required.</li>
 <li>emscripten: <code>LIBREMIDI_EMSCRIPTEN=1</code>.</li>
 <li>Any platform with JACK: <code>LIBREMIDI_JACK=1</code>.</li>
+<li>Network API: <code>LIBREMIDI_NETWORK=1</code> and include boost.</li>
+<li>Keyboard API: <code>LIBREMIDI_KEYBOARD=1</code>.</li>
 </ul>
 </li>
 <li>

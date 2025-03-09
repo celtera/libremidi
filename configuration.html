@@ -167,6 +167,7 @@ libremidi::midi_in in{
     }
 };
 </code></pre>
+<p>Note that by default, sysex are ignored and have to be enabled with <code>ignore_sysex = false</code> if desired.</p>
 <h2 id="custom-back-end-configuration"><a class="header" href="#custom-back-end-configuration">Custom back-end configuration</a></h2>
 <p>Additionnally, each back-end supports back-end specific configuration options, to enable users to tap into advanced features of a given API while retaining the general C++ abstraction.</p>
 <p>For instance, this enables to set output buffer sizes, chunking parameters, etc. for back-ends which support the feature.</p>
