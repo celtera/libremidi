@@ -1,7 +1,8 @@
 #pragma once
 #include <libremidi/backends/winmm/error_domain.hpp>
 #include <libremidi/detail/midi_api.hpp>
-#include <algorithm>
+
+#include <string>
 
 namespace libremidi
 {
@@ -70,5 +71,4 @@ inline void MakeUniqueOutPortName(std::string& deviceName, std::size_t portNumbe
   deviceName += " ";
   deviceName += std::to_string(x);
 }
-
 }

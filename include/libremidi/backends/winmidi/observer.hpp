@@ -84,6 +84,23 @@ public:
     return libremidi::API::WINDOWS_MIDI_SERVICES;
   }
 
+  static port_information::port_type code_to_type(std::string_view str) noexcept
+  {
+    using enum port_information::port_type;
+
+    if (str.starts_with("KS"))
+      return hardware;
+    if (str == "BLE")
+      return port_information::port_type(hardware | bluetooth);
+    if (str == "VPB" || str == "APP")
+      return software;
+    if (str == "LOOP")
+      return port_information::port_type(software | loopback);
+    if (str.starts_with("NET"))
+      return network;
+    return unknown;
+  }
+
   template <bool Input>
   auto to_port_info(const MidiEndpointDeviceInformation& p, const MidiGroupTerminalBlock& gp)
       const noexcept -> std::conditional_t<Input, input_port, output_port>
@@ -92,11 +109,14 @@ public:
 
     return {
         {.client = 0,
+         .container = std::bit_cast<libremidi::uuid>(p.ContainerId()),
+         .device = to_string(p.EndpointDeviceId()),
          .port = gp.Number(),
          .manufacturer = to_string(tinfo.ManufacturerName),
-         .device_name = to_string(p.EndpointDeviceId()),
+         .device_name = to_string(p.Name()),
          .port_name = to_string(gp.Name()),
-         .display_name = to_string(gp.Name()) + " " + std::to_string(gp.Number())}};
+         .display_name = to_string(gp.Name()) + " " + std::to_string(gp.Number()),
+         .type = code_to_type(to_string(p.GetTransportSuppliedInfo().TransportCode))}};
   }
 
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
@@ -143,7 +163,29 @@ public:
   void on_device_added(
       const MidiEndpointDeviceWatcher&, const MidiEndpointDeviceInformationAddedEventArgs& result)
   {
-    const auto& ep = result.AddedDevice();
+    add_device(result.AddedDevice());
+  }
+
+  void on_device_updated(
+      const MidiEndpointDeviceWatcher& e,
+      const MidiEndpointDeviceInformationUpdatedEventArgs& result)
+  {
+    // OPTIMIZEME
+    remove_device(result.EndpointDeviceId());
+
+    add_device(
+        MidiEndpointDeviceInformation::CreateFromEndpointDeviceId(result.EndpointDeviceId()));
+  }
+
+  void on_device_removed(
+      const MidiEndpointDeviceWatcher&,
+      const MidiEndpointDeviceInformationRemovedEventArgs& result)
+  {
+    remove_device(result.EndpointDeviceId());
+  }
+
+  void add_device(const MidiEndpointDeviceInformation& ep)
+  {
     for (const auto& gp : ep.GetGroupTerminalBlocks())
     {
       MidiGroupTerminalBlockDirection direction = gp.Direction();
@@ -195,24 +237,14 @@ public:
       }
     }
   }
-
-  void on_device_updated(
-      const MidiEndpointDeviceWatcher&, const MidiEndpointDeviceInformationUpdatedEventArgs&)
-  {
-    // FIXME
-  }
-
-  void on_device_removed(
-      const MidiEndpointDeviceWatcher&,
-      const MidiEndpointDeviceInformationRemovedEventArgs& result)
+  void remove_device(hstring eid)
   {
     std::vector<input_port> to_remove_in;
     std::vector<output_port> to_remove_out;
 
     {
       std::lock_guard _{m_devices_mtx};
-      if (auto it = m_known_input_devices.find(result.EndpointDeviceId());
-          it != m_known_input_devices.end())
+      if (auto it = m_known_input_devices.find(eid); it != m_known_input_devices.end())
       {
         for (auto& ip : it->second)
         {
@@ -220,8 +252,7 @@ public:
         }
         m_known_input_devices.erase(it);
       }
-      if (auto it = m_known_output_devices.find(result.EndpointDeviceId());
-          it != m_known_output_devices.end())
+      if (auto it = m_known_output_devices.find(eid); it != m_known_output_devices.end())
       {
         for (auto& op : it->second)
         {
