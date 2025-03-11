@@ -34,14 +34,14 @@ struct alsa_raw_port_id
 };
 inline constexpr port_handle raw_to_port_handle(alsa_raw_port_id id) noexcept
 {
-  return (uint64_t(id.card) << 32) + (uint64_t(id.dev) << 16) + id.port;
+  return (uint64_t(id.port) << 32) + (uint64_t(id.dev) << 16) + id.card;
 }
 inline constexpr alsa_raw_port_id raw_from_port_handle(port_handle p) noexcept
 {
   alsa_raw_port_id ret;
-  ret.card = (p & 0x00'00'FF'FF'00'00'00'00) >> 32;
+  ret.port = (p & 0x00'00'FF'FF'00'00'00'00) >> 32;
   ret.dev = (p & 0x00'00'00'00'FF'FF'00'00) >> 16;
-  ret.port = (p & 0x00'00'00'00'00'00'FF'FF);
+  ret.card = (p & 0x00'00'00'00'00'00'FF'FF);
   return ret;
 }
 static_assert(raw_from_port_handle(raw_to_port_handle({102, 7, 3})).card == 102);

@@ -46,13 +46,13 @@ namespace
 {
 inline constexpr port_handle seq_to_port_handle(uint64_t client, uint64_t port) noexcept
 {
-  return (client << 32) + port;
+  return (port << 32) + client;
 }
 
 inline constexpr std::pair<int, int> seq_from_port_handle(port_handle p) noexcept
 {
-  int client = p >> 32;
-  int port = p & 0xFFFFFFFF;
+  int port = p >> 32;
+  int client = p & 0xFFFFFFFF;
   return {client, port};
 }
 
