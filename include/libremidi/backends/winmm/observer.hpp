@@ -3,9 +3,6 @@
 #include <libremidi/backends/winmm/helpers.hpp>
 #include <libremidi/detail/observer.hpp>
 
-#include <condition_variable>
-#include <mutex>
-#include <ranges>
 #include <thread>
 
 namespace libremidi
