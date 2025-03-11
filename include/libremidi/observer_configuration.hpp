@@ -2,6 +2,7 @@
 #include <libremidi/config.hpp>
 #include <libremidi/error.hpp>
 
+#include <array>
 #include <compare>
 #include <string>
 
@@ -12,7 +13,7 @@ using port_handle = std::uint64_t;
 
 struct uuid
 {
-  uint8_t bytes[16];
+  std::array<uint8_t, 16> bytes;
 
   bool operator==(const uuid& other) const noexcept = default;
   std::strong_ordering operator<=>(const uuid& other) const noexcept = default;
