@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 project(pylibremidi)
 
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL 1)
+
 set(LIBREMIDI_FIND_BOOST 1)
 set(LIBREMIDI_HEADER_ONLY 1)
 set(LIBREMIDI_NEEDS_READERWRITERQUEUE 1)
-set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL 1)
+
 add_subdirectory(../.. libremidi-src)
+
 find_package(Python 3.8 COMPONENTS Interpreter Development.Module REQUIRED)
 
 FetchContent_Declare(
