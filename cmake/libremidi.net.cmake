@@ -49,3 +49,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     )
   endif()
 endif()
+
+if(WIN32)
+  target_link_libraries(libremidi ${_public} Ws2_32)
+endif()
