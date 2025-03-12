@@ -8,23 +8,60 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/winmidi-headers.zip")
     "${CMAKE_BINARY_DIR}/winmidi-headers.zip"
   )
 endif()
+
 file(ARCHIVE_EXTRACT
   INPUT "${CMAKE_BINARY_DIR}/winmidi-headers.zip"
   DESTINATION "${CMAKE_BINARY_DIR}/winmidi-headers/"
 )
+
 file(MAKE_DIRECTORY
-    "${CMAKE_BINARY_DIR}/cppwinrt/"
+  "${CMAKE_BINARY_DIR}/cppwinrt/"
 )
-file(
+
+file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/cppwinrt-winmidi/")
+if(CPPWINRT_TOOL)
+  # Enumerate winmd IDL files and store them in a response file
+  file(TO_CMAKE_PATH "${CMAKE_WINDOWS_KITS_10_DIR}/References/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}" winsdk)
+  file(GLOB winmds "${winsdk}/*/*/*.winmd")
+
+  set(args "")
+  string(APPEND args "-input \"${CMAKE_BINARY_DIR}/winmidi-headers/ref/native/Microsoft.Windows.Devices.Midi2.winmd\"\n")
+
+  foreach(winmd IN LISTS winmds)
+    string(APPEND args "-ref \"${winmd}\"\n")
+  endforeach()
+
+  # Recreate the sources
+  file(WRITE "${CMAKE_BINARY_DIR}/cppwinrt-src/cppwinrt-winmidi.rsp" "${args}")
+
+  execute_process(
+    COMMAND "${CPPWINRT_TOOL}"
+      "@${CMAKE_BINARY_DIR}/cppwinrt-src/cppwinrt-winmidi.rsp"
+      -output "${CMAKE_BINARY_DIR}/cppwinrt-winmidi"
+      -verbose
+  )
+
+  file(
+    COPY
+      "${CMAKE_BINARY_DIR}/winmidi-headers/build/native/include/winmidi/init"
+    DESTINATION
+      "${CMAKE_BINARY_DIR}/cppwinrt-winmidi/"
+  )
+else()
+  # In case we don't have cppwinrt we can still try to just use the SDK headers directly
+  file(
     COPY
       "${CMAKE_BINARY_DIR}/winmidi-headers/build/native/include/winmidi"
     DESTINATION
-      "${CMAKE_BINARY_DIR}/cppwinrt/"
-)
+      "${CMAKE_BINARY_DIR}/cppwinrt-winmidi/"
+  )
+endif()
 
+message(STATUS "libremidi: using Windows MIDI Services")
 target_include_directories(libremidi SYSTEM ${_public}
   $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/cppwinrt>
-  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/cppwinrt/winmidi>
+  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/cppwinrt-winmidi>
+  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/cppwinrt-winmidi/winmidi>
 )
 target_compile_definitions(libremidi ${_public} LIBREMIDI_WINMIDI)
 set(LIBREMIDI_HAS_WINMIDI 1)
