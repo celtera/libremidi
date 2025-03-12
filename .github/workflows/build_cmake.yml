@@ -193,7 +193,7 @@ jobs:
       matrix:
         boost: [0, 1]
         header_only: [0, 1]
-        distro: [bullseye, bookworm, trixie]
+        distro: [bookworm, trixie]
 
     steps:
     - name: Add backports repo if necessary
