@@ -183,6 +183,10 @@ struct midi_out_poll_wrapper {
 } // namespace libremidi
 
 NB_MODULE(pylibremidi, m) {
+#if defined(LIBREMIDI_WINMIDI) || defined(LIBREMIDI_WINUWP)
+  winrt::init_apartment();
+#endif
+
   namespace nb = nanobind;
   nb::class_<stdx::error>(m, "Error")
       .def("__bool__", [](stdx::error e) { return e != stdx::error{}; })
