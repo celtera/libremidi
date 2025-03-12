@@ -33,8 +33,12 @@ If you use this work as part of academic research, please kindly cite the [paper
 ### Since v5
 * Use stdx::error for error reporting until C++26 and std::error are widely available :-)
 * Hunt exceptions down
-* Basic I/O & observer with the Windows MIDI Services.
-  * Using Developer Preview 5, currently the most recent: https://github.com/microsoft/MIDI/releases/tag/dev-preview-5
+* MIDI 2 support on Windows with the Windows MIDI Services.
+  * Using Developer Preview 9: https://github.com/microsoft/MIDI/releases/
+  * Works on both MSVC and MinGW / MSYS2.
+* WinUWP support on MinGW / MSYS2.
+* Getters for USB location, etc. in `libremidi::port_information`.
+* Reverse-engineered implementation of [Mackie Control Universal & Logic Control protocols](https://github.com/celtera/libremidi/blob/master/include/libremidi/protocols/remote_control.hpp). Tested with [TouchMCU](https://github.com/NicoG60/TouchMCU) and a BCF2000.
 * C API for bindings to other languages ([libremidi-c.h](https://github.com/celtera/libremidi/blob/master/include/libremidi/libremidi-c.h)).
 * [Python binding](https://github.com/celtera/libremidi/tree/master/bindings/python).
 * [Haskell binding](https://github.com/ejconlon/libremidi-haskell) courtesy of @ejconlon λ!
