@@ -5,6 +5,7 @@
 #include <array>
 #include <compare>
 #include <string>
+#include <variant>
 
 namespace libremidi
 {
