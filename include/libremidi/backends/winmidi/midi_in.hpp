@@ -42,7 +42,11 @@ public:
 
   stdx::error open_port(const input_port& port, std::string_view) override
   {
-    auto [ep, gp] = get_port(port.device_name, port.port);
+    auto device_id = std::get_if<std::string>(&port.device);
+    if (!device_id)
+      return std::errc::invalid_argument;
+
+    auto [ep, gp] = get_port(*device_id, port.port);
     if (!ep || !gp)
       return std::errc::address_not_available;
 
