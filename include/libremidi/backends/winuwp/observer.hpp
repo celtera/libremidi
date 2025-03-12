@@ -197,13 +197,13 @@ public:
           configuration.output_added(p);
     }
 
-    evTokenOnInputAdded_
-        = internalInPortObserver_.PortAdded([this](const port_info& p) { on_input_added(p); });
-    evTokenOnInputRemoved_
-        = internalInPortObserver_.PortRemoved([this](const port_info& p) { on_input_removed(p); });
-    evTokenOnOutputAdded_
-        = internalOutPortObserver_.PortAdded([this](const port_info& p) { on_output_added(p); });
-    evTokenOnOutputRemoved_ = internalOutPortObserver_.PortRemoved(
+    evTokenOnInputAdded_ = get_internal_in_port_observer().PortAdded(
+        [this](const port_info& p) { on_input_added(p); });
+    evTokenOnInputRemoved_ = get_internal_in_port_observer().PortRemoved(
+        [this](const port_info& p) { on_input_removed(p); });
+    evTokenOnOutputAdded_ = get_internal_out_port_observer().PortAdded(
+        [this](const port_info& p) { on_output_added(p); });
+    evTokenOnOutputRemoved_ = get_internal_out_port_observer().PortRemoved(
         [this](const port_info& p) { on_output_removed(p); });
   }
 
@@ -211,10 +211,10 @@ public:
   {
     if (!configuration.has_callbacks())
       return;
-    internalInPortObserver_.PortAdded(evTokenOnInputAdded_);
-    internalInPortObserver_.PortRemoved(evTokenOnInputRemoved_);
-    internalOutPortObserver_.PortAdded(evTokenOnOutputAdded_);
-    internalOutPortObserver_.PortRemoved(evTokenOnOutputRemoved_);
+    get_internal_in_port_observer().PortAdded(evTokenOnInputAdded_);
+    get_internal_in_port_observer().PortRemoved(evTokenOnInputRemoved_);
+    get_internal_out_port_observer().PortAdded(evTokenOnOutputAdded_);
+    get_internal_out_port_observer().PortRemoved(evTokenOnOutputRemoved_);
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_UWP; }
@@ -235,7 +235,7 @@ public:
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
     std::vector<libremidi::input_port> ret;
-    for (auto& port : internalInPortObserver_.get_ports())
+    for (auto& port : get_internal_in_port_observer().get_ports())
       ret.push_back(to_port_info<true>(port));
     return ret;
   }
@@ -243,18 +243,20 @@ public:
   std::vector<libremidi::output_port> get_output_ports() const noexcept override
   {
     std::vector<libremidi::output_port> ret;
-    for (auto& port : internalOutPortObserver_.get_ports())
+    for (auto& port : get_internal_out_port_observer().get_ports())
       ret.push_back(to_port_info<false>(port));
     return ret;
   }
 
   static observer_winuwp_internal& get_internal_in_port_observer()
   {
+    static observer_winuwp_internal internalInPortObserver_{MidiInPort::GetDeviceSelector()};
     return internalInPortObserver_;
   }
 
   static observer_winuwp_internal& get_internal_out_port_observer()
   {
+    static observer_winuwp_internal internalOutPortObserver_{MidiOutPort::GetDeviceSelector()};
     return internalOutPortObserver_;
   }
 
@@ -283,10 +285,6 @@ public:
   }
 
 private:
-  static inline observer_winuwp_internal internalInPortObserver_{MidiInPort::GetDeviceSelector()};
-  static inline observer_winuwp_internal internalOutPortObserver_{
-      MidiOutPort::GetDeviceSelector()};
-
   int evTokenOnInputAdded_{-1};
   int evTokenOnInputRemoved_{-1};
   int evTokenOnOutputAdded_{-1};
