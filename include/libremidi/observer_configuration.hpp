@@ -75,21 +75,27 @@ struct LIBREMIDI_EXPORT port_information
   port_handle port = static_cast<port_handle>(-1);
 
   /// User-readable information
+  // CoreMIDI: kMIDIPropertyManufacturer
   // WinMIDI: MidiEndpointDeviceInformation::GetTransportSuppliedInfo().ManufacturerName
   // WinMM: unavailable
   std::string manufacturer{};
 
+  // CoreMIDI: kMIDIPropertyModel
   // WinMIDI: MidiEndpointDeviceInformation::Name
   // WinMM: unavailable
   std::string device_name{};
 
+  // CoreMIDI: kMIDIPropertyName
   // WinMIDI: MidiGroupTerminalBlock::Name
   // WinMM: szPname
   std::string port_name{};
 
+  // CoreMIDI: kMIDIPropertyDisplayName
+  // Otherwise: the closest to a unique name we can get
   std::string display_name{};
 
   /// Port type
+  // CoreMIDI: available
   // WinMM: unavailable
   // WinMIDI: available
   port_type type = port_type::unknown;
