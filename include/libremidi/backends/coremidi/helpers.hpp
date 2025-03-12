@@ -71,20 +71,22 @@ inline uint64_t AudioConvertHostTimeToNanos(uint64_t hostTime)
   return static_cast<uint64_t>(res);
 }
 #endif
+
+static inline auto get_cfstring_property(MIDIObjectRef prop, CFStringRef name)
+{
+  CFStringRef str = nullptr;
+  MIDIObjectGetStringProperty(prop, name, &str);
+  return CFString_handle{str};
+};
+
 // This function was submitted by Douglas Casey Tucker and apparently
 // derived largely from PortMidi.
 inline CFStringRef EndpointName(MIDIEndpointRef endpoint, bool isExternal)
 {
   CFMutableStringRef result = CFStringCreateMutable(nullptr, 0);
 
-  static constexpr auto getProp = [](MIDIObjectRef prop) {
-    CFStringRef str = nullptr;
-    MIDIObjectGetStringProperty(prop, kMIDIPropertyName, &str);
-    return CFString_handle{str};
-  };
-
   // Begin with the endpoint's name.
-  if (auto endpoint_name = getProp(endpoint))
+  if (auto endpoint_name = get_cfstring_property(endpoint, kMIDIPropertyName))
   {
     CFStringAppend(result, endpoint_name.get());
   }
@@ -101,7 +103,7 @@ inline CFStringRef EndpointName(MIDIEndpointRef endpoint, bool isExternal)
   if (CFStringGetLength(result) == 0)
   {
     // endpoint name has zero length -- try the entity
-    if (auto entity_name = getProp(entity))
+    if (auto entity_name = get_cfstring_property(entity, kMIDIPropertyName))
     {
       CFStringAppend(result, entity_name.get());
     }
@@ -112,7 +114,7 @@ inline CFStringRef EndpointName(MIDIEndpointRef endpoint, bool isExternal)
   if (device == 0)
     goto finish;
 
-  if (auto dev_name = getProp(device))
+  if (auto dev_name = get_cfstring_property(device, kMIDIPropertyName))
   {
     const auto dev_strlen = CFStringGetLength(dev_name.get());
 

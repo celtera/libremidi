@@ -10,7 +10,67 @@
 #include "3rdparty/args.hxx"
 
 #include <cstdlib>
+#include <iomanip>
 #include <iostream>
+
+inline std::ostream& operator<<(std::ostream& s, libremidi::port_information::port_type t)
+{
+  using enum libremidi::port_information::port_type;
+  if (t & software)
+  {
+    s << "software";
+    if (t & loopback)
+      s << ", loopback";
+  }
+
+  if (t & hardware)
+  {
+    s << "hardware";
+    if (t & usb)
+      s << ", usb";
+    if (t & bluetooth)
+      s << ", bt";
+    if (t & pci)
+      s << ", pci";
+  }
+
+  if (t & network)
+    s << "network";
+  return s;
+}
+
+inline std::ostream& operator<<(std::ostream& s, const libremidi::container_identifier& id)
+{
+  struct
+  {
+    std::ostream& s;
+    void operator()(libremidi::uuid u) { s << "uuid"; }
+    void operator()(uint64_t u) { s << u; }
+    void operator()(std::monostate) { }
+  } vis{s};
+  std::visit(vis, id);
+  return s;
+}
+
+inline std::ostream& operator<<(std::ostream& s, const libremidi::device_identifier& id)
+{
+  struct
+  {
+    std::ostream& s;
+    void operator()(const std::string& u) { s << u; }
+    void operator()(uint64_t u)
+    {
+      uint32_t res = u;
+      std::ios_base::fmtflags f(s.flags());
+      s << std::hex << std::setfill('0') << std::setw(4) << (res >> 16) << ":" << std::hex
+        << std::setfill('0') << std::setw(4) << (res & 0x0000FFFF);
+      s.flags(f);
+    }
+    void operator()(std::monostate) { }
+  } vis{s};
+  std::visit(vis, id);
+  return s;
+}
 
 inline std::ostream& operator<<(std::ostream& s, const libremidi::message& message)
 {
@@ -97,15 +157,24 @@ inline std::ostream& operator<<(std::ostream& s, const libremidi::ump& message)
 
 inline std::ostream& operator<<(std::ostream& s, const libremidi::port_information& rhs)
 {
-  s << "[ client: " << rhs.client << ", port: " << rhs.port;
+  s << "[ client: " << rhs.client;
+  if (rhs.container.index() > 0)
+    s << ", container: " << rhs.container;
+  if (rhs.device.index() > 0)
+    s << ", device_id: " << rhs.device;
+
+  s << ", port: " << rhs.port;
+
   if (!rhs.manufacturer.empty())
     s << ", manufacturer: " << rhs.manufacturer;
   if (!rhs.device_name.empty())
-    s << ", device: " << rhs.device_name;
+    s << ", device_name: " << rhs.device_name;
   if (!rhs.port_name.empty())
-    s << ", portname: " << rhs.port_name;
+    s << ", port_name: " << rhs.port_name;
   if (!rhs.display_name.empty())
-    s << ", display: " << rhs.display_name;
+    s << ", display_name: " << rhs.display_name;
+  if (rhs.type != libremidi::port_information::unknown)
+    s << ", type: " << rhs.type;
   return s << "]";
 }
 

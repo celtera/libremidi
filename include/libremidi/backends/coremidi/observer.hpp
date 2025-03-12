@@ -78,13 +78,55 @@ public:
     if (!ok)
       return {};
 
+    // Get the MIDI device from the entity
+    libremidi::port_information::port_type type{};
+    libremidi::container_identifier usb_location_id{};
+    libremidi::device_identifier usb_vendor_product{};
+    {
+      MIDIDeviceRef device{};
+      if (MIDIEntityGetDevice(e, &device) == noErr)
+      {
+        if (device)
+        {
+          using enum libremidi::port_information::port_type;
+          SInt32 devid_res{};
+          if (MIDIObjectGetIntegerProperty(device, CFSTR("USBLocationID"), &devid_res) == noErr)
+          {
+            type = (libremidi::port_information::port_type)(hardware | usb);
+            usb_location_id = (uint64_t)devid_res;
+          }
+
+          SInt32 vendor_res{};
+          if (MIDIObjectGetIntegerProperty(device, CFSTR("USBVendorProduct"), &vendor_res)
+              == noErr)
+          {
+            type = (libremidi::port_information::port_type)(hardware | usb);
+            usb_vendor_product = (uint64_t)vendor_res;
+          }
+
+          const auto driver = get_string_property(device, kMIDIPropertyDriverOwner);
+          if (driver == "com.apple.AppleMIDIUSBDriver")
+            type = (libremidi::port_information::port_type)(hardware | usb);
+          if (driver == "com.apple.AppleMIDIBluetoothDriver")
+            type = (libremidi::port_information::port_type)(hardware | bluetooth);
+          if (driver == "com.apple.AppleMIDIIACDriver")
+            type = (libremidi::port_information::port_type)(software);
+          if (driver == "com.apple.AppleMIDIRTPDriver")
+            type = (libremidi::port_information::port_type)(network);
+        }
+      }
+    }
+
     return std::conditional_t<Input, input_port, output_port>{
         {.client = (std::uintptr_t)this->client,
+         .container = usb_location_id,
+         .device = usb_vendor_product,
          .port = std::bit_cast<uint32_t>(get_int_property(obj, kMIDIPropertyUniqueID)),
          .manufacturer = get_string_property(obj, kMIDIPropertyManufacturer),
          .device_name = get_string_property(obj, kMIDIPropertyModel),
          .port_name = get_string_property(obj, kMIDIPropertyName),
-         .display_name = get_string_property(obj, kMIDIPropertyDisplayName)}};
+         .display_name = get_string_property(obj, kMIDIPropertyDisplayName),
+         .type = type}};
   }
 
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
