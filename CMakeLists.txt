@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 project(libremidi
-  VERSION 4.5.0
+  VERSION 5.0.1
   DESCRIPTION "A cross-platform MIDI library"
   LANGUAGES C CXX
   HOMEPAGE_URL "https://github.com/jcelerier/libremidi"
