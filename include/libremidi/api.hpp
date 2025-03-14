@@ -60,7 +60,7 @@ inline constexpr libremidi::API default_api() noexcept
   return API::COREMIDI;
 #elif defined(_WIN32)
   return API::WINDOWS_MM;
-#elif defined(__linux__)
+#elif defined(LIBREMIDI_ALSA)
   return API::ALSA_SEQ;
 #elif defined(__emscripten__)
   return API::EMSCRIPTEN_WEBMIDI;
@@ -79,7 +79,7 @@ inline constexpr libremidi::API default_api() noexcept
   return API::COREMIDI_UMP;
 #elif defined(_WIN32)
   return API::WINDOWS_MIDI_SERVICES;
-#elif defined(__linux__)
+#elif defined(LIBREMIDI_ALSA)
   return API::ALSA_SEQ_UMP;
 #elif defined(__emscripten__)
   return API::DUMMY;

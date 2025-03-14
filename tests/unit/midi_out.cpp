@@ -56,7 +56,7 @@ TEST_CASE("sending messages with span", "[midi_out]")
   midi.send_message(std::span<unsigned char>(data, 3));
 }
 
-#if defined(__linux__)
+#if defined(LIBREMIDI_ALSA)
   #include <libremidi/backends/alsa_raw/config.hpp>
 TEST_CASE("sending chunked messages", "[midi_out]")
 {
