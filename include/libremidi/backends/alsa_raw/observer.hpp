@@ -145,13 +145,31 @@ private:
   auto to_port_info(const alsa_raw::alsa_raw_port_info& p) const noexcept
       -> std::conditional_t<Input, input_port, output_port>
   {
+#if LIBREMIDI_HAS_UDEV
+    auto [container, device, type] = get_udev_soundcard_info(m_udev, p.card);
+#else
+    container_identifier container{};
+    device_identifier device{};
+    libremidi::port_information::port_type type{};
+#endif
+    std::string display_name = p.subdevice_name;
+    if (display_name.empty())
+      display_name = p.device_name;
+    if (display_name.empty())
+      display_name = p.card_name;
+    if (display_name.empty())
+      display_name = "unknown";
+
     return {
         {.client = 0,
+         .container = container,
+         .device = device,
          .port = raw_to_port_handle({p.card, p.dev, p.sub}),
          .manufacturer = p.card_name,
          .device_name = p.device_name,
          .port_name = p.subdevice_name,
-         .display_name = p.subdevice_name}};
+         .display_name = std::move(display_name),
+         .type = type}};
   }
 
   void check_devices()

@@ -7,7 +7,10 @@
 
 #include <alsa/asoundlib.h>
 
-#include <bitset>
+#if LIBREMIDI_HAS_UDEV
+  #include <libremidi/backends/linux/udev.hpp>
+#endif
+
 #include <map>
 
 namespace libremidi::alsa_seq
@@ -21,6 +24,8 @@ struct port_info
   int port{};
   bool isInput{};
   bool isOutput{};
+  std::optional<int> card{};
+  libremidi::port_information::port_type type{};
 };
 
 template <typename ConfigurationImpl>
@@ -111,9 +116,15 @@ public:
                                          | SND_SEQ_PORT_TYPE_APPLICATION;
 
     if ((tp & SND_SEQ_PORT_TYPE_HARDWARE) && this->configuration.track_hardware)
+    {
+      p.type = libremidi::port_information::port_type::hardware;
       ok = true;
+    }
     else if ((tp & virtual_port) && this->configuration.track_virtual)
+    {
+      p.type = libremidi::port_information::port_type::software;
       ok = true;
+    }
     if (!ok)
       return {};
 
@@ -123,7 +134,10 @@ public:
     if (auto name = snd.seq.port_info_get_name(pinfo))
       p.port_name = name;
 
-    auto cap = snd.seq.port_info_get_capability(pinfo);
+    if (int card = snd.seq.client_info_get_card(cinfo); card >= 0)
+      p.card = card;
+
+    const auto cap = snd.seq.port_info_get_capability(pinfo);
     p.isInput = (cap & SND_SEQ_PORT_CAP_DUPLEX) | (cap & SND_SEQ_PORT_CAP_READ);
     p.isOutput = (cap & SND_SEQ_PORT_CAP_DUPLEX) | (cap & SND_SEQ_PORT_CAP_WRITE);
 
@@ -136,13 +150,29 @@ public:
   {
     static_assert(sizeof(this->seq) <= sizeof(libremidi::client_handle));
     static_assert(sizeof(std::uintptr_t) <= sizeof(libremidi::client_handle));
+
+    container_identifier container{};
+    device_identifier device{};
+    libremidi::port_information::port_type type = p.type;
+#if LIBREMIDI_HAS_UDEV
+    if (p.card)
+    {
+      auto res = get_udev_soundcard_info(m_udev, *p.card);
+      container = res.container;
+      device = res.path;
+      type = res.type;
+    }
+#endif
     return {
         {.client = std::uintptr_t(this->seq),
+         .container = container,
+         .device = device,
          .port = alsa_seq::seq_to_port_handle(p.client, p.port),
          .manufacturer = "",
          .device_name = p.client_name,
          .port_name = p.port_name,
-         .display_name = p.port_name}};
+         .display_name = p.port_name,
+         .type = type}};
   }
 
   void init_all_ports()
@@ -264,6 +294,10 @@ public:
 
 private:
   std::map<std::pair<int, int>, port_info> m_knownClients;
+
+#if LIBREMIDI_HAS_UDEV
+  udev_helper m_udev{};
+#endif
 };
 
 template <typename ConfigurationImpl>
