@@ -19,7 +19,7 @@ struct uuid
   bool operator==(const uuid& other) const noexcept = default;
   std::strong_ordering operator<=>(const uuid& other) const noexcept = default;
 };
-using container_identifier = std::variant<std::monostate, uuid, std::uint64_t>;
+using container_identifier = std::variant<std::monostate, uuid, std::string, std::uint64_t>;
 using device_identifier = std::variant<std::monostate, std::string, std::uint64_t>;
 
 struct LIBREMIDI_EXPORT port_information
@@ -53,12 +53,14 @@ struct LIBREMIDI_EXPORT port_information
   /// Container identifier if the API provides one
   // WinMIDI: ContainerID GUID (bit_cast to a winapi or winrt::GUID ;
   //        this is not the string but the binary representation).
+  // ALSA: device id (std::string), e.g. ID_PATH as returned by udev: "pci-0000:00:14.0-usb-0:12:1.0"
   // CoreMIDI: USBLocationID (int32_t)
   container_identifier container = std::monostate{};
 
   /// Device identifier if the API provides one
   // WinMM: { uint16_t manufacturer_id, uint16_t product_id; }
   // WinMIDI: EndpointDeviceId (std::string), e.g. "\\?\swd#midisrv#midiu_ksa..."
+  // ALSA: sysfs path (std::string), e.g. "/sys/devices/pci0000:00/0000:00:02.2/0000:02:00.0/sound/card0/controlC0"
   // CoreMIDI: USBVendorProduct (int32_t)
   device_identifier device = std::monostate{};
 
