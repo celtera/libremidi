@@ -45,6 +45,7 @@ inline std::ostream& operator<<(std::ostream& s, const libremidi::container_iden
   {
     std::ostream& s;
     void operator()(libremidi::uuid u) { s << "uuid"; }
+    void operator()(std::string u) { s << u; }
     void operator()(uint64_t u) { s << u; }
     void operator()(std::monostate) { }
   } vis{s};
