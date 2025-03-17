@@ -1,26 +1,27 @@
 #pragma once
-#include <libremidi/backends/jack/config.hpp>
 #include <libremidi/backends/jack/helpers.hpp>
+#include <libremidi/backends/jack_ump/config.hpp>
 #include <libremidi/detail/midi_in.hpp>
 #include <libremidi/detail/midi_stream_decoder.hpp>
 
-namespace libremidi
+namespace libremidi::jack_ump
 {
 class midi_in_jack final
-    : public midi1::in_api
+    : public midi2::in_api
     , public jack_helpers
-    , public jack_midi1
+    , private jack_midi1
     , public error_handler
 {
 public:
   using midi_api::client_open_;
   struct
-      : input_configuration
-      , jack_input_configuration
+      : libremidi::ump_input_configuration
+      , jack_ump::input_configuration
   {
   } configuration;
 
-  explicit midi_in_jack(input_configuration&& conf, jack_input_configuration&& apiconf)
+  explicit midi_in_jack(
+      libremidi::ump_input_configuration&& conf, jack_ump::input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     auto status = connect(*this);
@@ -41,11 +42,12 @@ public:
     disconnect(*this);
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_MIDI; }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_UMP; }
 
   stdx::error open_port(const input_port& port, std::string_view portName) override
   {
-    if (auto err = create_local_port(*this, portName, port_type, JackPortIsInput);
+    if (auto err
+        = create_local_port(*this, portName, port_type, JackPortFlags(JackPortIsInput | 0x20));
         err != stdx::error{})
       return err;
 
@@ -53,8 +55,8 @@ public:
         err != 0 && err != EEXIST)
     {
       libremidi_handle_error(
-          configuration, "could not connect to port: " + port.port_name + " -> "
-                             + jack_port_name(this->port));
+          configuration,
+          "could not connect to port: " + port.port_name + " -> " + jack_port_name(this->port));
       return from_errc(err);
     }
     return stdx::error{};
@@ -62,7 +64,7 @@ public:
 
   stdx::error open_virtual_port(std::string_view portName) override
   {
-    return create_local_port(*this, portName, port_type, JackPortIsInput);
+    return create_local_port(*this, portName, port_type, JackPortFlags(JackPortIsInput | 0x20));
   }
 
   stdx::error close_port() override { return do_close_port(); }
@@ -105,13 +107,13 @@ public:
           = [=, this] { return 1000 * jack_frames_to_time(client, current_frames + event.time); };
 
       m_processing.on_bytes(
-          {event.buffer, event.buffer + event.size},
+          {(uint32_t*)event.buffer, (uint32_t*)(event.buffer + event.size)},
           m_processing.timestamp<timestamp_info>(to_ns, event.time));
     }
 
     return 0;
   }
 
-  midi1::input_state_machine m_processing{this->configuration};
+  midi2::input_state_machine m_processing{this->configuration};
 };
 }

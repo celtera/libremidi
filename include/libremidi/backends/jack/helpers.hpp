@@ -56,16 +56,16 @@ struct jack_client
   }
 
   template <bool Input>
-  static auto
-  get_ports(jack_client_t* client, const char* pattern, const JackPortFlags flags) noexcept
-      -> std::vector<std::conditional_t<Input, input_port, output_port>>
+  static auto get_ports(
+      jack_client_t* client, const char* pattern, const char* type, const JackPortFlags flags,
+      bool midi2) noexcept -> std::vector<std::conditional_t<Input, input_port, output_port>>
   {
     std::vector<std::conditional_t<Input, input_port, output_port>> ret;
 
     if (!client)
       return {};
 
-    const char** ports = jack_get_ports(client, pattern, JACK_DEFAULT_MIDI_TYPE, flags);
+    const char** ports = jack_get_ports(client, pattern, type, flags);
 
     if (ports == nullptr)
       return {};
@@ -75,7 +75,11 @@ struct jack_client
     {
       // FIXME this does not take into account filtering sw / hw ports
       auto port = jack_port_by_name(client, ports[i]);
-      ret.push_back(to_port_info<Input>(client, port));
+      if (port)
+      {
+        if (bool(midi2) == bool(jack_port_flags(port) & 0x20))
+          ret.push_back(to_port_info<Input>(client, port));
+      }
       i++;
     }
 
@@ -194,8 +198,8 @@ struct jack_helpers : jack_client
     self.client_open_ = std::errc::not_connected;
   }
 
-  stdx::error
-  create_local_port(const auto& self, std::string_view portName, JackPortFlags flags)
+  stdx::error create_local_port(
+      const auto& self, std::string_view portName, const char* type, JackPortFlags flags)
   {
     // full name: "client_name:port_name\0"
     if (portName.empty())
@@ -211,8 +215,7 @@ struct jack_helpers : jack_client
 
     if (!this->port)
     {
-      this->port
-          = jack_port_register(this->client, portName.data(), JACK_DEFAULT_MIDI_TYPE, flags, 0);
+      this->port = jack_port_register(this->client, portName.data(), type, flags, 0);
     }
 
     if (!this->port)
@@ -239,5 +242,78 @@ struct jack_helpers : jack_client
     int err = jack_port_unregister(this->client, port_ptr);
     return from_errc(err);
   }
+};
+
+struct jack_queue
+{
+public:
+  static constexpr auto size_sz = sizeof(int32_t);
+
+  jack_queue() = default;
+  jack_queue(const jack_queue&) = delete;
+  jack_queue(jack_queue&&) = delete;
+  jack_queue& operator=(const jack_queue&) = delete;
+
+  jack_queue& operator=(jack_queue&& other) noexcept
+  {
+    ringbuffer = other.ringbuffer;
+    ringbuffer_space = other.ringbuffer_space;
+    other.ringbuffer = nullptr;
+    return *this;
+  }
+
+  explicit jack_queue(int64_t sz) noexcept
+  {
+    ringbuffer = jack_ringbuffer_create(sz);
+    ringbuffer_space = jack_ringbuffer_write_space(ringbuffer);
+  }
+
+  ~jack_queue() noexcept
+  {
+    if (ringbuffer)
+      jack_ringbuffer_free(ringbuffer);
+  }
+
+  stdx::error write(const unsigned char* data, int64_t sz) const noexcept
+  {
+    if (static_cast<std::size_t>(sz + size_sz) > ringbuffer_space)
+      return std::errc::no_buffer_space;
+
+    while (jack_ringbuffer_write_space(ringbuffer) < sz + size_sz)
+      sched_yield();
+
+    jack_ringbuffer_write(ringbuffer, reinterpret_cast<char*>(&sz), size_sz);
+    jack_ringbuffer_write(ringbuffer, reinterpret_cast<const char*>(data), sz);
+
+    return stdx::error{};
+  }
+
+  void read(void* jack_events) const noexcept
+  {
+    int32_t sz;
+    while (jack_ringbuffer_peek(ringbuffer, reinterpret_cast<char*>(&sz), size_sz) == size_sz
+           && jack_ringbuffer_read_space(ringbuffer) >= size_sz + sz)
+    {
+      jack_ringbuffer_read_advance(ringbuffer, size_sz);
+
+      if (auto midi = jack_midi_event_reserve(jack_events, 0, sz))
+        jack_ringbuffer_read(ringbuffer, reinterpret_cast<char*>(midi), sz);
+      else
+        jack_ringbuffer_read_advance(ringbuffer, sz);
+    }
+  }
+
+  jack_ringbuffer_t* ringbuffer{};
+  std::size_t ringbuffer_space{}; // actual writable size, usually 1 less than ringbuffer
+};
+
+struct jack_midi1
+{
+  static constexpr const char* port_type = "8 bit raw midi";
+};
+
+struct jack_midi2
+{
+  static constexpr const char* port_type = "32 bit raw UMP";
 };
 }

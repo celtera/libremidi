@@ -46,11 +46,17 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/emscripten/observer.hpp
 
     include/libremidi/backends/jack/config.hpp
+    include/libremidi/backends/jack/error_domain.hpp
     include/libremidi/backends/jack/helpers.hpp
     include/libremidi/backends/jack/midi_in.hpp
     include/libremidi/backends/jack/midi_out.hpp
     include/libremidi/backends/jack/observer.hpp
     include/libremidi/backends/jack/shared_handler.hpp
+
+    include/libremidi/backends/jack_ump/config.hpp
+    include/libremidi/backends/jack_ump/midi_in.hpp
+    include/libremidi/backends/jack_ump/midi_out.hpp
+    include/libremidi/backends/jack_ump/observer.hpp
 
     include/libremidi/backends/keyboard/config.hpp
     include/libremidi/backends/keyboard/midi_in.hpp

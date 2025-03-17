@@ -1,36 +1,37 @@
 #pragma once
-#include <libremidi/backends/jack/config.hpp>
 #include <libremidi/backends/jack/helpers.hpp>
+#include <libremidi/backends/jack_ump/config.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
-namespace libremidi
+namespace libremidi::jack_ump
 {
 class midi_out_jack
-    : public midi1::out_api
+    : public midi2::out_api
     , public jack_helpers
-    , public jack_midi1
+    , private jack_midi1
     , public error_handler
 {
 public:
   using midi_api::client_open_;
   struct
-      : output_configuration
-      , jack_output_configuration
+      : libremidi::output_configuration
+      , jack_ump::output_configuration
   {
   } configuration;
 
-  midi_out_jack(output_configuration&& conf, jack_output_configuration&& apiconf)
+  midi_out_jack(libremidi::output_configuration&& conf, jack_ump::output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
   }
 
   ~midi_out_jack() override { }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_MIDI; }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_UMP; }
 
   stdx::error open_port(const output_port& port, std::string_view portName) override
   {
-    if (auto err = create_local_port(*this, portName, port_type, JackPortIsOutput);
+    if (auto err
+        = create_local_port(*this, portName, port_type, JackPortFlags(JackPortIsOutput | 0x20));
         err != stdx::error{})
       return err;
 
@@ -38,8 +39,7 @@ public:
     if (int err = jack_connect(this->client, jack_port_name(this->port), port.port_name.c_str());
         err != 0 && err != EEXIST)
     {
-      libremidi_handle_error(
-          configuration, "could not connect to port" + port.port_name);
+      libremidi_handle_error(configuration, "could not connect to port" + port.port_name);
       return from_errc(err);
     }
 
@@ -48,7 +48,7 @@ public:
 
   stdx::error open_virtual_port(std::string_view portName) override
   {
-    return create_local_port(*this, portName, port_type, JackPortIsOutput);
+    return create_local_port(*this, portName, port_type, JackPortFlags(JackPortIsOutput | 0x20));
   }
 
   stdx::error close_port() override { return do_close_port(); }
@@ -63,7 +63,8 @@ public:
 class midi_out_jack_queued final : public midi_out_jack
 {
 public:
-  midi_out_jack_queued(output_configuration&& conf, jack_output_configuration&& apiconf)
+  midi_out_jack_queued(
+      libremidi::output_configuration&& conf, jack_ump::output_configuration&& apiconf)
       : midi_out_jack{std::move(conf), std::move(apiconf)}
       , m_queue{configuration.ringbuffer_size}
   {
@@ -85,9 +86,9 @@ public:
     disconnect(*this);
   }
 
-  stdx::error send_message(const unsigned char* message, std::size_t size) override
+  stdx::error send_ump(const uint32_t* message, std::size_t size) override
   {
-    return m_queue.write(message, size);
+    return m_queue.write((unsigned char*)message, size * sizeof(uint32_t));
   }
 
   int process(jack_nframes_t nframes)
@@ -101,13 +102,14 @@ public:
   }
 
 private:
-  jack_queue m_queue;
+  libremidi::jack_queue m_queue;
 };
 
 class midi_out_jack_direct final : public midi_out_jack
 {
 public:
-  midi_out_jack_direct(output_configuration&& conf, jack_output_configuration&& apiconf)
+  midi_out_jack_direct(
+      libremidi::output_configuration&& conf, jack_ump::output_configuration&& apiconf)
       : midi_out_jack{std::move(conf), std::move(apiconf)}
   {
     auto status = connect(*this);
@@ -136,10 +138,10 @@ public:
     return 0;
   }
 
-  stdx::error send_message(const unsigned char* message, size_t size) override
+  stdx::error send_ump(const uint32_t* message, std::size_t size) override
   {
     void* buff = jack_port_get_buffer(this->port, buffer_size);
-    int ret = jack_midi_event_write(buff, 0, message, size);
+    int ret = jack_midi_event_write(buff, 0, (unsigned char*)message, size * sizeof(uint32_t));
     return from_errc(ret);
   }
 
@@ -156,10 +158,11 @@ public:
     }
   }
 
-  stdx::error schedule_message(int64_t ts, const unsigned char* message, size_t size) override
+  stdx::error schedule_ump(int64_t ts, const uint32_t* message, size_t size) override
   {
     void* buff = jack_port_get_buffer(this->port, buffer_size);
-    int ret = jack_midi_event_write(buff, convert_timestamp(ts), message, size);
+    int ret = jack_midi_event_write(
+        buff, convert_timestamp(ts), (unsigned char*)message, size * sizeof(uint32_t));
     return from_errc(ret);
   }
 
@@ -170,12 +173,12 @@ public:
 namespace libremidi
 {
 template <>
-inline std::unique_ptr<midi_out_api> make<midi_out_jack>(
-    libremidi::output_configuration&& conf, libremidi::jack_output_configuration&& api)
+inline std::unique_ptr<midi_out_api>
+make<jack_ump::midi_out_jack>(output_configuration&& conf, jack_ump::output_configuration&& api)
 {
   if (api.direct)
-    return std::make_unique<midi_out_jack_direct>(std::move(conf), std::move(api));
+    return std::make_unique<jack_ump::midi_out_jack_direct>(std::move(conf), std::move(api));
   else
-    return std::make_unique<midi_out_jack_queued>(std::move(conf), std::move(api));
+    return std::make_unique<jack_ump::midi_out_jack_queued>(std::move(conf), std::move(api));
 }
 }
