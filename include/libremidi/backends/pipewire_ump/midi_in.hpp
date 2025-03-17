@@ -1,24 +1,25 @@
 #pragma once
-#include <libremidi/backends/pipewire/config.hpp>
 #include <libremidi/backends/pipewire/helpers.hpp>
+#include <libremidi/backends/pipewire_ump/config.hpp>
 #include <libremidi/detail/midi_in.hpp>
 #include <libremidi/detail/midi_stream_decoder.hpp>
 
-namespace libremidi
+namespace libremidi::pipewire_ump
 {
 class midi_in_pipewire final
-    : public midi1::in_api
+    : public midi2::in_api
     , public pipewire_helpers
     , public error_handler
 {
 public:
   struct
-      : input_configuration
-      , pipewire_input_configuration
+      : ump_input_configuration
+      , libremidi::pipewire_ump::input_configuration
   {
   } configuration;
 
-  explicit midi_in_pipewire(input_configuration&& conf, pipewire_input_configuration&& apiconf)
+  explicit midi_in_pipewire(
+      ump_input_configuration&& conf, libremidi::pipewire_ump::input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     if (auto ret = create_context(*this); ret != stdx::error{})
@@ -43,11 +44,11 @@ public:
     client_open_ = std::errc::not_connected;
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE; }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE_UMP; }
 
   stdx::error open_port(const input_port& in_port, std::string_view name) override
   {
-    if (auto err = create_local_port(*this, name, SPA_DIRECTION_INPUT, "8 bit raw midi");
+    if (auto err = create_local_port(*this, name, SPA_DIRECTION_INPUT, "32 bit raw UMP");
         err != stdx::error{})
       return err;
 
@@ -60,7 +61,7 @@ public:
 
   stdx::error open_virtual_port(std::string_view name) override
   {
-    if (auto err = create_local_port(*this, name, SPA_DIRECTION_INPUT, "8 bit raw midi");
+    if (auto err = create_local_port(*this, name, SPA_DIRECTION_INPUT, "32 bit raw UMP");
         err != stdx::error{})
       return err;
 
@@ -111,7 +112,7 @@ public:
     struct spa_pod_control* c{};
     SPA_POD_SEQUENCE_FOREACH((struct spa_pod_sequence*)pod, c)
     {
-      if (c->type != SPA_CONTROL_Midi)
+      if (c->type != SPA_CONTROL_UMP)
         continue;
 
       auto data = (uint8_t*)SPA_POD_BODY(&c->value);
@@ -122,12 +123,13 @@ public:
       };
 
       m_processing.on_bytes(
-          {data, data + size}, m_processing.timestamp<timestamp_info>(to_ns, c->offset));
+          {(uint32_t*)data, (uint32_t*)(data + size)},
+          m_processing.timestamp<timestamp_info>(to_ns, c->offset));
     }
 
     pw.filter_queue_buffer(this->filter->port, b);
   }
 
-  midi1::input_state_machine m_processing{this->configuration};
+  midi2::input_state_machine m_processing{this->configuration};
 };
 }

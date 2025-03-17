@@ -1,11 +1,11 @@
 #pragma once
-#include <libremidi/backends/pipewire/config.hpp>
 #include <libremidi/backends/pipewire/helpers.hpp>
+#include <libremidi/backends/pipewire_ump/config.hpp>
 #include <libremidi/detail/observer.hpp>
 
 #include <unordered_set>
 
-namespace libremidi
+namespace libremidi::pipewire_ump
 {
 class observer_pipewire final
     : public observer_api
@@ -14,19 +14,21 @@ class observer_pipewire final
 {
 public:
   struct
-      : observer_configuration
-      , pipewire_observer_configuration
+      : libremidi::observer_configuration
+      , libremidi::pipewire_ump::observer_configuration
   {
   } configuration;
 
-  explicit observer_pipewire(observer_configuration&& conf, pipewire_observer_configuration&& apiconf)
+  explicit observer_pipewire(
+      libremidi::observer_configuration&& conf,
+      libremidi::pipewire_ump::observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     create_context(*this);
 
     // FIXME port rename callback
     {
-      this->add_callbacks("midi", configuration);
+      this->add_callbacks("UMP", configuration);
       this->start_thread();
     }
 
@@ -42,16 +44,16 @@ public:
     }
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE; }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE_UMP; }
 
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
-    return get_ports<SPA_DIRECTION_OUTPUT>("midi", this->configuration, *this->global_context);
+    return get_ports<SPA_DIRECTION_OUTPUT>("UMP", this->configuration, *this->global_context);
   }
 
   std::vector<libremidi::output_port> get_output_ports() const noexcept override
   {
-    return get_ports<SPA_DIRECTION_INPUT>("midi", this->configuration, *this->global_context);
+    return get_ports<SPA_DIRECTION_INPUT>("UMP", this->configuration, *this->global_context);
   }
 
   ~observer_pipewire()

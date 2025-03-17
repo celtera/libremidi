@@ -1,25 +1,27 @@
 #pragma once
-#include <libremidi/backends/pipewire/config.hpp>
 #include <libremidi/backends/pipewire/helpers.hpp>
+#include <libremidi/backends/pipewire_ump/config.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
 #include <readerwriterqueue.h>
 
-namespace libremidi
+namespace libremidi::pipewire_ump
 {
 class midi_out_pipewire
-    : public midi1::out_api
+    : public midi2::out_api
     , public pipewire_helpers
     , public error_handler
 {
 public:
   struct
-      : output_configuration
-      , pipewire_output_configuration
+      : libremidi::output_configuration
+      , libremidi::pipewire_ump::output_configuration
   {
   } configuration;
 
-  midi_out_pipewire(output_configuration&& conf, pipewire_output_configuration&& apiconf)
+  midi_out_pipewire(
+      libremidi::output_configuration&& conf,
+      libremidi::pipewire_ump::output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     if (auto ret = create_context(*this); ret != stdx::error{})
@@ -44,11 +46,11 @@ public:
     client_open_ = std::errc::not_connected;
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE; }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::PIPEWIRE_UMP; }
 
   stdx::error open_port(const output_port& out_port, std::string_view name) override
   {
-    if (auto err = create_local_port(*this, name, SPA_DIRECTION_OUTPUT, "8 bit raw midi");
+    if (auto err = create_local_port(*this, name, SPA_DIRECTION_OUTPUT, "32 bit raw UMP");
         err != stdx::error{})
       return err;
 
@@ -63,7 +65,7 @@ public:
 
   stdx::error open_virtual_port(std::string_view name) override
   {
-    if (auto err = create_local_port(*this, name, SPA_DIRECTION_OUTPUT, "8 bit raw midi");
+    if (auto err = create_local_port(*this, name, SPA_DIRECTION_OUTPUT, "32 bit raw UMP");
         err != stdx::error{})
       return err;
 
@@ -108,28 +110,15 @@ public:
     while (auto m_ptr = m_queue.peek())
     {
       auto& m = *m_ptr;
-      if (m.empty())
-      {
-        m_queue.pop();
-        continue;
-      }
 
-      // TODO why
-      if (m.bytes[0] == 0xff)
-      {
-        m_queue.pop();
-        continue;
-      }
-
-      spa_pod_builder_control(&build, m.timestamp, SPA_CONTROL_Midi);
-      int res = spa_pod_builder_bytes(&build, m.bytes.data(), m.bytes.size());
+      spa_pod_builder_control(&build, m.timestamp, SPA_CONTROL_UMP);
+      int res = spa_pod_builder_bytes(&build, m.data, cmidi2_ump_get_message_size_bytes(m.data));
 
       // Try again next buffer
       if (res == -ENOSPC)
         break;
 
       // Recycle the memory
-      m_gcqueue.enqueue(std::move(m));
       m_queue.pop();
     }
     spa_pod_builder_pop(&build, &f);
@@ -151,11 +140,14 @@ public:
     return 0;
   }
 
-  stdx::error send_message(const unsigned char* message, size_t size) override
+  stdx::error send_ump(const uint32_t* message, size_t size) override
   {
-    libremidi::message m;
-    m_gcqueue.try_dequeue(m);
-    m.bytes.assign(message, message + size);
+    // FIXME
+    if (size > 4)
+      return std::errc::message_size;
+
+    libremidi::ump m;
+    std::copy_n(message, size, m.data);
     m.timestamp = 0;
     m_queue.enqueue(std::move(m));
     return stdx::error{};
@@ -174,15 +166,20 @@ public:
     }
   }
 
-  stdx::error schedule_message(int64_t ts, const unsigned char* message, size_t size) override
+  stdx::error schedule_ump(int64_t ts, const uint32_t* message, size_t size) override
   {
-    m_queue.enqueue(
-        libremidi::message(midi_bytes{message, message + size}, convert_timestamp(ts)));
+    // FIXME
+    if (size > 4)
+      return std::errc::message_size;
+
+    libremidi::ump m;
+    std::copy_n(message, size, m.data);
+    m.timestamp = convert_timestamp(ts);
+    m_queue.enqueue(std::move(m)); // FIXME actually send them scheudled
     return stdx::error{};
   }
 
-  moodycamel::ReaderWriterQueue<libremidi::message> m_queue;
-  moodycamel::ReaderWriterQueue<libremidi::message> m_gcqueue;
+  moodycamel::ReaderWriterQueue<libremidi::ump> m_queue;
   std::atomic_int64_t m_process_clock = 0;
 };
 }
