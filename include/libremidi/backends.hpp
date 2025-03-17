@@ -177,7 +177,7 @@ static_assert(std::tuple_size_v<decltype(available_backends)> >= 1);
 template <typename F>
 auto for_all_backends(F&& f)
 {
-  std::apply([&](auto&&... x) { (f(x), ...); }, available_backends);
+  std::apply([&](auto&&... x) { ((x.available() && (f(x), true)), ...); }, available_backends);
 }
 
 template <typename F>
