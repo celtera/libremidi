@@ -212,6 +212,8 @@ NB_MODULE(pylibremidi, m) {
       .value("WINDOWS_MIDI_SERVICES", libremidi::API::WINDOWS_MIDI_SERVICES)
       .value("KEYBOARD_UMP", libremidi::API::KEYBOARD_UMP)
       .value("NETWORK_UMP", libremidi::API::NETWORK_UMP)
+      .value("JACK_UMP", libremidi::API::JACK_UMP)
+      .value("PIPEWIRE_UMP", libremidi::API::PIPEWIRE_UMP)
 
       .value("DUMMY", libremidi::API::DUMMY)
       .export_values();
@@ -345,10 +347,12 @@ NB_MODULE(pylibremidi, m) {
   nb::class_<libremidi::coremidi_ump::input_configuration>(m, "CoremidiUmpInputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::coremidi_ump::input_configuration::client_name);
   nb::class_<libremidi::emscripten_input_configuration>(m, "EmscriptenInputConfiguration").def(nb::init<>());
   nb::class_<libremidi::jack_input_configuration>(m, "JackInputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::jack_input_configuration::client_name);
+  nb::class_<libremidi::jack_ump::input_configuration>(m, "JackUmpInputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::jack_ump::input_configuration::client_name);
   nb::class_<libremidi::kbd_input_configuration>(m, "KeyboardInputConfiguration").def(nb::init<>());
   nb::class_<libremidi::net::dgram_input_configuration>(m, "DatagramInputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::net::dgram_input_configuration::client_name);
   nb::class_<libremidi::net_ump::dgram_input_configuration>(m, "DatagramUmpInputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::net_ump::dgram_input_configuration::client_name);
   nb::class_<libremidi::pipewire_input_configuration>(m, "PipewireInputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::pipewire_input_configuration::client_name);
+  nb::class_<libremidi::pipewire_ump::input_configuration>(m, "PipewireUmpInputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::pipewire_ump::input_configuration::client_name);
   nb::class_<libremidi::winmidi::input_configuration>(m, "WinmidiInputConfiguration").def(nb::init<>());
   nb::class_<libremidi::winmm_input_configuration>(m, "WinmmInputConfiguration").def(nb::init<>());
   nb::class_<libremidi::winuwp_input_configuration>(m, "WinuwpInputConfiguration").def(nb::init<>());
@@ -361,9 +365,11 @@ NB_MODULE(pylibremidi, m) {
   nb::class_<libremidi::coremidi_ump::output_configuration>(m, "CoremidiUmpOutputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::coremidi_ump::output_configuration::client_name);
   nb::class_<libremidi::emscripten_output_configuration>(m, "EmscriptenOutputConfiguration").def(nb::init<>());
   nb::class_<libremidi::jack_output_configuration>(m, "JackOutputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::jack_output_configuration::client_name);
+  nb::class_<libremidi::jack_ump::output_configuration>(m, "JackUmpOutputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::jack_ump::output_configuration::client_name);
   nb::class_<libremidi::net::dgram_output_configuration>(m, "DatagramOutputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::net::dgram_output_configuration::client_name);
   nb::class_<libremidi::net_ump::dgram_output_configuration>(m, "DatagramUmpOutputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::net_ump::dgram_output_configuration::client_name);
   nb::class_<libremidi::pipewire_output_configuration>(m, "PipewireOutputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::pipewire_output_configuration::client_name);
+  nb::class_<libremidi::pipewire_ump::output_configuration>(m, "PipewireUmpOutputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::pipewire_ump::output_configuration::client_name);
   nb::class_<libremidi::winmidi::output_configuration>(m, "WinmidiOutputConfiguration").def(nb::init<>());
   nb::class_<libremidi::winmm_output_configuration>(m, "WinmmOutputConfiguration").def(nb::init<>());
   nb::class_<libremidi::winuwp_output_configuration>(m, "WinuwpOutputConfiguration").def(nb::init<>());
@@ -380,11 +386,15 @@ NB_MODULE(pylibremidi, m) {
       .def_rw("client_name", &libremidi::coremidi_ump::observer_configuration::client_name);
   nb::class_<libremidi::emscripten_observer_configuration>(m, "EmscriptenObserverConfiguration").def(nb::init<>());
   nb::class_<libremidi::jack_observer_configuration>(m, "JackObserverConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::jack_observer_configuration::client_name);
+  nb::class_<libremidi::jack_ump::observer_configuration>(m, "JackUmpObserverConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::jack_ump::observer_configuration::client_name);
   nb::class_<libremidi::net::dgram_observer_configuration>(m, "DatagramObserverConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::net::dgram_observer_configuration::client_name);
   nb::class_<libremidi::net_ump::dgram_observer_configuration>(m, "DatagramUmpObserverConfiguration")
       .def(nb::init<>())
       .def_rw("client_name", &libremidi::net_ump::dgram_observer_configuration::client_name);
   nb::class_<libremidi::pipewire_observer_configuration>(m, "PipewireObserverConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::pipewire_observer_configuration::client_name);
+  nb::class_<libremidi::pipewire_ump::observer_configuration>(m, "PipewireObserverConfiguration")
+      .def(nb::init<>())
+      .def_rw("client_name", &libremidi::pipewire_ump::observer_configuration::client_name);
   nb::class_<libremidi::winmidi::observer_configuration>(m, "WinmidiObserverConfiguration").def(nb::init<>());
   nb::class_<libremidi::winmm_observer_configuration>(m, "WinmmObserverConfiguration").def(nb::init<>());
   nb::class_<libremidi::winuwp_observer_configuration>(m, "WinuwpObserverConfiguration").def(nb::init<>());
