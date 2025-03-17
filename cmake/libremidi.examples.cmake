@@ -72,8 +72,10 @@ if(LIBREMIDI_HAS_PIPEWIRE)
     add_backend_example(midi1_in_pipewire)
     add_backend_example(midi1_out_pipewire)
 
-    add_backend_example(midi2_in_pipewire)
-    add_backend_example(midi2_out_pipewire)
+    if(LIBREMIDI_HAS_PIPEWIRE_UMP)
+      add_backend_example(midi2_in_pipewire)
+      add_backend_example(midi2_out_pipewire)
+    endif()
 endif()
 
 if(LIBREMIDI_HAS_COREMIDI)
