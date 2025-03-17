@@ -30,6 +30,11 @@ If you use this work as part of academic research, please kindly cite the [paper
 
 ## Changelog 
 
+### Since v5.1
+
+* Report USB device identifiers with ALSA and udev
+* PipeWire and JACK UMP support (requires PipeWire v1.4+)
+
 ### Since v5
 * Use stdx::error for error reporting until C++26 and std::error are widely available :-)
 * Hunt exceptions down
