@@ -362,12 +362,16 @@ struct pipewire_context
           return &this->current_graph.physical_audio[nid];
         else if (p.format.find("midi") != p.format.npos)
           return &this->current_graph.physical_midi[nid];
+        else if (p.format.find("UMP") != p.format.npos)
+          return &this->current_graph.physical_midi[nid];
       }
       else
       {
         if (p.format.find("audio") != p.format.npos)
           return &this->current_graph.software_audio[nid];
         else if (p.format.find("midi") != p.format.npos)
+          return &this->current_graph.software_midi[nid];
+        else if (p.format.find("UMP") != p.format.npos)
           return &this->current_graph.software_midi[nid];
       }
       return nullptr;
@@ -499,7 +503,8 @@ struct pipewire_filter
       pw.filter_destroy(this->filter);
   }
 
-  stdx::error create_local_port(std::string_view port_name, spa_direction direction)
+  stdx::error
+  create_local_port(std::string_view port_name, spa_direction direction, const char* format)
   {
     // clang-format off
     this->port = (struct port*)pw.filter_add_port(
@@ -508,7 +513,7 @@ struct pipewire_filter
         PW_FILTER_PORT_FLAG_MAP_BUFFERS,
         sizeof(struct port),
         pw.properties_new(
-            PW_KEY_FORMAT_DSP, "8 bit raw midi",
+            PW_KEY_FORMAT_DSP, format,
             PW_KEY_PORT_NAME, port_name.data(),
             nullptr),
         nullptr, 0);

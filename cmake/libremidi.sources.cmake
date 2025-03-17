@@ -91,6 +91,8 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/pipewire/midi_out.hpp
     include/libremidi/backends/pipewire/observer.hpp
     include/libremidi/backends/pipewire/shared_handler.hpp
+    include/libremidi/backends/pipewire.hpp
+    include/libremidi/backends/pipewire_ump.hpp
 
     include/libremidi/backends/winmidi/config.hpp
     include/libremidi/backends/winmidi/helpers.hpp

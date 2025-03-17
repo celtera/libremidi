@@ -12,6 +12,8 @@ namespace libremidi
 class libpipewire
 {
 public:
+  decltype(&::pw_get_library_version) get_library_version{};
+
   decltype(&::pw_init) init{};
   decltype(&::pw_deinit) deinit{};
 
@@ -81,6 +83,9 @@ private:
     // in terms of regex:
     // decltype\(&::([a-z_]+)\) [a-z_]+{};
     // \1 = library.symbol<decltype(&::\1)>("\1");
+    get_library_version
+        = m_library.symbol<decltype(&::pw_get_library_version)>("pw_get_library_version");
+
     init = m_library.symbol<decltype(&::pw_init)>("pw_init");
     deinit = m_library.symbol<decltype(&::pw_deinit)>("pw_deinit");
 
@@ -129,6 +134,8 @@ private:
     filter_queue_buffer
         = m_library.symbol<decltype(&::pw_filter_queue_buffer)>("pw_filter_queue_buffer");
     filter_flush = m_library.symbol<decltype(&::pw_filter_flush)>("pw_filter_flush");
+
+    assert(get_library_version);
 
     assert(init);
     assert(deinit);

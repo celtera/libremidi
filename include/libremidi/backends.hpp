@@ -34,6 +34,7 @@
 
 #if defined(LIBREMIDI_PIPEWIRE)
   #include <libremidi/backends/pipewire.hpp>
+  #include <libremidi/backends/pipewire_ump.hpp>
 #endif
 
 #if defined(LIBREMIDI_COREMIDI)
@@ -167,6 +168,10 @@ static constexpr auto available_backends = make_tl(
 #if defined(LIBREMIDI_JACK)
     ,
     jack_ump::backend{}
+#endif
+#if defined(LIBREMIDI_PIPEWIRE)
+    ,
+    pipewire_ump::backend{}
 #endif
     ,
     dummy_backend{});

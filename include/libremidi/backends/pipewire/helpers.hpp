@@ -64,14 +64,14 @@ struct pipewire_helpers
     {
       this->filter = std::make_unique<pipewire_filter>(this->global_context, configuration.filter);
 
-      pipewire_callback cbs{
+      libremidi::pipewire_callback cbs{
           .token = this_instance,
           .callback = [&self, p = std::weak_ptr{canary}](spa_io_position* nf) -> void {
-            if (auto pt = p.lock())
-              self.process(nf);
+        if (auto pt = p.lock())
+          self.process(nf);
 
-            self.thread_lock.check_client_released();
-          }};
+        self.thread_lock.check_client_released();
+      }};
       configuration.set_process_func(cbs);
     }
     else
@@ -195,7 +195,8 @@ struct pipewire_helpers
   }
 
   template <typename Self>
-  stdx::error create_local_port(Self& self, std::string_view portName, spa_direction direction)
+  stdx::error create_local_port(
+      Self& self, std::string_view portName, spa_direction direction, const char* format)
   {
     assert(this->global_context);
     assert(this->filter);
@@ -205,7 +206,7 @@ struct pipewire_helpers
 
     if (!this->filter->port)
     {
-      auto ret = this->filter->create_local_port(portName.data(), direction);
+      auto ret = this->filter->create_local_port(portName.data(), direction, format);
       if (ret != stdx::error{})
       {
         self.libremidi_handle_error(self.configuration, "error creating port");
@@ -216,11 +217,11 @@ struct pipewire_helpers
     return stdx::error{};
   }
 
-  void add_callbacks(const observer_configuration& conf)
+  void add_callbacks(std::string format, const observer_configuration& conf)
   {
     assert(global_context);
-    global_context->on_port_added = [&conf](const pipewire_context::port_info& port) {
-      if (port.format.find("midi") == std::string::npos)
+    global_context->on_port_added = [format, &conf](const pipewire_context::port_info& port) {
+      if (port.format.find(format) == std::string::npos)
         return;
 
       bool unfiltered = conf.track_any;
@@ -241,8 +242,8 @@ struct pipewire_helpers
       }
     };
 
-    global_context->on_port_removed = [&conf](const pipewire_context::port_info& port) {
-      if (port.format.find("midi") == std::string::npos)
+    global_context->on_port_removed = [format, &conf](const pipewire_context::port_info& port) {
+      if (port.format.find(format) == std::string::npos)
         return;
 
       bool unfiltered = conf.track_any;
@@ -435,7 +436,9 @@ struct pipewire_helpers
   // Note: keep in mind that an "input" port for us (e.g. a keyboard that goes to the computer)
   // is an "output" port from the point of view of pipewire as data will come out of it
   template <spa_direction Direction>
-  static auto get_ports(const observer_configuration& conf, const pipewire_context& ctx) noexcept
+  static auto get_ports(
+      std::string_view format, const observer_configuration& conf,
+      const pipewire_context& ctx) noexcept
       -> std::vector<
           std::conditional_t<Direction == SPA_DIRECTION_OUTPUT, input_port, output_port>>
   {
@@ -450,7 +453,8 @@ struct pipewire_helpers
           for (auto& port :
                (Direction == SPA_DIRECTION_INPUT ? node.second.inputs : node.second.outputs))
           {
-            ret.push_back(to_port_info<Direction>(port));
+            if (port.format.find(format) != std::string::npos)
+              ret.push_back(to_port_info<Direction>(port));
           }
         }
 
@@ -460,7 +464,8 @@ struct pipewire_helpers
           for (auto& port :
                (Direction == SPA_DIRECTION_INPUT ? node.second.inputs : node.second.outputs))
           {
-            ret.push_back(to_port_info<Direction>(port));
+            if (port.format.find(format) != std::string::npos)
+              ret.push_back(to_port_info<Direction>(port));
           }
         }
     }
