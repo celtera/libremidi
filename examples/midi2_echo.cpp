@@ -1,3 +1,4 @@
+#include <libremidi/backends.hpp>
 #include <libremidi/libremidi.hpp>
 
 #include <iostream>
@@ -13,7 +14,7 @@ try
   auto pi = obs.get_input_ports();
   auto po = obs.get_output_ports();
   if (pi.empty() || po.empty())
-    throw std::runtime_error("No MIDI in / out available");
+    throw std::runtime_error("No MIDI in / out pair available");
 
   // Create a midi out
   midi_out midiout{{}, lm2::out_default_configuration()};

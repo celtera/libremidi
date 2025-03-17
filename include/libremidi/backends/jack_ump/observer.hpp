@@ -1,26 +1,27 @@
 #pragma once
-#include <libremidi/backends/jack/config.hpp>
 #include <libremidi/backends/jack/helpers.hpp>
+#include <libremidi/backends/jack_ump/config.hpp>
 #include <libremidi/detail/observer.hpp>
 
 #include <unordered_set>
 
-namespace libremidi
+namespace libremidi::jack_ump
 {
 class observer_jack final
     : public observer_api
     , private jack_client
-    , public jack_midi1
+    , private jack_midi1 // seems like a bug in PipeWire? MIDI 2 flag is set but the MIDI 1 type string is used
     , private error_handler
 {
 public:
   struct
-      : observer_configuration
-      , jack_observer_configuration
+      : libremidi::observer_configuration
+      , jack_ump::observer_configuration
   {
   } configuration;
 
-  explicit observer_jack(observer_configuration&& conf, jack_observer_configuration&& apiconf)
+  explicit observer_jack(
+      libremidi::observer_configuration&& conf, jack_ump::observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     // Initialize JACK client
@@ -56,8 +57,14 @@ public:
         int i = 0;
         while (ports[i] != nullptr)
         {
-          auto port = jack_port_by_name(client, ports[i]);
-          auto flags = jack_port_flags(port);
+          const auto port = jack_port_by_name(client, ports[i]);
+          const auto flags = jack_port_flags(port);
+
+          if (!(flags & 0x20)) // midi 2 check
+          {
+            i++;
+            continue;
+          }
 
           bool physical = flags & JackPortIsPhysical;
           bool ok = configuration.track_any;
@@ -87,8 +94,14 @@ public:
         int i = 0;
         while (ports[i] != nullptr)
         {
-          auto port = jack_port_by_name(client, ports[i]);
-          auto flags = jack_port_flags(port);
+          const auto port = jack_port_by_name(client, ports[i]);
+          const auto flags = jack_port_flags(port);
+
+          if (!(flags & 0x20)) // midi 2 check
+          {
+            i++;
+            continue;
+          }
 
           bool physical = flags & JackPortIsPhysical;
           bool ok = configuration.track_any;
@@ -119,6 +132,9 @@ public:
     {
       std::string_view type = jack_port_type(port);
       if (type != port_type)
+        return;
+
+      if (!(flags & 0x20)) // midi 2 check
         return;
 
       bool physical = flags & JackPortIsPhysical;
@@ -171,39 +187,35 @@ public:
     if (!configuration.has_callbacks())
       return;
 
-    jack_set_port_registration_callback(
-        this->client,
-        +[](jack_port_id_t p, int r, void* arg) {
-          auto& self = *(observer_jack*)arg;
-          if (auto port = jack_port_by_id(self.client, p))
-          {
-            self.on_port_callback(port, r != 0);
-          }
-        },
-        this);
+    jack_set_port_registration_callback(this->client, +[](jack_port_id_t p, int r, void* arg) {
+      auto& self = *(observer_jack*)arg;
+      if (auto port = jack_port_by_id(self.client, p))
+      {
+        self.on_port_callback(port, r != 0);
+      }
+    }, this);
 
     jack_set_port_rename_callback(
         this->client,
         +[](jack_port_id_t p, const char* /*old_name*/, const char* /*new_name*/, void* arg) {
-          const auto& self = *static_cast<observer_jack*>(arg);
+      const auto& self = *static_cast<observer_jack*>(arg);
 
-          auto port = jack_port_by_id(self.client, p);
-          if (!port)
-            return;
-        },
-        this);
+      auto port = jack_port_by_id(self.client, p);
+      if (!port)
+        return;
+    }, this);
   }
 
-  libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_MIDI; }
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_UMP; }
 
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
-    return get_ports<true>(this->client, nullptr, port_type, JackPortIsOutput, false);
+    return get_ports<true>(this->client, nullptr, port_type, JackPortIsOutput, true);
   }
 
   std::vector<libremidi::output_port> get_output_ports() const noexcept override
   {
-    return get_ports<false>(this->client, nullptr, port_type, JackPortIsInput, false);
+    return get_ports<false>(this->client, nullptr, port_type, JackPortIsInput, true);
   }
 
   ~observer_jack()
