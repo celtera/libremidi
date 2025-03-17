@@ -22,6 +22,11 @@ if(PIPEWIRE_INCLUDEDIR AND SPA_INCLUDEDIR)
   message(STATUS "libremidi: using PipeWire")
   set(LIBREMIDI_HAS_PIPEWIRE 1)
 
+  set(CMAKE_REQUIRED_INCLUDES "${SPA_INCLUDEDIR}/spa-0.2")
+  check_cxx_source_compiles("#include <spa/control/control.h>\nint main() { return sizeof(SPA_CONTROL_UMP); }" LIBREMIDI_HAS_PIPEWIRE_UMP)
+
+  unset(CMAKE_REQUIRED_INCLUDES)
+
   target_compile_options(libremidi
     ${_public}
       $<$<BOOL:${LIBREMIDI_CXX_HAS_WNO_GNU_STATEMENT}>:-Wno-gnu-statement-expression-from-macro-expansion>
@@ -30,6 +35,7 @@ if(PIPEWIRE_INCLUDEDIR AND SPA_INCLUDEDIR)
   target_compile_definitions(libremidi
     ${_public}
       LIBREMIDI_PIPEWIRE
+      $<$<BOOL:${LIBREMIDI_HAS_PIPEWIRE_UMP}>:LIBREMIDI_PIPEWIRE_UMP>
   )
   target_include_directories(libremidi SYSTEM
     ${_public}
