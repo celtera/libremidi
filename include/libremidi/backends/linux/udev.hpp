@@ -175,7 +175,9 @@ inline udev_soundcard_info get_udev_soundcard_info(const udev_helper& helper, in
 
     auto id_path = udev.device_get_property_value(dev, "ID_PATH");
 
-    return udev_soundcard_info{.container = id_path, .path = path, .type = type};
+    auto ret = udev_soundcard_info{.container = id_path, .path = path, .type = type};
+    udev.device_unref(dev);
+    return ret;
   }
   return {};
 }
