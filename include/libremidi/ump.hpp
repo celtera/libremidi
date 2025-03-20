@@ -1,14 +1,27 @@
 #pragma once
 #include <libremidi/config.hpp>
 
-#include <span>
-
 #if LIBREMIDI_NI_MIDI2_COMPAT
   #include <midi/universal_packet.h>
 #endif
 
 namespace libremidi
 {
+namespace midi2
+{
+// Imported from cmidi2
+enum class message_type
+{
+  // MIDI 2.0 UMP Section 3.
+  UTILITY = 0,
+  SYSTEM = 1,
+  MIDI_1_CHANNEL = 2,
+  SYSEX7 = 3,
+  MIDI_2_CHANNEL = 4,
+  SYSEX8_MDS = 5,
+};
+}
+
 struct ump
 {
   alignas(4) uint32_t data[4] = {};
@@ -62,28 +75,16 @@ struct ump
 
   constexpr std::size_t size() const noexcept
   {
-    // Imported from cmidi2
-    enum midi2_message_type
+    switch (midi2::message_type(((data[0] & 0xF0000000) >> 28) & 0xF))
     {
-      // MIDI 2.0 UMP Section 3.
-      UTILITY = 0,
-      SYSTEM = 1,
-      MIDI_1_CHANNEL = 2,
-      SYSEX7 = 3,
-      MIDI_2_CHANNEL = 4,
-      SYSEX8_MDS = 5,
-    };
-
-    switch (((data[0] & 0xF0000000) >> 28) & 0xF)
-    {
-      case UTILITY:
-      case SYSTEM:
-      case MIDI_1_CHANNEL:
+      case midi2::message_type::UTILITY:
+      case midi2::message_type::SYSTEM:
+      case midi2::message_type::MIDI_1_CHANNEL:
         return 1;
-      case MIDI_2_CHANNEL:
-      case SYSEX7:
+      case midi2::message_type::MIDI_2_CHANNEL:
+      case midi2::message_type::SYSEX7:
         return 2;
-      case SYSEX8_MDS:
+      case midi2::message_type::SYSEX8_MDS:
         return 4;
       default:
         return 0;
@@ -109,5 +110,14 @@ struct ump
   constexpr auto cend() const noexcept { return data + size(); }
   constexpr auto cbegin() noexcept { return data; }
   constexpr auto cend() noexcept { return data + size(); }
+
+  constexpr midi2::message_type get_type() const noexcept
+  {
+    return midi2::message_type(((data[0] & 0xF0000000) >> 28) & 0xF);
+  }
+  constexpr uint8_t get_group() const noexcept { return (data[0] >> 24) & 0x0F; }
+  constexpr uint8_t get_channel_0_15() const noexcept { return (data[0] >> 16) & 0x0F; }
+  constexpr uint8_t get_channel() const noexcept { return get_channel_0_15() + 1; }
+  constexpr uint8_t get_status_code() const noexcept { return (data[0] >> 16) & 0xF0; }
 };
 }

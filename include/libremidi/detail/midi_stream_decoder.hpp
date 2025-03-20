@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libremidi/cmidi2.hpp>
+#include <libremidi/detail/conversion.hpp>
 #include <libremidi/detail/midi_in.hpp>
 
 #include <cmath>
@@ -8,99 +9,6 @@
 #include <chrono>
 #include <cstdint>
 #include <span>
-
-static inline void cmidi2_reverse(int64_t v, cmidi2_ump* output)
-{
-  union
-  {
-    uint32_t u[2];
-    int64_t i;
-  } e0, e1;
-  e0.i = v;
-  e1.u[0] = e0.u[1];
-  e1.u[1] = e0.u[0];
-  memcpy(output, &e1, 8);
-}
-
-static inline bool
-cmidi2_ump_upgrade_midi1_channel_voice_to_midi2(const cmidi2_ump* input, cmidi2_ump* output)
-{
-  if (cmidi2_ump_get_message_type(input) != CMIDI2_MESSAGE_TYPE_MIDI_1_CHANNEL)
-    return false;
-
-  const auto group = cmidi2_ump_get_group(input);
-  const auto channel = cmidi2_ump_get_channel(input);
-  const auto b0 = cmidi2_ump_get_status_code(input);
-  const auto b1 = cmidi2_ump_get_midi1_byte2(input);
-  const auto b2 = cmidi2_ump_get_midi1_byte3(input);
-
-  static constexpr auto u7_to_u16 = [](uint8_t in) -> uint16_t {
-    static constexpr auto ratio = float(std::numeric_limits<uint16_t>::max()) / 127.f;
-    return std::clamp(std::round(in * ratio), 0.f, float(std::numeric_limits<uint16_t>::max()));
-  };
-  static constexpr auto u7_to_u32 = [](uint8_t in) -> uint32_t {
-    static constexpr auto ratio = double(std::numeric_limits<uint32_t>::max()) / 127.;
-    return std::clamp(std::round(in * ratio), 0., double(std::numeric_limits<uint32_t>::max()));
-  };
-  static constexpr auto u16_to_u32 = [](uint16_t in) -> uint32_t {
-    static constexpr auto ratio = double(std::numeric_limits<uint32_t>::max())
-                                  / double(std::numeric_limits<uint16_t>::max());
-    return std::clamp(std::round(in * ratio), 0., double(std::numeric_limits<uint32_t>::max()));
-  };
-
-  switch (b0)
-  {
-    // Not in midi 1:
-    case CMIDI2_STATUS_PER_NOTE_RCC:
-    case CMIDI2_STATUS_PER_NOTE_ACC:
-    case CMIDI2_STATUS_RPN:
-    case CMIDI2_STATUS_NRPN:
-    case CMIDI2_STATUS_RELATIVE_RPN:
-    case CMIDI2_STATUS_RELATIVE_NRPN:
-    case CMIDI2_STATUS_PER_NOTE_PITCH_BEND:
-    case CMIDI2_STATUS_PER_NOTE_MANAGEMENT:
-      return false;
-
-    case CMIDI2_STATUS_NOTE_OFF: {
-      const int64_t msg = cmidi2_ump_midi2_note_off(group, channel, b1, 0, u7_to_u16(b2), 0);
-      cmidi2_reverse(msg, output);
-      break;
-    }
-    case CMIDI2_STATUS_NOTE_ON: {
-      const int64_t msg = cmidi2_ump_midi2_note_on(group, channel, b1, 0, u7_to_u16(b2), 0);
-      cmidi2_reverse(msg, output);
-      break;
-    }
-    case CMIDI2_STATUS_PAF: {
-      const int64_t msg = cmidi2_ump_midi2_paf(group, channel, b1, u7_to_u32(b2));
-      cmidi2_reverse(msg, output);
-      break;
-    }
-    case CMIDI2_STATUS_CC: {
-      int64_t msg = cmidi2_ump_midi2_cc(group, channel, b1, u7_to_u32(b2));
-      cmidi2_reverse(msg, output);
-      break;
-    }
-    case CMIDI2_STATUS_PROGRAM: {
-      const int64_t msg = cmidi2_ump_midi2_program(group, channel, 0, b1, 0, 0);
-      cmidi2_reverse(msg, output);
-      break;
-    }
-    case CMIDI2_STATUS_CAF: {
-      const int64_t msg = cmidi2_ump_midi2_caf(group, channel, u7_to_u32(b1));
-      cmidi2_reverse(msg, output);
-      break;
-    }
-    case CMIDI2_STATUS_PITCH_BEND: {
-      const auto pb = b1 + b2 * 0x80;
-      const int64_t msg = cmidi2_ump_midi2_pitch_bend_direct(group, channel, u16_to_u32(pb));
-      cmidi2_reverse(msg, output);
-      break;
-    }
-  }
-
-  return true;
-}
 
 namespace libremidi
 {

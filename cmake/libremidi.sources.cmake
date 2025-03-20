@@ -115,6 +115,7 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/winuwp/observer.hpp
     include/libremidi/backends/winuwp.hpp
 
+    include/libremidi/detail/conversion.hpp
     include/libremidi/detail/memory.hpp
     include/libremidi/detail/midi_api.hpp
     include/libremidi/detail/midi_in.hpp
@@ -135,6 +136,7 @@ target_sources(libremidi PRIVATE
     include/libremidi/libremidi.hpp
     include/libremidi/message.hpp
     include/libremidi/output_configuration.hpp
+    include/libremidi/ump_events.hpp
 
     include/libremidi/reader.hpp
     include/libremidi/writer.hpp
