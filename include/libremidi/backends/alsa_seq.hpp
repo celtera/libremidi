@@ -16,6 +16,8 @@
 #include <libremidi/backends/alsa_seq/midi_out.hpp>
 #include <libremidi/backends/alsa_seq/observer.hpp>
 
+#include <unistd.h>
+
 #include <string_view>
 
 namespace libremidi::alsa_seq
@@ -37,7 +39,10 @@ struct backend
   static inline bool available() noexcept
   {
     static const libasound& snd = libasound::instance();
-    return snd.available && snd.seq.available;
+    if (!snd.available || !snd.seq.available)
+      return false;
+
+    return ::access("/dev/snd/seq", F_OK) == 0;
   }
 };
 

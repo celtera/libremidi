@@ -5,6 +5,8 @@
 #include <libremidi/backends/alsa_seq_ump/config.hpp>
 #include <libremidi/backends/alsa_seq_ump/midi_out.hpp>
 
+#include <unistd.h>
+
 #include <string_view>
 
 namespace libremidi
@@ -58,7 +60,10 @@ struct backend
   static inline bool available() noexcept
   {
     static const libasound& snd = libasound::instance();
-    return snd.available && snd.seq.available && snd.seq.ump.available && snd.ump.available;
+    if (!snd.available || !snd.seq.available || !snd.seq.ump.available || !snd.ump.available)
+      return false;
+
+    return ::access("/dev/snd/seq", F_OK) == 0;
   }
 };
 }
