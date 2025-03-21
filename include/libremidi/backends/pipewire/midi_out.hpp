@@ -121,8 +121,9 @@ public:
         continue;
       }
 
-      spa_pod_builder_control(&build, m.timestamp, SPA_CONTROL_Midi);
-      int res = spa_pod_builder_bytes(&build, m.bytes.data(), m.bytes.size());
+      spa_pod_builder_control(&build, static_cast<int32_t>(m.timestamp), SPA_CONTROL_Midi);
+      int res
+          = spa_pod_builder_bytes(&build, m.bytes.data(), static_cast<uint32_t>(m.bytes.size()));
 
       // Try again next buffer
       if (res == -ENOSPC)

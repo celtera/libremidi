@@ -322,7 +322,7 @@ public:
                 .count();
       for (;;)
       {
-        int err = poll(descriptors_.data(), descriptors_.size(), period);
+        int err = poll(descriptors_.data(), descriptors_.size(), static_cast<int32_t>(period));
         if (err >= 0)
         {
           // We got our stop-thread signal

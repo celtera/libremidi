@@ -228,7 +228,7 @@ private:
     for (;;)
     {
       // Poll
-      ssize_t err = poll(fds_.data(), fds_.size(), period);
+      ssize_t err = poll(fds_.data(), fds_.size(), static_cast<int32_t>(period));
       if (err == -EAGAIN)
         continue;
       else if (err < 0)

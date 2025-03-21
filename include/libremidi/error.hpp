@@ -28,7 +28,7 @@ struct source_location {
 
 namespace libremidi
 {
-inline auto from_errc(int ret) noexcept
+inline auto from_errc(int64_t ret) noexcept
 {
   return static_cast<std::errc>(-ret);
 }

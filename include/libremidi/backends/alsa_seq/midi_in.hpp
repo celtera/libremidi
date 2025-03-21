@@ -212,7 +212,7 @@ public:
         .count();
   }
 
-  int process_event(const snd_seq_event_t& ev)
+  int64_t process_event(const snd_seq_event_t& ev)
   {
     if constexpr (ConfigurationImpl::midi_version == 1)
     {
@@ -258,17 +258,17 @@ public:
     return 0;
   }
 
-  int process_events()
+  int64_t process_events()
   {
     if constexpr (ConfigurationImpl::midi_version == 1)
     {
       snd_seq_event_t* ev{};
       event_handle handle{snd};
-      int result = 0;
+      int64_t result = 0;
       if ((result = snd.seq.event_input(seq, &ev)) > 0)
       {
         handle.reset(ev);
-        if (int err = process_event(*ev); err < 0)
+        if (auto err = process_event(*ev); err < 0)
         {
           return err;
         }
@@ -439,7 +439,7 @@ private:
       if (alsa_data::snd.seq.event_input_pending(this->seq, 1) == 0)
       {
         // No data pending
-        if (poll(poll_fds, poll_fd_count, period) >= 0)
+        if (poll(poll_fds, poll_fd_count, static_cast<int32_t>(period)) >= 0)
         {
           // We got our stop-thread signal
           if (m_termination_event.ready(poll_fds[0]))
@@ -450,7 +450,7 @@ private:
         continue;
       }
 
-      int res{};
+      int64_t res{};
       if constexpr (ConfigurationImpl::midi_version == 1)
       {
         res = this->process_events();

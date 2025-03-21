@@ -96,7 +96,7 @@ int main()
           if (it != addresses.end())
           {
             // Dispatch the event to the correct observer or midi_in object
-            int index = std::distance(addresses.begin(), it);
+            auto index = std::distance(addresses.begin(), it);
             int err = callbacks[index](*ev);
             if (err < 0 && err != -EAGAIN)
               return -err;

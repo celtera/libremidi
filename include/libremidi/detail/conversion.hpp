@@ -43,7 +43,7 @@ static inline auto u16_to_u32(uint16_t in) -> uint32_t
 };
 
 static inline bool
-cmidi2_midi1_channel_voice_to_midi2(const uint8_t* bytes, int sz, cmidi2_ump* output)
+cmidi2_midi1_channel_voice_to_midi2(const uint8_t* bytes, std::size_t sz, cmidi2_ump* output)
 {
   if (sz < 2)
     return false;

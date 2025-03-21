@@ -80,11 +80,11 @@ struct pipewire_context
   struct graph
   {
     mutable std::mutex mtx;
-    libremidi::hash_map<uint32_t, node> physical_audio;
-    libremidi::hash_map<uint32_t, node> physical_midi;
-    libremidi::hash_map<uint32_t, node> software_audio;
-    libremidi::hash_map<uint32_t, node> software_midi;
-    libremidi::hash_map<uint32_t, port_info> port_cache;
+    libremidi::hash_map<uint64_t, node> physical_audio;
+    libremidi::hash_map<uint64_t, node> physical_midi;
+    libremidi::hash_map<uint64_t, node> software_audio;
+    libremidi::hash_map<uint64_t, node> software_midi;
+    libremidi::hash_map<uint64_t, port_info> port_cache;
 
     void for_each_port(auto func)
     {
@@ -288,7 +288,7 @@ struct pipewire_context
     spa_hook_remove(&core_listener);
   }
 
-  [[nodiscard]] pw_proxy* link_ports(uint32_t out_port, uint32_t in_port)
+  [[nodiscard]] pw_proxy* link_ports(uint64_t out_port, uint64_t in_port)
   {
     auto props = pw.properties_new(
         PW_KEY_LINK_OUTPUT_PORT, std::to_string(out_port).c_str(), PW_KEY_LINK_INPUT_PORT,
@@ -523,7 +523,7 @@ struct pipewire_filter
     return stdx::error{};
   }
 
-  void set_port_buffer(int bytes)
+  void set_port_buffer(int64_t bytes)
   {
     uint8_t buffer[1024];
     struct spa_pod_builder builder;

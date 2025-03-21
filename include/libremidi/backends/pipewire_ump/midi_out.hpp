@@ -111,7 +111,7 @@ public:
     {
       auto& m = *m_ptr;
 
-      spa_pod_builder_control(&build, m.timestamp, SPA_CONTROL_UMP);
+      spa_pod_builder_control(&build, static_cast<int32_t>(m.timestamp), SPA_CONTROL_UMP);
       int res = spa_pod_builder_bytes(&build, m.data, cmidi2_ump_get_message_size_bytes(m.data));
 
       // Try again next buffer

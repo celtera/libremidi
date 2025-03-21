@@ -61,7 +61,7 @@ inline std::ostream& operator<<(std::ostream& s, const libremidi::device_identif
     void operator()(const std::string& u) { s << u; }
     void operator()(uint64_t u)
     {
-      uint32_t res = u;
+      auto res = static_cast<uint32_t>(u);
       std::ios_base::fmtflags f(s.flags());
       s << std::hex << std::setfill('0') << std::setw(4) << (res >> 16) << ":" << std::hex
         << std::setfill('0') << std::setw(4) << (res & 0x0000FFFF);
