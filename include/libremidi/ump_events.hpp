@@ -68,8 +68,7 @@ namespace libremidi::from_midi1
 inline libremidi::ump note_on(uint8_t channel, uint8_t pitch, uint8_t vel)
 {
   libremidi::ump u;
-  // FIXME 7 bit -> 16 bit
-  const int64_t msg = cmidi2_ump_midi2_note_on(0, channel, pitch, 0, vel, 0);
+  const int64_t msg = cmidi2_ump_midi2_note_on(0, channel, pitch, 0, u7_to_u16(vel), 0);
   cmidi2_reverse(msg, u.data);
   return u;
 }
@@ -77,17 +76,15 @@ inline libremidi::ump note_on(uint8_t channel, uint8_t pitch, uint8_t vel)
 inline libremidi::ump note_off(uint8_t channel, uint8_t pitch, uint8_t vel)
 {
   libremidi::ump u;
-  // FIXME 7 bit -> 16 bit
-  const int64_t msg = cmidi2_ump_midi2_note_off(0, channel, pitch, 0, vel, 0);
+  const int64_t msg = cmidi2_ump_midi2_note_off(0, channel, pitch, 0, u7_to_u16(vel), 0);
   cmidi2_reverse(msg, u.data);
   return u;
 }
 
-inline libremidi::ump poly_pressure(uint8_t channel, uint8_t pitch, uint8_t vel)
+inline libremidi::ump poly_pressure(uint8_t channel, uint8_t pitch, uint8_t value)
 {
   libremidi::ump u;
-  // FIXME 7 bit -> 32 bit
-  const int64_t msg = cmidi2_ump_midi2_paf(0, channel, pitch, vel);
+  const int64_t msg = cmidi2_ump_midi2_paf(0, channel, pitch, u7_to_u32(value));
   cmidi2_reverse(msg, u.data);
   return u;
 }
@@ -95,8 +92,7 @@ inline libremidi::ump poly_pressure(uint8_t channel, uint8_t pitch, uint8_t vel)
 inline libremidi::ump control_change(uint8_t channel, uint8_t index, uint8_t value)
 {
   libremidi::ump u;
-  // FIXME 7 bit -> 32 bit
-  const int64_t msg = cmidi2_ump_midi2_cc(0, channel, index, value);
+  const int64_t msg = cmidi2_ump_midi2_cc(0, channel, index, u7_to_u32(value));
   cmidi2_reverse(msg, u.data);
   return u;
 }
@@ -112,8 +108,7 @@ inline libremidi::ump program_change(uint8_t channel, uint8_t index)
 inline libremidi::ump aftertouch(uint8_t channel, uint8_t value)
 {
   libremidi::ump u;
-  // FIXME 7 bit -> 32 bit
-  const int64_t msg = cmidi2_ump_midi2_caf(0, channel, value);
+  const int64_t msg = cmidi2_ump_midi2_caf(0, channel, u7_to_u32(value));
   cmidi2_reverse(msg, u.data);
   return u;
 }
@@ -121,8 +116,7 @@ inline libremidi::ump aftertouch(uint8_t channel, uint8_t value)
 inline libremidi::ump pitch_bend(uint8_t channel, uint16_t value)
 {
   libremidi::ump u;
-  // FIXME 7 bit -> 32 bit
-  const int64_t msg = cmidi2_ump_midi2_pitch_bend_direct(0, channel, value);
+  const int64_t msg = cmidi2_ump_midi2_pitch_bend_direct(0, channel, u16_to_u32(value));
   cmidi2_reverse(msg, u.data);
   return u;
 }
