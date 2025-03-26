@@ -66,3 +66,6 @@ target_include_directories(libremidi SYSTEM ${_public}
 target_compile_definitions(libremidi ${_public} LIBREMIDI_WINMIDI)
 set(LIBREMIDI_HAS_WINMIDI 1)
 target_link_libraries(libremidi INTERFACE RuntimeObject)
+if(MSVC)
+  target_link_libraries(libremidi ${_public} windowsapp)
+endif()
