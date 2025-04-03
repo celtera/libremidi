@@ -13,6 +13,7 @@ See a basic `midi2_echo.cpp` example: it uses the following printing function:
 std::ostream& operator<<(std::ostream& s, const libremidi::ump& message)
 {
   // Automatic conversion from libremidi::ump& to cmidi2_ump*
+  // Note that cmidi2_ump is just a typedef for uint32_t.
   const cmidi2_ump* b = message;
   
   // Read MIDI 2 information

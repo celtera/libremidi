@@ -276,11 +276,11 @@ int libremidi_midi_in_new(
             = [cb = c->get_timestamp](int64_t msg) { return cb.callback(cb.context, msg); };
       }
 
-      if (c->on_midi1_message.callback)
+      if (c->version == libremidi_midi_configuration::MIDI1 && c->on_midi1_message.callback)
         conf.on_message = [cb = c->on_midi1_message](const libremidi::message& msg) {
           cb.callback(cb.context, msg.timestamp, msg.bytes.data(), msg.size());
         };
-      else if (c->on_midi1_raw_data.callback)
+      else if (c->version == libremidi_midi_configuration::MIDI1_RAW && c->on_midi1_raw_data.callback)
       {
         conf.on_raw_data = [cb = c->on_midi1_raw_data](std::span<const uint8_t> msg, int64_t ts) {
           cb.callback(cb.context, ts, msg.data(), msg.size());
@@ -319,11 +319,11 @@ int libremidi_midi_in_new(
             = [cb = c->get_timestamp](int64_t msg) { return cb.callback(cb.context, msg); };
       }
 
-      if (c->on_midi2_message.callback)
+      if (c->version == libremidi_midi_configuration::MIDI2 && c->on_midi2_message.callback)
         conf.on_message = [cb = c->on_midi2_message](const libremidi::ump& msg) {
           cb.callback(cb.context, msg.timestamp, msg.data, msg.size());
         };
-      else if (c->on_midi2_raw_data.callback)
+      else if (c->version == libremidi_midi_configuration::MIDI2_RAW && c->on_midi2_raw_data.callback)
       {
         conf.on_raw_data = [cb = c->on_midi2_raw_data](std::span<const uint32_t> msg, int64_t ts) {
           cb.callback(cb.context, ts, msg.data(), msg.size());
