@@ -13,9 +13,9 @@ Q_DECLARE_METATYPE(libremidi::port_information);
 int main(int argc, char** argv)
 {
   using namespace libremidi;
-  auto in_api = libremidi::midi_in_default_configuration();
-  auto out_api = libremidi::midi_out_default_configuration();
-  auto observer_api = libremidi::observer_default_configuration();
+  auto in_api = libremidi::midi1::in_default_configuration();
+  auto out_api = libremidi::midi1::out_default_configuration();
+  auto observer_api = libremidi::midi1::observer_default_configuration();
 
   // Create the GUI
   QApplication app{argc, argv};
@@ -27,42 +27,35 @@ int main(int argc, char** argv)
 
   main.show();
 
-  std::map<libremidi::port_information, QListWidgetItem*> input_items;
-  std::map<libremidi::port_information, QListWidgetItem*> output_items;
+  std::map<libremidi::input_port, QListWidgetItem*> input_items;
+  std::map<libremidi::output_port, QListWidgetItem*> output_items;
 
   // Define the observer callbacks which will fill the list widgets with the input & output devices
-  observer_configuration conf{
-      .input_added =
-          [&](const port_information& p) {
+  observer_configuration conf{.input_added = [&](const input_port& p) {
     auto item = new QListWidgetItem{QString::fromStdString(p.display_name)};
     item->setData(Qt::UserRole, QVariant::fromValue(p));
     input_items[p] = item;
 
     inputs.addItem(item);
-      },
-      .input_removed =
-          [&](const port_information& p) {
+  }, .input_removed = [&](const input_port& p) {
     if (auto it = input_items.find(p); it != input_items.end())
     {
       inputs.removeItemWidget(it->second);
       input_items.erase(it);
     }
-      },
-      .output_added
-      = [&](const port_information& p) {
+  }, .output_added = [&](const output_port& p) {
     auto item = new QListWidgetItem{QString::fromStdString(p.display_name)};
     item->setData(Qt::UserRole, QVariant::fromValue(p));
     output_items[p] = item;
 
     outputs.addItem(item);
-      },
-      .output_removed = [&](const port_information& p) {
-        if (auto it = output_items.find(p); it != output_items.end())
-        {
-          outputs.removeItemWidget(it->second);
-          output_items.erase(it);
-        }
-      }};
+  }, .output_removed = [&](const output_port& p) {
+    if (auto it = output_items.find(p); it != output_items.end())
+    {
+      outputs.removeItemWidget(it->second);
+      output_items.erase(it);
+    }
+  }};
 
   // Create the libremidi structures
   observer obs{conf, observer_api};
