@@ -165,8 +165,16 @@ inline udev_soundcard_info get_udev_soundcard_info(const udev_helper& helper, in
        entry = udev.list_entry_get_next(entry))
   {
     auto path = udev.list_entry_get_name(entry);
+    if (!path)
+      continue;
+
     auto dev = udev.device_new_from_syspath(helper.instance, path);
-    auto usb_device = udev.device_get_parent_with_subsystem_devtype(dev, "usb", "usb_device");
+    if (!dev)
+      continue;
+
+    const auto usb_device
+        = udev.device_get_parent_with_subsystem_devtype(dev, "usb", "usb_device");
+
     port_information::port_type type = port_information::port_type::hardware;
     if (usb_device)
       type = (port_information::port_type)(type | port_information::port_type::usb);
@@ -174,6 +182,8 @@ inline udev_soundcard_info get_udev_soundcard_info(const udev_helper& helper, in
       type = (port_information::port_type)(type | port_information::port_type::pci);
 
     auto id_path = udev.device_get_property_value(dev, "ID_PATH");
+    if (!id_path)
+      id_path = "";
 
     auto ret = udev_soundcard_info{.container = id_path, .path = path, .type = type};
     udev.device_unref(dev);
