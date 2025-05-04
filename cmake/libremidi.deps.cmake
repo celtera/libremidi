@@ -40,11 +40,15 @@ if(NOT LIBREMIDI_NO_PIPEWIRE)
   set(LIBREMIDI_NEEDS_READERWRITERQUEUE 1)
 endif()
 if(LIBREMIDI_NEEDS_READERWRITERQUEUE AND NOT TARGET readerwriterqueue)
-  FetchContent_Declare(
-      readerwriterqueue
-      GIT_REPOSITORY https://github.com/cameron314/readerwriterqueue
-      GIT_TAG        master
-  )
+  find_package(readerwriterqueue)
 
-  FetchContent_MakeAvailable(readerwriterqueue)
+  if(NOT readerwriterqueue_FOUND)
+    FetchContent_Declare(
+        readerwriterqueue
+        GIT_REPOSITORY https://github.com/cameron314/readerwriterqueue
+        GIT_TAG        master
+    )
+
+    FetchContent_MakeAvailable(readerwriterqueue)
+  endif()
 endif()
