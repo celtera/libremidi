@@ -1,0 +1,26 @@
+.{
+    .name = .libremidi,
+    .version = "5.2.0",
+    .fingerprint = 0x235e7c9bf5e9c9ee, // Changing this has security and trust implications.
+    .minimum_zig_version = "0.14.0",
+
+    .dependencies = .{
+
+        .readerwriterqueue = .{
+            .url = "git+https://github.com/cameron314/readerwriterqueue/tree/master",
+            .hash = "N-V-__8AANDHAwArdTVetOBbZZZeKkJ3T0LaZit_KIZGh1iB",
+        },
+
+        .ni_midi2 = .{
+            .url = "git+https://github.com/midi2-dev/ni-midi2/tree/main",
+            .hash = "N-V-__8AAHVgEACwk3QBmtC2mSHWXXeV7OiaApXX22dpwyx1",
+        },
+
+        .boost = .{
+            .url = "git+https://github.com/allyourcodebase/boost-libraries-zig/tree/main",
+            .hash = "boost_libraries-1.88.0-frkKHMh_AQAu64vDTKQX5I77VurZqF6J5o26U7wsZrMO",
+        },
+    },
+
+    .paths = .{ "build.zig", "build.zig.zon", "include/", "bindings/zig/libremidi.zig", "LICENSE.md" },
+}

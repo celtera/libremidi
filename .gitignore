@@ -93,3 +93,6 @@ build
 
 .vscode
 
+# Zig related
+.zig-cache
+zig-out
