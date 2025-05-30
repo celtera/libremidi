@@ -3,15 +3,15 @@ const lm = @import("libremidi");
 
 
 const EnumeratedPorts = extern struct {
-    in_ports: [256]lm.midi.in.port.Handle = .{ lm.midi.in.port.Handle{} } ** 256,
-    out_ports: [256]lm.midi.out.port.Handle = .{ lm.midi.out.port.Handle{} } ** 256,
+    in_ports: [256]lm.midi.in.port.Handle = @splat(.{}),
+    out_ports: [256]lm.midi.out.port.Handle = @splat(.{}),
     in_port_count: usize = 0,
     out_port_count: usize = 0,
 };
 
 pub fn main() !void {
 
-    std.debug.print("Hello from midi Zig(ified) API example!\n", .{});
+    std.debug.print("Hello from libremidi Zig(ified) API example!\n", .{});
     std.debug.print("libremidi version: {s}\n\n", .{ lm.getVersion() });
 
     var e: EnumeratedPorts = .{};
