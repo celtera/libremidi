@@ -3,7 +3,7 @@ const c = @import("libremidi-c");
 
 const E = std.c.E;
 fn errnoFromInt(rc: anytype) E {
-    return .init(@bitCast(@as(isize, rc)));
+    return @enumFromInt(-rc);
 }
 
 
