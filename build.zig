@@ -49,12 +49,14 @@ pub fn build(b: *std.Build) !void {
 
     const c_obj = addLibremidiCObject(b, config);
     const libremidi = addLibremidiZigModule(b, c_obj, "libremidi", config);
+    // _ = libremidi; // autofix
 
-    const lib = b.addLibrary(.{
-        .name = "libremidi-zig",
-        .root_module = libremidi,
-    });
-    b.installArtifact(lib);
+    // const lib = b.addLibrary(.{
+    //     .name = "libremidi-zig",
+    //     .root_module = libremidi,
+    // });
+    // _ = lib; // autofix
+    // b.installArtifact(lib);
 
     addExamplesStep(b, libremidi, config);
 }
@@ -281,7 +283,7 @@ fn addAlsaConfig(b: *std.Build, libremidi_c: *Build.Module, config: anytype) voi
 // TODO: fix weakjack, make work on other OSes?
 fn addJackConfig(b: *std.Build, libremidi_c: *Build.Module, config: anytype) void {
     _ = b;
-    if ((config.no_jack) or (config.target.result.os.tag == .emscripten)) return;
+    if ((config.no_jack) or (config.target.result.os.tag != .linux)) return;
 
     addCMacroNoValue(libremidi_c, "LIBREMIDI_JACK");
     // libremidi_c.addCMacro("LIBREMIDI_WEAKJACK", "1");
