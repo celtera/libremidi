@@ -7,15 +7,37 @@ const ResolvedTarget = Build.ResolvedTarget;
 const OptimizeMode = std.builtin.OptimizeMode;
 
 
+const cpp_flags = .{ "-std=c++20" };
+
 const cpp_examples = [_][]const u8{
-    "midiprobe",
     "midiobserve",
-    // Add other examples once proper cpp library build is fixed
+    "echo",
+    "cmidiin",
+    "cmidiin2",
+    "midiclock_in",
+    "midiclock_out",
+    "midiout",
+    "client",
+    "midiprobe",
+    "qmidiin",
+    "sysextest",
+    "minimal",
+    "midi2_echo",
+    "rawmidiin",
+
+    // "coroutines",
+    // Add other examples once backends and such aare fixed
+};
+
+const c_examples = [_][]const u8{
+    "c_api", // just one for now
 };
 
 const zig_examples = [_][]const u8{
-    "zig_api",
+    "zig_api", // same
 };
+
+var boost_tkt: *Build.Dependency = undefined;
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -44,24 +66,75 @@ pub fn build(b: *std.Build) !void {
         // .ci = b.option(bool, "ci", "To be enabled only in CI, some tests cannot run there. Also enables -Werror.") orelse false,
     };
 
-    // const cpp_lib = addLibremidiCppLibrary(b, config);
-    // b.installArtifact(cpp_lib);
+    const cpp_lib = addLibremidiCppLibrary(b, config);
+    b.installArtifact(cpp_lib);
 
-    const c_obj = addLibremidiCObject(b, config);
-    const libremidi = addLibremidiZigModule(b, c_obj, "libremidi", config);
-    // _ = libremidi; // autofix
+    const c_lib = addLibremidiCLibrary(b, cpp_lib, config);
+    b.installArtifact(c_lib);
 
-    // const lib = b.addLibrary(.{
-    //     .name = "libremidi-zig",
-    //     .root_module = libremidi,
-    // });
-    // _ = lib; // autofix
-    // b.installArtifact(lib);
+    const libremidi = addLibremidiZigModule(b, c_lib, "libremidi", config);
 
-    addExamplesStep(b, libremidi, config);
+    const zig_lib = b.addLibrary(.{
+        .name = "libremidi-zig",
+        .root_module = libremidi,
+    });
+    b.installArtifact(zig_lib);
+
+    addExamplesStep(b, cpp_lib, c_lib, libremidi, config);
 }
 
-fn addLibremidiZigModule(b: *std.Build, c_obj: *Build.Step.Compile, name: []const u8, config: anytype) *Build.Module {
+// TODO: fix this
+fn addLibremidiCppLibrary(b: *std.Build, config: anytype) *Build.Step.Compile {
+
+    const cpp_lib = b.addLibrary(.{
+        .name = "libremidi",
+        .root_module = b.createModule(.{
+            .target = config.target,
+            .optimize = config.optimize,
+        }),
+    });
+
+    cpp_lib.root_module.addIncludePath(b.path("include/"));
+    cpp_lib.root_module.addCSourceFiles(.{
+        .files = &.{
+            "include/libremidi/libremidi.cpp",
+            "include/libremidi/observer.cpp",
+            "include/libremidi/midi_in.cpp",
+            "include/libremidi/midi_out.cpp",
+            "include/libremidi/client.cpp",
+        },
+        .flags = &cpp_flags,
+    });
+    cpp_lib.root_module.linkSystemLibrary("pthread", .{ .preferred_link_mode = .static }); // Needed ?
+
+    addLibremidiConfig(b, cpp_lib.root_module, config);
+
+    return cpp_lib;
+}
+
+fn addLibremidiCLibrary(b: *std.Build, cpp_lib: *Build.Step.Compile, config: anytype) *Build.Step.Compile {
+
+    const c_lib = b.addLibrary(.{
+        .name = "libremidi-c",
+        .root_module = b.createModule(.{
+            .target = config.target,
+            .optimize = config.optimize,
+        }),
+    });
+
+    c_lib.root_module.addIncludePath(b.path("include/"));
+    c_lib.root_module.addCSourceFiles(.{
+        .files = &.{
+            "include/libremidi/libremidi-c.cpp",
+        },
+        .flags = &cpp_flags,
+    });
+    c_lib.root_module.linkLibrary(cpp_lib);
+
+    return c_lib;
+}
+
+fn addLibremidiZigModule(b: *std.Build, c_lib: *Build.Step.Compile, name: []const u8, config: anytype) *Build.Module {
 
     const translated_header = b.addTranslateC(.{
         .root_source_file = b.path("include/libremidi/libremidi-c.h"),
@@ -75,7 +148,7 @@ fn addLibremidiZigModule(b: *std.Build, c_obj: *Build.Step.Compile, name: []cons
         .target = config.target,
         .optimize = config.optimize,
     });
-    libremidi_c_mod.addObject(c_obj);
+    libremidi_c_mod.linkLibrary(c_lib);
 
 
     const libremidi_zig_mod = b.addModule(name, .{
@@ -90,61 +163,6 @@ fn addLibremidiZigModule(b: *std.Build, c_obj: *Build.Step.Compile, name: []cons
     return libremidi_zig_mod;
 }
 
-fn addLibremidiCObject(b: *std.Build, config: anytype) *Build.Step.Compile {
-
-    const c_obj = b.addObject(.{
-        .name = "libremidi-c",
-        .root_module = b.createModule(.{
-            .target = config.target,
-            .optimize = config.optimize,
-            .link_libc = true,
-            .link_libcpp = true,
-        }),
-    });
-
-    c_obj.root_module.addIncludePath(b.path("include/"));
-    c_obj.root_module.addCSourceFiles(.{
-        .files = &.{
-            "include/libremidi/libremidi-c.cpp",
-        },
-        .flags = &.{ "-std=c++20" },
-    });
-    addCMacroNoValue(c_obj.root_module, "LIBREMIDI_HEADER_ONLY");
-    c_obj.root_module.linkSystemLibrary("pthread", .{ .preferred_link_mode = .static });
-
-
-    addLibremidiConfig(b, c_obj.root_module, config);
-
-    return c_obj;
-}
-
-// TODO: fix this
-fn addLibremidiCppLibrary(b: *std.Build, config: anytype) *Build.Step.Compile {
-
-    const cpp_lib = b.addStaticLibrary(.{
-        .name = "libremidi",
-        .root_module = b.createModule(.{
-            .target = config.target,
-            .optimize = config.optimize,
-            .link_libc = true,
-            .link_libcpp = true,
-        }),
-    });
-
-    addCMacroNoValue(cpp_lib.root_module, "LIBREMIDI_HEADER_ONLY");
-    cpp_lib.root_module.addIncludePath(b.path("include/"));
-    cpp_lib.root_module.addCSourceFiles(.{
-        .files = &.{
-            "include/libremidi/libremidi.hpp",
-        },
-        .flags = &.{ "-std=c++20" },
-    });
-
-    addLibremidiConfig(b, cpp_lib.root_module, config);
-
-    return cpp_lib;
-}
-
 fn addLibremidiConfig(b: *std.Build, module: *Build.Module, config: anytype) void {
 
     const boost = addBoostConfig(b, module, config);
@@ -152,7 +170,9 @@ fn addLibremidiConfig(b: *std.Build, module: *Build.Module, config: anytype) voi
     addExportsConfig(b, module , config);
     addNiMidi2Config(b, module, config); // Broken
     addEmscriptenConfig(b, module, config); // Broken
-    addWin32Config(b, module, config); // Unimplemented
+    addWinMMConfig(b, module, config); // I think this works now?
+    addWinUWPConfig(b, module, config); // Unimplemented
+    addWinMidiConfig(b, module, config); // Unimplemented
     addCoremidiConfig(b, module, config); // Unimplemented
     addAlsaConfig(b, module, config);
     addJackConfig(b, module, config);
@@ -179,7 +199,7 @@ fn addBoostConfig(b: *std.Build, libremidi_c: *Build.Module, config: anytype) ?*
 
     addCMacroNoValue(libremidi_c, "LIBREMIDI_USE_BOOST");
 
-    const boost = b.dependency("boost", .{ .target = config.target, .optimize = config.optimize });
+    const boost = b.dependency("boost", .{ .target = config.target, .optimize = config.optimize, .cobalt = true });
     const boost_artifact = boost.artifact("boost");
 
     for (boost_artifact.root_module.include_dirs.items) |include_dir|
@@ -231,7 +251,7 @@ fn addNiMidi2Config(b: *std.Build, libremidi_c: *Build.Module, config: anytype) 
             "universal_packet.cpp",
             "universal_sysex.cpp",
         },
-        .flags = &.{ "-std=c++20" },
+        .flags = &cpp_flags,
     });
     b.installArtifact(nimidi2_lib);
     // const tkt = b.addInstallArtifact(nimidi2_lib, .{ .dest_dir = .{ .override = .{ .custom = "obj/" } } });
@@ -251,8 +271,26 @@ fn addEmscriptenConfig(b: *std.Build, libremidi_c: *Build.Module, config: anytyp
     addCMacroNoValue(libremidi_c, "LIBREMIDI_EMSCRIPTEN");
 }
 
+fn addWinMMConfig(b: *std.Build, libremidi_c: *Build.Module, config: anytype) void {
+    _ = b;
+    if ((config.no_winmm) or (config.target.result.os.tag != .windows)) return;
+
+    addCMacroNoValue(libremidi_c, "LIBREMIDI_WINMM");
+    // libremidi_c.addCMacro("UNICODE", "1");
+    // libremidi_c.addCMacro("_UNICODE", "1");
+
+    libremidi_c.linkSystemLibrary("winmm", .{ .preferred_link_mode = .dynamic });
+}
+
 // TODO: Implement
-fn addWin32Config(b: *std.Build, libremidi_c: *Build.Module, config: anytype) void {
+fn addWinUWPConfig(b: *std.Build, libremidi_c: *Build.Module, config: anytype) void {
+    _ = b;
+    _ = libremidi_c;
+    _ = config;
+}
+
+// TODO: Implement
+fn addWinMidiConfig(b: *std.Build, libremidi_c: *Build.Module, config: anytype) void {
     _ = b;
     _ = libremidi_c;
     _ = config;
@@ -335,13 +373,21 @@ fn addNetworkConfig(b: *std.Build, libremidi_c: *Build.Module, maybe_boost: ?*Bu
     // something something win32 implement
 }
 
-fn addExamplesStep(b: *std.Build, libremidi: *Module, config: anytype) void {
+fn addExamplesStep(b: *std.Build, cpp_lib: *Build.Step.Compile, c_lib: *Build.Step.Compile, libremidi: *Module, config: anytype) void {
 
     const step = b.step("examples", "Build the examples");
 
     inline for (cpp_examples) |name| {
 
-        const example_exe = addCppExample(b, name, config);
+        const example_exe = addCppExample(b, cpp_lib, name, config);
+        const artifact = b.addInstallArtifact(example_exe, .{});
+
+        step.dependOn(&artifact.step);
+    }
+
+    inline for (c_examples) |name| {
+
+        const example_exe = addCExample(b, c_lib, name, config);
         const artifact = b.addInstallArtifact(example_exe, .{});
 
         step.dependOn(&artifact.step);
@@ -357,7 +403,7 @@ fn addExamplesStep(b: *std.Build, libremidi: *Module, config: anytype) void {
 }
 
 // TODO: improve/fix by figuring out how to compile liblibremidi.a properly
-fn addCppExample(b: *std.Build, name: []const u8, config: anytype) *Build.Step.Compile {
+fn addCppExample(b: *std.Build, cpp_lib: *Build.Step.Compile, name: []const u8, config: anytype) *Build.Step.Compile {
 
     var buf: [512]u8 = undefined;
 
@@ -366,22 +412,49 @@ fn addCppExample(b: *std.Build, name: []const u8, config: anytype) *Build.Step.C
         .root_module = b.createModule(.{
             .target = config.target,
             .optimize = config.optimize,
-            .link_libc = true,
-            .link_libcpp = true,
         }),
     });
 
-    addCMacroNoValue(example_exe.root_module, "LIBREMIDI_HEADER_ONLY");
     example_exe.root_module.addIncludePath(b.path("include/"));
     example_exe.root_module.addCSourceFiles(.{
         .files = &.{
             std.fmt.bufPrint(&buf, "examples/{s}.cpp", .{name}) catch @panic("BufferTooSmall"),
         },
-        .flags = &.{ "-std=c++20" },
+        .flags = &cpp_flags,
+    });
+    example_exe.root_module.linkLibrary(cpp_lib);
+
+    // const boost = boost_tkt;
+    // const boost_artifact = boost.artifact("boost");
+
+    // for (boost_artifact.root_module.include_dirs.items) |include_dir|
+    //     example_exe.root_module.include_dirs.append(b.allocator, include_dir) catch @panic("OOM");
+
+    // example_exe.linkLibrary(boost_artifact);
+
+    return example_exe;
+}
+
+fn addCExample(b: *std.Build, c_lib: *Build.Step.Compile, name: []const u8, config: anytype) *Build.Step.Compile {
+
+    var buf: [512]u8 = undefined;
+
+    const example_exe = b.addExecutable(.{
+        .name = name,
+        .root_module = b.createModule(.{
+            .target = config.target,
+            .optimize = config.optimize,
+        }),
     });
 
-    addLibremidiConfig(b, example_exe.root_module, config);
-
+    example_exe.root_module.addIncludePath(b.path("include/"));
+    example_exe.root_module.addCSourceFiles(.{
+        .files = &.{
+            std.fmt.bufPrint(&buf, "examples/{s}.c", .{name}) catch @panic("BufferTooSmall"),
+        },
+        .flags = &.{},
+    });
+    example_exe.root_module.linkLibrary(c_lib);
 
     return example_exe;
 }
