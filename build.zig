@@ -413,6 +413,7 @@ fn addCppExample(b: *std.Build, cpp_lib: *Build.Step.Compile, name: []const u8, 
             .target = config.target,
             .optimize = config.optimize,
         }),
+        .use_lld = false,
     });
 
     example_exe.root_module.addIncludePath(b.path("include/"));
@@ -445,6 +446,7 @@ fn addCExample(b: *std.Build, c_lib: *Build.Step.Compile, name: []const u8, conf
             .target = config.target,
             .optimize = config.optimize,
         }),
+        .use_lld = false,
     });
 
     example_exe.root_module.addIncludePath(b.path("include/"));
@@ -473,6 +475,7 @@ fn addZigExample(b: *std.Build, libremidi: *Build.Module, name: []const u8, conf
                 .{ .name = "libremidi", .module = libremidi },
             },
         }),
+        .use_lld = false,
     });
 
 
