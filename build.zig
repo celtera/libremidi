@@ -44,15 +44,16 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const use_llvm = if (b.option(bool, "no_llvm", "Use Zig's self-hosted codegen backend and linker wherever possible")) |val|
+    const use_llvm = if (b.option(bool, "no_llvm", "Use Zig self-hosted compiler codegen backend & linker")) |val|
                          !val else null;
 
     const config = .{
         .target = target,
         .optimize = optimize,
 
-        .use_llvm = use_llvm,
         .linkage = b.option(LinkMode, "linkage", "(default: static) Build libremidi as a static or dynamic/shared library") orelse .static,
+        .use_llvm = use_llvm,
+        .use_lld = b.option(bool, "use_lld", "(default: false) Forces LLD for linking instead of Zig's linker. Throws warnings due to a zig compiler bug.") orelse false,
 
         .no_coremidi = b.option(bool, "no_coremidi", "Disable CoreMidi back-end") orelse false,
         .no_winmm = b.option(bool, "no_winmm", "Disable WinMM back-end") orelse false,
@@ -86,7 +87,7 @@ pub fn build(b: *std.Build) !void {
         .name = "libremidi-zig",
         .root_module = libremidi,
         .linkage = .static, // this is glue code, no sense in dynamically linking to it
-        .use_lld = false,
+        .use_lld = config.use_lld,
         .use_llvm = config.use_llvm,
     });
     b.installArtifact(zig_lib);
@@ -104,8 +105,8 @@ fn addLibremidiCppLibrary(b: *std.Build, config: anytype) *Build.Step.Compile {
             .optimize = config.optimize,
         }),
         .linkage = config.linkage, // If linkage is specified as dynamic this is what user code wants to dynamically link against
-        .use_lld = false, // Needed to workaround ANOTHER interdependent Zig bug
         .use_llvm = config.use_llvm,
+        .use_lld = config.use_lld, // Needed to workaround ANOTHER interdependent Zig bug
     });
 
     cpp_lib.root_module.addIncludePath(b.path("include/"));
@@ -135,8 +136,8 @@ fn addLibremidiCLibrary(b: *std.Build, cpp_lib: *Build.Step.Compile, config: any
             .optimize = config.optimize,
         }),
         .linkage = .static, // this is just glue code, makes no sense to link it dynamically
-        .use_lld = false, // Needed to workaround ANOTHER interdependent Zig bug
         .use_llvm = config.use_llvm,
+        .use_lld = config.use_lld, // Needed to workaround ANOTHER interdependent Zig bug
     });
 
     c_lib.root_module.addIncludePath(b.path("include/"));
@@ -433,8 +434,8 @@ fn addCppExample(b: *std.Build, cpp_lib: *Build.Step.Compile, name: []const u8, 
             .target = config.target,
             .optimize = config.optimize,
         }),
-        .use_lld = false, // Needed to workaround a Zig bug (ziglang/zig#20476)
         .use_llvm = config.use_llvm,
+        .use_lld = config.use_lld, // Needed to workaround a Zig bug (ziglang/zig#20476)
     });
 
     example_exe.root_module.addIncludePath(b.path("include/"));
@@ -467,8 +468,8 @@ fn addCExample(b: *std.Build, c_lib: *Build.Step.Compile, name: []const u8, conf
             .target = config.target,
             .optimize = config.optimize,
         }),
-        .use_lld = false, // Needed to workaround a Zig bug (ziglang/zig#20476)
         .use_llvm = config.use_llvm,
+        .use_lld = config.use_lld, // Needed to workaround a Zig bug (ziglang/zig#20476)
     });
 
     example_exe.root_module.addIncludePath(b.path("include/"));
@@ -497,8 +498,8 @@ fn addZigExample(b: *std.Build, libremidi: *Build.Module, name: []const u8, conf
                 .{ .name = "libremidi", .module = libremidi },
             },
         }),
-        .use_lld = false, // Needed to workaround a Zig bug (ziglang/zig#20476)
         .use_llvm = config.use_llvm,
+        .use_lld = config.use_lld, // Needed to workaround a Zig bug (ziglang/zig#20476)
     });
 
 
