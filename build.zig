@@ -124,6 +124,8 @@ fn addLibremidiCppLibrary(b: *std.Build, config: anytype) struct { *Build.Step.C
             "include/libremidi/observer.cpp",
             "include/libremidi/midi_in.cpp",
             "include/libremidi/midi_out.cpp",
+            "include/libremidi/reader.cpp",
+            "include/libremidi/writer.cpp",
             "include/libremidi/client.cpp",
         },
         .flags = &cpp_flags,
