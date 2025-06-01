@@ -47,13 +47,19 @@ pub fn build(b: *std.Build) !void {
     const use_llvm = if (b.option(bool, "no_llvm", "Use Zig self-hosted compiler codegen backend & linker")) |val|
                          !val else null;
 
+    const use_lld = b.option(bool, "use_lld", "(default: true on Windows, false elsewhere) Force use of LLD or Zig's self-hosted linker. Throws warnings due to a zig compiler bug.")
+                    orelse switch(target.result.os.tag) {
+                        .windows => true,
+                        else => false,
+                    };
+
     const config = .{
         .target = target,
         .optimize = optimize,
 
         .linkage = b.option(LinkMode, "linkage", "(default: static) Build libremidi as a static or dynamic/shared library") orelse .static,
         .use_llvm = use_llvm,
-        .use_lld = b.option(bool, "use_lld", "(default: false) Forces LLD for linking instead of Zig's linker. Throws warnings due to a zig compiler bug.") orelse false,
+        .use_lld = use_lld,
 
         .no_coremidi = b.option(bool, "no_coremidi", "Disable CoreMidi back-end") orelse false,
         .no_winmm = b.option(bool, "no_winmm", "Disable WinMM back-end") orelse false,
