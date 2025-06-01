@@ -43,9 +43,14 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const use_llvm = if (b.option(bool, "no_llvm", "Use Zig's self-hosted codegen backend and linker wherever possible")) |val|
+                         !val else null;
+
     const config = .{
         .target = target,
         .optimize = optimize,
+
+        .use_llvm = use_llvm,
 
         .no_coremidi = b.option(bool, "no_coremidi", "Disable CoreMidi back-end") orelse false,
         .no_winmm = b.option(bool, "no_winmm", "Disable WinMM back-end") orelse false,
@@ -77,6 +82,7 @@ pub fn build(b: *std.Build) !void {
     const zig_lib = b.addLibrary(.{
         .name = "libremidi-zig",
         .root_module = libremidi,
+        .use_llvm = config.use_llvm,
     });
     b.installArtifact(zig_lib);
 
@@ -92,6 +98,7 @@ fn addLibremidiCppLibrary(b: *std.Build, config: anytype) *Build.Step.Compile {
             .target = config.target,
             .optimize = config.optimize,
         }),
+        .use_llvm = config.use_llvm,
     });
 
     cpp_lib.root_module.addIncludePath(b.path("include/"));
@@ -120,6 +127,7 @@ fn addLibremidiCLibrary(b: *std.Build, cpp_lib: *Build.Step.Compile, config: any
             .target = config.target,
             .optimize = config.optimize,
         }),
+        .use_llvm = config.use_llvm,
     });
 
     c_lib.root_module.addIncludePath(b.path("include/"));
@@ -140,6 +148,8 @@ fn addLibremidiZigModule(b: *std.Build, c_lib: *Build.Step.Compile, name: []cons
         .root_source_file = b.path("include/libremidi/libremidi-c.h"),
         .target = b.graph.host,
         .optimize = config.optimize,
+        // Seems to trigger a bug in zig's new translate-c backend relating to include paths
+        // .use_clang = false,
     });
     translated_header.addIncludePath(b.path("include/"));
 
@@ -236,7 +246,7 @@ fn addNiMidi2Config(b: *std.Build, libremidi_c: *Build.Module, config: anytype) 
         .root_module = b.createModule(.{
             .target = config.target,
             .optimize = config.optimize,
-        })
+        }),
     });
 
     nimidi2_lib.root_module.addIncludePath(nimidi2_dep.path("inc/"));
@@ -276,6 +286,7 @@ fn addWinMMConfig(b: *std.Build, libremidi_c: *Build.Module, config: anytype) vo
     if ((config.no_winmm) or (config.target.result.os.tag != .windows)) return;
 
     addCMacroNoValue(libremidi_c, "LIBREMIDI_WINMM");
+    // Those seem to take out Zig's stack traces, probably best not to enable them
     // libremidi_c.addCMacro("UNICODE", "1");
     // libremidi_c.addCMacro("_UNICODE", "1");
 
@@ -413,7 +424,8 @@ fn addCppExample(b: *std.Build, cpp_lib: *Build.Step.Compile, name: []const u8, 
             .target = config.target,
             .optimize = config.optimize,
         }),
-        .use_lld = false,
+        .use_lld = false, // Needed to workaround a Zig bug (ziglang/zig#20476)
+        .use_llvm = config.use_llvm,
     });
 
     example_exe.root_module.addIncludePath(b.path("include/"));
@@ -446,7 +458,8 @@ fn addCExample(b: *std.Build, c_lib: *Build.Step.Compile, name: []const u8, conf
             .target = config.target,
             .optimize = config.optimize,
         }),
-        .use_lld = false,
+        .use_lld = false, // Needed to workaround a Zig bug (ziglang/zig#20476)
+        .use_llvm = config.use_llvm,
     });
 
     example_exe.root_module.addIncludePath(b.path("include/"));
@@ -475,7 +488,8 @@ fn addZigExample(b: *std.Build, libremidi: *Build.Module, name: []const u8, conf
                 .{ .name = "libremidi", .module = libremidi },
             },
         }),
-        .use_lld = false,
+        .use_lld = false, // Needed to workaround a Zig bug (ziglang/zig#20476)
+        .use_llvm = config.use_llvm,
     });
 
 
