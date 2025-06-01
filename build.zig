@@ -27,6 +27,9 @@ const cpp_examples = [_][]const u8{
     "rawmidiin",
 
     // "coroutines",
+
+    // "midi2_interop"
+
     // Add other examples once backends and such are fixed
 };
 
@@ -37,8 +40,6 @@ const c_examples = [_][]const u8{
 const zig_examples = [_][]const u8{
     "zig_api", // same
 };
-
-var boost_tkt: *Build.Dependency = undefined;
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -80,7 +81,7 @@ pub fn build(b: *std.Build) !void {
         // .ci = b.option(bool, "ci", "To be enabled only in CI, some tests cannot run there. Also enables -Werror.") orelse false,
     };
 
-    const cpp_lib = addLibremidiCppLibrary(b, config);
+    const cpp_lib, const boost, const nimidi2 = addLibremidiCppLibrary(b, config);
     b.installArtifact(cpp_lib);
 
     const c_lib = addLibremidiCLibrary(b, cpp_lib, config);
@@ -98,17 +99,18 @@ pub fn build(b: *std.Build) !void {
     });
     b.installArtifact(zig_lib);
 
-    addExamplesStep(b, cpp_lib, c_lib, libremidi, config);
+    addExamplesStep(b, cpp_lib, c_lib, libremidi, boost, nimidi2, config);
 }
 
-// TODO: fix this
-fn addLibremidiCppLibrary(b: *std.Build, config: anytype) *Build.Step.Compile {
+fn addLibremidiCppLibrary(b: *std.Build, config: anytype) struct { *Build.Step.Compile, ?*Build.Module, ?*Build.Module } {
 
     const cpp_lib = b.addLibrary(.{
         .name = "libremidi",
         .root_module = b.createModule(.{
             .target = config.target,
             .optimize = config.optimize,
+            .link_libc = true,
+            .link_libcpp = true,
         }),
         .linkage = config.linkage, // If linkage is specified as dynamic this is what user code wants to dynamically link against
         .use_llvm = config.use_llvm,
@@ -128,9 +130,9 @@ fn addLibremidiCppLibrary(b: *std.Build, config: anytype) *Build.Step.Compile {
     });
     cpp_lib.root_module.linkSystemLibrary("pthread", .{ .preferred_link_mode = .static }); // Needed ?
 
-    addLibremidiConfig(b, cpp_lib.root_module, config);
+    const boost, const nimidi2 = addLibremidiConfig(b, cpp_lib.root_module, config);
 
-    return cpp_lib;
+    return .{ cpp_lib, boost, nimidi2 };
 }
 
 fn addLibremidiCLibrary(b: *std.Build, cpp_lib: *Build.Step.Compile, config: anytype) *Build.Step.Compile {
@@ -189,14 +191,14 @@ fn addLibremidiZigModule(b: *std.Build, c_lib: *Build.Step.Compile, name: []cons
     return libremidi_zig_mod;
 }
 
-fn addLibremidiConfig(b: *std.Build, module: *Build.Module, config: anytype) void {
+fn addLibremidiConfig(b: *std.Build, module: *Build.Module, config: anytype) struct { ?*Build.Module, ?*Build.Module} {
 
     const boost = addBoostConfig(b, module, config);
     addSlimMessageConfig(b, module, boost, config);
     addExportsConfig(b, module , config);
-    addNiMidi2Config(b, module, config); // Broken
+    const nimidi2 = addNiMidi2Config(b, module, config); // Seems to work?
     addEmscriptenConfig(b, module, config); // Broken
-    addWinMMConfig(b, module, config); // I think this works now?
+    addWinMMConfig(b, module, config);
     addWinUWPConfig(b, module, config); // Unimplemented
     addWinMidiConfig(b, module, config); // Unimplemented
     addCoremidiConfig(b, module, config); // Unimplemented
@@ -205,6 +207,8 @@ fn addLibremidiConfig(b: *std.Build, module: *Build.Module, config: anytype) voi
     addPipewireConfig(b, module, config); // Broken
     addKeyboardConfig(b, module, config);
     addNetworkConfig(b, module, boost, config); // Broken
+
+    return .{ boost, nimidi2 };
 }
 
 fn addCMacroNoValue(module: *Build.Module, macro: []const u8) void {
@@ -215,6 +219,11 @@ fn addCMacroNumeric(module: *Build.Module, macro: []const u8, value: anytype) vo
 
     var should_hold_any_int: [50]u8 = undefined;
     module.addCMacro(macro, std.fmt.bufPrint(&should_hold_any_int, "{d}", .{value}) catch @panic("MacroTooBig"));
+}
+
+fn addIncludeDirsFromOtherModule(b: *std.Build, module: *Build.Module, other_module: *Build.Module) void {
+    for (other_module.include_dirs.items) |include_dir|
+        module.include_dirs.append(b.allocator, include_dir) catch @panic("OOM");
 }
 
 fn addBoostConfig(b: *std.Build, libremidi_c: *Build.Module, config: anytype) ?*Build.Module {
@@ -228,8 +237,7 @@ fn addBoostConfig(b: *std.Build, libremidi_c: *Build.Module, config: anytype) ?*
     const boost = b.dependency("boost", .{ .target = config.target, .optimize = config.optimize, .cobalt = true });
     const boost_artifact = boost.artifact("boost");
 
-    for (boost_artifact.root_module.include_dirs.items) |include_dir|
-        libremidi_c.include_dirs.append(b.allocator, include_dir) catch @panic("OOM");
+    addIncludeDirsFromOtherModule(b, libremidi_c, boost_artifact.root_module);
 
     libremidi_c.linkLibrary(boost_artifact);
 
@@ -249,11 +257,8 @@ fn addExportsConfig(b: *std.Build, libremidi_c: *Build.Module, config: anytype) 
     if (!config.no_exports) addCMacroNoValue(libremidi_c, "LIBREMIDI_EXPORTS");
 }
 
-// TODO: fix
-fn addNiMidi2Config(b: *std.Build, libremidi_c: *Build.Module, config: anytype) void {
-    if (!config.ni_midi2) return;
-
-    if (true) return; // disable until fixed
+fn addNiMidi2Config(b: *std.Build, libremidi_c: *Build.Module, config: anytype) ?*Build.Module {
+    if (!config.ni_midi2) return null;
 
     const nimidi2_dep = b.dependency("ni_midi2", .{});
 
@@ -262,6 +267,7 @@ fn addNiMidi2Config(b: *std.Build, libremidi_c: *Build.Module, config: anytype) 
         .root_module = b.createModule(.{
             .target = config.target,
             .optimize = config.optimize,
+            .link_libcpp = true,
         }),
     });
 
@@ -279,13 +285,12 @@ fn addNiMidi2Config(b: *std.Build, libremidi_c: *Build.Module, config: anytype) 
         },
         .flags = &cpp_flags,
     });
-    b.installArtifact(nimidi2_lib);
-    // const tkt = b.addInstallArtifact(nimidi2_lib, .{ .dest_dir = .{ .override = .{ .custom = "obj/" } } });
-    // b.getInstallStep().dependOn(&tkt.step);
 
-    // this compiles but I suspect it will silently fail since it is still not linked to ni-midi2
+    addIncludeDirsFromOtherModule(b, libremidi_c, nimidi2_lib.root_module);
     libremidi_c.addCMacro("LIBREMIDI_USE_NI_MIDI2", "1");
-    libremidi_c.addIncludePath(nimidi2_dep.path("inc/"));
+    libremidi_c.linkLibrary(nimidi2_lib);
+
+    return nimidi2_lib.root_module;
 }
 
 // TODO: fix
@@ -400,23 +405,25 @@ fn addNetworkConfig(b: *std.Build, libremidi_c: *Build.Module, maybe_boost: ?*Bu
     // something something win32 implement
 }
 
-fn addExamplesStep(b: *std.Build, cpp_lib: *Build.Step.Compile, c_lib: *Build.Step.Compile, libremidi: *Module, config: anytype) void {
+fn addExamplesStep(b: *std.Build, cpp_lib: *Build.Step.Compile, c_lib: *Build.Step.Compile, libremidi: *Build.Module, boost: ?*Build.Module, nimidi2: ?*Build.Module, config: anytype) void {
 
     const step = b.step("examples", "Build the examples");
 
     inline for (cpp_examples) |name| {
 
         const example_exe = addCppExample(b, cpp_lib, name, config);
-        const artifact = b.addInstallArtifact(example_exe, .{});
+        if (boost) |boost_mod| addIncludeDirsFromOtherModule(b, example_exe.root_module, boost_mod);
+        if (nimidi2) |nimidi2_mod| addIncludeDirsFromOtherModule(b, example_exe.root_module, nimidi2_mod);
 
+        const artifact = b.addInstallArtifact(example_exe, .{});
         step.dependOn(&artifact.step);
     }
 
     inline for (c_examples) |name| {
 
         const example_exe = addCExample(b, c_lib, name, config);
-        const artifact = b.addInstallArtifact(example_exe, .{});
 
+        const artifact = b.addInstallArtifact(example_exe, .{});
         step.dependOn(&artifact.step);
     }
 
@@ -429,7 +436,6 @@ fn addExamplesStep(b: *std.Build, cpp_lib: *Build.Step.Compile, c_lib: *Build.St
     }
 }
 
-// TODO: improve/fix by figuring out how to compile liblibremidi.a properly
 fn addCppExample(b: *std.Build, cpp_lib: *Build.Step.Compile, name: []const u8, config: anytype) *Build.Step.Compile {
 
     var buf: [512]u8 = undefined;
@@ -452,14 +458,6 @@ fn addCppExample(b: *std.Build, cpp_lib: *Build.Step.Compile, name: []const u8, 
         .flags = &cpp_flags,
     });
     example_exe.root_module.linkLibrary(cpp_lib);
-
-    // const boost = boost_tkt;
-    // const boost_artifact = boost.artifact("boost");
-
-    // for (boost_artifact.root_module.include_dirs.items) |include_dir|
-    //     example_exe.root_module.include_dirs.append(b.allocator, include_dir) catch @panic("OOM");
-
-    // example_exe.linkLibrary(boost_artifact);
 
     return example_exe;
 }
