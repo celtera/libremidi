@@ -5,6 +5,7 @@ const Module = Build.Module;
 const Step = Build.Step;
 const ResolvedTarget = Build.ResolvedTarget;
 const OptimizeMode = std.builtin.OptimizeMode;
+const LinkMode = std.builtin.LinkMode;
 
 
 const cpp_flags = .{ "-std=c++20", "-fPIC" };
@@ -51,6 +52,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
 
         .use_llvm = use_llvm,
+        .linkage = b.option(LinkMode, "linkage", "(default: static) Build libremidi as a static or dynamic/shared library") orelse .static,
 
         .no_coremidi = b.option(bool, "no_coremidi", "Disable CoreMidi back-end") orelse false,
         .no_winmm = b.option(bool, "no_winmm", "Disable WinMM back-end") orelse false,
@@ -75,13 +77,16 @@ pub fn build(b: *std.Build) !void {
     b.installArtifact(cpp_lib);
 
     const c_lib = addLibremidiCLibrary(b, cpp_lib, config);
-    b.installArtifact(c_lib);
+    b.installArtifact(c_lib); // Not sure if we should provide this?
 
     const libremidi = addLibremidiZigModule(b, c_lib, "libremidi", config);
 
+    // Not sure it is a good idea either
     const zig_lib = b.addLibrary(.{
         .name = "libremidi-zig",
         .root_module = libremidi,
+        .linkage = .static, // this is glue code, no sense in dynamically linking to it
+        .use_lld = false,
         .use_llvm = config.use_llvm,
     });
     b.installArtifact(zig_lib);
@@ -98,6 +103,8 @@ fn addLibremidiCppLibrary(b: *std.Build, config: anytype) *Build.Step.Compile {
             .target = config.target,
             .optimize = config.optimize,
         }),
+        .linkage = config.linkage, // If linkage is specified as dynamic this is what user code wants to dynamically link against
+        .use_lld = false, // Needed to workaround ANOTHER interdependent Zig bug
         .use_llvm = config.use_llvm,
     });
 
@@ -127,6 +134,8 @@ fn addLibremidiCLibrary(b: *std.Build, cpp_lib: *Build.Step.Compile, config: any
             .target = config.target,
             .optimize = config.optimize,
         }),
+        .linkage = .static, // this is just glue code, makes no sense to link it dynamically
+        .use_lld = false, // Needed to workaround ANOTHER interdependent Zig bug
         .use_llvm = config.use_llvm,
     });
 
