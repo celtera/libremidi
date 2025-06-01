@@ -7,7 +7,7 @@ const ResolvedTarget = Build.ResolvedTarget;
 const OptimizeMode = std.builtin.OptimizeMode;
 
 
-const cpp_flags = .{ "-std=c++20" };
+const cpp_flags = .{ "-std=c++20", "-fPIC" };
 
 const cpp_examples = [_][]const u8{
     "midiobserve",
@@ -26,7 +26,7 @@ const cpp_examples = [_][]const u8{
     "rawmidiin",
 
     // "coroutines",
-    // Add other examples once backends and such aare fixed
+    // Add other examples once backends and such are fixed
 };
 
 const c_examples = [_][]const u8{
