@@ -85,54 +85,46 @@ pub const Timestamp = extern struct {
     }
 };
 
-pub const observer = struct {
+pub const Observer = opaque {
     const Ctx = ?*anyopaque;
 
-    pub const Handle = extern struct {
-        const Self = @This();
-        const Opaque = c.libremidi_midi_observer_handle;
+    extern fn libremidi_midi_observer_new(conf: ?*const Config, api: ?*const Api.Config, out: *?*Observer) c_int;
+    pub fn init(conf: ?*const Config, api: ?*const Api.Config) !*Observer {
 
-        ptr: ?*const Opaque = null,
-
-
-        extern fn libremidi_midi_observer_new(conf: ?*const Config, api: ?*const Api.Config, out: *Self) c_int;
-        pub fn init(conf: ?*const Config, api: ?*const Api.Config) !Self {
-
-            var handle: Self = .{};
-            switch (errnoFromInt(libremidi_midi_observer_new(conf, api, &handle))) {
-                .SUCCESS => return handle,
-                .INVAL => return error.InvalidArgument,
-                .IO => return error.InputOutput,
-                else => unreachable,
-            }
+        var handle: ?*Observer = undefined;
+        switch (errnoFromInt(libremidi_midi_observer_new(conf, api, &handle))) {
+            .SUCCESS => return handle.?,
+            .INVAL => return error.InvalidArgument,
+            .IO => return error.InputOutput,
+            else => unreachable,
         }
+    }
 
-        extern fn libremidi_midi_observer_enumerate_input_ports(self: Self, context: Ctx, cb: midi.in.port.Callback(Ctx)) c_int;
-        pub fn enumerateInputPorts(self: Self, context: Ctx, cb: midi.in.port.Callback(Ctx)) !void {
-            switch (errnoFromInt(libremidi_midi_observer_enumerate_input_ports(self, context, cb))) {
-                .SUCCESS => return,
-                .INVAL => return error.InvalidArgument,
-                else => unreachable,
-            }
+    extern fn libremidi_midi_observer_enumerate_input_ports(self: *Observer, context: Ctx, cb: midi.In.Port.Callback(Ctx)) c_int;
+    pub fn enumerateInputPorts(self: *Observer, context: Ctx, cb: midi.In.Port.Callback(Ctx)) !void {
+        switch (errnoFromInt(libremidi_midi_observer_enumerate_input_ports(self, context, cb))) {
+            .SUCCESS => return,
+            .INVAL => return error.InvalidArgument,
+            else => unreachable,
         }
+    }
 
-        extern fn libremidi_midi_observer_enumerate_output_ports(self: Self, context: Ctx, cb: midi.out.port.Callback(Ctx)) c_int;
-        pub fn enumerateOutputPorts(self: Self, context: Ctx, cb: midi.out.port.Callback(Ctx)) !void {
-            switch (errnoFromInt(libremidi_midi_observer_enumerate_output_ports(self, context, cb))) {
-                .SUCCESS => return,
-                .INVAL => return error.InvalidArgument,
-                else => unreachable,
-            }
+    extern fn libremidi_midi_observer_enumerate_output_ports(self: *Observer, context: Ctx, cb: midi.Out.Port.Callback(Ctx)) c_int;
+    pub fn enumerateOutputPorts(self: *Observer, context: Ctx, cb: midi.Out.Port.Callback(Ctx)) !void {
+        switch (errnoFromInt(libremidi_midi_observer_enumerate_output_ports(self, context, cb))) {
+            .SUCCESS => return,
+            .INVAL => return error.InvalidArgument,
+            else => unreachable,
         }
+    }
 
-        extern fn libremidi_midi_observer_free(self: Self) c_int;
-        pub fn free(self: Self) void {
-            switch (libremidi_midi_observer_free(self)) {
-                0 => return,
-                else => unreachable,
-            }
+    extern fn libremidi_midi_observer_free(self: *Observer) c_int;
+    pub fn free(self: *Observer) void {
+        switch (libremidi_midi_observer_free(self)) {
+            0 => return,
+            else => unreachable,
         }
-    };
+    }
 
     pub const Config = extern struct {
 
@@ -160,14 +152,14 @@ pub const observer = struct {
         fn InputCallback(comptime P: type) type {
             return extern struct {
                 context: P = null,
-                callback: midi.in.port.Callback(P) = null,
+                callback: midi.In.Port.Callback(P) = null,
             };
         }
 
         fn OutputCallback(comptime P: type) type {
             return extern struct {
                 context: P = null,
-                callback: midi.out.port.Callback(P) = null,
+                callback: midi.Out.Port.Callback(P) = null,
             };
         }
     };
@@ -186,9 +178,9 @@ pub const midi = struct {
         } = .none,
 
         port: extern union {
-            input: midi.in.port.Handle,
-            output: midi.out.port.Handle,
-        } = .{ .input = .{ .ptr = null } },
+            input: ?*midi.In.Port,
+            output: ?*midi.Out.Port,
+        } = .{ .input = null },
 
         msg_callback: extern union {
             on_midi1_message: v1.Callback(Ctx),
@@ -218,223 +210,191 @@ pub const midi = struct {
         }
     };
 
-    pub const in = struct {
+    pub const In = opaque {
 
-        pub const Handle = extern struct {
-            const Self = @This();
-            const Opaque = c.libremidi_midi_in_handle;
+        extern fn libremidi_midi_in_new(conf: ?*const Config, api: ?*const Api.Config, out: *?*In) c_int;
+        pub fn init(conf: ?*const Config, api: ?*const Api.Config) !*In {
 
-            ptr: ?*const Opaque = null,
+            var handle: ?*In = undefined;
+            switch (errnoFromInt(libremidi_midi_in_new(conf, api, &handle))) {
+                .SUCCESS => return handle.?,
+                .INVAL => return error.InvalidArgument,
+                .IO => return error.InputOutput,
+                else => unreachable,
+            }
+        }
+
+        extern fn libremidi_midi_in_is_connected(self: *In) c_int;
+        pub fn isConnected(self: *In) !bool {
+            switch (libremidi_midi_in_is_connected(self)) {
+                0 => return false,
+                1 => return true,
+                -@intFromEnum(E.INVAL) => return error.InvalidArgument,
+                else => unreachable,
+            }
+        }
+
+        extern fn libremidi_midi_in_absolute_timestamp(self: *In) Timestamp;
+        pub fn getAbsoluteTimestamp(self: *In) !Timestamp {
+            switch (libremidi_midi_in_absolute_timestamp(self)) {
+                -@intFromEnum(E.INVAL) => return error.InvalidArgument,
+                else => |ts| return ts,
+            }
+        }
+
+        extern fn libremidi_midi_in_free(self: *In) c_int;
+        pub fn free(self: *In) void {
+            switch (libremidi_midi_in_free(self)) {
+                0 => return,
+                else => unreachable,
+            }
+        }
 
 
-            extern fn libremidi_midi_in_new(conf: ?*const Config, api: ?*const Api.Config, out: *Self) c_int;
-            pub fn init(conf: ?*const Config, api: ?*const Api.Config) !Self {
+        pub const Port = opaque {
 
-                var handle: Self = .{};
-                switch (errnoFromInt(libremidi_midi_in_new(conf, api, &handle))) {
-                    .SUCCESS => return handle,
+            extern fn libremidi_midi_in_port_clone(self: *Port, dest: *?*Port) c_int;
+            pub fn clone(self: *Port) !*Port {
+
+                var handle: ?*Port = undefined;
+                switch (errnoFromInt(libremidi_midi_in_port_clone(self, &handle))) {
+                    .SUCCESS => return handle.?,
                     .INVAL => return error.InvalidArgument,
-                    .IO => return error.InputOutput,
                     else => unreachable,
                 }
             }
 
-            extern fn libremidi_midi_in_is_connected(self: Self) c_int;
-            pub fn isConnected(self: Self) !bool {
-                switch (libremidi_midi_in_is_connected(self)) {
-                    0 => return false,
-                    1 => return true,
-                    -@intFromEnum(E.INVAL) => return error.InvalidArgument,
-                    else => unreachable,
-                }
-            }
-
-            extern fn libremidi_midi_in_absolute_timestamp(self: Self) Timestamp;
-            pub fn getAbsoluteTimestamp(self: Self) !Timestamp {
-                switch (libremidi_midi_in_absolute_timestamp(self)) {
-                    -@intFromEnum(E.INVAL) => return error.InvalidArgument,
-                    else => |ts| return ts,
-                }
-            }
-
-            extern fn libremidi_midi_in_free(self: Self) c_int;
-            pub fn free(self: Self) void {
-                switch (libremidi_midi_in_free(self)) {
+            extern fn libremidi_midi_in_port_free(self: *Port) c_int;
+            pub fn free(self: *Port) void {
+                switch (libremidi_midi_in_port_free(self)) {
                     0 => return,
                     else => unreachable,
                 }
             }
-        };
 
+            extern fn libremidi_midi_in_port_name(self: *Port, name: *[*:0]const u8, len: *usize) c_int;
+            pub fn getName(self: *Port) ![:0]const u8 {
 
-        pub const port = struct {
-
-            pub const Handle = extern struct {
-                const Self = @This();
-                const Opaque = c.libremidi_midi_in_port;
-
-                ptr: ?*const Opaque = null,
-
-
-                extern fn libremidi_midi_in_port_clone(self: Self, dest: *Self) c_int;
-                pub fn clone(self: Self) !Self {
-
-                    var handle: Self = .{};
-                    switch (errnoFromInt(libremidi_midi_in_port_clone(self, &handle))) {
-                        .SUCCESS => return handle,
-                        .INVAL => return error.InvalidArgument,
-                        else => unreachable,
-                    }
+                var name: [:0]const u8 = undefined;
+                switch (errnoFromInt(libremidi_midi_in_port_name(self, &name.ptr, &name.len))) {
+                    .SUCCESS => return name,
+                    .INVAL => return error.InvalidArgument,
+                    else => unreachable,
                 }
-
-                extern fn libremidi_midi_in_port_free(self: Self) c_int;
-                pub fn free(self: Self) void {
-                    switch (libremidi_midi_in_port_free(self)) {
-                        0 => return,
-                        else => unreachable,
-                    }
-                }
-
-                extern fn libremidi_midi_in_port_name(self: Self, name: *[*:0]const u8, len: *usize) c_int;
-                pub fn getName(self: Self) ![:0]const u8 {
-
-                    var name: [:0]const u8 = undefined;
-                    switch (errnoFromInt(libremidi_midi_in_port_name(self, &name.ptr, &name.len))) {
-                        .SUCCESS => return name,
-                        .INVAL => return error.InvalidArgument,
-                        else => unreachable,
-                    }
-                }
-            };
+            }
 
             fn Callback(comptime P: type) type {
-                return (?*const fn(ctx: P, port: port.Handle) callconv(.C) void);
+                return (?*const fn(ctx: P, port: *Port) callconv(.C) void);
             }
         };
     };
 
-    pub const out = struct {
+    pub const Out = opaque {
 
-        pub const Handle = extern struct {
-            const Self = @This();
-            const Opaque = c.libremidi_midi_out_handle;
+        extern fn libremidi_midi_out_new(conf: ?*const Config, api: ?*const Api.Config, out: *?*Out) c_int;
+        pub fn init(conf: ?*const Config, api: ?*const Api.Config) !*Out {
 
-            ptr: ?*const Opaque = null,
+            var handle: ?*Out = undefined;
+            switch (errnoFromInt(libremidi_midi_out_new(conf, api, &handle))) {
+                .SUCCESS => return handle.?,
+                .INVAL => return error.InvalidArgument,
+                .IO => return error.InputOutput,
+                else => unreachable,
+            }
+        }
 
+        extern fn libremidi_midi_out_is_connected(self: *Out) c_int;
+        pub fn isConnected(self: *Out) !bool {
+            switch (libremidi_midi_out_is_connected(self)) {
+                0 => return false,
+                1 => return true,
+                -@intFromEnum(E.INVAL) => return error.InvalidArgument,
+                else => unreachable,
+            }
+        }
 
-            extern fn libremidi_midi_out_new(conf: ?*const Config, api: ?*const Api.Config, out: *Self) c_int;
-            pub fn init(conf: ?*const Config, api: ?*const Api.Config) !Self {
+        extern fn libremidi_midi_out_send_message(self: *Out, msg: [*]const v1.Symbol, len: usize) c_int;
+        pub fn sendMsg(self: *Out, msg: []const v1.Symbol) !void {
+            switch (errnoFromInt(libremidi_midi_out_send_message(self, msg.ptr, msg.len))) {
+                .SUCCESS => return,
+                .INVAL => return error.InvalidArgument,
+                .IO => return error.InputOutput,
+                else => unreachable,
+            }
+        }
 
-                var handle: Self = .{};
-                switch (errnoFromInt(libremidi_midi_out_new(conf, api, &handle))) {
-                    .SUCCESS => return handle,
+        extern fn libremidi_midi_out_send_ump(self: *Out, msg: [*]const v2.Symbol, len: usize) c_int;
+        pub fn sendUmp(self: *Out, msg: []const v2.Symbol) !void {
+            switch (errnoFromInt(libremidi_midi_out_send_ump(self, msg.ptr, msg.len))) {
+                .SUCCESS => return,
+                .INVAL => return error.InvalidArgument,
+                .IO => return error.InputOutput,
+                else => unreachable,
+            }
+        }
+
+        extern fn libremidi_midi_out_schedule_message(self: *Out, ts: Timestamp, msg: [*]const v1.Symbol, len: usize) c_int;
+        pub fn scheduleMsg(self: *Out, ts: Timestamp, msg: []const v1.Symbol) !void {
+            switch (errnoFromInt(libremidi_midi_out_schedule_message(self, ts, msg.ptr, msg.len))) {
+                .SUCCESS => return,
+                .INVAL => return error.InvalidArgument,
+                .IO => return error.InputOutput,
+                else => unreachable,
+            }
+        }
+
+        extern fn libremidi_midi_out_schedule_ump(self: *Out, ts: Timestamp, msg: [*]const v2.Symbol, len: usize) c_int;
+        pub fn scheduleUmp(self: *Out, ts: Timestamp, msg: []const v2.Symbol) !void {
+            switch (errnoFromInt(libremidi_midi_out_schedule_ump(self, ts, msg.ptr, msg.len))) {
+                .SUCCESS => return,
+                .INVAL => return error.InvalidArgument,
+                .IO => return error.InputOutput,
+                else => unreachable,
+            }
+        }
+
+        extern fn libremidi_midi_out_free(self: *Out) c_int;
+        pub fn free(self: *Out) void {
+            switch (libremidi_midi_out_free(self)) {
+                0 => return,
+                else => unreachable,
+            }
+        }
+
+        pub const Port = opaque {
+
+            extern fn libremidi_midi_out_port_clone(self: *Port, dest: *?*Port) c_int;
+            pub fn clone(self: *Port) !*Port {
+
+                var handle: ?*Port = undefined;
+                switch (errnoFromInt(libremidi_midi_out_port_clone(self, &handle))) {
+                    .SUCCESS => return handle.?,
                     .INVAL => return error.InvalidArgument,
-                    .IO => return error.InputOutput,
                     else => unreachable,
                 }
             }
 
-            extern fn libremidi_midi_out_is_connected(self: Self) c_int;
-            pub fn isConnected(self: Self) !bool {
-                switch (libremidi_midi_out_is_connected(self)) {
-                    0 => return false,
-                    1 => return true,
-                    -@intFromEnum(E.INVAL) => return error.InvalidArgument,
-                    else => unreachable,
-                }
-            }
-
-            extern fn libremidi_midi_out_send_message(self: Self, msg: [*]const v1.Symbol, len: usize) c_int;
-            pub fn sendMsg(self: Self, msg: []const v1.Symbol) !void {
-                switch (errnoFromInt(libremidi_midi_out_send_message(self, msg.ptr, msg.len))) {
-                    .SUCCESS => return,
-                    .INVAL => return error.InvalidArgument,
-                    .IO => return error.InputOutput,
-                    else => unreachable,
-                }
-            }
-
-            extern fn libremidi_midi_out_send_ump(self: Self, msg: [*]const v2.Symbol, len: usize) c_int;
-            pub fn sendUmp(self: Self, msg: []const v2.Symbol) !void {
-                switch (errnoFromInt(libremidi_midi_out_send_ump(self, msg.ptr, msg.len))) {
-                    .SUCCESS => return,
-                    .INVAL => return error.InvalidArgument,
-                    .IO => return error.InputOutput,
-                    else => unreachable,
-                }
-            }
-
-            extern fn libremidi_midi_out_schedule_message(self: Self, ts: Timestamp, msg: [*]const v1.Symbol, len: usize) c_int;
-            pub fn scheduleMsg(self: Self, ts: Timestamp, msg: []const v1.Symbol) !void {
-                switch (errnoFromInt(libremidi_midi_out_schedule_message(self, ts, msg.ptr, msg.len))) {
-                    .SUCCESS => return,
-                    .INVAL => return error.InvalidArgument,
-                    .IO => return error.InputOutput,
-                    else => unreachable,
-                }
-            }
-
-            extern fn libremidi_midi_out_schedule_ump(self: Self, ts: Timestamp, msg: [*]const v2.Symbol, len: usize) c_int;
-            pub fn scheduleUmp(self: Self, ts: Timestamp, msg: []const v2.Symbol) !void {
-                switch (errnoFromInt(libremidi_midi_out_schedule_ump(self, ts, msg.ptr, msg.len))) {
-                    .SUCCESS => return,
-                    .INVAL => return error.InvalidArgument,
-                    .IO => return error.InputOutput,
-                    else => unreachable,
-                }
-            }
-
-            extern fn libremidi_midi_out_free(self: Self) c_int;
-            pub fn free(self: Self) void {
-                switch (libremidi_midi_out_free(self)) {
+            extern fn libremidi_midi_out_port_free(self: *Port) c_int;
+            pub fn free(self: *Port) void {
+                switch (libremidi_midi_out_port_free(self)) {
                     0 => return,
                     else => unreachable,
                 }
             }
-        };
 
-        pub const port = struct {
+            extern fn libremidi_midi_out_port_name(self: *Port, name: *[*:0]const u8, len: *usize) c_int;
+            pub fn getName(self: *Port) ![:0]const u8 {
 
-            pub const Handle = extern struct {
-                const Self = @This();
-                const Opaque = c.libremidi_midi_out_port;
-
-                ptr: ?*const Opaque = null,
-
-
-                extern fn libremidi_midi_out_port_clone(self: Self, dest: *Self) c_int;
-                pub fn clone(self: Self) !Self {
-
-                    var handle: Self = .{};
-                    switch (errnoFromInt(libremidi_midi_out_port_clone(self, &handle))) {
-                        .SUCCESS => return handle,
-                        .INVAL => return error.InvalidArgument,
-                        else => unreachable,
-                    }
+                var name: [:0]const u8 = undefined;
+                switch (errnoFromInt(libremidi_midi_out_port_name(self, &name.ptr, &name.len))) {
+                    .SUCCESS => return name,
+                    .INVAL => return error.InvalidArgument,
+                    else => unreachable,
                 }
-
-                extern fn libremidi_midi_out_port_free(self: Self) c_int;
-                pub fn free(self: Self) void {
-                    switch (libremidi_midi_out_port_free(self)) {
-                        0 => return,
-                        else => unreachable,
-                    }
-                }
-
-                extern fn libremidi_midi_out_port_name(self: Self, name: *[*:0]const u8, len: *usize) c_int;
-                pub fn getName(self: Self) ![:0]const u8 {
-
-                    var name: [:0]const u8 = undefined;
-                    switch (errnoFromInt(libremidi_midi_out_port_name(self, &name.ptr, &name.len))) {
-                        .SUCCESS => return name,
-                        .INVAL => return error.InvalidArgument,
-                        else => unreachable,
-                    }
-                }
-            };
+            }
 
             fn Callback(comptime P: type) type {
-                return (?*const fn(ctx: P, port: port.Handle) callconv(.C) void);
+                return (?*const fn(ctx: P, port: *Port) callconv(.C) void);
             }
         };
     };
