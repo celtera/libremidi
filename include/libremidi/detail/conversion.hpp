@@ -210,6 +210,7 @@ struct midi1_to_midi2
     switch (cmidi2_convert_midi1_to_ump(&context))
     {
       case CMIDI2_CONVERSION_RESULT_OK: {
+        // FIXME handle sysex here
         if (auto n = context.ump_proceeded_bytes; n > 0)
           return on_ump(context.ump, context.ump_proceeded_bytes / 4, timestamp);
         else
