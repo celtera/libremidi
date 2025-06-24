@@ -2856,7 +2856,9 @@ static inline size_t cmidi2_convert_single_ump_to_timed_midi1(
     uint8_t* dst, size_t maxBytes, cmidi2_ump* ump, int32_t deltaTime,
     cmidi2_midi_conversion_context* context, uint8_t* sysex7Buffer, size_t* sysex7BufferIndex)
 {
-  (void)maxBytes;
+  if (maxBytes < 1)
+    return 0;
+
   size_t midiEventSize = 0;
   uint64_t sysex7U64;
   uint8_t sysex7NumBytesInUmp;
@@ -2878,22 +2880,30 @@ static inline size_t cmidi2_convert_single_ump_to_timed_midi1(
         case 0xF1:
         case 0xF3:
         case 0xF9:
-          dst[1] = cmidi2_ump_get_system_message_byte2(ump);
           midiEventSize = 2;
+          if (maxBytes < midiEventSize)
+            return 0;
+          dst[1] = cmidi2_ump_get_system_message_byte2(ump);
           break;
       }
       break;
     case CMIDI2_MESSAGE_TYPE_MIDI_1_CHANNEL:
       CMIDI2_INTERNAL_ADD_DELTA_TIME
-      midiEventSize = 3;
-      dst[1] = cmidi2_ump_get_midi1_byte2(ump);
+
       switch (statusCode)
       {
         case 0xC0:
         case 0xD0:
           midiEventSize = 2;
+          if (maxBytes < midiEventSize)
+            return 0;
+          dst[1] = cmidi2_ump_get_midi1_byte2(ump);
           break;
         default:
+          midiEventSize = 3;
+          if (maxBytes < midiEventSize)
+            return 0;
+          dst[1] = cmidi2_ump_get_midi1_byte2(ump);
           dst[2] = cmidi2_ump_get_midi1_byte3(ump);
           break;
       }
@@ -2905,6 +2915,8 @@ static inline size_t cmidi2_convert_single_ump_to_timed_midi1(
         case CMIDI2_STATUS_RPN:
           CMIDI2_INTERNAL_ADD_DELTA_TIME
           midiEventSize = 12;
+          if (maxBytes < midiEventSize)
+            return 0;
           dst[0] = cmidi2_ump_get_channel(ump) + CMIDI2_STATUS_CC;
           dst[1] = CMIDI2_CC_RPN_MSB;
           dst[2] = cmidi2_ump_get_midi2_rpn_msb(ump);
@@ -2921,6 +2933,8 @@ static inline size_t cmidi2_convert_single_ump_to_timed_midi1(
         case CMIDI2_STATUS_NRPN:
           CMIDI2_INTERNAL_ADD_DELTA_TIME
           midiEventSize = 12;
+          if (maxBytes < midiEventSize)
+            return 0;
           dst[0] = cmidi2_ump_get_channel(ump) + CMIDI2_STATUS_CC;
           dst[1] = CMIDI2_CC_NRPN_MSB;
           dst[2] = cmidi2_ump_get_midi2_nrpn_msb(ump);
@@ -2938,18 +2952,24 @@ static inline size_t cmidi2_convert_single_ump_to_timed_midi1(
         case CMIDI2_STATUS_NOTE_ON:
           CMIDI2_INTERNAL_ADD_DELTA_TIME
           midiEventSize = 3;
+          if (maxBytes < midiEventSize)
+            return 0;
           dst[1] = cmidi2_ump_get_midi2_note_note(ump);
           dst[2] = cmidi2_ump_get_midi2_note_velocity(ump) / 0x200;
           break;
         case CMIDI2_STATUS_PAF:
           CMIDI2_INTERNAL_ADD_DELTA_TIME
           midiEventSize = 3;
+          if (maxBytes < midiEventSize)
+            return 0;
           dst[1] = cmidi2_ump_get_midi2_paf_note(ump);
           dst[2] = cmidi2_ump_get_midi2_paf_data(ump) / 0x2000000;
           break;
         case CMIDI2_STATUS_CC:
           CMIDI2_INTERNAL_ADD_DELTA_TIME
           midiEventSize = 3;
+          if (maxBytes < midiEventSize)
+            return 0;
           dst[0] = statusCode | cmidi2_ump_get_channel(ump);
           dst[1] = cmidi2_ump_get_midi2_cc_index(ump);
           dst[2] = cmidi2_ump_get_midi2_cc_data(ump) / 0x2000000;
@@ -2960,6 +2980,8 @@ static inline size_t cmidi2_convert_single_ump_to_timed_midi1(
           if (cmidi2_ump_get_midi2_program_options(ump) & CMIDI2_PROGRAM_CHANGE_OPTION_BANK_VALID)
           {
             midiEventSize = 8;
+            if (maxBytes < midiEventSize)
+              return 0;
             dst[6] = dst[0]; // copy
             dst[7] = cmidi2_ump_get_midi2_program_program(ump);
             dst[0] = (dst[6] & 0xF) + CMIDI2_STATUS_CC;
@@ -2972,17 +2994,23 @@ static inline size_t cmidi2_convert_single_ump_to_timed_midi1(
           else
           {
             midiEventSize = 2;
+            if (maxBytes < midiEventSize)
+              return 0;
             dst[1] = cmidi2_ump_get_midi2_program_program(ump);
           }
           break;
         case CMIDI2_STATUS_CAF:
           CMIDI2_INTERNAL_ADD_DELTA_TIME
           midiEventSize = 2;
+          if (maxBytes < midiEventSize)
+            return 0;
           dst[1] = cmidi2_ump_get_midi2_caf_data(ump) / 0x2000000;
           break;
         case CMIDI2_STATUS_PITCH_BEND:
           CMIDI2_INTERNAL_ADD_DELTA_TIME
           midiEventSize = 3;
+          if (maxBytes < midiEventSize)
+            return 0;
           uint32_t pitchBendV1 = cmidi2_ump_get_midi2_pitch_bend_data(ump) / 0x40000;
           dst[1] = pitchBendV1 % 0x80;
           dst[2] = pitchBendV1 / 0x80;
@@ -3006,6 +3034,9 @@ static inline size_t cmidi2_convert_single_ump_to_timed_midi1(
         // minimal implementation for single-byte sysex7
         CMIDI2_INTERNAL_ADD_DELTA_TIME
         midiEventSize = 1 + cmidi2_ump_get_sysex7_num_bytes(ump);
+        if (maxBytes < midiEventSize)
+          return 0;
+
         sysex7U64 = cmidi2_ump_read_uint64_bytes(ump);
         for (size_t i = 0; i < midiEventSize - 1; i++)
           dst[i] = cmidi2_ump_get_byte_from_uint64(sysex7U64, 2 + i);
