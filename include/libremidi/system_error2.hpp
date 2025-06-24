@@ -63,6 +63,12 @@
     #define STDX_TRIVIALLY_RELOCATABLE
   #endif
 
+#if defined(__clang__) && defined(__has_warning)
+  #pragma clang diagnostic push
+  #if __has_warning("-Wdeprecated-declarations")
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+  #endif
+#endif
 #endif // STDX_COMPILER_HPP
 
 
@@ -3497,5 +3503,6 @@ inline string_ref dynamic_exception_code_error_domain::message(const error& e) c
 
 } // end namespace stdx
 
-
-
+#if defined(__clang__) && defined(__has_warning)
+#pragma clang diagnostic pop
+#endif
