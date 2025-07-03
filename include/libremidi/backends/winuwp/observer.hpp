@@ -1,5 +1,6 @@
 #pragma once
 #include <libremidi/backends/winuwp/config.hpp>
+#include <libremidi/backends/winuwp/helpers.hpp>
 #include <libremidi/detail/observer.hpp>
 
 namespace libremidi
@@ -33,11 +34,11 @@ public:
       cbs.emplace_back(tk, f);
       return tk;
     }
+
     void remove(int tk)
     {
       auto it = std::remove_if(
           cbs.begin(), cbs.end(), [tk](const callback& c) { return c.token == tk; });
-      auto r = std::distance(it, cbs.end());
       cbs.erase(it, cbs.end());
     }
   };
@@ -122,7 +123,7 @@ private:
     deviceWatcher_.Added(evTokenOnDeviceAdded_);
   }
 
-  void on_device_added(DeviceWatcher sender, DeviceInformation deviceInfo)
+  void on_device_added(const DeviceWatcher&, const DeviceInformation& deviceInfo)
   {
     port_info p;
     {
@@ -133,7 +134,7 @@ private:
     portAddedEvent_(p);
   }
 
-  void on_device_removed(DeviceWatcher sender, DeviceInformationUpdate deviceUpdate)
+  void on_device_removed(const DeviceWatcher&, const DeviceInformationUpdate& deviceUpdate)
   {
     const auto id = deviceUpdate.Id();
     auto pred = [&id](const port_info& portInfo) { return portInfo.id == id; };
@@ -152,9 +153,9 @@ private:
       portRemovedEvent_(*p);
   }
 
-  void on_device_updated(DeviceWatcher sender, DeviceInformationUpdate deviceUpdate) { }
+  void on_device_updated(const DeviceWatcher&, const DeviceInformationUpdate&) { }
 
-  void on_device_enumeration_completed(DeviceWatcher sender, IInspectable const&) { }
+  void on_device_enumeration_completed(const DeviceWatcher&, const IInspectable&) { }
 
 private:
   std::vector<port_info> portList_;

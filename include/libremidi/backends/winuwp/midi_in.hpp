@@ -47,7 +47,8 @@ public:
     midi_start_timestamp = std::chrono::steady_clock::now();
 
     port_.MessageReceived(
-        [=](const winrt::Windows::Devices::Midi::IMidiInPort& inputPort,
+        [this](
+            const winrt::Windows::Devices::Midi::IMidiInPort&,
             const winrt::Windows::Devices::Midi::MidiMessageReceivedEventArgs& args) {
       this->process_message(args.Message());
     });
