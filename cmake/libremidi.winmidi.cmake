@@ -2,15 +2,22 @@ if(LIBREMIDI_NO_WINMIDI)
   return()
 endif()
 
-if(NOT EXISTS "${CMAKE_BINARY_DIR}/winmidi-headers.zip")
-  file(DOWNLOAD
-    https://github.com/microsoft/MIDI/releases/download/dev-preview-9-namm-4/Microsoft.Windows.Devices.Midi2.1.0.2-preview-9.250121-1820.nupkg
-    "${CMAKE_BINARY_DIR}/winmidi-headers.zip"
-  )
+if(LIBREMIDI_DOWNLOAD_CPPWINRT)
+  if(NOT EXISTS "${CMAKE_BINARY_DIR}/winmidi-headers.zip")
+    file(DOWNLOAD
+      https://github.com/microsoft/MIDI/releases/download/dev-preview-9-namm-4/Microsoft.Windows.Devices.Midi2.1.0.2-preview-9.250121-1820.nupkg
+      "${CMAKE_BINARY_DIR}/winmidi-headers.zip"
+    )
+  endif()
+  set(LIBREMIDI_WINMIDI_HEADERS_ZIP "${CMAKE_BINARY_DIR}/winmidi-headers.zip")
+endif()
+
+if(NOT LIBREMIDI_WINMIDI_HEADERS_ZIP)
+  return()
 endif()
 
 file(ARCHIVE_EXTRACT
-  INPUT "${CMAKE_BINARY_DIR}/winmidi-headers.zip"
+  INPUT "${LIBREMIDI_WINMIDI_HEADERS_ZIP}"
   DESTINATION "${CMAKE_BINARY_DIR}/winmidi-headers/"
 )
 
@@ -19,6 +26,7 @@ file(MAKE_DIRECTORY
 )
 
 file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/cppwinrt-winmidi/")
+
 if(CPPWINRT_TOOL)
   # Enumerate winmd IDL files and store them in a response file
   file(TO_CMAKE_PATH "${CMAKE_WINDOWS_KITS_10_DIR}/References/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}" winsdk)

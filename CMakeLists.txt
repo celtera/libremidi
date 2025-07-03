@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 project(libremidi
-  VERSION 5.2.0
+  VERSION 5.3.0
   DESCRIPTION "A cross-platform MIDI library"
   LANGUAGES C CXX
   HOMEPAGE_URL "https://github.com/jcelerier/libremidi"
@@ -26,6 +26,11 @@ cmake_dependent_option(LIBREMIDI_NO_WINMIDI "Disable WinMIDI back-end" OFF "WIN3
 # if(LINUX) in CMake 3.25
 cmake_dependent_option(LIBREMIDI_NO_ALSA "Disable ALSA back-end" OFF "UNIX; NOT APPLE" OFF)
 cmake_dependent_option(LIBREMIDI_NO_UDEV "Disable udev support for ALSA" OFF "UNIX; NOT APPLE" OFF)
+cmake_dependent_option(LIBREMIDI_DOWNLOAD_CPPWINRT "Download cppwinrt and MIDI2 nupkgs" ON "WIN32" OFF)
+
+# https://github.com/microsoft/MIDI/releases/download/dev-preview-9-namm-4/Microsoft.Windows.Devices.Midi2.1.0.2-preview-9.250121-1820.nupkg renamed to .zip
+cmake_dependent_option(LIBREMIDI_WINMIDI_HEADERS_ZIP "Path to the WinMIDI headers archive" "" "WIN32" "")
+
 option(LIBREMIDI_NO_JACK "Disable JACK back-end" OFF)
 option(LIBREMIDI_NO_PIPEWIRE "Disable PipeWire back-end" OFF)
 option(LIBREMIDI_NO_NETWORK "Disable Network back-end" OFF)

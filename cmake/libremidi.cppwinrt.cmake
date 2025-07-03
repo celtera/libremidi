@@ -44,7 +44,7 @@ find_path(CPPWINRT_PATH "winrt/base.h"
     ${WINSDK_LIST}
 )
 
-if(MSVC)
+if(MSVC AND LIBREMIDI_DOWNLOAD_CPPWINRT)
   if (NOT EXISTS "${CMAKE_WINDOWS_KITS_10_DIR}/Lib/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}.")
     message(FATAL_ERROR "Windows SDK not found. Install a Windows SDK and pass it to CMake with e.g.  -DCMAKE_GENERATOR_PLATFORM=x64,version=10.0.26100.0 -DCMAKE_SYSTEM_VERSION=10.0.26100.0")
   endif()
