@@ -1,0 +1,57 @@
+name: MSYS2 build
+
+on: push
+
+jobs:
+  mingw:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - { sys: clang64, env: clang-x86_64 }
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Setup msys2 and mingw-w64
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{matrix.sys}}
+          update: true
+          pacboy: >-
+            cmake:p
+            ninja:p
+            toolchain:p
+            cppwinrt:p
+            boost:p
+
+      - name: Build debug
+        shell: msys2 {0}
+        run: |
+          cmake -S . -B build-debug \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=1 \
+            -DLIBREMIDI_EXAMPLES=1 -DLIBREMIDI_TESTS=1
+          cmake --build build-debug
+
+      - name: Test debug
+        shell: msys2 {0}
+        run: |
+          cmake --build build-debug --target test
+
+      - name: Build release
+        shell: msys2 {0}
+        run: |
+          cmake -S . -B build-release \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=1 \
+            -DLIBREMIDI_EXAMPLES=1 -DLIBREMIDI_TESTS=1
+          cmake --build build-release
+
+      - name: Test release
+        shell: msys2 {0}
+        run: |
+          cmake --build build-release --target test
+
