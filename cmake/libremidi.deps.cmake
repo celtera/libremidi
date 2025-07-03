@@ -44,11 +44,11 @@ if(LIBREMIDI_NEEDS_READERWRITERQUEUE AND NOT TARGET readerwriterqueue)
 
   if(NOT readerwriterqueue_FOUND)
     FetchContent_Declare(
-        readerwriterqueue
+        rwq
         GIT_REPOSITORY https://github.com/cameron314/readerwriterqueue
         GIT_TAG        master
     )
 
-    FetchContent_MakeAvailable(readerwriterqueue)
+    FetchContent_MakeAvailable(rwq)
   endif()
 endif()

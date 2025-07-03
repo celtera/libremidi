@@ -167,7 +167,7 @@ public:
   }
 
   void on_device_updated(
-      const MidiEndpointDeviceWatcher& e,
+      const MidiEndpointDeviceWatcher&,
       const MidiEndpointDeviceInformationUpdatedEventArgs& result)
   {
     // OPTIMIZEME
