@@ -1,10 +1,10 @@
-if(CMAKE_VERSION VERSION_GREATER 3.25)
-    set(CMAKE_FETCHCONTENT_SYSTEM_KEYWORD "SYSTEM")
+if(CMAKE_VERSION VERSION_GREATER 3.30)
+    set(CMAKE_FETCHCONTENT_SYSTEM_KEYWORD SYSTEM)
 endif()
 
 FetchContent_Declare(
     Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_REPOSITORY https://github.com/catchorg/Catch2
     GIT_TAG        v3.4.0
     ${CMAKE_FETCHCONTENT_SYSTEM_KEYWORD}
 )
