@@ -29,6 +29,10 @@ add_example(minimal)
 add_example(midi2_echo)
 add_example(rawmidiin)
 
+if(LIBREMIDI_HAS_STD_FLAT_SET AND LIBREMIDI_HAS_STD_PRINTLN)
+  add_example(midi_to_pattern)
+endif()
+
 add_example(protocols/remote_control)
 
 if(LIBREMIDI_NI_MIDI2)

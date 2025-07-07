@@ -1,5 +1,7 @@
 ### C++ features ###
 check_cxx_source_compiles("#include <thread>\nint main() { std::jthread t; }" LIBREMIDI_HAS_STD_JTHREAD)
+check_cxx_source_compiles("#include <flat_set>\nint main() { std::flat_set<int> t; }" LIBREMIDI_HAS_STD_FLAT_SET)
+check_cxx_source_compiles("#include <print>\nint main() { std::println(\"foo: {}\", 123); }" LIBREMIDI_HAS_STD_PRINTLN)
 check_cxx_source_compiles("#include <semaphore>\nint main() { std::binary_semaphore t{0}; }" LIBREMIDI_HAS_STD_SEMAPHORE)
 check_cxx_source_compiles("#include <stop_token>\n#include <thread>\nint main() { std::jthread t; }" LIBREMIDI_HAS_STD_STOP_TOKEN)
 
