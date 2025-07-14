@@ -19,7 +19,7 @@ if(CPPWINRT_PATH)
 
   target_include_directories(libremidi SYSTEM ${_public} "${CPPWINRT_PATH}")
   target_compile_definitions(libremidi ${_public} LIBREMIDI_WINUWP)
-  target_link_libraries(libremidi INTERFACE RuntimeObject windowsapp)
+  target_link_libraries(libremidi ${_public} RuntimeObject windowsapp)
   # We don't need /ZW option here (support for C++/CX)' as we use C++/WinRT
   if(MSVC)
     target_compile_options(libremidi ${_public} /EHsc)

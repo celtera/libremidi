@@ -66,11 +66,12 @@ else()
 endif()
 
 message(STATUS "libremidi: using Windows MIDI Services")
+set(LIBREMIDI_HAS_WINMIDI 1)
+
 target_include_directories(libremidi SYSTEM ${_public}
   $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/cppwinrt>
   $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/cppwinrt-winmidi>
   $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/cppwinrt-winmidi/winmidi>
 )
 target_compile_definitions(libremidi ${_public} LIBREMIDI_WINMIDI)
-set(LIBREMIDI_HAS_WINMIDI 1)
 target_link_libraries(libremidi ${_public} RuntimeObject windowsapp)
