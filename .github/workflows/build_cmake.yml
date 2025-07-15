@@ -9,6 +9,7 @@ on:
     paths-ignore:
       - '**.md'
       - 'docs/**'
+
 jobs:
   build:
     name: ${{ matrix.config.name }}
