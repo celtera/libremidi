@@ -148,13 +148,9 @@ public:
 
       if (num_messages > 0 && num_bytes > 0)
       {
-        libremidi::message msg;
-        msg.bytes.assign(buffer, buffer + num_bytes);
-        msg.timestamp = timestamp / 1000000.0; // Convert nanoseconds to milliseconds
-
         const auto to_ns = [=] { return timestamp; };
 
-        m_processing.on_bytes(
+        m_processing.on_bytes_multi(
             {buffer, buffer + num_bytes},
             m_processing.timestamp<timestamp_info>(to_ns, timestamp));
       }

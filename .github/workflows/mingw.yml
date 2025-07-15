@@ -1,6 +1,14 @@
 name: MSYS2 build
 
-on: push
+on:
+  push:
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
 
 jobs:
   mingw:
