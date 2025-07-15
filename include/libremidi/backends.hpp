@@ -71,6 +71,10 @@
   #include <libremidi/backends/network_ump.hpp>
 #endif
 
+#if defined(LIBREMIDI_ANDROID)
+  #include <libremidi/backends/android/android.hpp>
+#endif
+
 namespace libremidi
 {
 // The order here will control the order of the API search in
@@ -124,6 +128,10 @@ static constexpr auto available_backends = make_tl(
 #if defined(LIBREMIDI_NETWORK)
     ,
     net::backend{}
+#endif
+#if defined(LIBREMIDI_ANDROID)
+    ,
+    android::backend{}
 #endif
     ,
     dummy_backend{});

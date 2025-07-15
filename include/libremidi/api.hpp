@@ -64,6 +64,8 @@ inline constexpr libremidi::API default_api() noexcept
   return API::ALSA_SEQ;
 #elif defined(__emscripten__)
   return API::EMSCRIPTEN_WEBMIDI;
+#elif defined(LIBREMIDI_ANDROID)
+  return API::ANDROID_AMIDI;
 #else
   return API::DUMMY;
 #endif

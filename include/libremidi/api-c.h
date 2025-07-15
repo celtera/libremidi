@@ -22,6 +22,7 @@ typedef enum libremidi_api
   PIPEWIRE,       /*!< PipeWire */
   KEYBOARD,       /*!< Computer keyboard input */
   NETWORK,        /*!< MIDI over IP */
+  ANDROID_AMIDI,  /*!< Android AMidi API */
 
   // MIDI 2.0 APIs
   ALSA_RAW_UMP = 0x1000, /*!< Raw ALSA API for MIDI 2.0 */

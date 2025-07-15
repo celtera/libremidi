@@ -35,6 +35,7 @@ option(LIBREMIDI_NO_JACK "Disable JACK back-end" OFF)
 option(LIBREMIDI_NO_PIPEWIRE "Disable PipeWire back-end" OFF)
 option(LIBREMIDI_NO_NETWORK "Disable Network back-end" OFF)
 option(LIBREMIDI_NO_KEYBOARD "Disable Computer keyboard back-end" OFF)
+cmake_dependent_option(LIBREMIDI_NO_ANDROID "Disable Android AMidi back-end" OFF "ANDROID" OFF)
 
 option(LIBREMIDI_NO_EXPORTS "Disable dynamic symbol exporting" OFF)
 option(LIBREMIDI_NO_BOOST "Do not use Boost if available" OFF)
@@ -70,6 +71,7 @@ include(libremidi.jack)
 include(libremidi.pipewire)
 include(libremidi.keyboard)
 include(libremidi.net)
+include(libremidi.android)
 
 ### Install ###
 include(libremidi.install)
