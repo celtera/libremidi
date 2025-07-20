@@ -38,8 +38,9 @@ TEST_CASE("write a track with an empty event", "[midi_writer]")
 TEST_CASE("write a track with a note", "[midi_writer]")
 {
   libremidi::writer writer;
-  writer.tracks.push_back(libremidi::midi_track{
-      libremidi::track_event{0, 0, libremidi::channel_events::note_on(1, 45, 35)}});
+  writer.tracks.push_back(
+      libremidi::midi_track{
+          libremidi::track_event{0, 0, libremidi::channel_events::note_on(1, 45, 35)}});
   std::ofstream empty;
   writer.write(empty);
 }

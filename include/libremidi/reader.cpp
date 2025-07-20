@@ -589,7 +589,7 @@ try
     return parse_result::invalid;
   }
 
-  startingTempo = 120.0f;             // midi default
+  startingTempo = 120.0f;              // midi default
   ticksPerBeat = float(time_division); // ticks per beat (a beat is defined as a quarter note)
 
   parse_result result = parse_result::validated;

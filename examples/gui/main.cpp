@@ -92,24 +92,24 @@ int main(int argc, char** argv)
   // Connect gui changes to port changes
   QObject::connect(
       &inputs, &QListWidget::currentItemChanged, [&](QListWidgetItem* selected, QListWidgetItem*) {
-        in.close_port();
-        for (auto& [port, item] : input_items)
+    in.close_port();
+    for (auto& [port, item] : input_items)
+    {
+      if (item == selected)
+      {
+        in.open_port(port);
+        if (!in.is_port_open())
         {
-          if (item == selected)
-          {
-            in.open_port(port);
-            if (!in.is_port_open())
-            {
-              QMessageBox::warning(
-                  &main, QString("Error !"),
-                  QString("Could not connect to input:\n%1\n%2")
-                      .arg(port.display_name.c_str())
-                      .arg(port.port_name.c_str()));
-            }
-            return;
-          }
+          QMessageBox::warning(
+              &main, QString("Error !"),
+              QString("Could not connect to input:\n%1\n%2")
+                  .arg(port.display_name.c_str())
+                  .arg(port.port_name.c_str()));
         }
-      });
+        return;
+      }
+    }
+  });
 
   QObject::connect(
       &outputs, &QListWidget::currentItemChanged,
@@ -131,6 +131,6 @@ int main(int argc, char** argv)
         return;
       }
     }
-      });
+  });
   return app.exec();
 }

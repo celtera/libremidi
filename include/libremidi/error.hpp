@@ -13,10 +13,15 @@
 
 #if __has_include(<source_location>) && (__cpp_lib_source_location >= 201907L)
   #include <source_location>
-namespace libremidi { using source_location = std::source_location; }
+namespace libremidi
+{
+using source_location = std::source_location;
+}
 #else
-namespace libremidi {
-struct source_location {
+namespace libremidi
+{
+struct source_location
+{
   static source_location current() noexcept { return {}; }
   int line() const noexcept { return -1; }
   int offset() const noexcept { return -1; }
@@ -40,8 +45,10 @@ inline auto from_errc(int64_t ret) noexcept
     Note that class behaviour is undefined after a critical error (not
     a warning) is reported.
  */
-using midi_error_callback = std::function<void(std::string_view errorText, const source_location&)>;
-using midi_warning_callback = std::function<void(std::string_view errorText, const source_location&)>;
+using midi_error_callback
+    = std::function<void(std::string_view errorText, const source_location&)>;
+using midi_warning_callback
+    = std::function<void(std::string_view errorText, const source_location&)>;
 }
 
 #if !defined(LIBREMIDI_LOG)

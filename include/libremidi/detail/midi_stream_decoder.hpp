@@ -31,7 +31,7 @@ struct timestamp_backend_info
   bool has_samples{};
 };
 
-template<typename Configuration>
+template <typename Configuration>
 struct input_state_machine_base
 {
   const Configuration& configuration;
@@ -415,22 +415,20 @@ private:
   on_bytes_segmented(const ump_callback& cb, std::span<const uint32_t> bytes, int64_t timestamp)
   {
     // Filter according to message type
-    switch(cmidi2_ump_get_message_type(bytes.data()))
+    switch (cmidi2_ump_get_message_type(bytes.data()))
     {
-      case CMIDI2_MESSAGE_TYPE_UTILITY:
-      {
+      case CMIDI2_MESSAGE_TYPE_UTILITY: {
         // All the utility messages are about timing
         if (this->configuration.ignore_timing)
           return;
         break;
       }
 
-      case CMIDI2_MESSAGE_TYPE_SYSTEM:
-      {
+      case CMIDI2_MESSAGE_TYPE_SYSTEM: {
         if (this->configuration.ignore_timing)
         {
           auto status = cmidi2_ump_get_system_message_byte2(bytes.data());
-          switch(status)
+          switch (status)
           {
             case CMIDI2_SYSTEM_STATUS_MIDI_TIME_CODE:
             case CMIDI2_SYSTEM_STATUS_SONG_POSITION:
@@ -439,18 +437,17 @@ private:
           }
         }
 
-       if (this->configuration.ignore_sensing)
-       {
-         auto status = cmidi2_ump_get_system_message_byte2(bytes.data());
-         if(status == CMIDI2_SYSTEM_STATUS_ACTIVE_SENSING)
-           return;
-       }
-       break;
+        if (this->configuration.ignore_sensing)
+        {
+          auto status = cmidi2_ump_get_system_message_byte2(bytes.data());
+          if (status == CMIDI2_SYSTEM_STATUS_ACTIVE_SENSING)
+            return;
+        }
+        break;
       }
 
       case CMIDI2_MESSAGE_TYPE_SYSEX7:
-      case CMIDI2_MESSAGE_TYPE_SYSEX8_MDS:
-      {
+      case CMIDI2_MESSAGE_TYPE_SYSEX8_MDS: {
         if (this->configuration.ignore_sysex)
           return;
         break;

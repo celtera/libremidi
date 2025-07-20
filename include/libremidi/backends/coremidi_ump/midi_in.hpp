@@ -26,8 +26,7 @@ public:
     if (auto result = init_client(configuration); result != noErr)
     {
       libremidi_handle_error(
-          this->configuration,
-          "error creating MIDI client object: " + std::to_string(result));
+          this->configuration, "error creating MIDI client object: " + std::to_string(result));
       client_open_ = from_osstatus(result);
       return;
     }
@@ -69,8 +68,7 @@ public:
     {
       close_client(*this);
       libremidi_handle_error(
-          this->configuration, "error creating macOS MIDI input port: "
-                                   + std::to_string(result));
+          this->configuration, "error creating macOS MIDI input port: " + std::to_string(result));
       return from_osstatus(result);
     }
 
@@ -79,8 +77,7 @@ public:
     {
       MIDIPortDispose(port);
       close_client(*this);
-      libremidi_handle_error(
-          this->configuration, "error connecting macOS MIDI input port.");
+      libremidi_handle_error(this->configuration, "error connecting macOS MIDI input port.");
       return from_osstatus(result);
     }
 
@@ -113,10 +110,7 @@ public:
     return stdx::error{};
   }
 
-  stdx::error close_port() override
-  {
-    return coremidi_data::close_port();
-  }
+  stdx::error close_port() override { return coremidi_data::close_port(); }
 
   timestamp absolute_timestamp() const noexcept override
   {

@@ -2,8 +2,8 @@
 #include <libremidi/api.hpp>
 #include <libremidi/config.hpp>
 #include <libremidi/error.hpp>
-#include <libremidi/observer_configuration.hpp>
 #include <libremidi/input_configuration.hpp>
+#include <libremidi/observer_configuration.hpp>
 #include <libremidi/output_configuration.hpp>
 
 #include <string_view>
@@ -58,6 +58,8 @@ struct error_handler
 };
 
 // Needed as apple still doesn't support source_location in xcode 15.3
-#define libremidi_handle_error(config, str) error_impl(config.on_error, str, libremidi::source_location::current())
-#define libremidi_handle_warning(config, str) warning_impl(config.on_warning, str, libremidi::source_location::current())
+#define libremidi_handle_error(config, str) \
+  error_impl(config.on_error, str, libremidi::source_location::current())
+#define libremidi_handle_warning(config, str) \
+  warning_impl(config.on_warning, str, libremidi::source_location::current())
 }

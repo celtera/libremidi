@@ -137,7 +137,7 @@ public:
       static_assert(std::errc{0} == std::errc{});
       return std::errc{};
     };
-    segment_ump_stream(ump_stream, count, write_func, []() {});
+    segment_ump_stream(ump_stream, count, write_func, []() { });
 
     snd.seq.drain_output(this->seq);
     return stdx::error{};

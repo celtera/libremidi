@@ -171,27 +171,23 @@ public:
     if (!configuration.has_callbacks())
       return;
 
-    jack_set_port_registration_callback(
-        this->client,
-        +[](jack_port_id_t p, int r, void* arg) {
-          auto& self = *(observer_jack*)arg;
-          if (auto port = jack_port_by_id(self.client, p))
-          {
-            self.on_port_callback(port, r != 0);
-          }
-        },
-        this);
+    jack_set_port_registration_callback(this->client, +[](jack_port_id_t p, int r, void* arg) {
+      auto& self = *(observer_jack*)arg;
+      if (auto port = jack_port_by_id(self.client, p))
+      {
+        self.on_port_callback(port, r != 0);
+      }
+    }, this);
 
     jack_set_port_rename_callback(
         this->client,
         +[](jack_port_id_t p, const char* /*old_name*/, const char* /*new_name*/, void* arg) {
-          const auto& self = *static_cast<observer_jack*>(arg);
+      const auto& self = *static_cast<observer_jack*>(arg);
 
-          auto port = jack_port_by_id(self.client, p);
-          if (!port)
-            return;
-        },
-        this);
+      auto port = jack_port_by_id(self.client, p);
+      if (!port)
+        return;
+    }, this);
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::JACK_MIDI; }

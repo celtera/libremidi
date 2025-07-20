@@ -1,9 +1,9 @@
 #pragma once
+#include <libremidi/backends/coremidi/error_domain.hpp>
 #include <libremidi/detail/memory.hpp>
 #include <libremidi/detail/midi_api.hpp>
 #include <libremidi/error_handler.hpp>
 #include <libremidi/input_configuration.hpp>
-#include <libremidi/backends/coremidi/error_domain.hpp>
 
 #include <CoreMIDI/CoreMIDI.h>
 #include <CoreServices/CoreServices.h>
@@ -220,16 +220,14 @@ locate_object(auto& self, const port_information& info, MIDIObjectType requested
   auto ret = MIDIObjectFindByUniqueID(uid, &object, &type);
   if (ret != noErr)
   {
-    self.libremidi_handle_error(
-        self.configuration, "cannot find port: " + info.port_name);
+    self.libremidi_handle_error(self.configuration, "cannot find port: " + info.port_name);
     return 0;
   }
 
   if (type != requested_type || object == 0)
   {
     self.libremidi_handle_error(
-        self.configuration, "invalid object: " + info.port_name + " : "
-                                + std::to_string(object));
+        self.configuration, "invalid object: " + info.port_name + " : " + std::to_string(object));
     return 0;
   }
 

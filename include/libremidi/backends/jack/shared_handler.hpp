@@ -23,13 +23,10 @@ struct shared_handler : public libremidi::shared_context
     client = jack_client_open(v.data(), JackNoStartServer, &status);
     assert(client);
     assert(status == 0);
-    jack_set_process_callback(
-        client,
-        +[](jack_nframes_t cnt, void* ctx) -> int {
-          ((shared_handler*)ctx)->jack_callback(cnt);
-          return 0;
-        },
-        this);
+    jack_set_process_callback(client, +[](jack_nframes_t cnt, void* ctx) -> int {
+      ((shared_handler*)ctx)->jack_callback(cnt);
+      return 0;
+    }, this);
   }
 
   virtual void start_processing() override { jack_activate(client); }

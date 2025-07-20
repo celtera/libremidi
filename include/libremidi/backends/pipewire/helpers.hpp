@@ -82,10 +82,10 @@ struct pipewire_helpers
       static constexpr struct pw_filter_events filter_events
           = {.version = PW_VERSION_FILTER_EVENTS,
              .process = +[](void* _data, struct spa_io_position* position) -> void {
-               // FIXME likely we need the thread_lock check here too
-               Self& self = *static_cast<Self*>(_data);
-               self.process(position);
-             }};
+        // FIXME likely we need the thread_lock check here too
+        Self& self = *static_cast<Self*>(_data);
+        self.process(position);
+      }};
 #pragma GCC diagnostic pop
 
       this->filter->create_filter(self.configuration.client_name, filter_events, &self);

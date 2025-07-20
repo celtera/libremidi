@@ -137,13 +137,13 @@ struct jack_helpers : jack_client
       configuration.set_process_func(
           {.token = this_instance,
            .callback = [&self, p = std::weak_ptr{this->port.impl}](jack_nframes_t nf) -> int {
-             if (auto pt = p.lock())
-               if (pt->load())
-                 self.process(nf);
+        if (auto pt = p.lock())
+          if (pt->load())
+            self.process(nf);
 
-             self.thread_lock.check_client_released();
-             return 0;
-           }});
+        self.thread_lock.check_client_released();
+        return 0;
+      }});
 
       this->client = configuration.context;
       return jack_status_t{};
@@ -155,26 +155,25 @@ struct jack_helpers : jack_client
           = jack_client_open(configuration.client_name.c_str(), JackNoStartServer, &status);
       if (this->client != nullptr)
       {
-        if(status & JackNameNotUnique) {
-          self.libremidi_handle_warning(self.configuration, "JACK client with the same name already exists, renamed.");
+        if (status & JackNameNotUnique)
+        {
+          self.libremidi_handle_warning(
+              self.configuration, "JACK client with the same name already exists, renamed.");
         }
 
-        jack_set_process_callback(
-            this->client,
-            +[](jack_nframes_t nf, void* ctx) -> int {
-              auto& self = *static_cast<Self*>(ctx);
-              jack_port_t* port = self.port;
+        jack_set_process_callback(this->client, +[](jack_nframes_t nf, void* ctx) -> int {
+          auto& self = *static_cast<Self*>(ctx);
+          jack_port_t* port = self.port;
 
-              // Is port created?
-              if (port == nullptr)
-                return 0;
+          // Is port created?
+          if (port == nullptr)
+            return 0;
 
-              self.process(nf);
+          self.process(nf);
 
-              self.thread_lock.check_client_released();
-              return 0;
-            },
-            &self);
+          self.thread_lock.check_client_released();
+          return 0;
+        }, &self);
         jack_activate(this->client);
       }
       return status;
@@ -208,8 +207,7 @@ struct jack_helpers : jack_client
     if (self.configuration.client_name.size() + portName.size() + 2u
         >= static_cast<size_t>(jack_port_name_size()))
     {
-      self.libremidi_handle_error(
-          self.configuration, "port name length limit exceeded");
+      self.libremidi_handle_error(self.configuration, "port name length limit exceeded");
       return std::errc::invalid_argument;
     }
 

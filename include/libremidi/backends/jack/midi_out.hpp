@@ -38,8 +38,7 @@ public:
     if (int err = jack_connect(this->client, jack_port_name(this->port), port.port_name.c_str());
         err != 0 && err != EEXIST)
     {
-      libremidi_handle_error(
-          configuration, "could not connect to port" + port.port_name);
+      libremidi_handle_error(configuration, "could not connect to port" + port.port_name);
       return from_errc(err);
     }
 

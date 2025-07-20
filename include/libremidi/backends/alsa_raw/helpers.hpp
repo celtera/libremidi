@@ -98,7 +98,6 @@ struct enumerator
       : handler{self}
       , configuration{self.configuration}
   {
-
   }
 
   // 1: is an input / output

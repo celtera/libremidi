@@ -188,13 +188,13 @@ struct pipewire_context
       pipewire_context& self = *(pipewire_context*)object;
       if (strcmp(type, PW_TYPE_INTERFACE_Port) == 0)
         self.register_port(id, type);
-        },
+    },
         .global_remove =
             [](void* object, uint32_t id) {
       pipewire_context& self = *(pipewire_context*)object;
       self.unregister_port(id);
-        },
-        };
+    },
+    };
 
     // Start listening
     pw_registry_add_listener(this->registry, &this->registry_listener, &registry_events, this);
@@ -245,8 +245,8 @@ struct pipewire_context
     // Remove from the listeners
     auto it
         = std::find_if(port_listener.begin(), port_listener.end(), [&](const listened_port& l) {
-            return l.id == id;
-          });
+      return l.id == id;
+    });
     if (it != port_listener.end())
     {
       pw.proxy_destroy((pw_proxy*)it->port);
@@ -267,14 +267,14 @@ struct pipewire_context
     static constexpr struct pw_core_events core_events = {
         .version = PW_VERSION_CORE_EVENTS,
         .done =
-        [](void* object, uint32_t id, int seq) {
+            [](void* object, uint32_t id, int seq) {
       auto& self = *(pipewire_context*)object;
-      if(id == PW_ID_CORE && seq == self.pending)
+      if (id == PW_ID_CORE && seq == self.pending)
       {
         self.done = 1;
         libpipewire::instance().main_loop_quit(self.main_loop);
       }
-        },
+    },
     };
 
     spa_zero(core_listener);

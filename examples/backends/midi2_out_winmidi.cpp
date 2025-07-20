@@ -1,4 +1,5 @@
 #include "backend_test_utils.hpp"
+
 #include <libremidi/backends/winmidi.hpp>
 #include <libremidi/libremidi.hpp>
 using api = libremidi::winmidi::backend;

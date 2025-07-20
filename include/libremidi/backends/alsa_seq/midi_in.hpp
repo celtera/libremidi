@@ -487,13 +487,13 @@ public:
     using poll_params = typename ConfigurationImpl::poll_parameters_type;
     this->configuration.manual_poll(
         poll_params{.addr = this->vaddr, .callback = [this](const auto& ev) {
-                      if constexpr (ConfigurationImpl::midi_version == 1)
-                        return this->process_event(ev);
+      if constexpr (ConfigurationImpl::midi_version == 1)
+        return this->process_event(ev);
 #if __has_include(<alsa/ump.h>)
-                      else
-                        return this->process_ump_event(ev);
+      else
+        return this->process_ump_event(ev);
 #endif
-                    }});
+    }});
     return 0;
   }
 

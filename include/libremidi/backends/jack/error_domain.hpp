@@ -34,36 +34,36 @@ public:
   stdx::string_ref message(const stdx::error& e) const noexcept override
   {
     const auto status = error_cast<jack_status_t>(e);
-    if(status == jack_status_t{})
+    if (status == jack_status_t{})
       return "Success";
 
-    if(status & JackInvalidOption)
+    if (status & JackInvalidOption)
       return "The operation contained an invalid or unsupported option";
-    if(status & JackServerFailed)
+    if (status & JackServerFailed)
       return "Unable to connect to the JACK server";
-    if(status & JackServerError)
+    if (status & JackServerError)
       return "Communication error with the JACK server";
-    if(status & JackNoSuchClient)
+    if (status & JackNoSuchClient)
       return "Requested client does not exist";
-    if(status & JackLoadFailure)
+    if (status & JackLoadFailure)
       return "Unable to load internal client";
-    if(status & JackInitFailure)
+    if (status & JackInitFailure)
       return "Unable to initialize client";
-    if(status & JackShmFailure)
+    if (status & JackShmFailure)
       return "Unable to access shared memory";
-    if(status & JackVersionError)
+    if (status & JackVersionError)
       return "Client's protocol version does not match";
-    if(status & JackBackendError)
+    if (status & JackBackendError)
       return "Backend error";
-    if(status & JackClientZombie)
+    if (status & JackClientZombie)
       return "Client zombified failure";
-    if(status & JackFailure)
+    if (status & JackFailure)
       return "Failure";
-    if(status & JackNameNotUnique)
+    if (status & JackNameNotUnique)
       return "The desired client name was not unique";
 
     // Can't happen in libremidi as we set JackNoStartServer
-    if(status & JackServerStarted)
+    if (status & JackServerStarted)
       return "Server was started";
 
     return "Unknown JACK status code";

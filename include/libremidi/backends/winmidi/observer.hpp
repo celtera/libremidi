@@ -125,7 +125,8 @@ public:
 
     for (const auto& ep : MidiEndpointDeviceInformation::FindAll())
     {
-      if(ep.Name().starts_with(L"Diagnostics")) {
+      if (ep.Name().starts_with(L"Diagnostics"))
+      {
         continue;
       }
 
@@ -145,7 +146,8 @@ public:
 
     for (const auto& ep : MidiEndpointDeviceInformation::FindAll())
     {
-      if(ep.Name().starts_with(L"Diagnostics")) {
+      if (ep.Name().starts_with(L"Diagnostics"))
+      {
         continue;
       }
 

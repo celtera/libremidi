@@ -32,8 +32,7 @@ LIBREMIDI_INLINE stdx::error midi_in_emscripten::open_port(int portNumber, std::
 
   if (portNumber < 0 || portNumber >= midi.input_count())
   {
-    libremidi_handle_error(
-        this->configuration, "no MIDI output sources found.");
+    libremidi_handle_error(this->configuration, "no MIDI output sources found.");
     return std::errc::invalid_argument;
   }
 

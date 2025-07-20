@@ -46,12 +46,12 @@ struct my_app
     // Create our configuration
     auto api_input_config = libremidi::jack_input_configuration{
         .context = handle.get(), .set_process_func = [this](libremidi::jack_callback cb) {
-          midiin_callbacks.push_back(std::move(cb));
-        }};
+      midiin_callbacks.push_back(std::move(cb));
+    }};
     auto api_output_config = libremidi::jack_output_configuration{
         .context = handle.get(), .set_process_func = [this](libremidi::jack_callback cb) {
-          midiout_callbacks.push_back(std::move(cb));
-        }};
+      midiout_callbacks.push_back(std::move(cb));
+    }};
 
     // Create 16 inputs and 16 outputs
     for (int i = 0; i < 16; i++)

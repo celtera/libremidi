@@ -23,13 +23,10 @@ struct shared_handler : public libremidi::shared_context
     client = pipewire_client_open(v.data(), PipewireNoStartServer, &status);
     assert(client);
     assert(status == 0);
-    pipewire_set_process_callback(
-        client,
-        +[](pipewire_nframes_t cnt, void* ctx) -> int {
-          ((shared_handler*)ctx)->pipewire_callback(cnt);
-          return 0;
-        },
-        this);
+    pipewire_set_process_callback(client, +[](pipewire_nframes_t cnt, void* ctx) -> int {
+      ((shared_handler*)ctx)->pipewire_callback(cnt);
+      return 0;
+    }, this);
   }
 
   virtual void start_processing() override { pipewire_activate(client); }

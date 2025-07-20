@@ -44,7 +44,8 @@ public:
     SND_RAWMIDI_NONBLOCK; // fixme
     if (int err = snd.ump.open(&midiport_, 0, portname, mode); err < 0)
     {
-      libremidi_handle_error(this->configuration, "alsa_raw_ump::ump::open_port: cannot open device.");
+      libremidi_handle_error(
+          this->configuration, "alsa_raw_ump::ump::open_port: cannot open device.");
       return from_errc(err);
     }
 
@@ -143,7 +144,8 @@ public:
     while ((err = snd.ump.read(this->midiport_, words, nwords * 4)) > 0)
     {
       const auto to_ns = [this] { return absolute_timestamp(); };
-      m_processing.on_bytes({words, words + err / 4}, m_processing.timestamp<timestamp_info>(to_ns, 0));
+      m_processing.on_bytes(
+          {words, words + err / 4}, m_processing.timestamp<timestamp_info>(to_ns, 0));
     }
     return err;
   }
@@ -166,7 +168,8 @@ public:
       const auto to_ns = [ts] {
         return static_cast<int64_t>(ts.tv_sec) * 1'000'000'000 + static_cast<int64_t>(ts.tv_nsec);
       };
-      m_processing.on_bytes({words, words + err / 4}, m_processing.timestamp<timestamp_info>(to_ns, 0));
+      m_processing.on_bytes(
+          {words, words + err / 4}, m_processing.timestamp<timestamp_info>(to_ns, 0));
     }
     return err;
   }
@@ -257,8 +260,7 @@ private:
       using namespace std::literals;
 
       libremidi_handle_error(
-          this->configuration,
-          "error starting MIDI input thread: "s + e.what());
+          this->configuration, "error starting MIDI input thread: "s + e.what());
       return e.code();
     }
     return stdx::error{};
@@ -309,19 +311,21 @@ private:
   {
     if (configuration.timestamps == timestamp_mode::NoTimestamp)
     {
-      configuration.manual_poll(manual_poll_parameters{
-          .fds = {this->fds_.data(), this->fds_.size()},
-          .callback = [this](std::span<pollfd> fds) {
-            return do_read_events(&midi_in_impl::read_input_buffer, fds);
-          }});
+      configuration.manual_poll(
+          manual_poll_parameters{
+              .fds = {this->fds_.data(), this->fds_.size()},
+              .callback = [this](std::span<pollfd> fds) {
+        return do_read_events(&midi_in_impl::read_input_buffer, fds);
+      }});
     }
     else
     {
-      configuration.manual_poll(manual_poll_parameters{
-          .fds = {this->fds_.data(), this->fds_.size()},
-          .callback = [this](std::span<pollfd> fds) {
-            return do_read_events(&midi_in_impl::read_input_buffer_with_timestamps, fds);
-          }});
+      configuration.manual_poll(
+          manual_poll_parameters{
+              .fds = {this->fds_.data(), this->fds_.size()},
+              .callback = [this](std::span<pollfd> fds) {
+        return do_read_events(&midi_in_impl::read_input_buffer_with_timestamps, fds);
+      }});
     }
   }
 

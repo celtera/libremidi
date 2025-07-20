@@ -19,7 +19,8 @@ public:
   {
   } configuration;
 
-  explicit observer_pipewire(observer_configuration&& conf, pipewire_observer_configuration&& apiconf)
+  explicit observer_pipewire(
+      observer_configuration&& conf, pipewire_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
     create_context(*this);

@@ -1,8 +1,8 @@
 #include "../include_catch.hpp"
+
+#include <libremidi/backends.hpp>
 #include <libremidi/error.hpp>
 #include <libremidi/libremidi.hpp>
-#include <libremidi/backends.hpp>
-
 
 TEST_CASE("error code retrieval", "[error]")
 {

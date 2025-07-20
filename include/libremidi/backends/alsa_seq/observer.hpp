@@ -179,10 +179,10 @@ public:
   {
     alsa_seq::for_all_ports(
         snd, this->seq, [this](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
-          int clt = snd.seq.client_info_get_client(&client);
-          int pt = snd.seq.port_info_get_port(&port);
-          register_port(clt, pt);
-        });
+      int clt = snd.seq.client_info_get_client(&client);
+      int pt = snd.seq.port_info_get_port(&port);
+      register_port(clt, pt);
+    });
   }
 
   libremidi::API get_current_api() const noexcept override
@@ -198,12 +198,12 @@ public:
     std::vector<libremidi::input_port> ret;
     alsa_seq::for_all_ports(
         snd, this->seq, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
-          int clt = snd.seq.client_info_get_client(&client);
-          int pt = snd.seq.port_info_get_port(&port);
-          if (auto p = get_info(clt, pt))
-            if (p->isInput)
-              ret.push_back(to_port_info<true>(*p));
-        });
+      int clt = snd.seq.client_info_get_client(&client);
+      int pt = snd.seq.port_info_get_port(&port);
+      if (auto p = get_info(clt, pt))
+        if (p->isInput)
+          ret.push_back(to_port_info<true>(*p));
+    });
     return ret;
   }
 
@@ -212,12 +212,12 @@ public:
     std::vector<libremidi::output_port> ret;
     alsa_seq::for_all_ports(
         snd, this->seq, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
-          int clt = snd.seq.client_info_get_client(&client);
-          int pt = snd.seq.port_info_get_port(&port);
-          if (auto p = get_info(clt, pt))
-            if (p->isOutput)
-              ret.push_back(to_port_info<false>(*p));
-        });
+      int clt = snd.seq.client_info_get_client(&client);
+      int pt = snd.seq.port_info_get_port(&port);
+      if (auto p = get_info(clt, pt))
+        if (p->isOutput)
+          ret.push_back(to_port_info<false>(*p));
+    });
     return ret;
   }
 
@@ -363,9 +363,9 @@ public:
   {
     this->configuration.manual_poll(
         poll_parameters{.addr = this->vaddr, .callback = [this](const auto& v) {
-                          this->handle_event(v);
-                          return 0;
-                        }});
+      this->handle_event(v);
+      return 0;
+    }});
   }
 
   ~observer_manual() { this->configuration.stop_poll(this->vaddr); }

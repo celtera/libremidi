@@ -53,8 +53,8 @@ public:
         err != 0 && err != EEXIST)
     {
       libremidi_handle_error(
-          configuration, "could not connect to port: " + port.port_name + " -> "
-                             + jack_port_name(this->port));
+          configuration,
+          "could not connect to port: " + port.port_name + " -> " + jack_port_name(this->port));
       return from_errc(err);
     }
     return stdx::error{};

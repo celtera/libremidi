@@ -30,11 +30,11 @@ int main()
   libremidi::midi_in midiin{
       {
           // Set our callback function.
-          .on_message
-          = [&](const libremidi::message& message) {
+          .on_message =
+              [&](const libremidi::message& message) {
     std::cout << message << std::endl;
-    auto _ = midiout.send_message(message); 
-          },
+    auto _ = midiout.send_message(message);
+  },
       },
       libremidi::midi_in_configuration_for(obs)};
 

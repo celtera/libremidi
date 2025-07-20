@@ -67,7 +67,8 @@ public:
     return stdx::error{};
   }
 
-  void process_message(const winrt::Microsoft::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& msg)
+  void process_message(
+      const winrt::Microsoft::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& msg)
   {
     static constexpr timestamp_backend_info timestamp_info{
         .has_absolute_timestamps = true,

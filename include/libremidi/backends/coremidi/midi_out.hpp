@@ -24,8 +24,7 @@ public:
     if (auto result = init_client(configuration); result != noErr)
     {
       libremidi_handle_error(
-          this->configuration,
-          "error creating MIDI client object: " + std::to_string(result));
+          this->configuration, "error creating MIDI client object: " + std::to_string(result));
       client_open_ = from_osstatus(result);
       return;
     }
@@ -60,8 +59,7 @@ public:
     if (result != noErr)
     {
       close_client(*this);
-      libremidi_handle_error(
-          this->configuration, "error creating macOS MIDI output port.");
+      libremidi_handle_error(this->configuration, "error creating macOS MIDI output port.");
       return from_osstatus(result);
     }
 
@@ -80,9 +78,7 @@ public:
 
     if (result != noErr)
     {
-      libremidi_handle_error(
-          this->configuration,
-          "error creating macOS virtual MIDI source.");
+      libremidi_handle_error(this->configuration, "error creating macOS virtual MIDI source.");
 
       return from_osstatus(result);
     }
@@ -92,10 +88,7 @@ public:
     return stdx::error{};
   }
 
-  stdx::error close_port() override
-  {
-    return coremidi_data::close_port();
-  }
+  stdx::error close_port() override { return coremidi_data::close_port(); }
 
   stdx::error send_message(const unsigned char* message, size_t size) override
   {
@@ -137,8 +130,7 @@ public:
 
       if (!packet)
       {
-        libremidi_handle_error(
-            this->configuration, "could not allocate packet list");
+        libremidi_handle_error(this->configuration, "could not allocate packet list");
 
         return std::errc::message_size;
       }
@@ -163,9 +155,7 @@ public:
         auto result = MIDISend(this->port, this->destinationId, packetList);
         if (result != noErr)
         {
-          libremidi_handle_warning(
-              this->configuration,
-              "error sending MIDI message to port.");
+          libremidi_handle_warning(this->configuration, "error sending MIDI message to port.");
           return std::errc::io_error;
         }
       }

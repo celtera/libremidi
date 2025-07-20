@@ -32,15 +32,13 @@ public:
     auto result = MIDIClientCreate(
         toCFString(configuration.client_name).get(),
         +[](const MIDINotification* message, void* ctx) {
-          ((observer_core*)ctx)->notify(message);
-        },
-        this, &client);
+      ((observer_core*)ctx)->notify(message);
+    }, this, &client);
 
     if (result != noErr)
     {
       libremidi_handle_error(
-          this->configuration,
-          "error creating MIDI client object: " + std::to_string(result));
+          this->configuration, "error creating MIDI client object: " + std::to_string(result));
       return;
     }
 

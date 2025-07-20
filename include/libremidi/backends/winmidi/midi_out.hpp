@@ -1,9 +1,9 @@
 #pragma once
-#include <libremidi/detail/ump_stream.hpp>
 #include <libremidi/backends/winmidi/config.hpp>
 #include <libremidi/backends/winmidi/helpers.hpp>
 #include <libremidi/backends/winmidi/observer.hpp>
 #include <libremidi/detail/midi_out.hpp>
+#include <libremidi/detail/ump_stream.hpp>
 
 namespace libremidi::winmidi
 {
@@ -62,7 +62,7 @@ public:
   {
     auto write_func = [this](const uint32_t* ump, int64_t bytes) -> std::errc {
       MidiSendMessageResults ret{};
-      switch(bytes / 4)
+      switch (bytes / 4)
       {
         case 1:
           ret = m_endpoint.SendSingleMessagePacket(MidiMessage32(0, ump[0]));
@@ -74,18 +74,19 @@ public:
           ret = m_endpoint.SendSingleMessagePacket(MidiMessage96(0, ump[0], ump[1], ump[2]));
           break;
         case 4:
-          ret = m_endpoint.SendSingleMessagePacket(MidiMessage128(0, ump[0], ump[1], ump[2], ump[3]));
+          ret = m_endpoint.SendSingleMessagePacket(
+              MidiMessage128(0, ump[0], ump[1], ump[2], ump[3]));
           break;
         default:
           return std::errc::bad_message;
       }
 
-      if(ret != MidiSendMessageResults::Succeeded)
+      if (ret != MidiSendMessageResults::Succeeded)
         return std::errc::bad_message;
       return std::errc{0};
     };
 
-    return segment_ump_stream(message, size, write_func, []() {});
+    return segment_ump_stream(message, size, write_func, []() { });
   }
 
 private:

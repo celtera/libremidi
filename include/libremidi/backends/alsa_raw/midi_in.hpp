@@ -264,8 +264,7 @@ private:
       using namespace std::literals;
 
       libremidi_handle_error(
-          this->configuration,
-          "error starting MIDI input thread: "s + e.what());
+          this->configuration, "error starting MIDI input thread: "s + e.what());
       return e.code();
     }
     return stdx::error{};
@@ -316,19 +315,21 @@ private:
   {
     if (configuration.timestamps == timestamp_mode::NoTimestamp)
     {
-      configuration.manual_poll(manual_poll_parameters{
-          .fds = {this->fds_.data(), this->fds_.size()},
-          .callback = [this](std::span<pollfd> fds) {
-            return do_read_events(&midi_in_impl::read_input_buffer, fds);
-          }});
+      configuration.manual_poll(
+          manual_poll_parameters{
+              .fds = {this->fds_.data(), this->fds_.size()},
+              .callback = [this](std::span<pollfd> fds) {
+        return do_read_events(&midi_in_impl::read_input_buffer, fds);
+      }});
     }
     else
     {
-      configuration.manual_poll(manual_poll_parameters{
-          .fds = {this->fds_.data(), this->fds_.size()},
-          .callback = [this](std::span<pollfd> fds) {
-            return do_read_events(&midi_in_impl::read_input_buffer_with_timestamps, fds);
-          }});
+      configuration.manual_poll(
+          manual_poll_parameters{
+              .fds = {this->fds_.data(), this->fds_.size()},
+              .callback = [this](std::span<pollfd> fds) {
+        return do_read_events(&midi_in_impl::read_input_buffer_with_timestamps, fds);
+      }});
     }
   }
 

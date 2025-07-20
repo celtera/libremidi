@@ -1,6 +1,7 @@
+#include "utils.hpp"
+
 #include <libremidi/configurations.hpp>
 #include <libremidi/libremidi.hpp>
-#include "utils.hpp"
 
 #include <CoreMIDI/CoreMIDI.h>
 

@@ -79,10 +79,7 @@ public:
     return do_close_port();
   }
 
-  stdx::error set_port_name(std::string_view port_name) override
-  {
-    return rename_port(port_name);
-  }
+  stdx::error set_port_name(std::string_view port_name) override { return rename_port(port_name); }
 
   int process(spa_io_position* pos)
   {

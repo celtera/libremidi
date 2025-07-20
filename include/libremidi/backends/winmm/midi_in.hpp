@@ -24,9 +24,7 @@ public:
   {
     if (!InitializeCriticalSectionAndSpinCount(&(this->_mutex), 0x00000400))
     {
-      libremidi_handle_error(
-          configuration,
-          "InitializeCriticalSectionAndSpinCount failed.");
+      libremidi_handle_error(configuration, "InitializeCriticalSectionAndSpinCount failed.");
 
       this->client_open_ = std::errc::too_many_files_open;
       return;
@@ -40,7 +38,7 @@ public:
     // Close a connection if it exists.
     midi_in_winmm::close_port();
 
-    if(this->client_open_ == stdx::error{})
+    if (this->client_open_ == stdx::error{})
       DeleteCriticalSection(&(this->_mutex));
   }
 
@@ -53,8 +51,7 @@ public:
         std::bit_cast<DWORD_PTR>(this), CALLBACK_FUNCTION);
     if (result != MMSYSERR_NOERROR)
     {
-      libremidi_handle_error(
-          configuration, "error creating Windows MM MIDI input port.");
+      libremidi_handle_error(configuration, "error creating Windows MM MIDI input port.");
       return from_mmerr(result);
     }
 
@@ -101,8 +98,7 @@ public:
     {
       midiInClose(this->inHandle);
       this->inHandle = nullptr;
-      libremidi_handle_error(
-          configuration, "error starting Windows MM MIDI input port.");
+      libremidi_handle_error(configuration, "error starting Windows MM MIDI input port.");
       return from_mmerr(result);
     }
 
@@ -126,8 +122,7 @@ public:
       if (p.port_name == port.port_name)
         return do_open(port.port);
     }
-    libremidi_handle_error(
-        configuration, "port not found: " + p.port_name);
+    libremidi_handle_error(configuration, "port not found: " + p.port_name);
     return std::errc::invalid_argument;
   }
 
@@ -238,13 +233,13 @@ private:
     {
       // Sysex message ( MIM_LONGDATA or MIM_LONGERROR )
       const auto* sysex = reinterpret_cast<MIDIHDR*>(midiMessage);
-      if(inputStatus == MIM_LONGERROR)
+      if (inputStatus == MIM_LONGERROR)
       {
         self.m_processing.reset();
       }
       else if (!self.configuration.ignore_sysex)
       {
-        if(sysex->dwBytesRecorded > 0)
+        if (sysex->dwBytesRecorded > 0)
         {
           const auto sysex_bytes = reinterpret_cast<uint8_t*>(sysex->lpData);
 

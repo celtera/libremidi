@@ -272,8 +272,7 @@ struct alsa_data
     // Make subscription
     if (int err = snd.seq.port_subscribe_malloc(&this->subscription); err < 0)
     {
-      self.libremidi_handle_error(
-          self.configuration, "ALSA error allocation port subscription.");
+      self.libremidi_handle_error(self.configuration, "ALSA error allocation port subscription.");
       return err;
     }
 
