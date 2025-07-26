@@ -42,7 +42,6 @@ public:
   }
   stdx::error open_virtual_port(std::string_view /*portName*/) override { return stdx::error{}; }
   stdx::error close_port() override { return stdx::error{}; }
-  stdx::error set_client_name(std::string_view /*clientName*/) override { return stdx::error{}; }
   stdx::error set_port_name(std::string_view /*portName*/) override { return stdx::error{}; }
   timestamp absolute_timestamp() const noexcept override { return 0; }
 };
@@ -66,7 +65,6 @@ public:
   stdx::error open_virtual_port(std::string_view /*portName*/) override { return stdx::error{}; }
 
   stdx::error close_port() override { return stdx::error{}; }
-  stdx::error set_client_name(std::string_view /*clientName*/) override { return stdx::error{}; }
   stdx::error set_port_name(std::string_view /*portName*/) override { return stdx::error{}; }
   stdx::error send_message(const unsigned char* /*message*/, size_t /*size*/) override
   {

@@ -195,11 +195,6 @@ public:
     return stdx::error{};
   }
 
-  stdx::error set_client_name(std::string_view clientName) override
-  {
-    return alsa_data::set_client_name(clientName);
-  }
-
   stdx::error set_port_name(std::string_view portName) override
   {
     return alsa_data::set_port_name(portName);

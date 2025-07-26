@@ -103,18 +103,6 @@ public:
     return stdx::error{};
   }
 
-  stdx::error set_client_name(std::string_view name) override
-  {
-    if (!context::client_name.empty() && context::client_name != name)
-    {
-      libremidi_handle_error(
-          configuration, "Android backend only supports one client name per process");
-      return std::errc{};
-    }
-    context::client_name = std::string(name);
-    return stdx::error{};
-  }
-
   bool is_port_open() const noexcept { return port_open; }
 
   void start_midi_thread() { poll_thread = std::thread(&midi_in::poll_midi, this); }
