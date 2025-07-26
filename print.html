@@ -412,7 +412,8 @@ if(auto port = libremidi::midi1::in_default_port())
 libremidi::midi_out midi;
 
 // Open a given midi port. Same as for input:
-midi.open_port(libremidi::midi2::out_default_port());
+if(auto port = libremidi::midi1::out_default_port())
+  midi.open_port(*port);
 
 // Option A: send fixed amount of bytes for most basic cases
 midi.send_message(144, 110, 40); // Overloads exist for 1, 2, 3 bytes
@@ -469,7 +470,7 @@ midi.open_port(libremidi::midi2::in_default_port());
 libremidi::midi_out midi;
 
 // Open a given midi port. Same as for input:
-if(auto port = libremidi::midi2::in_default_port())
+if(auto port = libremidi::midi2::out_default_port())
   midi.open_port(*port);
 
 // Option A: send fixed amount of bytes for most basic cases
