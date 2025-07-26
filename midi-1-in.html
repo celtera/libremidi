@@ -199,7 +199,8 @@ libremidi::midi_in midi{
 // The argument is a libremidi::input_port gotten from a libremidi::observer. 
 midi.open_port(/* a port */);
 // Alternatively, to get the default port for the system: 
-midi.open_port(libremidi::midi1::in_default_port());
+if(auto port = libremidi::midi1::in_default_port())
+  midi.open_port(*port);
 
 // Note that only one port can be open at a given time on a midi_in or midi_out object.
 
