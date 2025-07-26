@@ -68,4 +68,21 @@ LIBREMIDI_EXPORT
 libremidi::API midi_api(const output_api_configuration& conf);
 LIBREMIDI_EXPORT
 libremidi::API midi_api(const observer_api_configuration& conf);
+
+void set_client_name(auto&& conf, std::string name)
+{
+  std::visit([&](auto& impl) {
+    if constexpr (requires { impl.client_name; })
+      impl.client_name = std::move(name);
+  }, conf);
+}
+
+std::optional<std::string> client_name(const auto& conf) noexcept
+{
+  return std::visit([&](auto& impl) -> std::optional<std::string> {
+    if constexpr (requires { impl.client_name; })
+      return impl.client_name;
+    return std::nullopt;
+  }, conf);
+}
 }
