@@ -36,7 +36,13 @@ void on_input_port_found(void* ctx, const libremidi_midi_in_port* port)
   if (ret != 0)
     return;
 
-  printf("input: %s\n", name);
+  uint64_t handle = -1;
+
+  ret = libremidi_midi_in_port_handle(port, &handle);
+  if (ret != 0)
+    return;
+
+  printf("input %d: %s\n", handle, name);
   fflush(stdout);
 
   enumerated_ports* e = (enumerated_ports*)ctx;
@@ -53,7 +59,13 @@ void on_output_port_found(void* ctx, const libremidi_midi_out_port* port)
   if (ret != 0)
     return;
 
-  printf("output: %s\n", name);
+  uint64_t handle = -1;
+
+  ret = libremidi_midi_out_port_handle(port, &handle);
+  if (ret != 0)
+    return;
+
+  printf("output %d: %s\n", handle, name);
   fflush(stdout);
 
   enumerated_ports* e = (enumerated_ports*)ctx;
