@@ -199,6 +199,10 @@ int libremidi_midi_in_port_name(
     const libremidi_midi_in_port* port, const char** name, size_t* len);
 
 LIBREMIDI_EXPORT
+int libremidi_midi_in_port_handle(
+    const libremidi_midi_in_port* port, uint64_t* handle);
+
+LIBREMIDI_EXPORT
 int libremidi_midi_out_port_clone(
     const libremidi_midi_out_port* port, libremidi_midi_out_port** dst);
 
@@ -208,6 +212,10 @@ int libremidi_midi_out_port_free(libremidi_midi_out_port* port);
 LIBREMIDI_EXPORT
 int libremidi_midi_out_port_name(
     const libremidi_midi_out_port* port, const char** name, size_t* len);
+
+LIBREMIDI_EXPORT
+int libremidi_midi_out_port_handle(
+    const libremidi_midi_out_port* port, uint64_t* handle);
 
 /// Observer API
 LIBREMIDI_EXPORT
