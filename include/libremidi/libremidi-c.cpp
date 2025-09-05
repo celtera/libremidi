@@ -123,6 +123,16 @@ int libremidi_midi_in_port_name(const libremidi_midi_in_port* port, const char**
   return 0;
 }
 
+int libremidi_midi_in_port_handle(const libremidi_midi_in_port* port, uint64_t* handle)
+{
+  if (!port || !handle)
+    return -EINVAL;
+
+  auto& p = *reinterpret_cast<const libremidi::input_port*>(port);
+  *handle = static_cast<uint64_t>(p.port);
+  return 0;
+}
+
 int libremidi_midi_out_port_clone(
     const libremidi_midi_out_port* port, libremidi_midi_out_port** dst)
 {
@@ -149,6 +159,16 @@ int libremidi_midi_out_port_name(
   auto& p = *reinterpret_cast<const libremidi::output_port*>(port);
   *name = p.port_name.data();
   *len = p.port_name.size();
+  return 0;
+}
+
+int libremidi_midi_out_port_handle(const libremidi_midi_out_port* port, uint64_t* handle)
+{
+  if (!port || !handle)
+    return -EINVAL;
+
+  auto& p = *reinterpret_cast<const libremidi::output_port*>(port);
+  *handle = static_cast<uint64_t>(p.port);
   return 0;
 }
 
