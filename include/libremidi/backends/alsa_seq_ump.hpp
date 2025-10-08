@@ -63,7 +63,7 @@ struct backend
     if (!snd.available || !snd.seq.available || !snd.seq.ump.available || !snd.ump.available)
       return false;
 
-    return ::access("/dev/snd/seq", F_OK) == 0;
+    return ::access("/dev/snd/seq", F_OK | R_OK | W_OK) == 0;
   }
 };
 }

@@ -42,7 +42,7 @@ struct backend
     if (!snd.available || !snd.seq.available)
       return false;
 
-    return ::access("/dev/snd/seq", F_OK) == 0;
+    return ::access("/dev/snd/seq", F_OK | R_OK | W_OK) == 0;
   }
 };
 
