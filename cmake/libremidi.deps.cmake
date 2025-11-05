@@ -34,7 +34,25 @@ if(LIBREMIDI_NO_BOOST AND LIBREMIDI_FIND_BOOST)
 endif()
 
 if(LIBREMIDI_FIND_BOOST)
-  find_package(Boost REQUIRED OPTIONAL_COMPONENTS cobalt)
+  find_package(Boost OPTIONAL_COMPONENTS cobalt)
+
+  if(NOT Boost_FOUND)
+    set(BOOST_ENABLE_CMAKE ON)
+    set(BOOST_INCLUDE_LIBRARIES container asio variant2 cobalt)
+
+    FetchContent_Declare(
+            Boost
+            GIT_REPOSITORY https://github.com/boostorg/boost.git
+            GIT_TAG boost-1.89.0
+            GIT_PROGRESS ON
+            GIT_SHALLOW TRUE
+            OVERRIDE_FIND_PACKAGE TRUE
+    )
+
+    FetchContent_MakeAvailable(Boost)
+
+    find_package(Boost REQUIRED OPTIONAL_COMPONENTS cobalt)
+  endif()
 endif()
 
 # readerwriterqueue
