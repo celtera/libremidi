@@ -12,6 +12,16 @@ add_subdirectory(../.. libremidi-src)
 
 find_package(Python 3.8 COMPONENTS Interpreter Development.Module REQUIRED)
 
+if(NOT readerwriterqueue_FOUND AND NOT TARGET readerwriterqueue)
+    FetchContent_Declare(
+            readerwriterqueue
+            GIT_REPOSITORY https://github.com/cameron314/readerwriterqueue
+            GIT_TAG        master
+    )
+
+    FetchContent_MakeAvailable(readerwriterqueue)
+endif()
+
 FetchContent_Declare(
     nanobind
     GIT_REPOSITORY https://github.com/wjakob/nanobind
