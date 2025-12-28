@@ -10,6 +10,66 @@
 
 #include <cmath>
 
+namespace libremidi
+{
+struct cmidi2_error_domain : public stdx::error_domain
+{
+public:
+  constexpr cmidi2_error_domain() noexcept
+      : error_domain{{0x636d696469325f5fULL, 0x636f6e7665727400ULL}}
+  {
+  }
+
+  virtual ~cmidi2_error_domain() = default;
+
+  stdx::string_ref name() const noexcept override { return "cmidi2_conversion"; }
+
+  bool equivalent(const stdx::error& lhs, const stdx::error& rhs) const noexcept override
+  {
+    if (lhs.domain() == rhs.domain())
+      return error_cast<cmidi2_midi_conversion_result>(lhs)
+             == error_cast<cmidi2_midi_conversion_result>(rhs);
+
+    return false;
+  }
+
+  stdx::string_ref message(const stdx::error& e) const noexcept override
+  {
+    const auto status = error_cast<cmidi2_midi_conversion_result>(e);
+    switch (status)
+    {
+      case CMIDI2_CONVERSION_RESULT_OK:
+        return "Success";
+      case CMIDI2_CONVERSION_RESULT_OUT_OF_SPACE:
+        return "Destination buffer is too small";
+      case CMIDI2_CONVERSION_RESULT_INVALID_SYSEX:
+        return "Invalid System Exclusive message format";
+      case CMIDI2_CONVERSION_RESULT_INVALID_DTE_SEQUENCE:
+        return "Invalid Data Entry, RPN, or NRPN sequence";
+      case CMIDI2_CONVERSION_RESULT_INVALID_STATUS:
+        return "Invalid or unsupported MIDI status byte";
+      case CMIDI2_CONVERSION_RESULT_INCOMPLETE_SYSEX7:
+        return "Incomplete 7-bit System Exclusive message";
+      case CMIDI2_CONVERSION_RESULT_INVALID_INPUT:
+        return "Invalid input data length or content";
+      default:
+        return "Unknown cmidi2 conversion error";
+    }
+  }
+};
+
+inline stdx::error from_cmidi2_result(cmidi2_midi_conversion_result ret) noexcept
+{
+  static constexpr cmidi2_error_domain domain{};
+  // We explicitly map OK to success (0 value error) just in case,
+  // though usually error{} is default constructed for success.
+  if (ret == CMIDI2_CONVERSION_RESULT_OK)
+    return stdx::error{};
+
+  return {ret, domain};
+}
+}
+
 static inline void cmidi2_reverse(int64_t v, cmidi2_ump* output)
 {
   union
@@ -207,27 +267,22 @@ struct midi1_to_midi2
     context.ump_proceeded_bytes = 0;
     context.skip_delta_time = true;
 
-    switch (cmidi2_convert_midi1_to_ump(&context))
+    switch (auto err = cmidi2_convert_midi1_to_ump(&context))
     {
       case CMIDI2_CONVERSION_RESULT_OK: {
         // FIXME handle sysex here
         if (auto n = context.ump_proceeded_bytes; n > 0)
           return on_ump(context.ump, context.ump_proceeded_bytes / 4, timestamp);
         else
-          return std::errc::operation_not_supported;
+          return std::errc::no_message;
       }
       case CMIDI2_CONVERSION_RESULT_OUT_OF_SPACE:
-        return std::errc::no_buffer_space;
       case CMIDI2_CONVERSION_RESULT_INVALID_SYSEX:
-        return std::errc::invalid_argument;
       case CMIDI2_CONVERSION_RESULT_INVALID_DTE_SEQUENCE:
-        return std::errc::invalid_argument;
       case CMIDI2_CONVERSION_RESULT_INVALID_STATUS:
-        return std::errc::invalid_argument;
       case CMIDI2_CONVERSION_RESULT_INCOMPLETE_SYSEX7:
-        return std::errc::invalid_argument;
       case CMIDI2_CONVERSION_RESULT_INVALID_INPUT:
-        return std::errc::invalid_argument;
+        return from_cmidi2_result(err);
       default:
         return std::errc::operation_not_supported;
     }
@@ -254,26 +309,21 @@ struct midi2_to_midi1
     context.ump_proceeded_bytes = 0;
     context.skip_delta_time = true;
 
-    switch (cmidi2_convert_ump_to_midi1(&context))
+    switch (auto err = cmidi2_convert_ump_to_midi1(&context))
     {
       case CMIDI2_CONVERSION_RESULT_OK: {
         if (auto n = context.midi1_proceeded_bytes; n > 0)
           return on_midi(midi, n, timestamp);
         else
-          return std::errc::operation_not_supported;
+          return std::errc::no_message;
       }
       case CMIDI2_CONVERSION_RESULT_OUT_OF_SPACE:
-        return std::errc::no_buffer_space;
       case CMIDI2_CONVERSION_RESULT_INVALID_SYSEX:
-        return std::errc::invalid_argument;
       case CMIDI2_CONVERSION_RESULT_INVALID_DTE_SEQUENCE:
-        return std::errc::invalid_argument;
       case CMIDI2_CONVERSION_RESULT_INVALID_STATUS:
-        return std::errc::invalid_argument;
       case CMIDI2_CONVERSION_RESULT_INCOMPLETE_SYSEX7:
-        return std::errc::invalid_argument;
       case CMIDI2_CONVERSION_RESULT_INVALID_INPUT:
-        return std::errc::invalid_argument;
+        return from_cmidi2_result(err);
       default:
         return std::errc::operation_not_supported;
     }
