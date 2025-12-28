@@ -1,3 +1,4 @@
+
 #ifndef CMIDI2_H_INCLUDED
 #define CMIDI2_H_INCLUDED
 
@@ -5,11 +6,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define CMIDI2_MIDI_2_0_RESERVED 0
+#define CMIDI2_JR_TIMESTAMP_TICKS_PER_SECOND 31250
+// FIXME: remove those global defs that are quite harmful (conflicts with other libraries)
 #define MIDI_2_0_RESERVED 0
 #define JR_TIMESTAMP_TICKS_PER_SECOND 31250
-
-#pragma GCC system_header
-#pragma clang system_header
 
 #ifdef __cplusplus
 extern "C" {
@@ -235,13 +236,6 @@ enum cmidi2_system_message_status
   CMIDI2_SYSTEM_STATUS_RESET = 0xFF,
 };
 
-// TODO: remove this. Use cmidi2_utility_message_status instead
-enum cmidi2_jr_timestamp_status
-{
-  CMIDI2_JR_CLOCK = 0x10,
-  CMIDI2_JR_TIMESTAMP = 0x20,
-};
-
 enum cmidi2_utility_message_status
 {
   CMIDI2_UTILITY_STATUS_NOOP = 0,
@@ -277,7 +271,7 @@ enum cmidi2_flex_data_metadata_text_status
   CMIDI2_FLEX_DATA_STATUS_ARRANGER_NAME = 7,
   CMIDI2_FLEX_DATA_STATUS_PUBLISHER_NAME = 8,
   CMIDI2_FLEX_DATA_STATUS_PRIMARY_PERFORMER_NAME = 9,
-  CMIDI2_FLEX_DATA_STATUS_ACCOMPANYING_PERFORMAER_NAME = 10,
+  CMIDI2_FLEX_DATA_STATUS_ACCOMPANYING_PERFORMER_NAME = 10,
   CMIDI2_FLEX_DATA_STATUS_RECORDING_DATE = 11,
   CMIDI2_FLEX_DATA_STATUS_RECORDING_LOCATION = 12
 };
@@ -546,44 +540,42 @@ static inline cmidi2_ump128_t cmidi2_ump_end_of_clip()
 }
 
 // 7.2 Utility Messages
-static inline uint32_t cmidi2_ump_noop(uint8_t group)
+static inline uint32_t cmidi2_ump_noop()
 {
-  return (group & 0xF) << 24;
+  return 0;
 }
 
-static inline uint32_t cmidi2_ump_jr_clock_direct(uint8_t group, uint32_t senderClockTime)
+static inline uint32_t cmidi2_ump_jr_clock_direct(uint16_t senderClockTime)
 {
-  return cmidi2_ump_noop(group) + (CMIDI2_UTILITY_STATUS_JR_CLOCK << 16) + senderClockTime;
+  return (CMIDI2_UTILITY_STATUS_JR_CLOCK << 16) + senderClockTime;
 }
 
-static inline uint32_t cmidi2_ump_jr_clock(uint8_t group, double senderClockTime)
+static inline uint32_t cmidi2_ump_jr_clock(double senderClockTime)
 {
   uint16_t value = (uint16_t)(senderClockTime * JR_TIMESTAMP_TICKS_PER_SECOND);
-  return cmidi2_ump_noop(group) + (CMIDI2_UTILITY_STATUS_JR_CLOCK << 16) + value;
+  return (CMIDI2_UTILITY_STATUS_JR_CLOCK << 16) + value;
 }
 
-static inline uint32_t cmidi2_ump_jr_timestamp_direct(uint8_t group, uint16_t senderClockTimestamp)
+static inline uint32_t cmidi2_ump_jr_timestamp_direct(uint16_t senderClockTimestamp)
 {
-  return cmidi2_ump_noop(group) + (CMIDI2_UTILITY_STATUS_JR_TIMESTAMP << 16)
-         + senderClockTimestamp;
+  return (CMIDI2_UTILITY_STATUS_JR_TIMESTAMP << 16) + senderClockTimestamp;
 }
 
-static inline uint32_t cmidi2_ump_jr_timestamp(uint8_t group, double senderClockTimestamp)
+static inline uint32_t cmidi2_ump_jr_timestamp(double senderClockTimestamp)
 {
   uint16_t value = (uint16_t)(senderClockTimestamp * JR_TIMESTAMP_TICKS_PER_SECOND);
-  return cmidi2_ump_noop(group) + (CMIDI2_UTILITY_STATUS_JR_TIMESTAMP << 16) + value;
+  return (CMIDI2_UTILITY_STATUS_JR_TIMESTAMP << 16) + value;
 }
 
-static inline uint32_t cmidi2_ump_dctpq(uint8_t group, uint32_t dctpq)
+static inline uint32_t cmidi2_ump_dctpq(uint32_t dctpq)
 {
-  return cmidi2_ump_noop(group) + (CMIDI2_UTILITY_STATUS_DCTPQ << 16) + dctpq;
+  return (CMIDI2_UTILITY_STATUS_DCTPQ << 16) + dctpq;
 }
 
-static inline uint32_t cmidi2_ump_dcs(uint8_t group, uint32_t ticks)
+static inline uint32_t cmidi2_ump_dcs(uint32_t ticks)
 {
   // Note that unlike JR timestamp delta clockstamps accepts ticks up to 20 bits.
-  return cmidi2_ump_noop(group) + (CMIDI2_UTILITY_STATUS_DELTA_CLOCKSTAMP << 16)
-         + (ticks & 0xFFFFF);
+  return (CMIDI2_UTILITY_STATUS_DELTA_CLOCKSTAMP << 16) + (ticks & 0xFFFFF);
 }
 
 // 7.6 System Common and System Real Time Messages
@@ -831,9 +823,9 @@ static inline uint8_t cmidi2_ump_get_byte_from_uint64(uint64_t src, uint8_t inde
   return (uint8_t)(src >> ((7 - index) * 8) & 0xFF);
 }
 
-static inline uint8_t cmidi2_ump_sysex_get_num_packets(uint8_t numBytes, uint8_t radix)
+static inline size_t cmidi2_ump_sysex_get_num_packets(size_t numBytes, uint8_t radix)
 {
-  return numBytes <= radix ? 1 : numBytes / radix + (numBytes % radix ? 1 : 0);
+  return numBytes <= radix ? 1 : (numBytes / radix + (numBytes % radix ? 1 : 0));
 }
 
 static inline uint32_t cmidi2_ump_read_uint32_bytes_le(const void* sequence)
@@ -885,7 +877,7 @@ static inline uint64_t cmidi2_ump_read_uint64_bytes(const void* sequence)
 }
 
 static inline void cmidi2_ump_sysex_get_packet_of(
-    uint64_t* result1, uint64_t* result2, uint8_t group, uint8_t numBytes, const void* srcData,
+    uint64_t* result1, uint64_t* result2, uint8_t group, size_t numBytes, const void* srcData,
     int32_t index, enum cmidi2_message_type messageType, int radix, bool hasStreamId,
     uint8_t streamId)
 {
@@ -927,7 +919,7 @@ static inline void cmidi2_ump_sysex_get_packet_of(
     dst8[2] = streamId;
 
   uint8_t dstOffset = hasStreamId ? 3 : 2;
-  for (uint8_t i = 0, j = index * radix; i < size; i++, j++)
+  for (size_t i = 0, j = index * radix; i < size; i++, j++)
     dst8[i + dstOffset] = src8[j];
 
   *result1 = cmidi2_ump_read_uint64_bytes_be(dst8);
@@ -957,13 +949,13 @@ static inline uint32_t cmidi2_ump_sysex7_get_sysex_length(const void* srcData)
   return i - (csrc[0] == 0xF0 ? 1 : 0);
 }
 
-static inline uint8_t cmidi2_ump_sysex7_get_num_packets(uint8_t numSysex7Bytes)
+static inline size_t cmidi2_ump_sysex7_get_num_packets(size_t numSysex7Bytes)
 {
   return cmidi2_ump_sysex_get_num_packets(numSysex7Bytes, 6);
 }
 
-static inline uint64_t cmidi2_ump_sysex7_get_packet_of(
-    uint8_t group, uint8_t numBytes, const void* srcData, int32_t index)
+static inline uint64_t
+cmidi2_ump_sysex7_get_packet_of(uint8_t group, size_t numBytes, const void* srcData, int32_t index)
 {
   uint64_t result;
   int srcOffset = numBytes > 0 && ((const uint8_t*)srcData)[0] == 0xF0 ? 1 : 0;
@@ -978,6 +970,7 @@ static inline uint64_t cmidi2_ump_sysex7_get_packet_of(
 // This returns NULL for success, or anything else for failure.
 typedef void* (*cmidi2_ump_handler_u64)(uint64_t data, void* context);
 
+// Processes sysex7 inputs where we do not always end at F7 and thus takes length as the argument.
 // This returns NULL for success, or anything else that `sendUMP` returns for failure.
 static inline void* cmidi2_ump_sysex7_process_n(
     uint8_t group, void* sysex, uint32_t length, cmidi2_ump_handler_u64 sendUMP, void* context)
@@ -1003,13 +996,13 @@ static inline void* cmidi2_ump_sysex7_process(
 
 // 7.8 System Exclusive 8-Bit Messages
 
-static inline int8_t cmidi2_ump_sysex8_get_num_packets(uint8_t numBytes)
+static inline size_t cmidi2_ump_sysex8_get_num_packets(size_t numBytes)
 {
   return cmidi2_ump_sysex_get_num_packets(numBytes, 13);
 }
 
 static inline void cmidi2_ump_sysex8_get_packet_of(
-    uint8_t group, uint8_t streamId, uint8_t numBytes, const void* srcData, int32_t index,
+    uint8_t group, uint8_t streamId, size_t numBytes, const void* srcData, size_t index,
     uint64_t* result1, uint64_t* result2)
 {
   cmidi2_ump_sysex_get_packet_of(
@@ -2444,43 +2437,69 @@ static inline uint32_t cmidi2_midi1_get_7bit_encoded_int(uint8_t* bytes, uint32_
 
 static inline uint32_t cmidi2_midi1_get_message_size(uint8_t* bytes, uint32_t length)
 {
-  uint32_t metaLength;
-  uint8_t* start = bytes;
-  uint8_t* end = bytes + length;
   switch (bytes[0])
   {
-    case 0xF0:
+    case 0xF0: {
+      uint8_t* start = bytes;
+      uint8_t* end = bytes + length;
       for (bytes++; bytes < end; bytes++)
         if (*bytes == 0xF7)
           break;
       bytes++;
-      break;
+      return bytes - start;
+    }
+    case CMIDI2_SYSTEM_STATUS_MIDI_TIME_CODE:
+    case CMIDI2_SYSTEM_STATUS_SONG_SELECT:
+      return 2;
+    case CMIDI2_SYSTEM_STATUS_SONG_POSITION:
+      return 3;
+    case CMIDI2_SYSTEM_STATUS_TUNE_REQUEST:
     case CMIDI2_SYSTEM_STATUS_TIMING_CLOCK:
     case CMIDI2_SYSTEM_STATUS_START:
     case CMIDI2_SYSTEM_STATUS_CONTINUE:
     case CMIDI2_SYSTEM_STATUS_STOP:
     case CMIDI2_SYSTEM_STATUS_ACTIVE_SENSING:
-      bytes += 1;
-      break;
-    case 0xFF: // Note: conflicts with CMIDI2_SYSTEM_STATUS_RESET ?
-      bytes++;
-      metaLength = cmidi2_midi1_get_7bit_encoded_int(bytes, end - bytes);
-      bytes += metaLength + cmidi2_midi1_get_7bit_encoded_int_length(metaLength);
-      break;
+    case CMIDI2_SYSTEM_STATUS_RESET: // Use cmidi2_midi1_get_message_size_smf to handle meta-events
+      return 1;
     default:
       switch (bytes[0] & 0xF0)
       {
         case 0xC0:
         case 0xD0:
-          bytes += 2;
-          break;
+          return 2;
         default:
-          bytes += 3;
-          break;
+          return 3;
       }
       break;
   }
-  return bytes - start;
+  return 0;
+}
+
+static inline uint32_t cmidi2_midi1_get_message_size_live(uint8_t* bytes, uint32_t length)
+{
+  // 0xFF in live MIDI stream indicates reset. We handle it there.
+  return cmidi2_midi1_get_message_size(bytes, length);
+}
+
+static inline uint32_t cmidi2_midi1_get_message_size_smf(uint8_t* bytes, uint32_t length)
+{
+  switch (bytes[0])
+  {
+    case 0xFF: // 0xFF in standard MIDI file indicates Meta-events, not RESET
+    {
+      uint32_t metaLength;
+      uint8_t* start = bytes;
+      uint8_t* end = bytes + length;
+
+      bytes++;
+      metaLength = cmidi2_midi1_get_7bit_encoded_int(bytes, end - bytes);
+      bytes += metaLength + cmidi2_midi1_get_7bit_encoded_int_length(metaLength);
+
+      return bytes - start;
+    }
+    default:
+      return cmidi2_midi1_get_message_size(bytes, length);
+  }
 }
 
 // MIDI1 to UMP Translator
@@ -2550,7 +2569,7 @@ typedef struct cmidi2_midi_conversion_context
   int32_t context_rpn;
   int32_t context_nrpn;
   int32_t context_dte;
-  // MIDI 2.0 Defalult Translation (UMP specification Appendix D.3) accepts only DTE LSB
+  // MIDI 2.0 Default Translation (UMP specification Appendix D.3) accepts only DTE LSB
   // as the conversion terminator, but cmidi2 allows DTE LSB to come first,
   // if this flag is enabled.
   bool allow_reordered_dte;
@@ -2616,7 +2635,8 @@ cmidi2_internal_convert_add_midi1_sysex7_ump_to_list(uint64_t data, void* contex
   cmidi2_convert_sysex_context* s7ctx = (cmidi2_convert_sysex_context*)context;
   s7ctx->conversion_context->ump[s7ctx->dst_offset] = data >> 32;
   s7ctx->conversion_context->ump[s7ctx->dst_offset + 1] = data & 0xFFFFFFFF;
-  s7ctx->conversion_context->ump_proceeded_bytes += 2;
+  s7ctx->conversion_context->ump_proceeded_bytes += 2 * sizeof(cmidi2_ump);
+  s7ctx->dst_offset += 2;
   return NULL;
 }
 
@@ -2629,7 +2649,8 @@ static inline void* cmidi2_internal_convert_add_midi1_sysex8_ump_to_list(
   s8ctx->conversion_context->ump[s8ctx->dst_offset + 1] = data1 & 0xFFFFFFFF;
   s8ctx->conversion_context->ump[s8ctx->dst_offset + 2] = data2 >> 32;
   s8ctx->conversion_context->ump[s8ctx->dst_offset + 3] = data2 & 0xFFFFFFFF;
-  s8ctx->conversion_context->ump_proceeded_bytes += 4;
+  s8ctx->conversion_context->ump_proceeded_bytes += 4 * sizeof(cmidi2_ump);
+  s8ctx->dst_offset += 4;
   return NULL;
 }
 
@@ -2702,18 +2723,21 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
             context->group, context->midi1 + *sIdx,
             cmidi2_internal_convert_add_midi1_sysex7_ump_to_list, &sysExCtx);
       }
-      *sIdx += sysexSize + 1; // +1 for 0xF7
+      *sIdx += sysexSize + 2; // +1 for 0xF0 and 0xF7
     }
     else
     {
       // fixed sized message
       size_t remaining = sLen - *sIdx;
-      size_t len = cmidi2_midi1_get_message_size(context->midi1 + *sIdx, remaining);
-      if (len > remaining)
+      size_t inputMidi1Len
+          = context->is_midi1_smf
+                ? cmidi2_midi1_get_message_size_smf(context->midi1 + *sIdx, remaining)
+                : cmidi2_midi1_get_message_size_live(context->midi1 + *sIdx, remaining);
+      if (inputMidi1Len > remaining)
         return CMIDI2_CONVERSION_RESULT_INVALID_INPUT;
 
-      uint8_t byte2 = len > 1 ? context->midi1[*sIdx + 1] : 0;
-      uint8_t byte3 = len > 2 ? context->midi1[*sIdx + 2] : 0;
+      uint8_t byte2 = inputMidi1Len > 1 ? context->midi1[*sIdx + 1] : 0;
+      uint8_t byte3 = inputMidi1Len > 2 ? context->midi1[*sIdx + 2] : 0;
       uint8_t channel = status & 0xF;
       if (context->midi_protocol == CMIDI2_PROTOCOL_TYPE_MIDI1)
       {
@@ -2721,14 +2745,14 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
         if (status > 0xF0)
         {
           dst[*dIdx] = cmidi2_ump_system_message(context->group, status, byte2, byte3);
-          *sIdx += len;
+          *sIdx += inputMidi1Len;
           *dIdx += 4;
         }
         else
         {
           dst[*dIdx]
               = cmidi2_ump_midi1_message(context->group, status & 0xF0, channel, byte2, byte3);
-          *sIdx += len;
+          *sIdx += inputMidi1Len;
           *dIdx += 4;
         }
       }
@@ -2740,22 +2764,22 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
         const int16_t NO_ATTRIBUTE_DATA = 0;
         bool bankValid, bankMsbValid, bankLsbValid;
         bool skipEmitUmp = false;
-        int umpLen = 0;
+        int outputUmpLen = 0;
         switch (status & 0xF0)
         {
           case CMIDI2_STATUS_NOTE_OFF:
             m2 = cmidi2_ump_midi2_note_off(
                 context->group, channel, byte2, NO_ATTRIBUTE_TYPE, byte3 << 9, NO_ATTRIBUTE_DATA);
-            umpLen = 2;
+            outputUmpLen = 2;
             break;
           case CMIDI2_STATUS_NOTE_ON:
             m2 = cmidi2_ump_midi2_note_on(
                 context->group, channel, byte2, NO_ATTRIBUTE_TYPE, byte3 << 9, NO_ATTRIBUTE_DATA);
-            umpLen = 2;
+            outputUmpLen = 2;
             break;
           case CMIDI2_STATUS_PAF:
             m2 = cmidi2_ump_midi2_paf(context->group, channel, byte2, byte3 << 25);
-            umpLen = 2;
+            outputUmpLen = 2;
             break;
           case CMIDI2_STATUS_CC:
             switch (byte2)
@@ -2782,7 +2806,7 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
                 if (context->allow_reordered_dte && (context->context_dte & 0x8080) == 0)
                 {
                   m2 = cmidi2_internal_convert_midi1_dte_to_ump(context, channel);
-                  umpLen = 2;
+                  outputUmpLen = 2;
                 }
                 else
                   skipEmitUmp = true;
@@ -2796,7 +2820,7 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
                 if ((context->context_rpn & 0x8080) && (context->context_nrpn & 0x8080))
                   return CMIDI2_CONVERSION_RESULT_INVALID_DTE_SEQUENCE;
                 m2 = cmidi2_internal_convert_midi1_dte_to_ump(context, channel);
-                umpLen = 2;
+                outputUmpLen = 2;
 
                 break;
               case CMIDI2_CC_BANK_SELECT:
@@ -2809,7 +2833,7 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
                 break;
               default:
                 m2 = cmidi2_ump_midi2_cc(context->group, channel, byte2, byte3 << 25);
-                umpLen = 2;
+                outputUmpLen = 2;
                 break;
             }
             break;
@@ -2823,42 +2847,43 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
                           : CMIDI2_PROGRAM_CHANGE_OPTION_NONE,
                 byte2, bankMsbValid ? context->context_bank >> 8 : 0,
                 bankLsbValid ? context->context_bank & 0x7F : 0);
+            outputUmpLen = 2;
             context->context_bank = 0x8080;
-            umpLen = 2;
             break;
           case CMIDI2_STATUS_CAF:
             m2 = cmidi2_ump_midi2_caf(context->group, channel, byte2 << 25);
-            umpLen = 2;
+            outputUmpLen = 2;
             break;
           case CMIDI2_STATUS_PITCH_BEND:
             // Note: Pitch Bend values in the MIDI 1.0 Protocol are presented as Little Endian.
             m2 = cmidi2_ump_midi2_pitch_bend_direct(
                 context->group, channel, ((byte3 << 7) + byte2) << 18);
-            umpLen = 2;
+            outputUmpLen = 2;
             break;
           default:
             switch (status)
             {
               case CMIDI2_SYSTEM_STATUS_MIDI_TIME_CODE:
               case CMIDI2_SYSTEM_STATUS_SONG_SELECT:
-                len = 2;
+                inputMidi1Len = 2;
                 m2 = cmidi2_ump_system_message(context->group, status, byte2, byte3);
-                umpLen = 2;
+                outputUmpLen = 1;
                 break;
               case CMIDI2_SYSTEM_STATUS_SONG_POSITION:
-                len = 3;
+                inputMidi1Len = 3;
                 m2 = cmidi2_ump_system_message(context->group, status, byte2, byte3);
-                umpLen = 2;
+                outputUmpLen = 1;
                 break;
               case CMIDI2_SYSTEM_STATUS_TUNE_REQUEST:
               case CMIDI2_SYSTEM_STATUS_TIMING_CLOCK:
               case CMIDI2_SYSTEM_STATUS_START:
+              case CMIDI2_SYSTEM_STATUS_CONTINUE:
               case CMIDI2_SYSTEM_STATUS_STOP:
               case CMIDI2_SYSTEM_STATUS_ACTIVE_SENSING:
               case CMIDI2_SYSTEM_STATUS_RESET:
-                len = 1;
+                inputMidi1Len = 1;
                 m2 = cmidi2_ump_system_message(context->group, status, 0, 0);
-                umpLen = 1;
+                outputUmpLen = 1;
                 break;
               default:
                 return CMIDI2_CONVERSION_RESULT_INVALID_STATUS;
@@ -2867,7 +2892,7 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
         }
         if (!skipEmitUmp)
         {
-          switch (umpLen)
+          switch (outputUmpLen)
           {
             case 1:
               *(uint32_t*)(dst + *dIdx) = m2;
@@ -2892,7 +2917,7 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
             }
           }
         }
-        *sIdx += len;
+        *sIdx += inputMidi1Len;
       }
     }
   }
@@ -2950,6 +2975,7 @@ static inline size_t cmidi2_convert_single_ump_to_timed_midi1(
   switch (messageType)
   {
     case CMIDI2_MESSAGE_TYPE_SYSTEM:
+      statusCode = cmidi2_ump_get_status_byte(ump);
       CMIDI2_INTERNAL_ADD_DELTA_TIME
 
       switch (statusCode)
@@ -2960,15 +2986,18 @@ static inline size_t cmidi2_convert_single_ump_to_timed_midi1(
         case CMIDI2_SYSTEM_STATUS_MIDI_TIME_CODE:
         case CMIDI2_SYSTEM_STATUS_SONG_SELECT:
           midiEventSize = 2;
+          break;
         default:
           midiEventSize = 1;
           break;
       }
       if (maxBytes < midiEventSize)
         return 0;
-      dst[0] = cmidi2_ump_get_status_byte(ump); // no channel filtering
-      dst[1] = cmidi2_ump_get_midi1_byte2(ump);
-      dst[2] = cmidi2_ump_get_midi1_byte3(ump);
+      dst[0] = statusCode; // no channel filtering
+      if (midiEventSize >= 2)
+        dst[1] = cmidi2_ump_get_midi1_byte2(ump);
+      if (midiEventSize >= 3)
+        dst[2] = cmidi2_ump_get_midi1_byte3(ump);
       break;
     case CMIDI2_MESSAGE_TYPE_MIDI_1_CHANNEL:
       CMIDI2_INTERNAL_ADD_DELTA_TIME
@@ -3293,7 +3322,7 @@ static inline bool cmidi2_internal_ump_merge_sequence_write_delta_time(
   {
     cmidi2_ump_write32(
         (cmidi2_ump*)((uint8_t*)dst + *dIdx),
-        cmidi2_ump_jr_timestamp_direct(0, deltaTime > 0xFFFF ? 0xFFFF : deltaTime));
+        cmidi2_ump_jr_timestamp_direct(deltaTime > 0xFFFF ? 0xFFFF : deltaTime));
     *dIdx += 4;
   }
   *lastTimestamp += deltaTime;
