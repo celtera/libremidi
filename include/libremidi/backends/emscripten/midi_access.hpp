@@ -37,16 +37,25 @@ public:
 
   int input_count() const noexcept
   {
+    if (!available())
+      return 0;
+
     return EM_ASM_INT(return globalThis.__libreMidi_currentInputs.length;);
   }
 
   int output_count() const noexcept
   {
+    if (!available())
+      return 0;
+
     return EM_ASM_INT(return globalThis.__libreMidi_currentOutputs.length;);
   }
 
   void load_current_infos() noexcept
   {
+    if (!available())
+      return;
+
 #define get_js_string(variable_to_read, ...) \
   (char*)EM_ASM_INT(                            \
         {                                         \
@@ -206,6 +215,9 @@ public:
 
   stdx::error send_message(int port_index, const char* bytes, int len)
   {
+    if (!available())
+      return std::errc::operation_not_supported;
+
     const auto& id = m_current_outputs[port_index].id;
     EM_ASM(
         {
@@ -216,6 +228,8 @@ public:
           output.send(Array.from(bytes));
         },
         bytes, len, id.c_str());
+
+    return stdx::error{};
   }
 
   const std::vector<device_information>& inputs() const noexcept { return m_current_inputs; }
@@ -248,6 +262,9 @@ private:
 
   void start_stream(int port_index)
   {
+    if (!available())
+      return;
+
     // Isn't life great...
     // https://github.com/Planeshifter/emscripten-examples/tree/master/01_PassingArrays
     const auto& id = m_current_inputs[port_index].id;
@@ -282,6 +299,9 @@ private:
 
   void stop_stream(int port_index)
   {
+    if (!available())
+      return;
+
     const auto& id = m_current_inputs[port_index].id;
     EM_ASM(const id = UTF8ToString($1);
 
