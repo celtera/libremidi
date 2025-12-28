@@ -2455,7 +2455,14 @@ static inline uint32_t cmidi2_midi1_get_message_size(uint8_t* bytes, uint32_t le
           break;
       bytes++;
       break;
-    case 0xFF:
+    case CMIDI2_SYSTEM_STATUS_TIMING_CLOCK:
+    case CMIDI2_SYSTEM_STATUS_START:
+    case CMIDI2_SYSTEM_STATUS_CONTINUE:
+    case CMIDI2_SYSTEM_STATUS_STOP:
+    case CMIDI2_SYSTEM_STATUS_ACTIVE_SENSING:
+      bytes += 1;
+      break;
+    case 0xFF: // Note: conflicts with CMIDI2_SYSTEM_STATUS_RESET ?
       bytes++;
       metaLength = cmidi2_midi1_get_7bit_encoded_int(bytes, end - bytes);
       bytes += metaLength + cmidi2_midi1_get_7bit_encoded_int_length(metaLength);
@@ -2705,16 +2712,25 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
       if (len > remaining)
         return CMIDI2_CONVERSION_RESULT_INVALID_INPUT;
 
-      uint8_t byte2 = context->midi1[*sIdx + 1];
+      uint8_t byte2 = len > 1 ? context->midi1[*sIdx + 1] : 0;
       uint8_t byte3 = len > 2 ? context->midi1[*sIdx + 2] : 0;
       uint8_t channel = status & 0xF;
       if (context->midi_protocol == CMIDI2_PROTOCOL_TYPE_MIDI1)
       {
         // generate MIDI1 UMPs
-        dst[*dIdx]
-            = cmidi2_ump_midi1_message(context->group, status & 0xF0, channel, byte2, byte3);
-        *sIdx += len;
-        *dIdx += 4;
+        if (status > 0xF0)
+        {
+          dst[*dIdx] = cmidi2_ump_system_message(context->group, status, byte2, byte3);
+          *sIdx += len;
+          *dIdx += 4;
+        }
+        else
+        {
+          dst[*dIdx]
+              = cmidi2_ump_midi1_message(context->group, status & 0xF0, channel, byte2, byte3);
+          *sIdx += len;
+          *dIdx += 4;
+        }
       }
       else
       {
@@ -2724,18 +2740,22 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
         const int16_t NO_ATTRIBUTE_DATA = 0;
         bool bankValid, bankMsbValid, bankLsbValid;
         bool skipEmitUmp = false;
+        int umpLen = 0;
         switch (status & 0xF0)
         {
           case CMIDI2_STATUS_NOTE_OFF:
             m2 = cmidi2_ump_midi2_note_off(
                 context->group, channel, byte2, NO_ATTRIBUTE_TYPE, byte3 << 9, NO_ATTRIBUTE_DATA);
+            umpLen = 2;
             break;
           case CMIDI2_STATUS_NOTE_ON:
             m2 = cmidi2_ump_midi2_note_on(
                 context->group, channel, byte2, NO_ATTRIBUTE_TYPE, byte3 << 9, NO_ATTRIBUTE_DATA);
+            umpLen = 2;
             break;
           case CMIDI2_STATUS_PAF:
             m2 = cmidi2_ump_midi2_paf(context->group, channel, byte2, byte3 << 25);
+            umpLen = 2;
             break;
           case CMIDI2_STATUS_CC:
             switch (byte2)
@@ -2760,7 +2780,10 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
                 context->context_dte = (context->context_dte & 0xFF) | (byte3 << 8);
 
                 if (context->allow_reordered_dte && (context->context_dte & 0x8080) == 0)
+                {
                   m2 = cmidi2_internal_convert_midi1_dte_to_ump(context, channel);
+                  umpLen = 2;
+                }
                 else
                   skipEmitUmp = true;
 
@@ -2773,6 +2796,7 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
                 if ((context->context_rpn & 0x8080) && (context->context_nrpn & 0x8080))
                   return CMIDI2_CONVERSION_RESULT_INVALID_DTE_SEQUENCE;
                 m2 = cmidi2_internal_convert_midi1_dte_to_ump(context, channel);
+                umpLen = 2;
 
                 break;
               case CMIDI2_CC_BANK_SELECT:
@@ -2785,6 +2809,7 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
                 break;
               default:
                 m2 = cmidi2_ump_midi2_cc(context->group, channel, byte2, byte3 << 25);
+                umpLen = 2;
                 break;
             }
             break;
@@ -2799,14 +2824,17 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
                 byte2, bankMsbValid ? context->context_bank >> 8 : 0,
                 bankLsbValid ? context->context_bank & 0x7F : 0);
             context->context_bank = 0x8080;
+            umpLen = 2;
             break;
           case CMIDI2_STATUS_CAF:
             m2 = cmidi2_ump_midi2_caf(context->group, channel, byte2 << 25);
+            umpLen = 2;
             break;
           case CMIDI2_STATUS_PITCH_BEND:
             // Note: Pitch Bend values in the MIDI 1.0 Protocol are presented as Little Endian.
             m2 = cmidi2_ump_midi2_pitch_bend_direct(
                 context->group, channel, ((byte3 << 7) + byte2) << 18);
+            umpLen = 2;
             break;
           default:
             switch (status)
@@ -2815,10 +2843,12 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
               case CMIDI2_SYSTEM_STATUS_SONG_SELECT:
                 len = 2;
                 m2 = cmidi2_ump_system_message(context->group, status, byte2, byte3);
+                umpLen = 2;
                 break;
               case CMIDI2_SYSTEM_STATUS_SONG_POSITION:
                 len = 3;
                 m2 = cmidi2_ump_system_message(context->group, status, byte2, byte3);
+                umpLen = 2;
                 break;
               case CMIDI2_SYSTEM_STATUS_TUNE_REQUEST:
               case CMIDI2_SYSTEM_STATUS_TIMING_CLOCK:
@@ -2828,6 +2858,7 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
               case CMIDI2_SYSTEM_STATUS_RESET:
                 len = 1;
                 m2 = cmidi2_ump_system_message(context->group, status, 0, 0);
+                umpLen = 1;
                 break;
               default:
                 return CMIDI2_CONVERSION_RESULT_INVALID_STATUS;
@@ -2836,20 +2867,30 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
         }
         if (!skipEmitUmp)
         {
-          int platEndian = cmidi2_util_is_platform_little_endian()
-                               ? CMIDI2_TRANSLATOR_LITTLE_ENDIAN
-                               : CMIDI2_TRANSLATOR_BIG_ENDIAN;
-          int actualEndian
-              = context->ump_serialization_endianness != CMIDI2_TRANSLATOR_DEFAULT_ENDIAN
-                    ? context->ump_serialization_endianness
-                    : platEndian;
-          if (platEndian != actualEndian)
-            m2 = (((uint64_t)cmidi2_internal_swap_endian(m2 >> 32)) << 32)
-                 | cmidi2_internal_swap_endian(m2 & 0xFFFFFFFF);
-          *(uint32_t*)(dst + *dIdx) = m2 >> 32;
-          *dIdx += 4;
-          *(uint32_t*)(dst + *dIdx) = m2 & 0xFFFFFFFF;
-          *dIdx += 4;
+          switch (umpLen)
+          {
+            case 1:
+              *(uint32_t*)(dst + *dIdx) = m2;
+              *dIdx += 4;
+              break;
+            case 2: {
+              int platEndian = cmidi2_util_is_platform_little_endian()
+                                   ? CMIDI2_TRANSLATOR_LITTLE_ENDIAN
+                                   : CMIDI2_TRANSLATOR_BIG_ENDIAN;
+              int actualEndian
+                  = context->ump_serialization_endianness != CMIDI2_TRANSLATOR_DEFAULT_ENDIAN
+                        ? context->ump_serialization_endianness
+                        : platEndian;
+              if (platEndian != actualEndian)
+                m2 = (((uint64_t)cmidi2_internal_swap_endian(m2 >> 32)) << 32)
+                     | cmidi2_internal_swap_endian(m2 & 0xFFFFFFFF);
+              *(uint32_t*)(dst + *dIdx) = m2 >> 32;
+              *dIdx += 4;
+              *(uint32_t*)(dst + *dIdx) = m2 & 0xFFFFFFFF;
+              *dIdx += 4;
+              break;
+            }
+          }
         }
         *sIdx += len;
       }
