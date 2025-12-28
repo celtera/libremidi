@@ -6,6 +6,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#pragma GCC system_header
+#pragma clang system_header
+
 #define CMIDI2_MIDI_2_0_RESERVED 0
 #define CMIDI2_JR_TIMESTAMP_TICKS_PER_SECOND 31250
 // FIXME: remove those global defs that are quite harmful (conflicts with other libraries)
