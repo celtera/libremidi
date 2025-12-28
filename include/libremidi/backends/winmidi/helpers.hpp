@@ -42,7 +42,6 @@ using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Devices::Enumeration;
 using namespace winrt::Windows::Storage::Streams;
 using namespace winrt::Microsoft::Windows::Devices::Midi2;
-using namespace Windows::Devices::Enumeration;
 using namespace ::Microsoft::Windows::Devices::Midi2::Initialization;
 
 inline bool ichar_equals(char a, char b)
