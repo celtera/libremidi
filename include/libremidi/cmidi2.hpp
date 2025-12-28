@@ -889,7 +889,7 @@ static inline void cmidi2_ump_sysex_get_packet_of(
 
   enum cmidi2_sysex_status status;
   uint8_t size;
-  if (numBytes <= radix)
+  if (numBytes <= (size_t)radix)
   {
     status = CMIDI2_SYSEX_IN_ONE_UMP;
     size = numBytes; // single packet message
@@ -901,7 +901,7 @@ static inline void cmidi2_ump_sysex_get_packet_of(
   }
   else
   {
-    uint8_t isEnd = index == cmidi2_ump_sysex_get_num_packets(numBytes, radix) - 1;
+    uint8_t isEnd = (size_t)index == cmidi2_ump_sysex_get_num_packets(numBytes, radix) - 1;
     if (isEnd)
     {
       size = numBytes % radix ? numBytes % radix : radix;
@@ -1173,7 +1173,7 @@ static inline void cmidi2_ump_flex_data_get_packet_of(
   }
   else
   {
-    uint8_t isEnd = currentPacket == cmidi2_ump_sysex_get_num_packets(numBytes, radix) - 1;
+    uint8_t isEnd = (size_t)currentPacket == cmidi2_ump_sysex_get_num_packets(numBytes, radix) - 1;
     if (isEnd)
     {
       size = numBytes % radix ? numBytes % radix : radix;
