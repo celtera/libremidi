@@ -186,7 +186,11 @@ using is_trivially_move_constructible = is_trivially_copyable<T>;
   #if defined(__cpp_lib_trivially_relocatable)
 using std::is_trivially_relocatable;
   #elif defined(__has_builtin)
-    #if __has_builtin(__is_trivially_relocatable)
+    #if __has_builtin(__builtin_is_cpp_trivially_relocatable)
+template <class T>
+struct is_trivially_relocatable : std::bool_constant<__builtin_is_cpp_trivially_relocatable(T)> { };
+      #define STDX_MUST_SPECIALIZE_IS_TRIVIALLY_RELOCATABLE
+    #elif __has_builtin(__is_trivially_relocatable)
 template <class T>
 struct is_trivially_relocatable : std::bool_constant<__is_trivially_relocatable(T)> { };
       #define STDX_MUST_SPECIALIZE_IS_TRIVIALLY_RELOCATABLE
