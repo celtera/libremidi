@@ -20,8 +20,6 @@ public:
   {
   }
 
-  virtual ~cmidi2_error_domain() = default;
-
   stdx::string_ref name() const noexcept override { return "cmidi2_conversion"; }
 
   bool equivalent(const stdx::error& lhs, const stdx::error& rhs) const noexcept override
