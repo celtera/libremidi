@@ -4,6 +4,8 @@
 #include <libremidi/libremidi.hpp>
 
 #include <span>
+#include <iomanip>
+
 namespace Catch
 {
 template <>
