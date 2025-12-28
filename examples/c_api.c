@@ -176,7 +176,7 @@ int main(void)
   libremidi_midi_out_handle* midi_out = NULL;
   ret = libremidi_midi_out_new(&midi_out_conf, &midi_out_api_conf, &midi_out);
   if (ret != 0)
-    goto free_midi_in;
+    goto free_midi_out;
 
   for (int i = 0; i < 100; i++)
     sleep_ms(1000);
