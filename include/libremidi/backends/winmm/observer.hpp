@@ -107,7 +107,8 @@ protected:
     return {
         {.api = libremidi::API::WINDOWS_MM,
          .client = 0,
-         .device = usb_device_identifier{.vid = deviceCaps.wMid, .pid = deviceCaps.wPid},
+         .device
+         = usb_device_identifier{.vendor_id = deviceCaps.wMid, .product_id = deviceCaps.wPid},
          .port = index,
          .manufacturer = "",
          .device_name = "",
@@ -127,7 +128,8 @@ protected:
     return {
         {.api = libremidi::API::WINDOWS_MM,
          .client = 0,
-         .device = usb_device_identifier{.vid = deviceCaps.wMid, .pid = deviceCaps.wPid},
+         .device
+         = usb_device_identifier{.vendor_id = deviceCaps.wMid, .product_id = deviceCaps.wPid},
          .port = index,
          .manufacturer = "",
          .device_name = "",
