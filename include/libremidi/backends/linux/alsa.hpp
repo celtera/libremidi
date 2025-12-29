@@ -13,6 +13,10 @@
   #if __has_include(<alsa/ump.h>) && SND_LIB_VERSION >= ((1 << 16) | (2 << 8) | 10)
     #define LIBREMIDI_ALSA_HAS_UMP 1
   #endif
+
+  #if __has_include(<alsa/ump.h>) && SND_LIB_VERSION >= ((1 << 16) | (2 << 8) | 14)
+    #define LIBREMIDI_ALSA_HAS_UMP_SEQ_EVENTS 1
+  #endif
 #endif
 
 namespace libremidi
