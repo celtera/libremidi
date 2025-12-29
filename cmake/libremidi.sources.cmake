@@ -126,8 +126,8 @@ target_sources(libremidi PRIVATE
     include/libremidi/detail/ump_stream.hpp
 
     include/libremidi/api.hpp
-    include/libremidi/client.cpp
-    include/libremidi/client.hpp
+    # include/libremidi/client.cpp
+    # include/libremidi/client.hpp
     include/libremidi/config.hpp
     include/libremidi/configurations.hpp
     include/libremidi/error.hpp
