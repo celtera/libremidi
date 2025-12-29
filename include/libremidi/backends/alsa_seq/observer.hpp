@@ -319,7 +319,7 @@ public:
         // TODO
         break;
       }
-#if __has_include(<alsa/ump.h>)
+#if LIBREMIDI_ALSA_HAS_UMP_SEQ_EVENTS
       case SND_SEQ_EVENT_UMP_EP_CHANGE: {
         // TODO
         break;
@@ -440,7 +440,7 @@ public:
       case SND_SEQ_EVENT_CLIENT_EXIT:
       case SND_SEQ_EVENT_CLIENT_CHANGE:
 
-#if __has_include(<alsa/ump.h>)
+#if LIBREMIDI_ALSA_HAS_UMP_SEQ_EVENTS
       case SND_SEQ_EVENT_UMP_EP_CHANGE:
       case SND_SEQ_EVENT_UMP_BLOCK_CHANGE:
 #endif
