@@ -22,10 +22,10 @@ struct port_info
   std::string port_name;
   int client{};
   int port{};
-  bool isInput{};
-  bool isOutput{};
+  bool is_input{};
+  bool is_output{};
   std::optional<int> card{};
-  libremidi::port_information::port_type type{};
+  libremidi::transport_type type{};
 };
 
 template <typename ConfigurationImpl>
@@ -93,12 +93,54 @@ public:
     }
   }
 
-  std::optional<port_info> get_info(int client, int port) const noexcept
+  std::optional<port_info> get_info(
+      int client, int port, snd_seq_client_info_t& cinfo,
+      snd_seq_port_info_t& pinfo) const noexcept
   {
+    const auto tp = snd.seq.port_info_get_type(&pinfo);
+    const auto cap = snd.seq.port_info_get_capability(&pinfo);
+    if ((cap & SND_SEQ_PORT_CAP_NO_EXPORT) != 0)
+      return std::nullopt;
+
     port_info p;
     p.client = client;
     p.port = port;
 
+    bool ok = this->configuration.track_any;
+
+    static constexpr auto virtual_port = SND_SEQ_PORT_TYPE_SOFTWARE | SND_SEQ_PORT_TYPE_SYNTHESIZER
+                                         | SND_SEQ_PORT_TYPE_APPLICATION;
+
+    if ((tp & SND_SEQ_PORT_TYPE_HARDWARE) && this->configuration.track_hardware)
+    {
+      p.type = libremidi::transport_type::hardware;
+      ok = true;
+    }
+    else if ((tp & virtual_port) && this->configuration.track_virtual)
+    {
+      p.type = libremidi::transport_type::software;
+      ok = true;
+    }
+    if (!ok)
+      return {};
+
+    if (auto name = snd.seq.client_info_get_name(&cinfo))
+      p.client_name = name;
+
+    if (auto name = snd.seq.port_info_get_name(&pinfo))
+      p.port_name = name;
+
+    if (int card = snd.seq.client_info_get_card(&cinfo); card >= 0)
+      p.card = card;
+
+    p.is_input = (cap & SND_SEQ_PORT_CAP_DUPLEX) | (cap & SND_SEQ_PORT_CAP_READ);
+    p.is_output = (cap & SND_SEQ_PORT_CAP_DUPLEX) | (cap & SND_SEQ_PORT_CAP_WRITE);
+
+    return p;
+  }
+
+  std::optional<port_info> get_info(int client, int port) const noexcept
+  {
     snd_seq_client_info_t* cinfo;
     snd_seq_client_info_alloca(&cinfo);
     if (int err = snd.seq.get_any_client_info(seq, client, cinfo); err < 0)
@@ -109,39 +151,7 @@ public:
     if (int err = snd.seq.get_any_port_info(seq, client, port, pinfo); err < 0)
       return std::nullopt;
 
-    const auto tp = snd.seq.port_info_get_type(pinfo);
-    bool ok = this->configuration.track_any;
-
-    static constexpr auto virtual_port = SND_SEQ_PORT_TYPE_SOFTWARE | SND_SEQ_PORT_TYPE_SYNTHESIZER
-                                         | SND_SEQ_PORT_TYPE_APPLICATION;
-
-    if ((tp & SND_SEQ_PORT_TYPE_HARDWARE) && this->configuration.track_hardware)
-    {
-      p.type = libremidi::port_information::port_type::hardware;
-      ok = true;
-    }
-    else if ((tp & virtual_port) && this->configuration.track_virtual)
-    {
-      p.type = libremidi::port_information::port_type::software;
-      ok = true;
-    }
-    if (!ok)
-      return {};
-
-    if (auto name = snd.seq.client_info_get_name(cinfo))
-      p.client_name = name;
-
-    if (auto name = snd.seq.port_info_get_name(pinfo))
-      p.port_name = name;
-
-    if (int card = snd.seq.client_info_get_card(cinfo); card >= 0)
-      p.card = card;
-
-    const auto cap = snd.seq.port_info_get_capability(pinfo);
-    p.isInput = (cap & SND_SEQ_PORT_CAP_DUPLEX) | (cap & SND_SEQ_PORT_CAP_READ);
-    p.isOutput = (cap & SND_SEQ_PORT_CAP_DUPLEX) | (cap & SND_SEQ_PORT_CAP_WRITE);
-
-    return p;
+    return get_info(client, port, *cinfo, *pinfo);
   }
 
   template <bool Input>
@@ -209,8 +219,8 @@ public:
         snd, this->seq, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
       int clt = snd.seq.client_info_get_client(&client);
       int pt = snd.seq.port_info_get_port(&port);
-      if (auto p = get_info(clt, pt))
-        if (p->isInput)
+      if (auto p = get_info(clt, pt, client, port))
+        if (p->is_input)
           ret.push_back(to_port_info<true>(*p));
     });
     return ret;
@@ -223,8 +233,8 @@ public:
         snd, this->seq, [this, &ret](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
       int clt = snd.seq.client_info_get_client(&client);
       int pt = snd.seq.port_info_get_port(&port);
-      if (auto p = get_info(clt, pt))
-        if (p->isOutput)
+      if (auto p = get_info(clt, pt, client, port))
+        if (p->is_output)
           ret.push_back(to_port_info<false>(*p));
     });
     return ret;
@@ -240,12 +250,12 @@ public:
       return;
 
     m_knownClients[{p.client, p.port}] = p;
-    if (p.isInput && configuration.input_added)
+    if (p.is_input && configuration.input_added)
     {
       configuration.input_added(to_port_info<true>(p));
     }
 
-    if (p.isOutput && configuration.output_added)
+    if (p.is_output && configuration.output_added)
     {
       configuration.output_added(to_port_info<false>(p));
     }
@@ -259,12 +269,12 @@ public:
       auto p = it->second;
       m_knownClients.erase(it);
 
-      if (p.isInput && configuration.input_removed)
+      if (p.is_input && configuration.input_removed)
       {
         configuration.input_removed(to_port_info<true>(p));
       }
 
-      if (p.isOutput && configuration.output_removed)
+      if (p.is_output && configuration.output_removed)
       {
         configuration.output_removed(to_port_info<false>(p));
       }

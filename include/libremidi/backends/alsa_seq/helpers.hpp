@@ -159,15 +159,15 @@ struct alsa_data
         snd.seq.set_client_name(seq, configuration.client_name.data());
 
 #if __has_include(<alsa/ump.h>)
-      if (snd.seq.ump.set_client_midi_version)
+      if (snd.seq.set_client_midi_version)
       {
         switch (configuration.midi_version)
         {
           case 1:
-            snd.seq.ump.set_client_midi_version(seq, SND_SEQ_CLIENT_LEGACY_MIDI);
+            snd.seq.set_client_midi_version(seq, SND_SEQ_CLIENT_LEGACY_MIDI);
             break;
           case 2:
-            snd.seq.ump.set_client_midi_version(seq, SND_SEQ_CLIENT_UMP_MIDI_2_0);
+            snd.seq.set_client_midi_version(seq, SND_SEQ_CLIENT_UMP_MIDI_2_0);
             break;
         }
       }
