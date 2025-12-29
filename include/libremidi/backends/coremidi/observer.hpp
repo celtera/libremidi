@@ -23,6 +23,10 @@ public:
   explicit observer_core(observer_configuration&& conf, coremidi_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
+  }
+
+  void finish_init()
+  {
     if (configuration.client_name.empty())
       configuration.client_name = "libremidi observer";
 
@@ -77,7 +81,7 @@ public:
       return {};
 
     // Get the MIDI device from the entity
-    libremidi::port_information::port_type type{};
+    libremidi::transport_type type{};
     libremidi::container_identifier usb_location_id{};
     libremidi::device_identifier usb_vendor_product{};
     {
@@ -86,11 +90,11 @@ public:
       {
         if (device)
         {
-          using enum libremidi::port_information::port_type;
+          using enum libremidi::transport_type;
           SInt32 devid_res{};
           if (MIDIObjectGetIntegerProperty(device, CFSTR("USBLocationID"), &devid_res) == noErr)
           {
-            type = (libremidi::port_information::port_type)(hardware | usb);
+            type = (libremidi::transport_type)(hardware | usb);
             usb_location_id = (uint64_t)devid_res;
           }
 
@@ -98,25 +102,26 @@ public:
           if (MIDIObjectGetIntegerProperty(device, CFSTR("USBVendorProduct"), &vendor_res)
               == noErr)
           {
-            type = (libremidi::port_information::port_type)(hardware | usb);
+            type = (libremidi::transport_type)(hardware | usb);
             usb_vendor_product = (uint64_t)vendor_res;
           }
 
           const auto driver = get_string_property(device, kMIDIPropertyDriverOwner);
           if (driver == "com.apple.AppleMIDIUSBDriver")
-            type = (libremidi::port_information::port_type)(hardware | usb);
+            type = (libremidi::transport_type)(hardware | usb);
           if (driver == "com.apple.AppleMIDIBluetoothDriver")
-            type = (libremidi::port_information::port_type)(hardware | bluetooth);
+            type = (libremidi::transport_type)(hardware | bluetooth);
           if (driver == "com.apple.AppleMIDIIACDriver")
-            type = (libremidi::port_information::port_type)(software);
+            type = (libremidi::transport_type)(software);
           if (driver == "com.apple.AppleMIDIRTPDriver")
-            type = (libremidi::port_information::port_type)(network);
+            type = (libremidi::transport_type)(network);
         }
       }
     }
 
     return std::conditional_t<Input, input_port, output_port>{
-        {.client = (std::uintptr_t)this->client,
+        {.api = get_current_api(),
+         .client = (std::uintptr_t)this->client,
          .container = usb_location_id,
          .device = usb_vendor_product,
          .port = std::bit_cast<uint32_t>(get_int_property(obj, kMIDIPropertyUniqueID)),
@@ -211,5 +216,19 @@ public:
 
 private:
   MIDIClientRef client{};
+};
+}
+
+namespace libremidi::coremidi
+{
+struct observer_impl : observer_core
+{
+  observer_impl(observer_configuration&& conf, coremidi_observer_configuration&& apiconf)
+      : observer_core{std::move(conf), std::move(apiconf)}
+  {
+    finish_init();
+  }
+
+  libremidi::API get_current_api() const noexcept override { return libremidi::API::COREMIDI; }
 };
 }

@@ -149,7 +149,10 @@ struct udev_soundcard_info
 {
   container_identifier container;
   device_identifier path;
-  port_information::port_type type{};
+  transport_type type{};
+  std::string vendor;
+  std::string product;
+  std::string serial;
 };
 
 inline udev_soundcard_info get_udev_soundcard_info(const udev_helper& helper, int card)
@@ -174,18 +177,50 @@ inline udev_soundcard_info get_udev_soundcard_info(const udev_helper& helper, in
 
     const auto usb_device
         = udev.device_get_parent_with_subsystem_devtype(dev, "usb", "usb_device");
+    const auto pci_device = udev.device_get_parent_with_subsystem_devtype(dev, "pci", nullptr);
 
-    port_information::port_type type = port_information::port_type::hardware;
+    transport_type type = transport_type::hardware;
     if (usb_device)
-      type = (port_information::port_type)(type | port_information::port_type::usb);
-    else
-      type = (port_information::port_type)(type | port_information::port_type::pci);
+      type = (transport_type)(type | transport_type::usb);
+    else if (pci_device)
+      type = (transport_type)(type | transport_type::pci);
 
     auto id_path = udev.device_get_property_value(dev, "ID_PATH");
     if (!id_path)
       id_path = "";
 
-    auto ret = udev_soundcard_info{.container = id_path, .path = path, .type = type};
+    auto read_property = [&](const char* property) {
+      auto res = udev.device_get_property_value(dev, property);
+      if (!res)
+        res = "";
+      if (strlen(res) == 0)
+      {
+        if (usb_device)
+        {
+          res = udev.device_get_property_value(usb_device, property);
+          if (!res)
+            res = "";
+        }
+        else if (pci_device)
+        {
+          res = udev.device_get_property_value(pci_device, property);
+          if (!res)
+            res = "";
+        }
+      }
+      return res;
+    };
+
+    auto id_vendor = read_property("ID_VENDOR_FROM_DATABASE");
+    auto id_product = read_property("ID_MODEL_FROM_DATABASE");
+    auto id_serial = read_property("ID_SERIAL");
+    auto ret = udev_soundcard_info{
+        .container = id_path,
+        .path = path,
+        .type = type,
+        .vendor = id_vendor,
+        .product = id_product,
+        .serial = id_serial};
     udev.device_unref(dev);
     return ret;
   }

@@ -29,6 +29,21 @@ public:
       observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
+  }
+
+  ~observer_impl_base()
+  {
+#if LIBREMIDI_HAS_UDEV
+    m_termination_event.notify();
+
+    if (m_thread.joinable())
+      m_thread.join();
+#endif
+  }
+
+  // Must be called for child classes due to virtual function calls
+  void finish_init()
+  {
     if (!configuration.has_callbacks())
       return;
 
@@ -45,16 +60,6 @@ public:
 #if LIBREMIDI_HAS_UDEV
     // Start thread
     m_thread = std::thread{[this] { this->run(); }};
-#endif
-  }
-
-  ~observer_impl_base()
-  {
-#if LIBREMIDI_HAS_UDEV
-    m_termination_event.notify();
-
-    if (m_thread.joinable())
-      m_thread.join();
 #endif
   }
 
@@ -84,7 +89,6 @@ public:
     return ret;
   }
 
-private:
 #if LIBREMIDI_HAS_UDEV
   void run()
   {
@@ -96,6 +100,12 @@ private:
           continue;
         else
           return;
+      }
+
+      // Check eventfd to see if we need to exit
+      if (m_fds[1].revents & POLLIN)
+      {
+        break;
       }
 
       // Check udev
@@ -122,12 +132,6 @@ private:
         m_fds[0].revents = 0;
       }
 
-      // Check eventfd
-      if (m_fds[1].revents & POLLIN)
-      {
-        break;
-      }
-
       // Check timer
       if (m_fds[2].revents & POLLIN)
       {
@@ -146,11 +150,15 @@ private:
       -> std::conditional_t<Input, input_port, output_port>
   {
 #if LIBREMIDI_HAS_UDEV
-    auto [container, device, type] = get_udev_soundcard_info(m_udev, p.card);
+    auto [container, device, type, manufacturer, product, serial]
+        = get_udev_soundcard_info(m_udev, p.card);
 #else
     container_identifier container{};
     device_identifier device{};
-    libremidi::port_information::port_type type{};
+    libremidi::transport_type type{};
+    std::string manufacturer;
+    std::string product;
+    std::string serial;
 #endif
     std::string display_name = p.subdevice_name;
     if (display_name.empty())
@@ -158,14 +166,19 @@ private:
     if (display_name.empty())
       display_name = p.card_name;
     if (display_name.empty())
+      display_name = product;
+    if (display_name.empty())
       display_name = "unknown";
 
     return {
-        {.client = 0,
+        {.api = get_current_api(),
+         .client = 0,
          .container = container,
          .device = device,
          .port = raw_to_port_handle({p.card, p.dev, p.sub}),
-         .manufacturer = p.card_name,
+         .manufacturer = manufacturer,
+         .product = product,
+         .serial = serial,
          .device_name = p.device_name,
          .port_name = p.subdevice_name,
          .display_name = std::move(display_name),
@@ -247,7 +260,12 @@ namespace libremidi::alsa_raw
 {
 struct observer_impl : observer_impl_base<alsa_raw::midi1_enumerator>
 {
-  using alsa_raw::observer_impl_base<midi1_enumerator>::observer_impl_base;
+  observer_impl(observer_configuration&& conf, alsa_raw_observer_configuration&& apiconf)
+      : observer_impl_base<alsa_raw::midi1_enumerator>{std::move(conf), std::move(apiconf)}
+  {
+    finish_init();
+  }
+
   libremidi::API get_current_api() const noexcept override { return libremidi::API::ALSA_RAW; }
 };
 }

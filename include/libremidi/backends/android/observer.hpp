@@ -53,6 +53,7 @@ public:
     for (size_t i = 0; i < context::midi_devices.size(); ++i)
     {
       libremidi::input_port port;
+      port.api = libremidi::API::ANDROID_AMIDI;
       port.port_name = context::port_name(env, i);
       port.port = i;
       ports.push_back(std::move(port));

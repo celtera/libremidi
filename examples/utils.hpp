@@ -59,6 +59,10 @@ inline std::ostream& operator<<(std::ostream& s, const libremidi::device_identif
   {
     std::ostream& s;
     void operator()(const std::string& u) { s << u; }
+    void operator()(libremidi::usb_device_identifier u)
+    {
+      s << u.vendor_id << ":" << u.product_id;
+    }
     void operator()(uint64_t u)
     {
       auto res = static_cast<uint32_t>(u);
@@ -160,23 +164,27 @@ inline std::ostream& operator<<(std::ostream& s, const libremidi::port_informati
 {
   s << "[ client: " << rhs.client;
   if (rhs.container.index() > 0)
-    s << ", container: " << rhs.container;
+    s << "\n    , container: " << rhs.container;
   if (rhs.device.index() > 0)
-    s << ", device_id: " << rhs.device;
+    s << "\n    , device_id: " << rhs.device;
 
-  s << ", port: " << rhs.port;
+  s << "\n    , port: " << rhs.port;
 
   if (!rhs.manufacturer.empty())
-    s << ", manufacturer: " << rhs.manufacturer;
+    s << "\n    , manufacturer: " << rhs.manufacturer;
+  if (!rhs.product.empty())
+    s << "\n    , product: " << rhs.product;
+  if (!rhs.serial.empty())
+    s << "\n    , serial: " << rhs.serial;
   if (!rhs.device_name.empty())
-    s << ", device_name: " << rhs.device_name;
+    s << "\n    , device_name: " << rhs.device_name;
   if (!rhs.port_name.empty())
-    s << ", port_name: " << rhs.port_name;
+    s << "\n    , port_name: " << rhs.port_name;
   if (!rhs.display_name.empty())
-    s << ", display_name: " << rhs.display_name;
-  if (rhs.type != libremidi::port_information::unknown)
-    s << ", type: " << rhs.type;
-  return s << "]";
+    s << "\n    , display_name: " << rhs.display_name;
+  if (rhs.type != libremidi::transport_type::unknown)
+    s << "\n    , type: " << rhs.type;
+  return s << "\n  ]";
 }
 
 namespace libremidi::examples

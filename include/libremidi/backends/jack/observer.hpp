@@ -70,7 +70,8 @@ public:
           {
             seen_input_ports.insert(ports[i]);
             if (this->configuration.input_added && configuration.notify_in_constructor)
-              this->configuration.input_added(to_port_info<true>(client, port));
+              this->configuration.input_added(
+                  to_port_info<true, libremidi::API::JACK_MIDI>(client, port));
           }
           i++;
         }
@@ -101,7 +102,8 @@ public:
           {
             seen_output_ports.insert(ports[i]);
             if (this->configuration.output_added && configuration.notify_in_constructor)
-              this->configuration.output_added(to_port_info<false>(client, port));
+              this->configuration.output_added(
+                  to_port_info<false, libremidi::API::JACK_MIDI>(client, port));
           }
           i++;
         }
@@ -138,13 +140,15 @@ public:
       {
         seen_input_ports.insert(name);
         if (this->configuration.input_added)
-          this->configuration.input_added(to_port_info<true>(client, port));
+          this->configuration.input_added(
+              to_port_info<true, libremidi::API::JACK_MIDI>(client, port));
       }
       else if (flags & JackPortIsInput)
       {
         seen_output_ports.insert(name);
         if (this->configuration.output_added)
-          this->configuration.output_added(to_port_info<false>(client, port));
+          this->configuration.output_added(
+              to_port_info<false, libremidi::API::JACK_MIDI>(client, port));
       }
     }
     else
@@ -152,13 +156,15 @@ public:
       if (auto it = seen_input_ports.find(name); it != seen_input_ports.end())
       {
         if (this->configuration.input_removed)
-          this->configuration.input_removed(to_port_info<true>(client, port));
+          this->configuration.input_removed(
+              to_port_info<true, libremidi::API::JACK_MIDI>(client, port));
         seen_input_ports.erase(it);
       }
       if (auto it = seen_output_ports.find(name); it != seen_output_ports.end())
       {
         if (this->configuration.output_removed)
-          this->configuration.output_removed(to_port_info<false>(client, port));
+          this->configuration.output_removed(
+              to_port_info<false, libremidi::API::JACK_MIDI>(client, port));
         seen_output_ports.erase(it);
       }
     }
@@ -194,12 +200,14 @@ public:
 
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
-    return get_ports<true>(this->client, nullptr, port_type, JackPortIsOutput, false);
+    return get_ports<true, libremidi::API::JACK_MIDI>(
+        this->client, nullptr, port_type, JackPortIsOutput, false);
   }
 
   std::vector<libremidi::output_port> get_output_ports() const noexcept override
   {
-    return get_ports<false>(this->client, nullptr, port_type, JackPortIsInput, false);
+    return get_ports<false, libremidi::API::JACK_MIDI>(
+        this->client, nullptr, port_type, JackPortIsInput, false);
   }
 
   ~observer_jack()
