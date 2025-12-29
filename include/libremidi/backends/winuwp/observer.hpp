@@ -225,7 +225,8 @@ public:
       -> std::conditional_t<Input, input_port, output_port>
   {
     return {
-        {.client = 0,
+        {.api = libremidi::API::WINDOWS_UWP,
+         .client = 0,
          .port = 0,
          .manufacturer = "",
          .device_name = "",

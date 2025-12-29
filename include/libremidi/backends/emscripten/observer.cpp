@@ -42,7 +42,8 @@ static auto to_port_info(int index, const webmidi_helpers::device_information& d
     -> std::conditional_t<Input, input_port, output_port>
 {
   return {
-      {.client = 0,
+      {.api = libremidi::API::WEBMIDI,
+       .client = 0,
        .port = (uint64_t)index,
        .manufacturer = "",
        .device_name = "",

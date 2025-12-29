@@ -153,7 +153,10 @@ public:
 
     container_identifier container{};
     device_identifier device{};
-    libremidi::port_information::port_type type = p.type;
+    libremidi::transport_type type = p.type;
+    std::string manufacturer;
+    std::string product;
+    std::string serial;
 #if LIBREMIDI_HAS_UDEV
     if (p.card)
     {
@@ -161,14 +164,20 @@ public:
       container = res.container;
       device = res.path;
       type = res.type;
+      manufacturer = res.vendor;
+      product = res.product;
+      serial = res.serial;
     }
 #endif
     return {
-        {.client = std::uintptr_t(this->seq),
+        {.api = get_current_api(),
+         .client = std::uintptr_t(this->seq),
          .container = container,
          .device = device,
          .port = alsa_seq::seq_to_port_handle(p.client, p.port),
-         .manufacturer = "",
+         .manufacturer = manufacturer,
+         .product = product,
+         .serial = serial,
          .device_name = p.client_name,
          .port_name = p.port_name,
          .display_name = p.port_name,

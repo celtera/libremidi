@@ -14,6 +14,7 @@ public:
             std::move(conf),
             coremidi_observer_configuration{apiconf.client_name, apiconf.on_create_context}}
   {
+    finish_init();
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::COREMIDI_UMP; }

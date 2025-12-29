@@ -103,8 +103,11 @@ protected:
     auto rawName = ConvertToUTF8(deviceCaps.szPname);
     auto portName = rawName;
     MakeUniqueInPortName(portName, index);
+
     return {
-        {.client = 0,
+        {.api = libremidi::API::WINDOWS_MM,
+         .client = 0,
+         .device = usb_device_identifier{.vid = deviceCaps.wMid, .pid = deviceCaps.wPid},
          .port = index,
          .manufacturer = "",
          .device_name = "",
@@ -120,8 +123,11 @@ protected:
     auto rawName = ConvertToUTF8(deviceCaps.szPname);
     auto portName = rawName;
     MakeUniqueOutPortName(portName, index);
+
     return {
-        {.client = 0,
+        {.api = libremidi::API::WINDOWS_MM,
+         .client = 0,
+         .device = usb_device_identifier{.vid = deviceCaps.wMid, .pid = deviceCaps.wPid},
          .port = index,
          .manufacturer = "",
          .device_name = "",

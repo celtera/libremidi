@@ -310,6 +310,9 @@ libremidi::API midi_in::get_current_api() const noexcept
 LIBREMIDI_INLINE
 stdx::error midi_in::open_port(const input_port& port, std::string_view portName)
 {
+  if (port.api != get_current_api())
+    return std::errc::invalid_argument;
+
   if (auto err = m_impl->is_client_open(); err != stdx::error{})
     return std::errc::not_connected;
 

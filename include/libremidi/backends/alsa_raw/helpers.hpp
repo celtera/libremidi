@@ -53,6 +53,7 @@ namespace alsa_raw
 {
 struct alsa_raw_port_info
 {
+  // hw:1,2,0
   std::string device;
   std::string card_name;
   std::string device_name;

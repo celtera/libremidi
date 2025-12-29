@@ -84,18 +84,18 @@ public:
     return libremidi::API::WINDOWS_MIDI_SERVICES;
   }
 
-  static port_information::port_type code_to_type(std::string_view str) noexcept
+  static transport_type code_to_type(std::string_view str) noexcept
   {
-    using enum port_information::port_type;
+    using enum transport_type;
 
     if (str.starts_with("KS"))
       return hardware;
     if (str == "BLE")
-      return port_information::port_type(hardware | bluetooth);
+      return transport_type(hardware | bluetooth);
     if (str == "VPB" || str == "APP")
       return software;
     if (str == "LOOP")
-      return port_information::port_type(software | loopback);
+      return transport_type(software | loopback);
     if (str.starts_with("NET"))
       return network;
     return unknown;
@@ -108,7 +108,8 @@ public:
     const auto& tinfo = p.GetTransportSuppliedInfo();
 
     return {
-        {.client = 0,
+        {.api = libremidi::API::WINDOWS_MIDI_SERVICES,
+         .client = 0,
          .container = std::bit_cast<libremidi::uuid>(p.ContainerId()),
          .device = to_string(p.EndpointDeviceId()),
          .port = gp.Number(),
