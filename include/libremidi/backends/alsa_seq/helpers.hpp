@@ -56,6 +56,24 @@ inline constexpr std::pair<int, int> seq_from_port_handle(port_handle p) noexcep
   return {client, port};
 }
 
+inline void for_all_clients(
+    const libasound& snd, snd_seq_t* seq, const std::function<void(snd_seq_client_info_t&)>& func)
+{
+  snd_seq_client_info_t* cinfo{};
+  snd_seq_client_info_alloca(&cinfo);
+  snd_seq_port_info_t* pinfo{};
+  snd_seq_port_info_alloca(&pinfo);
+
+  snd.seq.client_info_set_client(cinfo, -1);
+  while (snd.seq.query_next_client(seq, cinfo) >= 0)
+  {
+    int client = snd.seq.client_info_get_client(cinfo);
+    if (client == 0)
+      continue;
+    func(*cinfo);
+  }
+}
+
 inline void for_all_ports(
     const libasound& snd, snd_seq_t* seq,
     const std::function<void(snd_seq_client_info_t&, snd_seq_port_info_t&)>& func)
@@ -79,6 +97,21 @@ inline void for_all_ports(
     {
       func(*cinfo, *pinfo);
     }
+  }
+}
+
+inline void for_all_ports(
+    const libasound& snd, snd_seq_t* seq, int client,
+    const std::function<void(snd_seq_port_info_t&)>& func)
+{
+  snd_seq_port_info_t* pinfo{};
+  snd_seq_port_info_alloca(&pinfo);
+
+  snd.seq.port_info_set_client(pinfo, client);
+  snd.seq.port_info_set_port(pinfo, -1);
+  while (snd.seq.query_next_port(seq, pinfo) >= 0)
+  {
+    func(*pinfo);
   }
 }
 

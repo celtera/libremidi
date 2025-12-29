@@ -16,6 +16,13 @@
 namespace libremidi::alsa_seq
 {
 
+struct client_info
+{
+  std::string client_name;
+  int client_id{};
+  std::optional<int> card{};
+};
+
 struct port_info
 {
   std::string client_name;
@@ -91,6 +98,21 @@ public:
         return;
       }
     }
+  }
+
+  std::optional<client_info>
+  get_client_info(int client, snd_seq_client_info_t& cinfo) const noexcept
+  {
+    client_info p;
+    p.client_id = client;
+
+    if (auto name = snd.seq.client_info_get_name(&cinfo))
+      p.client_name = name;
+
+    if (int card = snd.seq.client_info_get_card(&cinfo); card >= 0)
+      p.card = card;
+
+    return p;
   }
 
   std::optional<port_info> get_info(
@@ -281,19 +303,43 @@ public:
     }
   }
 
-  void handle_event(const snd_seq_event_t& ev)
+  void handle_event_direct(const snd_seq_event_t& ev)
   {
     switch (ev.type)
     {
+      case SND_SEQ_EVENT_CLIENT_START: {
+        // TODO
+        break;
+      }
+      case SND_SEQ_EVENT_CLIENT_EXIT: {
+        // TODO
+        break;
+      }
+      case SND_SEQ_EVENT_CLIENT_CHANGE: {
+        // TODO
+        break;
+      }
+#if __has_include(<alsa/ump.h>)
+      case SND_SEQ_EVENT_UMP_EP_CHANGE: {
+        // TODO
+        break;
+      }
+      case SND_SEQ_EVENT_UMP_BLOCK_CHANGE: {
+        // TODO
+        break;
+      }
+#endif
       case SND_SEQ_EVENT_PORT_START: {
-        register_port(ev.data.addr.client, ev.data.addr.port);
+        this->register_port(ev.data.addr.client, ev.data.addr.port);
         break;
       }
       case SND_SEQ_EVENT_PORT_EXIT: {
-        unregister_port(ev.data.addr.client, ev.data.addr.port);
+        this->unregister_port(ev.data.addr.client, ev.data.addr.port);
         break;
       }
       case SND_SEQ_EVENT_PORT_CHANGE:
+        // TODO
+        break;
       default:
         break;
     }
@@ -328,36 +374,81 @@ public:
   {
     // Create relevant descriptors
     auto& snd = alsa_data::snd;
+
+    // 1. Descriptor count
     const auto n = snd.seq.poll_descriptors_count(this->seq, POLLIN);
-    descriptors_.resize(n + 1);
-    snd.seq.poll_descriptors(this->seq, descriptors_.data(), n, POLLIN);
-    descriptors_.back() = this->termination_event;
+    int total_descriptors = n;
+    total_descriptors++; // eventfd for terminating the thread
+
+    // 2. Create storage
+    descriptors.resize(total_descriptors);
+
+    // 3. Store descriptors
+    snd.seq.poll_descriptors(this->seq, descriptors.data(), n, POLLIN);
+    descriptors[n] = this->termination_event;
 
     // Start the listening thread
-    thread = std::thread{[this] {
+    thread = std::thread{[this, n] {
       auto& snd = alsa_data::snd;
       const auto period
           = std::chrono::duration_cast<std::chrono::milliseconds>(this->configuration.poll_period)
                 .count();
       for (;;)
       {
-        int err = poll(descriptors_.data(), descriptors_.size(), static_cast<int32_t>(period));
+        int err = poll(descriptors.data(), descriptors.size(), static_cast<int32_t>(period));
         if (err >= 0)
         {
           // We got our stop-thread signal
-          if (descriptors_.back().revents & POLLIN)
+          if (descriptors[n].revents & POLLIN)
             break;
 
+          // Put ALSA event in our queue
           snd_seq_event_t* ev{};
           event_handle handle{snd};
           while (snd.seq.event_input(this->seq, &ev) >= 0)
           {
             handle.reset(ev);
-            this->handle_event(*ev);
+            this->handle_event_delayed(*ev);
+          }
+
+          // Process the events in a deferred way.
+          // This is because udev takes some milliseconds to populate its field after a
+          // port was added
+          auto tm = std::chrono::steady_clock::now();
+          for (auto it = queued_events.begin(); it != queued_events.end();)
+          {
+            if ((tm - it->second) >= this->configuration.poll_period)
+            {
+              this->handle_event_direct(it->first);
+              it = queued_events.erase(it);
+            }
+            else
+            {
+              break;
+            }
           }
         }
       }
     }};
+  }
+
+  void handle_event_delayed(const snd_seq_event_t& ev)
+  {
+    switch (ev.type)
+    {
+      case SND_SEQ_EVENT_CLIENT_START:
+      case SND_SEQ_EVENT_CLIENT_EXIT:
+      case SND_SEQ_EVENT_CLIENT_CHANGE:
+      case SND_SEQ_EVENT_UMP_EP_CHANGE:
+      case SND_SEQ_EVENT_UMP_BLOCK_CHANGE:
+      case SND_SEQ_EVENT_PORT_START:
+      case SND_SEQ_EVENT_PORT_EXIT:
+      case SND_SEQ_EVENT_PORT_CHANGE:
+        queued_events.emplace_back(ev, std::chrono::steady_clock::now());
+        break;
+      default:
+        break;
+    }
   }
 
   ~observer_threaded()
@@ -370,7 +461,8 @@ public:
 
   eventfd_notifier termination_event{};
   std::thread thread;
-  std::vector<pollfd> descriptors_;
+  std::vector<pollfd> descriptors;
+  std::vector<std::pair<snd_seq_event_t, std::chrono::steady_clock::time_point>> queued_events;
 };
 
 template <typename ConfigurationImpl>
@@ -382,7 +474,7 @@ public:
   {
     this->configuration.manual_poll(
         poll_parameters{.addr = this->vaddr, .callback = [this](const auto& v) {
-      this->handle_event(v);
+      this->handle_event_direct(v);
       return 0;
     }});
   }
