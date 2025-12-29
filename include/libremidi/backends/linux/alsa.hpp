@@ -278,6 +278,7 @@ struct libasound
       LIBREMIDI_SYMBOL_INIT(snd_seq, port_info_sizeof)
       LIBREMIDI_SYMBOL_INIT(snd_seq, port_subscribe_free)
       LIBREMIDI_SYMBOL_INIT(snd_seq, port_subscribe_malloc)
+      LIBREMIDI_SYMBOL_INIT(snd_seq, port_subscribe_sizeof)
       LIBREMIDI_SYMBOL_INIT(snd_seq, port_subscribe_set_dest)
       LIBREMIDI_SYMBOL_INIT(snd_seq, port_subscribe_set_sender)
       LIBREMIDI_SYMBOL_INIT(snd_seq, port_subscribe_set_time_real)
