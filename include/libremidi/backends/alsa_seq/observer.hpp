@@ -439,8 +439,12 @@ public:
       case SND_SEQ_EVENT_CLIENT_START:
       case SND_SEQ_EVENT_CLIENT_EXIT:
       case SND_SEQ_EVENT_CLIENT_CHANGE:
+
+#if __has_include(<alsa/ump.h>)
       case SND_SEQ_EVENT_UMP_EP_CHANGE:
       case SND_SEQ_EVENT_UMP_BLOCK_CHANGE:
+#endif
+
       case SND_SEQ_EVENT_PORT_START:
       case SND_SEQ_EVENT_PORT_EXIT:
       case SND_SEQ_EVENT_PORT_CHANGE:
