@@ -24,7 +24,7 @@ jobs:
             name: "Windows (MSVC)",
             os: windows-latest,
             generator: "",
-            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_86_0 -DCMAKE_GENERATOR_PLATFORM=version=10.0.22621.0",
+            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_86_0",
             test_target: "RUN_TESTS",
             tests: 1,
             examples: 1
@@ -33,7 +33,7 @@ jobs:
             name: "Windows (MSVC, arm64)",
             os: windows-11-arm,
             generator: "",
-            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_86_0 -DCMAKE_GENERATOR_PLATFORM=version=10.0.22621.0",
+            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_86_0",
             test_target: "RUN_TESTS",
             tests: 1,
             examples: 1

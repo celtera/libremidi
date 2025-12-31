@@ -8,12 +8,18 @@
 #include <cctype>
 #include <string>
 #include <guiddef.h>
+#include <unknwn.h>
 
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Devices.Enumeration.h>
 #include <winrt/Microsoft.Windows.Devices.Midi2.h>
 #include <libremidi/cmidi2.hpp>
+
+#if __has_include(<WindowsMidiServicesAppSdkComExtensions.h>)
+#include <WindowsMidiServicesAppSdkComExtensions.h>
+  #define LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS 1
+#endif
 
 // MinGW support
 #if !defined(_MSC_VER)

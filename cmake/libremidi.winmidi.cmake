@@ -5,7 +5,7 @@ endif()
 if(LIBREMIDI_DOWNLOAD_CPPWINRT)
   if(NOT EXISTS "${CMAKE_BINARY_DIR}/winmidi-headers.zip")
     file(DOWNLOAD
-      https://github.com/microsoft/MIDI/releases/download/dev-preview-9-namm-4/Microsoft.Windows.Devices.Midi2.1.0.2-preview-9.250121-1820.nupkg
+      https://github.com/microsoft/MIDI/releases/download/rc-1/Microsoft.Windows.Devices.Midi2.1.0.14-rc.1.209.nupkg
       "${CMAKE_BINARY_DIR}/winmidi-headers.zip"
     )
   endif()
@@ -52,6 +52,9 @@ if(CPPWINRT_TOOL)
   file(
     COPY
       "${CMAKE_BINARY_DIR}/winmidi-headers/build/native/include/winmidi/init"
+      "${CMAKE_BINARY_DIR}/winmidi-headers/build/native/include/winmidi/WindowsMidiServicesAppSdkComExtensions.h"
+      "${CMAKE_BINARY_DIR}/winmidi-headers/build/native/include/winmidi/WindowsMidiServicesAppSdkComExtensions_i.c"
+      "${CMAKE_BINARY_DIR}/winmidi-headers/build/native/include/winmidi/WindowsMidiServicesAppSdkComExtensions_p.c"
     DESTINATION
       "${CMAKE_BINARY_DIR}/cppwinrt-winmidi/"
   )
@@ -75,3 +78,7 @@ target_include_directories(libremidi SYSTEM ${_public}
 )
 target_compile_definitions(libremidi ${_public} LIBREMIDI_WINMIDI)
 target_link_libraries(libremidi ${_public} RuntimeObject windowsapp)
+target_sources(libremidi PRIVATE
+  "${CMAKE_BINARY_DIR}/cppwinrt-winmidi/WindowsMidiServicesAppSdkComExtensions_i.c"
+  "${CMAKE_BINARY_DIR}/cppwinrt-winmidi/WindowsMidiServicesAppSdkComExtensions_p.c"
+)

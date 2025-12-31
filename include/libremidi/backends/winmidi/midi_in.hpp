@@ -19,6 +19,56 @@ public:
   {
   } configuration;
 
+#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
+  struct raw_callback_type final : IMidiEndpointConnectionMessagesReceivedCallback
+  {
+    explicit raw_callback_type(midi_in_impl& self)
+        : self{self}
+    {
+
+    }
+
+    midi_in_impl& self;
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
+    {
+      if (!ppvObject)
+        return E_POINTER;
+
+      if (riid == __uuidof(IUnknown) ||
+          riid == __uuidof(IMidiEndpointConnectionMessagesReceivedCallback))
+      {
+        *ppvObject = static_cast<IMidiEndpointConnectionMessagesReceivedCallback*>(this);
+        AddRef();
+        return S_OK;
+      }
+
+      *ppvObject = nullptr;
+      return E_NOINTERFACE;
+    }
+
+    ULONG STDMETHODCALLTYPE AddRef() override
+    {
+      return 1;
+    }
+
+    ULONG STDMETHODCALLTYPE Release() override
+    {
+      return 1;
+    }
+
+    HRESULT STDMETHODCALLTYPE MessagesReceived(
+        GUID sessionId,
+        GUID connectionId,
+        UINT64 timestamp,
+        UINT32 wordCount,
+        UINT32 *messages) override {
+      HRESULT res{};
+      self.process_message(sessionId, connectionId, timestamp, wordCount, messages);
+      return res;
+    }
+  } raw_callback{*this};
+#endif
+
   explicit midi_in_impl(
       libremidi::ump_input_configuration&& conf, winmidi::input_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
@@ -55,12 +105,20 @@ public:
     // TODO use a MidiGroupEndpointListener for the filtering
     m_endpoint = m_session.CreateEndpointConnection(ep.EndpointDeviceId());
 
+#if !LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
     m_revoke_token = m_endpoint.MessageReceived(
         [this](
             const winrt::Microsoft::Windows::Devices::Midi2::IMidiMessageReceivedEventSource&,
             const winrt::Microsoft::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& args) {
       process_message(args);
     });
+#else
+    m_raw_endpoint = m_endpoint.as<IMidiEndpointConnectionRaw>();
+
+    m_raw_endpoint->SetMessagesReceivedCallback(
+        &raw_callback
+    );
+#endif
 
     m_endpoint.Open();
 
@@ -96,9 +154,43 @@ public:
         {ump_space, ump_space + b.Size()}, m_processing.timestamp<timestamp_info>(to_ns, 0));
   }
 
+#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
+  void process_message(
+      const GUID& /* sessionId */,
+      const GUID& /* connectionId */,
+      UINT64 timestamp,
+      UINT32 wordCount,
+      UINT32 *ump)
+  {
+    static constexpr timestamp_backend_info timestamp_info{
+        .has_absolute_timestamps = true,
+        .absolute_is_monotonic = false,
+        .has_samples = false,
+    };
+
+    if(wordCount == 0)
+      return;
+
+    if (m_group_filter >= 0)
+    {
+      int group = cmidi2_ump_get_group(ump);
+      if (group != m_group_filter)
+        return;
+    }
+
+    auto to_ns = [t = timestamp] { return t; };
+    m_processing.on_bytes(
+        {ump, ump + wordCount}, m_processing.timestamp<timestamp_info>(to_ns, 0));
+  }
+#endif
+
   stdx::error close_port() override
   {
+#if !LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
     m_endpoint.MessageReceived(m_revoke_token);
+#else
+    m_raw_endpoint->RemoveMessagesReceivedCallback();
+#endif
     m_session.DisconnectEndpointConnection(m_endpoint.ConnectionId());
     return stdx::error{};
   }
@@ -109,6 +201,9 @@ private:
   MidiSession m_session;
   winrt::event_token m_revoke_token{};
   winrt::Microsoft::Windows::Devices::Midi2::MidiEndpointConnection m_endpoint{nullptr};
+#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
+  winrt::impl::com_ref<IMidiEndpointConnectionRaw> m_raw_endpoint{};
+#endif
   midi2::input_state_machine m_processing{this->configuration};
   int m_group_filter = -1;
 };
