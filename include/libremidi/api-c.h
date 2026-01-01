@@ -23,6 +23,7 @@ typedef enum libremidi_api
   KEYBOARD,       /*!< Computer keyboard input */
   NETWORK,        /*!< MIDI over IP */
   ANDROID_AMIDI,  /*!< Android AMidi API */
+  KDMAPI,         /*!< OmniMIDI KDMAPI (Windows) */
 
   // MIDI 2.0 APIs
   ALSA_RAW_UMP = 0x1000, /*!< Raw ALSA API for MIDI 2.0 */

@@ -96,6 +96,10 @@ if(LIBREMIDI_HAS_WINMIDI)
   add_backend_example(midi2_out_winmidi)
 endif()
 
+if(LIBREMIDI_HAS_KDMAPI)
+  add_backend_example(midi1_out_kdmapi)
+endif()
+
 if(LIBREMIDI_HAS_NETWORK)
   add_example(network)
 endif()
