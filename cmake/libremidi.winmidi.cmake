@@ -78,7 +78,3 @@ target_include_directories(libremidi SYSTEM ${_public}
 )
 target_compile_definitions(libremidi ${_public} LIBREMIDI_WINMIDI)
 target_link_libraries(libremidi ${_public} RuntimeObject windowsapp)
-target_sources(libremidi PRIVATE
-  "${CMAKE_BINARY_DIR}/cppwinrt-winmidi/WindowsMidiServicesAppSdkComExtensions_i.c"
-  "${CMAKE_BINARY_DIR}/cppwinrt-winmidi/WindowsMidiServicesAppSdkComExtensions_p.c"
-)

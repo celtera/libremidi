@@ -1,11 +1,15 @@
 #pragma once
 #include <libremidi/config.hpp>
 
+#if !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 #include <libremidi/system_error2.hpp>
+#if !defined(_MSC_VER)
 #pragma GCC diagnostic pop
+#endif
 
 #include <functional>
 #include <string_view>
