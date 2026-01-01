@@ -35,7 +35,7 @@ public:
         return E_POINTER;
 
       if (riid == __uuidof(IUnknown) ||
-          riid == __uuidof(IMidiEndpointConnectionMessagesReceivedCallback))
+          riid == IID_IMidiEndpointConnectionMessagesReceivedCallback)
       {
         *ppvObject = static_cast<IMidiEndpointConnectionMessagesReceivedCallback*>(this);
         AddRef();
@@ -113,7 +113,7 @@ public:
       process_message(args);
     });
 #else
-    m_raw_endpoint = m_endpoint.as<IMidiEndpointConnectionRaw>();
+    m_endpoint.as(IID_IMidiEndpointConnectionRaw, m_raw_endpoint.put_void());
 
     m_raw_endpoint->SetMessagesReceivedCallback(
         &raw_callback
