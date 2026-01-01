@@ -70,6 +70,11 @@ private:
       return;
     }
 
+#if !defined(_MSC_VER)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
+
     // Load all function pointers
     IsKDMAPIAvailable
         = reinterpret_cast<IsKDMAPIAvailable_t>(GetProcAddress(m_handle, "IsKDMAPIAvailable"));
@@ -93,6 +98,10 @@ private:
         = reinterpret_cast<UnprepareLongData_t>(GetProcAddress(m_handle, "UnprepareLongData"));
     ReturnKDMAPIVer
         = reinterpret_cast<ReturnKDMAPIVer_t>(GetProcAddress(m_handle, "ReturnKDMAPIVer"));
+
+#if !defined(_MSC_VER)
+#pragma GCC diagnostic pop
+#endif
 
     // Check if the minimum required functions are available
     if (!IsKDMAPIAvailable || !InitializeKDMAPIStream || !TerminateKDMAPIStream || !SendDirectData)
