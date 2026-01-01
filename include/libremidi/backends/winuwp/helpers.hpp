@@ -7,6 +7,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <unknwn.h>
 
 #include <winrt/Windows.Devices.Enumeration.h>
 #include <winrt/Windows.Devices.Midi.h>
