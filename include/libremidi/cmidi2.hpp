@@ -6,8 +6,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#if !defined(_MSC_VER)
 #pragma GCC system_header
 #pragma clang system_header
+#endif
 
 #define CMIDI2_MIDI_2_0_RESERVED 0
 #define CMIDI2_JR_TIMESTAMP_TICKS_PER_SECOND 31250

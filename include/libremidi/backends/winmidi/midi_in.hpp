@@ -35,7 +35,7 @@ public:
         return E_POINTER;
 
       if (riid == __uuidof(IUnknown) ||
-          riid == IID_IMidiEndpointConnectionMessagesReceivedCallback)
+          riid == libremidi::IID_IMidiEndpointConnectionMessagesReceivedCallback)
       {
         *ppvObject = static_cast<IMidiEndpointConnectionMessagesReceivedCallback*>(this);
         AddRef();
@@ -113,7 +113,7 @@ public:
       process_message(args);
     });
 #else
-    m_endpoint.as(IID_IMidiEndpointConnectionRaw, m_raw_endpoint.put_void());
+    m_endpoint.as(libremidi::IID_IMidiEndpointConnectionRaw, m_raw_endpoint.put_void());
 
     m_raw_endpoint->SetMessagesReceivedCallback(
         &raw_callback

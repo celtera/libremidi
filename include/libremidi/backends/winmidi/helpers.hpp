@@ -19,6 +19,14 @@
 #if __has_include(<WindowsMidiServicesAppSdkComExtensions.h>)
 #include <WindowsMidiServicesAppSdkComExtensions.h>
   #define LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS 1
+
+#define LIBREMIDI_DEFINE_GUID_CONSTEXPR(type,name,l,w1,w2,b1,b2,b3,b4,b5,b6,b7,b8) \
+        static constexpr const type name = {l,w1,w2,{b1,b2,b3,b4,b5,b6,b7,b8}}
+
+namespace libremidi {
+  LIBREMIDI_DEFINE_GUID_CONSTEXPR(IID, IID_IMidiEndpointConnectionMessagesReceivedCallback,0x8087b303,0x0519,0x31d1,0x31,0xd1,0x00,0x00,0x00,0x00,0x00,0x10);
+  LIBREMIDI_DEFINE_GUID_CONSTEXPR(IID, IID_IMidiEndpointConnectionRaw,0x8087b303,0x0519,0x31d1,0x31,0xd1,0x00,0x00,0x00,0x00,0x00,0x20);
+}
 #endif
 
 // MinGW support

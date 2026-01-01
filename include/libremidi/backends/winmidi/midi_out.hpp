@@ -48,7 +48,7 @@ public:
 
     m_endpoint = m_session.CreateEndpointConnection(ep.EndpointDeviceId());
 #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
-    m_endpoint.as(IID_IMidiEndpointConnectionRaw, m_raw_endpoint.put_void());
+    m_endpoint.as(libremidi::IID_IMidiEndpointConnectionRaw, m_raw_endpoint.put_void());
   #endif
     m_endpoint.Open();
 
