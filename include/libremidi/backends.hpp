@@ -50,6 +50,10 @@
   #include <libremidi/backends/winmm.hpp>
 #endif
 
+#if defined(LIBREMIDI_KDMAPI)
+  #include <libremidi/backends/kdmapi.hpp>
+#endif
+
 #if defined(LIBREMIDI_WINUWP)
   #include <libremidi/backends/winuwp.hpp>
 #endif
@@ -106,6 +110,10 @@ static constexpr auto available_backends = make_tl(
 #if defined(LIBREMIDI_WINMM)
     ,
     winmm_backend{}
+#endif
+#if defined(LIBREMIDI_KDMAPI)
+    ,
+    kdmapi_backend{}
 #endif
 #if defined(LIBREMIDI_WINUWP)
     ,

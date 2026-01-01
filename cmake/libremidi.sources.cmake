@@ -69,6 +69,13 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/jack_ump/observer.hpp
     include/libremidi/backends/jack_ump.hpp
 
+    include/libremidi/backends/kdmapi/config.hpp
+    include/libremidi/backends/kdmapi/helpers.hpp
+    include/libremidi/backends/kdmapi/midi_in.hpp
+    include/libremidi/backends/kdmapi/midi_out.hpp
+    include/libremidi/backends/kdmapi/observer.hpp
+    include/libremidi/backends/kdmapi.hpp
+
     include/libremidi/backends/keyboard/config.hpp
     include/libremidi/backends/keyboard/midi_in.hpp
 
