@@ -10,6 +10,21 @@
 
 Q_DECLARE_METATYPE(libremidi::port_information);
 
+struct port_equal
+{
+  bool operator()(const libremidi::port_information& lhs, const libremidi::port_information& rhs) const noexcept
+  {
+    return lhs.api == rhs.api && lhs.port_name == rhs.port_name;
+  }
+};
+struct port_name_sort
+{
+  bool operator()(const libremidi::port_information& lhs, const libremidi::port_information& rhs) const noexcept
+  {
+    return std::tie(lhs.api, lhs.port_name) < std::tie(rhs.api, rhs.port_name);
+  }
+};
+
 int main(int argc, char** argv)
 {
   using namespace libremidi;
@@ -27,8 +42,8 @@ int main(int argc, char** argv)
 
   main.show();
 
-  std::map<libremidi::input_port, QListWidgetItem*> input_items;
-  std::map<libremidi::output_port, QListWidgetItem*> output_items;
+  std::map<libremidi::input_port, QListWidgetItem*, port_name_sort> input_items;
+  std::map<libremidi::output_port, QListWidgetItem*, port_name_sort> output_items;
 
   // Define the observer callbacks which will fill the list widgets with the input & output devices
   observer_configuration conf{.input_added = [&](const input_port& p) {
@@ -40,7 +55,12 @@ int main(int argc, char** argv)
   }, .input_removed = [&](const input_port& p) {
     if (auto it = input_items.find(p); it != input_items.end())
     {
-      inputs.removeItemWidget(it->second);
+      for(int i = 0; i < inputs.count(); i++) {
+        if(auto item = inputs.item(i); item == it->second) {
+          delete inputs.takeItem(i);
+          break;
+        }
+      }
       input_items.erase(it);
     }
   }, .output_added = [&](const output_port& p) {
@@ -52,7 +72,12 @@ int main(int argc, char** argv)
   }, .output_removed = [&](const output_port& p) {
     if (auto it = output_items.find(p); it != output_items.end())
     {
-      outputs.removeItemWidget(it->second);
+      for(int i = 0; i < outputs.count(); i++) {
+        if(auto item = outputs.item(i); item == it->second) {
+          delete outputs.takeItem(i);
+          break;
+        }
+      }
       output_items.erase(it);
     }
   }};

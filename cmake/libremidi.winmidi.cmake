@@ -53,8 +53,6 @@ if(CPPWINRT_TOOL)
     COPY
       "${CMAKE_BINARY_DIR}/winmidi-headers/build/native/include/winmidi/init"
       "${CMAKE_BINARY_DIR}/winmidi-headers/build/native/include/winmidi/WindowsMidiServicesAppSdkComExtensions.h"
-      "${CMAKE_BINARY_DIR}/winmidi-headers/build/native/include/winmidi/WindowsMidiServicesAppSdkComExtensions_i.c"
-      "${CMAKE_BINARY_DIR}/winmidi-headers/build/native/include/winmidi/WindowsMidiServicesAppSdkComExtensions_p.c"
     DESTINATION
       "${CMAKE_BINARY_DIR}/cppwinrt-winmidi/"
   )

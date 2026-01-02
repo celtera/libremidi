@@ -101,18 +101,24 @@ struct LIBREMIDI_EXPORT port_information
   // WinMIDI: available
   port_type type = port_type::unknown;
 
-  bool operator==(const port_information& other) const noexcept = default;
+  // Equality and comparison operators are deleted as there is not one
+  // single correct way to compare two port_information:
+  // in some cases it may be useful to only compare the names, while in other cases
+  // it is necessary to check whether this is the exact same low-level identifier.
+  // Thus, the end-user must define their own custom equality operators
+  // if using std:: containers or algorithms
+  bool operator==(const port_information& other) const noexcept = delete;
   std::strong_ordering operator<=>(const port_information& other) const noexcept = delete;
 };
 
 struct input_port : port_information
 {
-  bool operator==(const input_port& other) const noexcept = default;
+  bool operator==(const input_port& other) const noexcept = delete;
   std::strong_ordering operator<=>(const input_port& other) const noexcept = delete;
 };
 struct output_port : port_information
 {
-  bool operator==(const output_port& other) const noexcept = default;
+  bool operator==(const output_port& other) const noexcept = delete;
   std::strong_ordering operator<=>(const output_port& other) const noexcept = delete;
 };
 
