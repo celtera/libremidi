@@ -2,6 +2,10 @@
 
 #include <libremidi/libremidi.hpp>
 
+#if defined(_WIN32) && __has_include(<winrt/base.h>)
+  #include <winrt/base.h>
+#endif
+
 #include <midi/capability_inquiry.h>
 #include <midi/midi1_byte_stream.h>
 #include <midi/sysex_collector.h>
@@ -330,6 +334,11 @@ struct midi_ci_processor
 int main()
 try
 {
+#if defined(_WIN32) && __has_include(<winrt/base.h>)
+  // Necessary for using WinUWP and WinMIDI, must be done as early as possible in your main()
+  winrt::init_apartment();
+#endif
+
   midi_ci_processor processor;
 
   processor.open();

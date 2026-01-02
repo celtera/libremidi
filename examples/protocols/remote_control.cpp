@@ -1,6 +1,10 @@
 #include <libremidi/libremidi.hpp>
 #include <libremidi/protocols/remote_control.hpp>
 
+#if defined(_WIN32) && __has_include(<winrt/base.h>)
+  #include <winrt/base.h>
+#endif
+
 #if __has_include(<magic_enum_all.hpp>)
   #include <magic_enum_all.hpp>
 #else
@@ -26,6 +30,10 @@ std::string enum_name(auto cmd)
 
 int main()
 {
+#if defined(_WIN32) && __has_include(<winrt/base.h>)
+  winrt::init_apartment();
+#endif
+
   auto api = libremidi::API::ALSA_SEQ;
   libremidi::observer observer{{.track_any = true}, api};
   if (observer.get_input_ports().empty())

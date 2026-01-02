@@ -8,6 +8,10 @@
 
 #include <libremidi/libremidi.hpp>
 
+#if defined(_WIN32) && __has_include(<winrt/base.h>)
+  #include <winrt/base.h>
+#endif
+
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
@@ -15,6 +19,11 @@
 
 void enumerate_api(libremidi::API api)
 {
+#if defined(_WIN32) && __has_include(<winrt/base.h>)
+  // Necessary for using WinUWP and WinMIDI, must be done as early as possible in your main()
+  winrt::init_apartment();
+#endif
+
   std::string_view api_name = libremidi::get_api_display_name(api);
   std::cout << "Displaying ports for: " << api_name << std::endl;
 

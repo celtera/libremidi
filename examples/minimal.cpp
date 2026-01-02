@@ -3,11 +3,20 @@
 
 #include <libremidi/libremidi.hpp>
 
+#if defined(_WIN32) && __has_include(<winrt/base.h>)
+  #include <winrt/base.h>
+#endif
+
 #include <cstdlib>
 #include <iostream>
 
 int main()
 {
+#if defined(_WIN32) && __has_include(<winrt/base.h>)
+  // Necessary for using WinUWP and WinMIDI, must be done as early as possible in your main()
+  winrt::init_apartment();
+#endif
+
   libremidi::observer observer;
   if (observer.get_input_ports().empty())
     return 1;

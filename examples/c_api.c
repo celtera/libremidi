@@ -104,6 +104,11 @@ int enumerate_ports(libremidi_midi_observer_handle* observer, struct enumerated_
 
 int main(void)
 {
+#if defined(_WIN32)
+  // Necessary for using WinUWP and WinMIDI, must be done as early as possible in your main()
+  CoInitializeEx(NULL, COINIT_MULTITHREADED);
+#endif
+
   int ret = 0;
 
   /// Create an observer for MIDI ports

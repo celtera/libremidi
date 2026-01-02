@@ -8,6 +8,10 @@
 #include <QSplitter>
 #include <QWidget>
 
+#if defined(_WIN32) && __has_include(<winrt/base.h>)
+  #include <winrt/base.h>
+#endif
+
 Q_DECLARE_METATYPE(libremidi::port_information);
 
 struct port_equal
@@ -27,6 +31,11 @@ struct port_name_sort
 
 int main(int argc, char** argv)
 {
+#if defined(_WIN32) && __has_include(<winrt/base.h>)
+  // Necessary for using WinUWP and WinMIDI, must be done as early as possible in your main()
+  // In addition, we are using Qt in this example which requires COM to be in single-thread mode.
+  winrt::init_apartment(winrt::apartment_type::single_threaded);
+#endif
   using namespace libremidi;
   auto in_api = libremidi::midi1::in_default_configuration();
   auto out_api = libremidi::midi1::out_default_configuration();
