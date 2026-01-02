@@ -29,25 +29,19 @@ public:
   std::map<hstring, std::vector<input_port>> m_known_input_devices;
   std::map<hstring, std::vector<output_port>> m_known_output_devices;
   std::mutex m_devices_mtx;
+  std::atomic_bool m_in_constructor{true};
 
   explicit observer_impl(
       libremidi::observer_configuration&& conf, winmidi::observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
+    struct on_delete { observer_impl& self; ~on_delete() { self.m_in_constructor = false; } } on_delete{*this};
+
     if (!configuration.has_callbacks())
       return;
 
-    if (configuration.notify_in_constructor)
-    {
-      if (configuration.input_added)
-        for (const auto& p : get_input_ports())
-          configuration.input_added(p);
-
-      if (configuration.output_added)
-        for (const auto& p : get_output_ports())
-          configuration.output_added(p);
-    }
-
+    // Note: winmidi also notifies for existing devices, so the "notify in constructor"
+    // is handled in the callbacks
     if ((watcher = MidiEndpointDeviceWatcher::Create()))
     {
       namespace enumeration = winrt::Windows::Devices::Enumeration;
@@ -204,7 +198,9 @@ public:
               std::lock_guard _{m_devices_mtx};
               m_known_input_devices[ep.EndpointDeviceId()].push_back(ip);
             }
-            configuration.input_added(std::move(ip));
+
+            if(!m_in_constructor || configuration.notify_in_constructor)
+              configuration.input_added(std::move(ip));
           }
           if (configuration.output_added)
           {
@@ -213,7 +209,9 @@ public:
               std::lock_guard _{m_devices_mtx};
               m_known_output_devices[ep.EndpointDeviceId()].push_back(op);
             }
-            configuration.output_added(std::move(op));
+
+            if(!m_in_constructor || configuration.notify_in_constructor)
+              configuration.output_added(std::move(op));
           }
           break;
         }
@@ -225,7 +223,9 @@ public:
               std::lock_guard _{m_devices_mtx};
               m_known_input_devices[ep.EndpointDeviceId()].push_back(ip);
             }
-            configuration.input_added(std::move(ip));
+
+            if(!m_in_constructor || configuration.notify_in_constructor)
+              configuration.input_added(std::move(ip));
           }
           break;
         case MidiGroupTerminalBlockDirection::BlockOutput:
@@ -236,12 +236,15 @@ public:
               std::lock_guard _{m_devices_mtx};
               m_known_output_devices[ep.EndpointDeviceId()].push_back(op);
             }
-            configuration.output_added(std::move(op));
+
+            if(!m_in_constructor || configuration.notify_in_constructor)
+              configuration.output_added(std::move(op));
           }
           break;
       }
     }
   }
+
   void remove_device(hstring eid)
   {
     std::vector<input_port> to_remove_in;

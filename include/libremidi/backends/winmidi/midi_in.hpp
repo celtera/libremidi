@@ -186,10 +186,16 @@ public:
 
   stdx::error close_port() override
   {
+    if(!m_endpoint)
+      return std::errc::not_connected;
+
 #if !LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
     m_endpoint.MessageReceived(m_revoke_token);
 #else
-    m_raw_endpoint->RemoveMessagesReceivedCallback();
+    if(m_raw_endpoint) {
+      m_raw_endpoint->RemoveMessagesReceivedCallback();
+      m_raw_endpoint = nullptr;
+    }
 #endif
     m_session.DisconnectEndpointConnection(m_endpoint.ConnectionId());
     return stdx::error{};

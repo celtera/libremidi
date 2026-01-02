@@ -57,6 +57,9 @@ public:
 
   stdx::error close_port() override
   {
+    if(!m_endpoint)
+      return std::errc::not_connected;
+
     m_session.DisconnectEndpointConnection(m_endpoint.ConnectionId());
     return stdx::error{};
   }
