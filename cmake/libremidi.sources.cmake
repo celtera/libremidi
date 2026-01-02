@@ -142,6 +142,8 @@ target_sources(libremidi PRIVATE
     include/libremidi/input_configuration.hpp
     include/libremidi/libremidi.hpp
     include/libremidi/message.hpp
+    include/libremidi/port_comparison.hpp
+    include/libremidi/port_information.hpp
     include/libremidi/output_configuration.hpp
     include/libremidi/ump_events.hpp
 

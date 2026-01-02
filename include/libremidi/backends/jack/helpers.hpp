@@ -50,7 +50,7 @@ struct jack_client
         .client = reinterpret_cast<std::uintptr_t>(client),
         .port = 0,
         .manufacturer = "",
-        .device_name = "",
+        .device_name = jack_get_client_name(client),
         .port_name = jack_port_name(port),
         .display_name = get_port_display_name(port),
     }};

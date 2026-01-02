@@ -7,6 +7,7 @@
 #include "utils.hpp"
 
 #include <libremidi/libremidi.hpp>
+#include <libremidi/port_comparison.hpp>
 
 #if defined(_WIN32) && __has_include(<winrt/base.h>)
   #include <winrt/base.h>
@@ -17,7 +18,7 @@
 #include <iostream>
 #include <thread>
 
-void enumerate_api(libremidi::API api)
+void lookup_api(libremidi::API api, const libremidi::input_port& searched)
 {
   std::string_view api_name = libremidi::get_api_display_name(api);
   std::cout << "Displaying ports for: " << api_name << std::endl;
@@ -33,22 +34,11 @@ void enumerate_api(libremidi::API api)
   {
     // Check inputs.
     auto ports = midi.get_input_ports();
-    std::cout << ports.size() << " MIDI input sources:\n";
-    int i = 0;
-    for (auto& port : ports)
-      std::cout << " - " << i++ << ": " << port << '\n';
+    auto res = libremidi::find_closest_port(searched, ports);
+    if (res.found) {
+      std::cout << "Found: " << *res.port << "\n";
+    }
   }
-
-  {
-    // Check outputs.
-    auto ports = midi.get_output_ports();
-    std::cout << ports.size() << " MIDI output sinks:\n";
-    int i = 0;
-    for (auto& port : ports)
-      std::cout << " - " << i++ << ": " << port << '\n';
-  }
-
-  std::cout << "\n";
 }
 
 int main()
@@ -57,9 +47,15 @@ int main()
   // Necessary for using WinUWP and WinMIDI, must be done as early as possible in your main()
   winrt::init_apartment();
 #endif
+
+  // This will find the port that is closest to this.
+  // For instance, given a Launchpad and a Launchpad Mini,
+  // the launchpad will be returned. Otherwise, the mini will be returned.
+  libremidi::input_port searched{{.port_name = "launchpad"}};
+
   for (auto& api : libremidi::available_apis())
-    enumerate_api(api);
+    lookup_api(api, searched);
   for (auto& api : libremidi::available_ump_apis())
-    enumerate_api(api);
+    lookup_api(api, searched);
   return 0;
 }
