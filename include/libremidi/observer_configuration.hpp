@@ -24,35 +24,35 @@ struct LIBREMIDI_EXPORT port_information
   // ALSA Raw: unused
   // ALSA Seq: snd_seq_t*
   // CoreMIDI: MidiClientRef
-  // WebMIDI: unused
   // JACK: jack_client_t*
   // PipeWire: unused // FIXME: pw_context? pw_main_loop?
+  // WebMIDI: unused
   // WinMIDI: TODO
   // WinMM: unused
   // WinUWP: unused
   client_handle client = static_cast<client_handle>(-1);
 
   /// Container identifier if the API provides one
-  // WinMIDI: ContainerID GUID (bit_cast to a winapi or winrt::GUID ;
-  //        this is not the string but the binary representation).
   // ALSA: device id (std::string), e.g. ID_PATH as returned by udev: "pci-0000:00:14.0-usb-0:12:1.0"
   // CoreMIDI: USBLocationID (int32_t)
+  // WinMIDI: ContainerID GUID (bit_cast to a winapi or winrt::GUID ;
+  //        this is not the string but the binary representation).
   container_identifier container = std::monostate{};
 
   /// Device identifier if the API provides one
-  // WinMM: MIDI{IN,OUT}CAPS mId / pId { uint16_t manufacturer_id, uint16_t product_id; }
-  // WinMIDI: EndpointDeviceId (std::string), e.g. "\\?\swd#midisrv#midiu_ksa..."
   // ALSA: sysfs path (std::string), e.g. "/sys/devices/pci0000:00/0000:00:02.2/0000:02:00.0/sound/card0/controlC0"
   // CoreMIDI: USBVendorProduct (int32_t)
+  // WinMIDI: EndpointDeviceId (std::string), e.g. "\\?\swd#midisrv#midiu_ksa..."
+  // WinMM: MIDI{IN,OUT}CAPS mId / pId { uint16_t manufacturer_id, uint16_t product_id; }
   device_identifier device = std::monostate{};
 
   /// Handle to the port identifier if the API provides one
   // ALSA Raw: bit_cast to struct { uint16_t card, device, sub, padding; }.
   // ALSA Seq: bit_cast to struct { uint32_t client, port; }
   // CoreMIDI: MidiObjectRef's kMIDIPropertyUniqueID (uint32_t)
-  // WebMIDI: index of the MIDI device in the list provided by the browser.
   // JACK: jack_port_id_t
   // PipeWire: port.id
+  // WebMIDI: index of the MIDI device in the list provided by the browser.
   // WinMIDI: uint64_t terminal_block_number; (MidiGroupTerminalBlock::Number(), index is 1-based)
   // WinMM: port index between 0 and midi{In,Out}GetNumDevs()
   // WinUWP: index of the MIDI device in the list provided by the OS.
@@ -68,6 +68,7 @@ struct LIBREMIDI_EXPORT port_information
 
   // ALSA Raw: ID_MODEL_FROM_DATABASE if provided by udev
   // ALSA Seq: ID_MODEL_FROM_DATABASE if provided by udev
+  // WinMIDI: MidiEndpointDeviceInformation::GetTransportSuppliedInfo().Name
   std::string product{};
 
   /// "Unique" serial number. Note that this is super unreliable - pretty
@@ -75,6 +76,7 @@ struct LIBREMIDI_EXPORT port_information
   /// unlike most USB devices.
   // ALSA Raw: ID_USB_SERIAL if provided by udev.
   // ALSA Seq: ID_USB_SERIAL if provided by udev.
+  // WinMIDI: MidiEndpointDeviceInformation::GetTransportSuppliedInfo().SerialNumber
   std::string serial{};
 
   // ALSA Raw: Name returned by snd_rawmidi_info_get_name
@@ -97,8 +99,8 @@ struct LIBREMIDI_EXPORT port_information
 
   /// Port type
   // CoreMIDI: available
-  // WinMM: unavailable
   // WinMIDI: available
+  // WinMM: unavailable
   port_type type = port_type::unknown;
 
   // Equality and comparison operators are deleted as there is not one

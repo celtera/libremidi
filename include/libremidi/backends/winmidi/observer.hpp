@@ -114,6 +114,8 @@ public:
          .device = to_string(p.EndpointDeviceId()),
          .port = gp.Number(),
          .manufacturer = to_string(tinfo.ManufacturerName),
+         .product = to_string(tinfo.Name),
+         .serial = to_string(tinfo.SerialNumber),
          .device_name = to_string(p.Name()),
          .port_name = to_string(gp.Name()),
          .display_name = to_string(gp.Name()) + " " + std::to_string(gp.Number()),
