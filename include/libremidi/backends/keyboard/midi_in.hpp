@@ -5,7 +5,7 @@
 #include <chrono>
 #include <unordered_map>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class midi_in_kbd final
     : public midi1::in_api

@@ -1,7 +1,7 @@
 #pragma once
 #include <libremidi/port_information.hpp>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 using input_port_callback = std::function<void(const input_port&)>;
 using output_port_callback = std::function<void(const output_port&)>;

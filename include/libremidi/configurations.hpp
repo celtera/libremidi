@@ -22,7 +22,7 @@
 #include <libremidi/config.hpp>
 
 #include <variant>
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 struct unspecified_configuration
 {

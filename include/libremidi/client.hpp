@@ -6,7 +6,7 @@
 #include <map>
 #include <utility>
 
-namespace libremidi::midi1
+NAMESPACE_LIBREMIDI::midi1
 {
 struct client_configuration
 {

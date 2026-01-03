@@ -18,7 +18,7 @@ typedef MIDIObjectRef MIDIClientRef;
 using MIDIClientRef = uint32_t;
 using MIDIObjectRef = uint32_t;
 #endif
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
 struct coremidi_input_configuration

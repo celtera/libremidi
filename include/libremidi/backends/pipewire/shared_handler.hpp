@@ -8,7 +8,7 @@
 
   #include <variant>
 
-namespace libremidi::pipewire
+NAMESPACE_LIBREMIDI::pipewire
 {
 
 // Create a PipeWire client which will be shared across objects

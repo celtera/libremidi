@@ -2,7 +2,7 @@
   #include <libremidi/backends/emscripten/midi_access.hpp>
   #include <libremidi/backends/emscripten/midi_out.hpp>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 LIBREMIDI_INLINE midi_out_emscripten::midi_out_emscripten(
     output_configuration&& conf, emscripten_output_configuration&& apiconf)

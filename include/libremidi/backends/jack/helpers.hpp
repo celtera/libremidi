@@ -9,7 +9,7 @@
 #include <cstring>
 #include <memory>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 struct jack_client
 {

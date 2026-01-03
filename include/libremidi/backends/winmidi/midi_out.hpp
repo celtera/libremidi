@@ -5,7 +5,7 @@
 #include <libremidi/detail/midi_out.hpp>
 #include <libremidi/detail/ump_stream.hpp>
 
-namespace libremidi::winmidi
+NAMESPACE_LIBREMIDI::winmidi
 {
 
 class midi_out_impl final

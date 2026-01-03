@@ -9,7 +9,7 @@
 
 #include <libremidi/error.hpp>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
 struct winmm_error_domain : public stdx::error_domain

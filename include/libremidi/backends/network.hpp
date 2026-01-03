@@ -7,7 +7,7 @@
 
 #include <string_view>
 
-namespace libremidi::net
+NAMESPACE_LIBREMIDI::net
 {
 struct backend
 {

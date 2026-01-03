@@ -7,10 +7,10 @@
 
 #include <cassert>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
-static libremidi::ump_input_configuration
+LIBREMIDI_STATIC_IMPLEMENTATION libremidi::ump_input_configuration
 convert_midi1_to_midi2_input_configuration(const input_configuration& base_conf) noexcept
 {
   libremidi::ump_input_configuration c2;
@@ -32,7 +32,7 @@ convert_midi1_to_midi2_input_configuration(const input_configuration& base_conf)
   return c2;
 }
 
-static libremidi::input_configuration
+LIBREMIDI_STATIC_IMPLEMENTATION libremidi::input_configuration
 convert_midi2_to_midi1_input_configuration(const ump_input_configuration& base_conf) noexcept
 {
   libremidi::input_configuration c2;
@@ -59,7 +59,7 @@ convert_midi2_to_midi1_input_configuration(const ump_input_configuration& base_c
   return c2;
 }
 
-static LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
+LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_in_api>
 make_midi_in(auto base_conf, input_api_configuration api_conf, auto backends)
 {
   std::unique_ptr<midi_in_api> ptr;
@@ -79,7 +79,7 @@ make_midi_in(auto base_conf, input_api_configuration api_conf, auto backends)
 }
 
 /// MIDI 1 helpers
-static LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
+LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_in_api>
 make_midi1_in(const input_configuration& base_conf)
 {
   for (const auto& api : available_apis())
@@ -116,7 +116,7 @@ make_midi1_in(const input_configuration& base_conf)
   return std::make_unique<midi_in_dummy>(input_configuration{}, dummy_configuration{});
 }
 
-static LIBREMIDI_INLINE std::unique_ptr<midi_in_api> make_midi1_in(
+LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_in_api> make_midi1_in(
     const input_configuration& base_conf, const input_api_configuration& api_conf,
     libremidi::API api)
 {
@@ -132,7 +132,7 @@ static LIBREMIDI_INLINE std::unique_ptr<midi_in_api> make_midi1_in(
   return {};
 }
 
-static LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
+LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_in_api>
 make_midi1_in(const input_configuration& base_conf, const input_api_configuration& api_conf)
 {
   if (std::get_if<unspecified_configuration>(&api_conf))
@@ -178,7 +178,7 @@ midi_in::midi_in(const input_configuration& base_conf, const input_api_configura
 }
 
 /// MIDI 2 helpers
-static LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
+LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_in_api>
 make_midi2_in(const ump_input_configuration& base_conf)
 {
   for (const auto& api : available_ump_apis())
@@ -213,7 +213,7 @@ make_midi2_in(const ump_input_configuration& base_conf)
   return {};
 }
 
-static LIBREMIDI_INLINE std::unique_ptr<midi_in_api> make_midi2_in(
+LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_in_api> make_midi2_in(
     const ump_input_configuration& base_conf, const input_api_configuration& api_conf,
     libremidi::API api)
 {
@@ -230,7 +230,7 @@ static LIBREMIDI_INLINE std::unique_ptr<midi_in_api> make_midi2_in(
   return {};
 }
 
-static LIBREMIDI_INLINE std::unique_ptr<midi_in_api>
+LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_in_api>
 make_midi2_in(const ump_input_configuration& base_conf, const input_api_configuration& api_conf)
 {
   if (std::get_if<unspecified_configuration>(&api_conf))

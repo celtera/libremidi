@@ -3,7 +3,7 @@
 #include <libremidi/backends/emscripten/helpers.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class midi_out_emscripten final
     : public midi1::out_api

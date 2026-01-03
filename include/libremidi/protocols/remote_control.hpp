@@ -12,7 +12,7 @@
 #include <functional>
 #include <span>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 static constexpr auto to_underlying(auto e)
 {

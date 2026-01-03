@@ -15,7 +15,7 @@ typedef struct snd_seq_addr
 }
 #endif
 
-namespace libremidi::alsa_seq
+NAMESPACE_LIBREMIDI::alsa_seq
 {
 
 // Possible parameters:

@@ -11,7 +11,7 @@
 #include <atomic>
 #include <thread>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 struct pipewire_helpers
 {

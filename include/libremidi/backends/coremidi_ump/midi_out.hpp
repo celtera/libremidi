@@ -5,7 +5,7 @@
 #include <libremidi/detail/midi_out.hpp>
 #include <libremidi/detail/ump_stream.hpp>
 
-namespace libremidi::coremidi_ump
+NAMESPACE_LIBREMIDI::coremidi_ump
 {
 class midi_out_impl final
     : public midi2::out_api

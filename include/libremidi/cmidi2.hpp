@@ -343,7 +343,7 @@ enum cmidi2_ump_chord_name_chord_type
   CMIDI2_UMP_CHORD_TYPE_7_SUSPENDED_4TH = 27,
 };
 
-static inline uint8_t cmidi2_ump_get_num_bytes(uint32_t data)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_num_bytes(uint32_t data)
 {
   switch (((data & 0xF0000000) >> 28) & 0xF)
   {
@@ -410,7 +410,7 @@ enum cmidi2_ump_function_block_discovery_flags
 
 // 7.1 UMP Stream Messages
 
-static inline cmidi2_ump128_t
+LIBREMIDI_STATIC cmidi2_ump128_t
 cmidi2_ump_endpoint_discovery(cmidi2_ump_version_t version, uint8_t filterBitmap)
 {
   cmidi2_ump128_t ret
@@ -421,7 +421,7 @@ cmidi2_ump_endpoint_discovery(cmidi2_ump_version_t version, uint8_t filterBitmap
   return ret;
 }
 
-static inline cmidi2_ump128_t cmidi2_ump_endpoint_info_notification(
+LIBREMIDI_STATIC cmidi2_ump128_t cmidi2_ump_endpoint_info_notification(
     cmidi2_ump_version_t version, bool isStaticFunctionBlock, uint8_t numFunctionBlocks,
     bool midi2Capable, bool midi1Capable, bool rxJR, bool txJR)
 {
@@ -435,7 +435,7 @@ static inline cmidi2_ump128_t cmidi2_ump_endpoint_info_notification(
   return ret;
 }
 
-static inline cmidi2_ump128_t cmidi2_ump_device_identity_notification(
+LIBREMIDI_STATIC cmidi2_ump128_t cmidi2_ump_device_identity_notification(
     uint32_t manufacturerIdIn7bitArray, uint8_t deviceFamilyLSB, uint8_t deviceFamilyMSB,
     uint8_t deviceFamilyModelLSB, uint8_t deviceFamilyModelMSB,
     uint32_t softwareRevisionIn7bitArray)
@@ -451,7 +451,7 @@ static inline cmidi2_ump128_t cmidi2_ump_device_identity_notification(
   return ret;
 }
 
-static inline cmidi2_ump128_t
+LIBREMIDI_STATIC cmidi2_ump128_t
 cmidi2_ump_internal_name_notification(uint8_t statusCode, const char name[14])
 {
   cmidi2_ump128_t ret
@@ -463,17 +463,17 @@ cmidi2_ump_internal_name_notification(uint8_t statusCode, const char name[14])
   return ret;
 }
 
-static inline cmidi2_ump128_t cmidi2_ump_endpoint_name_notification(const char name[14])
+LIBREMIDI_STATIC cmidi2_ump128_t cmidi2_ump_endpoint_name_notification(const char name[14])
 {
   return cmidi2_ump_internal_name_notification(CMIDI2_UMP_STREAM_STATUS_ENDPOINT_NAME, name);
 }
 
-static inline cmidi2_ump128_t cmidi2_ump_product_instance_id_notification(const char id[14])
+LIBREMIDI_STATIC cmidi2_ump128_t cmidi2_ump_product_instance_id_notification(const char id[14])
 {
   return cmidi2_ump_internal_name_notification(CMIDI2_UMP_STREAM_STATUS_PRODUCT_INSTANCE_ID, id);
 }
 
-static inline cmidi2_ump128_t
+LIBREMIDI_STATIC cmidi2_ump128_t
 cmidi2_ump_stream_configuration_request(uint8_t protocol, bool rxJR, bool txJR)
 {
   cmidi2_ump128_t ret
@@ -484,7 +484,7 @@ cmidi2_ump_stream_configuration_request(uint8_t protocol, bool rxJR, bool txJR)
   return ret;
 }
 
-static inline cmidi2_ump128_t
+LIBREMIDI_STATIC cmidi2_ump128_t
 cmidi2_ump_stream_configuration_notification(uint8_t protocol, bool rxJR, bool txJR)
 {
   cmidi2_ump128_t ret
@@ -495,7 +495,7 @@ cmidi2_ump_stream_configuration_notification(uint8_t protocol, bool rxJR, bool t
   return ret;
 }
 
-static inline cmidi2_ump128_t
+LIBREMIDI_STATIC cmidi2_ump128_t
 cmidi2_ump_function_block_discovery(uint8_t numFunctionBlocks, uint8_t filter)
 {
   cmidi2_ump128_t ret
@@ -506,7 +506,7 @@ cmidi2_ump_function_block_discovery(uint8_t numFunctionBlocks, uint8_t filter)
   return ret;
 }
 
-static inline cmidi2_ump128_t cmidi2_ump_function_block_info_notification(
+LIBREMIDI_STATIC cmidi2_ump128_t cmidi2_ump_function_block_info_notification(
     bool active, uint8_t numFunctionBlocks, uint8_t uiHint, uint8_t midi1, uint8_t direction,
     uint8_t firstGroup, uint8_t numSpannedGroup, uint8_t midiCIVersionFormat,
     uint8_t maxNumSysEx8Streams)
@@ -521,12 +521,12 @@ static inline cmidi2_ump128_t cmidi2_ump_function_block_info_notification(
   return ret;
 }
 
-static inline cmidi2_ump128_t cmidi2_ump_function_block_name_notification(const char name[14])
+LIBREMIDI_STATIC cmidi2_ump128_t cmidi2_ump_function_block_name_notification(const char name[14])
 {
   return cmidi2_ump_internal_name_notification(CMIDI2_UMP_STREAM_STATUS_FUNCTION_BLOCK_NAME, name);
 }
 
-static inline cmidi2_ump128_t cmidi2_ump_start_of_clip()
+LIBREMIDI_STATIC cmidi2_ump128_t cmidi2_ump_start_of_clip()
 {
   cmidi2_ump128_t ret
       = {(uint32_t)(CMIDI2_MESSAGE_TYPE_UMP_STREAM << 28)
@@ -535,7 +535,7 @@ static inline cmidi2_ump128_t cmidi2_ump_start_of_clip()
   return ret;
 }
 
-static inline cmidi2_ump128_t cmidi2_ump_end_of_clip()
+LIBREMIDI_STATIC cmidi2_ump128_t cmidi2_ump_end_of_clip()
 {
   cmidi2_ump128_t ret
       = {(uint32_t)(CMIDI2_MESSAGE_TYPE_UMP_STREAM << 28)
@@ -545,46 +545,46 @@ static inline cmidi2_ump128_t cmidi2_ump_end_of_clip()
 }
 
 // 7.2 Utility Messages
-static inline uint32_t cmidi2_ump_noop()
+LIBREMIDI_STATIC uint32_t cmidi2_ump_noop()
 {
   return 0;
 }
 
-static inline uint32_t cmidi2_ump_jr_clock_direct(uint16_t senderClockTime)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_jr_clock_direct(uint16_t senderClockTime)
 {
   return (CMIDI2_UTILITY_STATUS_JR_CLOCK << 16) + senderClockTime;
 }
 
-static inline uint32_t cmidi2_ump_jr_clock(double senderClockTime)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_jr_clock(double senderClockTime)
 {
   uint16_t value = (uint16_t)(senderClockTime * JR_TIMESTAMP_TICKS_PER_SECOND);
   return (CMIDI2_UTILITY_STATUS_JR_CLOCK << 16) + value;
 }
 
-static inline uint32_t cmidi2_ump_jr_timestamp_direct(uint16_t senderClockTimestamp)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_jr_timestamp_direct(uint16_t senderClockTimestamp)
 {
   return (CMIDI2_UTILITY_STATUS_JR_TIMESTAMP << 16) + senderClockTimestamp;
 }
 
-static inline uint32_t cmidi2_ump_jr_timestamp(double senderClockTimestamp)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_jr_timestamp(double senderClockTimestamp)
 {
   uint16_t value = (uint16_t)(senderClockTimestamp * JR_TIMESTAMP_TICKS_PER_SECOND);
   return (CMIDI2_UTILITY_STATUS_JR_TIMESTAMP << 16) + value;
 }
 
-static inline uint32_t cmidi2_ump_dctpq(uint32_t dctpq)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_dctpq(uint32_t dctpq)
 {
   return (CMIDI2_UTILITY_STATUS_DCTPQ << 16) + dctpq;
 }
 
-static inline uint32_t cmidi2_ump_dcs(uint32_t ticks)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_dcs(uint32_t ticks)
 {
   // Note that unlike JR timestamp delta clockstamps accepts ticks up to 20 bits.
   return (CMIDI2_UTILITY_STATUS_DELTA_CLOCKSTAMP << 16) + (ticks & 0xFFFFF);
 }
 
 // 7.6 System Common and System Real Time Messages
-static inline int32_t
+LIBREMIDI_STATIC int32_t
 cmidi2_ump_system_message(uint8_t group, uint8_t status, uint8_t midi1Byte2, uint8_t midi1Byte3)
 {
   return (CMIDI2_MESSAGE_TYPE_SYSTEM << 28) + ((group & 0xF) << 24) + (status << 16)
@@ -592,66 +592,66 @@ cmidi2_ump_system_message(uint8_t group, uint8_t status, uint8_t midi1Byte2, uin
 }
 
 // 7.3 MIDI 1.0 Channel Voice Messages
-static inline int32_t cmidi2_ump_midi1_message(
+LIBREMIDI_STATIC int32_t cmidi2_ump_midi1_message(
     uint8_t group, uint8_t code, uint8_t channel, uint8_t byte3, uint8_t byte4)
 {
   return (CMIDI2_MESSAGE_TYPE_MIDI_1_CHANNEL << 28) + ((group & 0xF) << 24)
          + (((code & 0xF0) + (channel & 0xF)) << 16) + ((byte3 & 0x7F) << 8) + (byte4 & 0x7F);
 }
 
-static inline int32_t
+LIBREMIDI_STATIC int32_t
 cmidi2_ump_midi1_note_off(uint8_t group, uint8_t channel, uint8_t note, uint8_t velocity)
 {
   return cmidi2_ump_midi1_message(
       group, CMIDI2_STATUS_NOTE_OFF, channel, note & 0x7F, velocity & 0x7F);
 }
 
-static inline int32_t
+LIBREMIDI_STATIC int32_t
 cmidi2_ump_midi1_note_on(uint8_t group, uint8_t channel, uint8_t note, uint8_t velocity)
 {
   return cmidi2_ump_midi1_message(
       group, CMIDI2_STATUS_NOTE_ON, channel, note & 0x7F, velocity & 0x7F);
 }
 
-static inline int32_t
+LIBREMIDI_STATIC int32_t
 cmidi2_ump_midi1_paf(uint8_t group, uint8_t channel, uint8_t note, uint8_t data)
 {
   return cmidi2_ump_midi1_message(group, CMIDI2_STATUS_PAF, channel, note & 0x7F, data & 0x7F);
 }
 
-static inline int32_t
+LIBREMIDI_STATIC int32_t
 cmidi2_ump_midi1_cc(uint8_t group, uint8_t channel, uint8_t index, uint8_t data)
 {
   return cmidi2_ump_midi1_message(group, CMIDI2_STATUS_CC, channel, index & 0x7F, data & 0x7F);
 }
 
-static inline int32_t cmidi2_ump_midi1_program(uint8_t group, uint8_t channel, uint8_t program)
+LIBREMIDI_STATIC int32_t cmidi2_ump_midi1_program(uint8_t group, uint8_t channel, uint8_t program)
 {
   return cmidi2_ump_midi1_message(
       group, CMIDI2_STATUS_PROGRAM, channel, program & 0x7F, MIDI_2_0_RESERVED);
 }
 
-static inline int32_t cmidi2_ump_midi1_caf(uint8_t group, uint8_t channel, uint8_t data)
+LIBREMIDI_STATIC int32_t cmidi2_ump_midi1_caf(uint8_t group, uint8_t channel, uint8_t data)
 {
   return cmidi2_ump_midi1_message(
       group, CMIDI2_STATUS_CAF, channel, data & 0x7F, MIDI_2_0_RESERVED);
 }
 
-static inline int32_t
+LIBREMIDI_STATIC int32_t
 cmidi2_ump_midi1_pitch_bend_direct(uint8_t group, uint8_t channel, uint16_t data)
 {
   return cmidi2_ump_midi1_message(
       group, CMIDI2_STATUS_PITCH_BEND, channel, data & 0x7F, (data >> 7) & 0x7F);
 }
 
-static inline int32_t
+LIBREMIDI_STATIC int32_t
 cmidi2_ump_midi1_pitch_bend_split(uint8_t group, uint8_t channel, uint8_t dataLSB, uint8_t dataMSB)
 {
   return cmidi2_ump_midi1_message(
       group, CMIDI2_STATUS_PITCH_BEND, channel, dataLSB & 0x7F, dataMSB & 0x7F);
 }
 
-static inline int32_t cmidi2_ump_midi1_pitch_bend(uint8_t group, uint8_t channel, int16_t data)
+LIBREMIDI_STATIC int32_t cmidi2_ump_midi1_pitch_bend(uint8_t group, uint8_t channel, int16_t data)
 {
   data += 8192;
   return cmidi2_ump_midi1_message(
@@ -659,7 +659,7 @@ static inline int32_t cmidi2_ump_midi1_pitch_bend(uint8_t group, uint8_t channel
 }
 
 // 7.4 MIDI 2.0 Channel Voice Messages
-static inline int64_t cmidi2_ump_midi2_channel_message_8_8_16_16(
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_channel_message_8_8_16_16(
     uint8_t group, uint8_t code, uint8_t channel, uint8_t byte3, uint8_t byte4, uint16_t short1,
     uint16_t short2)
 {
@@ -669,7 +669,7 @@ static inline int64_t cmidi2_ump_midi2_channel_message_8_8_16_16(
          + ((uint64_t)short1 << 16) + short2;
 }
 
-static inline int64_t cmidi2_ump_midi2_channel_message_8_8_32(
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_channel_message_8_8_32(
     uint8_t group, uint8_t code, uint8_t channel, uint8_t byte3, uint8_t byte4, uint32_t rest)
 {
   return (((uint64_t)(CMIDI2_MESSAGE_TYPE_MIDI_2_CHANNEL << 28) + ((group & 0xF) << 24)
@@ -678,7 +678,7 @@ static inline int64_t cmidi2_ump_midi2_channel_message_8_8_32(
          + rest;
 }
 
-static inline uint16_t cmidi2_ump_pitch_7_9(double semitone)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_pitch_7_9(double semitone)
 {
   double actual = semitone < 0.0 ? 0.0 : semitone >= 128.0 ? 128.0 : semitone;
   uint16_t dec = (uint16_t)actual;
@@ -686,7 +686,7 @@ static inline uint16_t cmidi2_ump_pitch_7_9(double semitone)
   return (dec << 9) + (int)(microtone * 512.0);
 }
 
-static inline uint16_t cmidi2_ump_pitch_7_9_split(uint8_t semitone, double microtone)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_pitch_7_9_split(uint8_t semitone, double microtone)
 {
   uint16_t ret = (uint16_t)(semitone & 0x7F) << 9;
   double actual = microtone < 0.0 ? 0.0 : microtone > 1.0 ? 1.0 : microtone;
@@ -694,7 +694,7 @@ static inline uint16_t cmidi2_ump_pitch_7_9_split(uint8_t semitone, double micro
   return ret;
 }
 
-static inline int64_t cmidi2_ump_midi2_note_off(
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_note_off(
     uint8_t group, uint8_t channel, uint8_t note, uint8_t attributeType, uint16_t velocity,
     uint16_t attributeData)
 {
@@ -702,7 +702,7 @@ static inline int64_t cmidi2_ump_midi2_note_off(
       group, CMIDI2_STATUS_NOTE_OFF, channel, note & 0x7F, attributeType, velocity, attributeData);
 }
 
-static inline int64_t cmidi2_ump_midi2_note_on(
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_note_on(
     uint8_t group, uint8_t channel, uint8_t note, uint8_t attributeType, uint16_t velocity,
     uint16_t attributeData)
 {
@@ -710,56 +710,56 @@ static inline int64_t cmidi2_ump_midi2_note_on(
       group, CMIDI2_STATUS_NOTE_ON, channel, note & 0x7F, attributeType, velocity, attributeData);
 }
 
-static inline int64_t
+LIBREMIDI_STATIC int64_t
 cmidi2_ump_midi2_paf(uint8_t group, uint8_t channel, uint8_t note, uint32_t data)
 {
   return cmidi2_ump_midi2_channel_message_8_8_32(
       group, CMIDI2_STATUS_PAF, channel, note & 0x7F, MIDI_2_0_RESERVED, data);
 }
 
-static inline int64_t cmidi2_ump_midi2_per_note_rcc(
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_per_note_rcc(
     uint8_t group, uint8_t channel, uint8_t note, uint8_t index, uint32_t data)
 {
   return cmidi2_ump_midi2_channel_message_8_8_32(
       group, CMIDI2_STATUS_PER_NOTE_RCC, channel, note & 0x7F, index, data);
 }
 
-static inline int64_t cmidi2_ump_midi2_per_note_acc(
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_per_note_acc(
     uint8_t group, uint8_t channel, uint8_t note, uint8_t index, uint32_t data)
 {
   return cmidi2_ump_midi2_channel_message_8_8_32(
       group, CMIDI2_STATUS_PER_NOTE_ACC, channel, note & 0x7F, index, data);
 }
 
-static inline int64_t cmidi2_ump_midi2_per_note_management(
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_per_note_management(
     uint8_t group, uint8_t channel, uint8_t note, uint8_t optionFlags)
 {
   return cmidi2_ump_midi2_channel_message_8_8_32(
       group, CMIDI2_STATUS_PER_NOTE_MANAGEMENT, channel, note & 0x7F, optionFlags & 3, 0);
 }
 
-static inline int64_t
+LIBREMIDI_STATIC int64_t
 cmidi2_ump_midi2_cc(uint8_t group, uint8_t channel, uint8_t index, uint32_t data)
 {
   return cmidi2_ump_midi2_channel_message_8_8_32(
       group, CMIDI2_STATUS_CC, channel, index & 0x7F, MIDI_2_0_RESERVED, data);
 }
 
-static inline int64_t cmidi2_ump_midi2_rpn(
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_rpn(
     uint8_t group, uint8_t channel, uint8_t bankAkaMSB, uint8_t indexAkaLSB, uint32_t dataAkaDTE)
 {
   return cmidi2_ump_midi2_channel_message_8_8_32(
       group, CMIDI2_STATUS_RPN, channel, bankAkaMSB & 0x7F, indexAkaLSB & 0x7F, dataAkaDTE);
 }
 
-static inline int64_t cmidi2_ump_midi2_nrpn(
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_nrpn(
     uint8_t group, uint8_t channel, uint8_t bankAkaMSB, uint8_t indexAkaLSB, uint32_t dataAkaDTE)
 {
   return cmidi2_ump_midi2_channel_message_8_8_32(
       group, CMIDI2_STATUS_NRPN, channel, bankAkaMSB & 0x7F, indexAkaLSB & 0x7F, dataAkaDTE);
 }
 
-static inline int64_t cmidi2_ump_midi2_relative_rpn(
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_relative_rpn(
     uint8_t group, uint8_t channel, uint8_t bankAkaMSB, uint8_t indexAkaLSB, uint32_t dataAkaDTE)
 {
   return cmidi2_ump_midi2_channel_message_8_8_32(
@@ -767,7 +767,7 @@ static inline int64_t cmidi2_ump_midi2_relative_rpn(
       dataAkaDTE);
 }
 
-static inline int64_t cmidi2_ump_midi2_relative_nrpn(
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_relative_nrpn(
     uint8_t group, uint8_t channel, uint8_t bankAkaMSB, uint8_t indexAkaLSB, uint32_t dataAkaDTE)
 {
   return cmidi2_ump_midi2_channel_message_8_8_32(
@@ -775,7 +775,7 @@ static inline int64_t cmidi2_ump_midi2_relative_nrpn(
       dataAkaDTE);
 }
 
-static inline int64_t cmidi2_ump_midi2_program(
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_program(
     uint8_t group, uint8_t channel, uint8_t optionFlags, uint8_t program, uint8_t bankMSB,
     uint8_t bankLSB)
 {
@@ -784,13 +784,13 @@ static inline int64_t cmidi2_ump_midi2_program(
       ((program & 0x7F) << 24) + (bankMSB << 8) + bankLSB);
 }
 
-static inline int64_t cmidi2_ump_midi2_caf(uint8_t group, uint8_t channel, uint32_t data)
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_caf(uint8_t group, uint8_t channel, uint32_t data)
 {
   return cmidi2_ump_midi2_channel_message_8_8_32(
       group, CMIDI2_STATUS_CAF, channel, MIDI_2_0_RESERVED, MIDI_2_0_RESERVED, data);
 }
 
-static inline int64_t
+LIBREMIDI_STATIC int64_t
 cmidi2_ump_midi2_pitch_bend_direct(uint8_t group, uint8_t channel, uint32_t unsignedData)
 {
   return cmidi2_ump_midi2_channel_message_8_8_32(
@@ -798,19 +798,19 @@ cmidi2_ump_midi2_pitch_bend_direct(uint8_t group, uint8_t channel, uint32_t unsi
       unsignedData);
 }
 
-static inline int64_t cmidi2_ump_midi2_pitch_bend(uint8_t group, uint8_t channel, int32_t data)
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_pitch_bend(uint8_t group, uint8_t channel, int32_t data)
 {
   return cmidi2_ump_midi2_pitch_bend_direct(group, channel, 0x80000000 + data);
 }
 
-static inline int64_t cmidi2_ump_midi2_per_note_pitch_bend_direct(
+LIBREMIDI_STATIC int64_t cmidi2_ump_midi2_per_note_pitch_bend_direct(
     uint8_t group, uint8_t channel, uint8_t note, uint32_t data)
 {
   return cmidi2_ump_midi2_channel_message_8_8_32(
       group, CMIDI2_STATUS_PER_NOTE_PITCH_BEND, channel, note & 0x7F, MIDI_2_0_RESERVED, data);
 }
 
-static inline int64_t
+LIBREMIDI_STATIC int64_t
 cmidi2_ump_midi2_per_note_pitch_bend(uint8_t group, uint8_t channel, uint8_t note, uint32_t data)
 {
   return cmidi2_ump_midi2_per_note_pitch_bend_direct(group, channel, note, 0x80000000 + data);
@@ -818,22 +818,22 @@ cmidi2_ump_midi2_per_note_pitch_bend(uint8_t group, uint8_t channel, uint8_t not
 
 // Common utility functions for sysex support
 
-static inline uint8_t cmidi2_ump_get_byte_from_uint32(uint32_t src, uint8_t index)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_byte_from_uint32(uint32_t src, uint8_t index)
 {
   return (uint8_t)(src >> ((7 - index) * 8) & 0xFF);
 }
 
-static inline uint8_t cmidi2_ump_get_byte_from_uint64(uint64_t src, uint8_t index)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_byte_from_uint64(uint64_t src, uint8_t index)
 {
   return (uint8_t)(src >> ((7 - index) * 8) & 0xFF);
 }
 
-static inline size_t cmidi2_ump_sysex_get_num_packets(size_t numBytes, uint8_t radix)
+LIBREMIDI_STATIC size_t cmidi2_ump_sysex_get_num_packets(size_t numBytes, uint8_t radix)
 {
   return numBytes <= radix ? 1 : (numBytes / radix + (numBytes % radix ? 1 : 0));
 }
 
-static inline uint32_t cmidi2_ump_read_uint32_bytes_le(const void* sequence)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_read_uint32_bytes_le(const void* sequence)
 {
   const uint8_t* bytes = (const uint8_t*)sequence;
   uint32_t ret = 0;
@@ -842,7 +842,7 @@ static inline uint32_t cmidi2_ump_read_uint32_bytes_le(const void* sequence)
   return ret;
 }
 
-static inline uint32_t cmidi2_ump_read_uint32_bytes_be(const void* sequence)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_read_uint32_bytes_be(const void* sequence)
 {
   const uint8_t* bytes = (const uint8_t*)sequence;
   uint32_t ret = 0;
@@ -851,37 +851,37 @@ static inline uint32_t cmidi2_ump_read_uint32_bytes_be(const void* sequence)
   return ret;
 }
 
-static inline bool cmidi2_util_is_platform_little_endian()
+LIBREMIDI_STATIC bool cmidi2_util_is_platform_little_endian()
 {
   int i = 1;
   return *(char*)&i;
 }
 
-static inline uint32_t cmidi2_ump_read_uint32_bytes(const void* sequence)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_read_uint32_bytes(const void* sequence)
 {
   return cmidi2_util_is_platform_little_endian() ? cmidi2_ump_read_uint32_bytes_le(sequence)
                                                  : cmidi2_ump_read_uint32_bytes_be(sequence);
 }
 
-static inline uint64_t cmidi2_ump_read_uint64_bytes_le(const void* sequence)
+LIBREMIDI_STATIC uint64_t cmidi2_ump_read_uint64_bytes_le(const void* sequence)
 {
   return ((uint64_t)cmidi2_ump_read_uint32_bytes_le(sequence) << 32)
          + cmidi2_ump_read_uint32_bytes_le((const uint8_t*)sequence + 4);
 }
 
-static inline uint64_t cmidi2_ump_read_uint64_bytes_be(const void* sequence)
+LIBREMIDI_STATIC uint64_t cmidi2_ump_read_uint64_bytes_be(const void* sequence)
 {
   return ((uint64_t)cmidi2_ump_read_uint32_bytes_be(sequence) << 32)
          + cmidi2_ump_read_uint32_bytes_be((const uint8_t*)sequence + 4);
 }
 
-static inline uint64_t cmidi2_ump_read_uint64_bytes(const void* sequence)
+LIBREMIDI_STATIC uint64_t cmidi2_ump_read_uint64_bytes(const void* sequence)
 {
   return cmidi2_util_is_platform_little_endian() ? cmidi2_ump_read_uint64_bytes_le(sequence)
                                                  : cmidi2_ump_read_uint64_bytes_be(sequence);
 }
 
-static inline void cmidi2_ump_sysex_get_packet_of(
+LIBREMIDI_STATIC void cmidi2_ump_sysex_get_packet_of(
     uint64_t* result1, uint64_t* result2, uint8_t group, size_t numBytes, const void* srcData,
     int32_t index, enum cmidi2_message_type messageType, int radix, bool hasStreamId,
     uint8_t streamId)
@@ -933,7 +933,7 @@ static inline void cmidi2_ump_sysex_get_packet_of(
 }
 
 // 7.7 System Exclusive 7-Bit Messages
-static inline uint64_t cmidi2_ump_sysex7_direct(
+LIBREMIDI_STATIC uint64_t cmidi2_ump_sysex7_direct(
     uint8_t group, uint8_t status, uint8_t numBytes, uint8_t data1, uint8_t data2, uint8_t data3,
     uint8_t data4, uint8_t data5, uint8_t data6)
 {
@@ -944,7 +944,7 @@ static inline uint64_t cmidi2_ump_sysex7_direct(
          + (data5 << 8) + data6;
 }
 
-static inline uint32_t cmidi2_ump_sysex7_get_sysex_length(const void* srcData)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_sysex7_get_sysex_length(const void* srcData)
 {
   int i = 0;
   const uint8_t* csrc = (const uint8_t*)srcData;
@@ -954,12 +954,12 @@ static inline uint32_t cmidi2_ump_sysex7_get_sysex_length(const void* srcData)
   return i - (csrc[0] == 0xF0 ? 1 : 0);
 }
 
-static inline size_t cmidi2_ump_sysex7_get_num_packets(size_t numSysex7Bytes)
+LIBREMIDI_STATIC size_t cmidi2_ump_sysex7_get_num_packets(size_t numSysex7Bytes)
 {
   return cmidi2_ump_sysex_get_num_packets(numSysex7Bytes, 6);
 }
 
-static inline uint64_t
+LIBREMIDI_STATIC uint64_t
 cmidi2_ump_sysex7_get_packet_of(uint8_t group, size_t numBytes, const void* srcData, int32_t index)
 {
   uint64_t result;
@@ -977,7 +977,7 @@ typedef void* (*cmidi2_ump_handler_u64)(uint64_t data, void* context);
 
 // Processes sysex7 inputs where we do not always end at F7 and thus takes length as the argument.
 // This returns NULL for success, or anything else that `sendUMP` returns for failure.
-static inline void* cmidi2_ump_sysex7_process_n(
+LIBREMIDI_STATIC void* cmidi2_ump_sysex7_process_n(
     uint8_t group, void* sysex, uint32_t length, cmidi2_ump_handler_u64 sendUMP, void* context)
 {
   int32_t numPackets = cmidi2_ump_sysex7_get_num_packets(length);
@@ -992,7 +992,7 @@ static inline void* cmidi2_ump_sysex7_process_n(
 }
 
 // This returns NULL for success, or anything else that `sendUMP` returns for failure.
-static inline void* cmidi2_ump_sysex7_process(
+LIBREMIDI_STATIC void* cmidi2_ump_sysex7_process(
     uint8_t group, void* sysex, cmidi2_ump_handler_u64 sendUMP, void* context)
 {
   uint32_t length = cmidi2_ump_sysex7_get_sysex_length(sysex);
@@ -1001,12 +1001,12 @@ static inline void* cmidi2_ump_sysex7_process(
 
 // 7.8 System Exclusive 8-Bit Messages
 
-static inline size_t cmidi2_ump_sysex8_get_num_packets(size_t numBytes)
+LIBREMIDI_STATIC size_t cmidi2_ump_sysex8_get_num_packets(size_t numBytes)
 {
   return cmidi2_ump_sysex_get_num_packets(numBytes, 13);
 }
 
-static inline void cmidi2_ump_sysex8_get_packet_of(
+LIBREMIDI_STATIC void cmidi2_ump_sysex8_get_packet_of(
     uint8_t group, uint8_t streamId, size_t numBytes, const void* srcData, size_t index,
     uint64_t* result1, uint64_t* result2)
 {
@@ -1022,7 +1022,7 @@ typedef void* (*cmidi2_ump_handler_u128)(
     uint64_t data1, uint64_t data2, size_t index, void* context);
 
 // This returns NULL for success, or anything else that `sendUMP` returns for failure.
-static inline void* cmidi2_ump_sysex8_process(
+LIBREMIDI_STATIC void* cmidi2_ump_sysex8_process(
     uint8_t group, void* sysex, uint32_t length, uint8_t streamId, cmidi2_ump_handler_u128 sendUMP,
     void* context)
 {
@@ -1040,21 +1040,21 @@ static inline void* cmidi2_ump_sysex8_process(
 
 // 7.9 Mixed Data Set Message
 
-static inline uint16_t cmidi2_ump_mds_get_num_chunks(uint32_t numTotalBytesInMDS)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_mds_get_num_chunks(uint32_t numTotalBytesInMDS)
 {
   uint32_t radix = 14 * 0x10000;
   return numTotalBytesInMDS / radix + (numTotalBytesInMDS % radix ? 1 : 0);
 }
 
 // Returns -1 if input is out of range
-static inline int32_t cmidi2_ump_mds_get_num_payloads(uint32_t numTotalBytesinChunk)
+LIBREMIDI_STATIC int32_t cmidi2_ump_mds_get_num_payloads(uint32_t numTotalBytesinChunk)
 {
   if (numTotalBytesinChunk > 14 * 65535)
     return -1;
   return numTotalBytesinChunk / 14 + (numTotalBytesinChunk % 14 ? 1 : 0);
 }
 
-static inline void cmidi2_ump_mds_get_header(
+LIBREMIDI_STATIC void cmidi2_ump_mds_get_header(
     uint8_t group, uint8_t mdsId, uint16_t numBytesInChunk, uint16_t numChunks,
     uint16_t chunkIndex, uint16_t manufacturerId, uint16_t deviceId, uint16_t subId,
     uint16_t subId2, uint64_t* result1, uint64_t* result2)
@@ -1078,7 +1078,7 @@ static inline void cmidi2_ump_mds_get_header(
 }
 
 // srcData points to exact start of the source data.
-static inline void cmidi2_ump_mds_get_payload_of(
+LIBREMIDI_STATIC void cmidi2_ump_mds_get_payload_of(
     uint8_t group, uint8_t mdsId, uint16_t numBytes, const void* srcData, uint64_t* result1,
     uint64_t* result2)
 {
@@ -1106,7 +1106,7 @@ typedef void* (*cmidi2_mds_handler)(
     uint64_t data1, uint64_t data2, size_t chunkId, size_t payloadId, void* context);
 
 // This returns NULL for success, or anything else that `sendUMP` returns for failure.
-static inline void* cmidi2_ump_mds_process(
+LIBREMIDI_STATIC void* cmidi2_ump_mds_process(
     uint8_t group, uint8_t mdsId, void* data, uint32_t length, cmidi2_mds_handler sendUMP,
     void* context)
 {
@@ -1132,12 +1132,12 @@ static inline void* cmidi2_ump_mds_process(
 
 // 7.5 Flex Data Message
 
-static inline uint16_t cmidi2_ump_flex_data_get_num_packets(uint32_t numTotalBytesInFlexData)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_flex_data_get_num_packets(uint32_t numTotalBytesInFlexData)
 {
   return numTotalBytesInFlexData / 12 + (numTotalBytesInFlexData % 12 ? 1 : 0);
 }
 
-static inline void cmidi2_ump_flex_data_complete_packet(
+LIBREMIDI_STATIC void cmidi2_ump_flex_data_complete_packet(
     uint8_t group, uint8_t addressing, uint8_t channel, uint8_t statusBank, uint8_t statusCode,
     uint32_t data1, uint32_t data2, uint32_t data3, uint64_t* result1, uint64_t* result2)
 {
@@ -1152,7 +1152,7 @@ static inline void cmidi2_ump_flex_data_complete_packet(
   *result2 = ((uint64_t)data2 << 32) + data3;
 }
 
-static inline void cmidi2_ump_flex_data_get_packet_of(
+LIBREMIDI_STATIC void cmidi2_ump_flex_data_get_packet_of(
     uint8_t group, uint8_t addressing, uint8_t channel, uint8_t statusBank, uint8_t statusCode,
     uint16_t numBytes, const void* srcData, int32_t currentPacket, uint64_t* result1,
     uint64_t* result2)
@@ -1207,7 +1207,7 @@ typedef void* (*cmidi2_flex_data_handler)(uint64_t data1, uint64_t data2, void* 
 
 // This returns NULL for success, or anything else that `sendUMP` returns for failure.
 // `text` is usually a null-terminated text string, but it may contain `\0` as Melisma in lyricText. Hence we still need `length`.
-static inline void* cmidi2_ump_flex_data_process(
+LIBREMIDI_STATIC void* cmidi2_ump_flex_data_process(
     uint8_t group, uint8_t addressing, uint8_t channel, uint8_t statusBank, uint8_t statusCode,
     const char* text, uint32_t length, cmidi2_flex_data_handler sendUMP, void* context)
 {
@@ -1226,7 +1226,7 @@ static inline void* cmidi2_ump_flex_data_process(
 
 // individual flex data message generators
 
-static inline void cmidi2_ump_flex_data_set_tempo_direct(
+LIBREMIDI_STATIC void cmidi2_ump_flex_data_set_tempo_direct(
     uint8_t group, uint8_t channel, uint32_t tempoIn10NanosecondsPerQN, uint64_t* result1,
     uint64_t* result2)
 {
@@ -1235,7 +1235,7 @@ static inline void cmidi2_ump_flex_data_set_tempo_direct(
       CMIDI2_FLEX_DATA_STATUS_SET_TEMPO, tempoIn10NanosecondsPerQN, 0, 0, result1, result2);
 }
 
-static inline void cmidi2_ump_flex_data_set_time_signature(
+LIBREMIDI_STATIC void cmidi2_ump_flex_data_set_time_signature(
     uint8_t group, uint8_t channel, uint8_t numerator, uint8_t denominator,
     uint8_t numberOf32thNotes, uint64_t* result1, uint64_t* result2)
 {
@@ -1245,7 +1245,7 @@ static inline void cmidi2_ump_flex_data_set_time_signature(
       (numerator << 24) + (denominator << 16) + (numberOf32thNotes << 8), 0, 0, result1, result2);
 }
 
-static inline void cmidi2_ump_flex_data_set_metronome(
+LIBREMIDI_STATIC void cmidi2_ump_flex_data_set_metronome(
     uint8_t group, uint8_t channel, uint8_t clocksPerPrimaryClick, uint8_t barAccent1,
     uint8_t barAccent2, uint8_t barAccent3, uint8_t subDivisionClicks1, uint8_t subDivisionClicks2,
     uint64_t* result1, uint64_t* result2)
@@ -1257,7 +1257,7 @@ static inline void cmidi2_ump_flex_data_set_metronome(
       (subDivisionClicks1 << 24) + (subDivisionClicks2 << 16), 0, result1, result2);
 }
 
-static inline void cmidi2_ump_flex_data_set_key_signature(
+LIBREMIDI_STATIC void cmidi2_ump_flex_data_set_key_signature(
     uint8_t group, uint8_t addressing, uint8_t channel, uint8_t sharpsFlats, uint8_t tonicNote,
     uint64_t* result1, uint64_t* result2)
 {
@@ -1267,7 +1267,7 @@ static inline void cmidi2_ump_flex_data_set_key_signature(
       result1, result2);
 }
 
-static inline void cmidi2_ump_flex_data_set_chord_name(
+LIBREMIDI_STATIC void cmidi2_ump_flex_data_set_chord_name(
     uint8_t group, uint8_t addressing, uint8_t channel, uint8_t sharpsFlats, uint8_t chordTonic,
     uint8_t chordType, uint8_t alter1Type, uint8_t alter1Degree, uint8_t alter2Type,
     uint8_t alter2Degree, uint8_t alter3Type, uint8_t alter3Degree, uint8_t alter4Type,
@@ -1293,18 +1293,18 @@ static inline void cmidi2_ump_flex_data_set_chord_name(
 
 typedef uint32_t cmidi2_ump;
 
-static inline void cmidi2_ump_write32(cmidi2_ump* dst, uint32_t value)
+LIBREMIDI_STATIC void cmidi2_ump_write32(cmidi2_ump* dst, uint32_t value)
 {
   dst[0] = value;
 }
 
-static inline void cmidi2_ump_write64(cmidi2_ump* dst, uint64_t value)
+LIBREMIDI_STATIC void cmidi2_ump_write64(cmidi2_ump* dst, uint64_t value)
 {
   dst[0] = value >> 32;
   dst[1] = value & 0xFFFFFFFF;
 }
 
-static inline void cmidi2_ump_write128(cmidi2_ump* dst, uint64_t value1, uint64_t value2)
+LIBREMIDI_STATIC void cmidi2_ump_write128(cmidi2_ump* dst, uint64_t value1, uint64_t value2)
 {
   dst[0] = value1 >> 32;
   dst[1] = value1 & 0xFFFFFFFF;
@@ -1312,7 +1312,7 @@ static inline void cmidi2_ump_write128(cmidi2_ump* dst, uint64_t value1, uint64_
   dst[3] = value2 & 0xFFFFFFFF;
 }
 
-static inline uint8_t cmidi2_ump_get_byte_at(const cmidi2_ump* ump, uint8_t at)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_byte_at(const cmidi2_ump* ump, uint8_t at)
 {
   ump += at / 4;
   switch (at % 4)
@@ -1329,12 +1329,12 @@ static inline uint8_t cmidi2_ump_get_byte_at(const cmidi2_ump* ump, uint8_t at)
   return 0; // This is unexpected.
 }
 
-static inline uint8_t cmidi2_ump_get_message_type(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_message_type(const cmidi2_ump* ump)
 {
   return *ump >> 28;
 }
 
-static inline uint8_t cmidi2_ump_get_message_size_bytes(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_message_size_bytes(const cmidi2_ump* ump)
 {
   switch (cmidi2_ump_get_message_type(ump))
   {
@@ -1351,272 +1351,272 @@ static inline uint8_t cmidi2_ump_get_message_size_bytes(const cmidi2_ump* ump)
   return 0; // invalid
 }
 
-static inline uint8_t cmidi2_ump_get_group(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_group(const cmidi2_ump* ump)
 {
   return (*ump >> 24) & 0xF;
 }
 
-static inline uint8_t cmidi2_ump_get_status_byte(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_status_byte(const cmidi2_ump* ump)
 {
   return (*ump >> 16) & 0xFF;
 }
 
-static inline uint8_t cmidi2_ump_get_status_code(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_status_code(const cmidi2_ump* ump)
 {
   return (*ump >> 16) & 0xF0;
 }
 
-static inline uint8_t cmidi2_ump_get_channel(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_channel(const cmidi2_ump* ump)
 {
   return (*ump >> 16) & 0xF;
 }
 
-static inline uint32_t cmidi2_ump_get_32_to_64(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_get_32_to_64(const cmidi2_ump* ump)
 {
   return *(ump + 1);
 }
 
-static inline uint16_t cmidi2_ump_get_jr_clock_time(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_get_jr_clock_time(const cmidi2_ump* ump)
 {
   return (cmidi2_ump_get_byte_at(ump, 2) << 8) + cmidi2_ump_get_byte_at(ump, 3);
 }
-static inline uint16_t cmidi2_ump_get_jr_timestamp_timestamp(const cmidi2_ump* ump)
-{
-  return (cmidi2_ump_get_byte_at(ump, 2) << 8) + cmidi2_ump_get_byte_at(ump, 3);
-}
-
-static inline uint16_t cmidi2_ump_get_dctpq(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_get_jr_timestamp_timestamp(const cmidi2_ump* ump)
 {
   return (cmidi2_ump_get_byte_at(ump, 2) << 8) + cmidi2_ump_get_byte_at(ump, 3);
 }
 
-static inline uint16_t cmidi2_ump_get_dcs(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_get_dctpq(const cmidi2_ump* ump)
+{
+  return (cmidi2_ump_get_byte_at(ump, 2) << 8) + cmidi2_ump_get_byte_at(ump, 3);
+}
+
+LIBREMIDI_STATIC uint16_t cmidi2_ump_get_dcs(const cmidi2_ump* ump)
 {
   return ((cmidi2_ump_get_byte_at(ump, 1) & 0xF) << 16) + (cmidi2_ump_get_byte_at(ump, 2) << 8)
          + cmidi2_ump_get_byte_at(ump, 3);
 }
 
-static inline uint8_t cmidi2_ump_get_system_message_byte2(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_system_message_byte2(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
-static inline uint8_t cmidi2_ump_get_system_message_byte3(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_system_message_byte3(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 3);
 }
 
-static inline uint8_t cmidi2_ump_get_midi1_byte2(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi1_byte2(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
-static inline uint8_t cmidi2_ump_get_midi1_byte3(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi1_byte3(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 3);
 }
 
-static inline uint8_t cmidi2_ump_get_midi1_note_note(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi1_note_note(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
-static inline uint8_t cmidi2_ump_get_midi1_note_velocity(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi1_note_velocity(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 3);
 }
-static inline uint8_t cmidi2_ump_get_midi1_paf_note(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi1_paf_note(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
-static inline uint8_t cmidi2_ump_get_midi1_paf_data(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi1_paf_data(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 3);
 }
-static inline uint8_t cmidi2_ump_get_midi1_cc_index(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi1_cc_index(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
-static inline uint8_t cmidi2_ump_get_midi1_cc_data(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi1_cc_data(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 3);
 }
-static inline uint8_t cmidi2_ump_get_midi1_program_program(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi1_program_program(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
-static inline uint8_t cmidi2_ump_get_midi1_caf_data(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi1_caf_data(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
-static inline uint16_t cmidi2_ump_get_midi1_pitch_bend_data(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_get_midi1_pitch_bend_data(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2) + cmidi2_ump_get_byte_at(ump, 3) * 0x80;
 }
 
-static inline uint8_t cmidi2_ump_get_sysex7_num_bytes(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_sysex7_num_bytes(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_channel(ump); // same bits
 }
 
-static inline uint8_t cmidi2_ump_get_midi2_note_note(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_note_note(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
-static inline uint8_t cmidi2_ump_get_midi2_note_attribute_type(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_note_attribute_type(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 3);
 }
-static inline uint16_t cmidi2_ump_get_midi2_note_velocity(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_get_midi2_note_velocity(const cmidi2_ump* ump)
 {
   return (cmidi2_ump_get_byte_at(ump, 4) << 8) + (cmidi2_ump_get_byte_at(ump, 5));
 }
-static inline uint16_t cmidi2_ump_get_midi2_note_attribute_data(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_get_midi2_note_attribute_data(const cmidi2_ump* ump)
 {
   return (cmidi2_ump_get_byte_at(ump, 6) << 8) + (cmidi2_ump_get_byte_at(ump, 7));
 }
-static inline uint8_t cmidi2_ump_get_midi2_paf_note(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_paf_note(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
-static inline uint32_t cmidi2_ump_get_midi2_paf_data(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_get_midi2_paf_data(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_32_to_64(ump);
 }
-static inline uint8_t cmidi2_ump_get_midi2_pnrcc_note(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_pnrcc_note(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
-static inline uint8_t cmidi2_ump_get_midi2_pnrcc_index(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_pnrcc_index(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 3);
 }
-static inline uint32_t cmidi2_ump_get_midi2_pnrcc_data(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_get_midi2_pnrcc_data(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_32_to_64(ump);
 }
-static inline uint8_t cmidi2_ump_get_midi2_pnacc_note(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_pnacc_note(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
-static inline uint8_t cmidi2_ump_get_midi2_pnacc_index(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_pnacc_index(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 3);
 }
-static inline uint32_t cmidi2_ump_get_midi2_pnacc_data(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_get_midi2_pnacc_data(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_32_to_64(ump);
 }
-static inline uint8_t cmidi2_ump_get_midi2_pn_management_note(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_pn_management_note(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
-static inline uint32_t cmidi2_ump_get_midi2_pn_management_options(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_get_midi2_pn_management_options(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 3);
 }
-static inline uint8_t cmidi2_ump_get_midi2_cc_index(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_cc_index(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
-static inline uint32_t cmidi2_ump_get_midi2_cc_data(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_get_midi2_cc_data(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_32_to_64(ump);
 }
 // absolute RPN or relative RPN
-static inline uint8_t cmidi2_ump_get_midi2_rpn_msb(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_rpn_msb(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
 // absolute RPN or relative RPN
-static inline uint8_t cmidi2_ump_get_midi2_rpn_lsb(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_rpn_lsb(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 3);
 }
 // absolute RPN or relative RPN
-static inline uint32_t cmidi2_ump_get_midi2_rpn_data(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_get_midi2_rpn_data(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_32_to_64(ump);
 }
 // absolute NRPN or relative NRPN
-static inline uint8_t cmidi2_ump_get_midi2_nrpn_msb(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_nrpn_msb(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
 // absolute NRPN or relative NRPN
-static inline uint8_t cmidi2_ump_get_midi2_nrpn_lsb(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_nrpn_lsb(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 3);
 }
 // absolute NRPN or relative NRPN
-static inline uint32_t cmidi2_ump_get_midi2_nrpn_data(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_get_midi2_nrpn_data(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_32_to_64(ump);
 }
-static inline uint8_t cmidi2_ump_get_midi2_program_options(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_program_options(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 3);
 }
-static inline uint8_t cmidi2_ump_get_midi2_program_program(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_program_program(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 4);
 }
-static inline uint8_t cmidi2_ump_get_midi2_program_bank_msb(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_program_bank_msb(const cmidi2_ump* ump)
 {
   return (cmidi2_ump_get_byte_at(ump, 6));
 }
-static inline uint8_t cmidi2_ump_get_midi2_program_bank_lsb(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_program_bank_lsb(const cmidi2_ump* ump)
 {
   return (cmidi2_ump_get_byte_at(ump, 7));
 }
-static inline uint32_t cmidi2_ump_get_midi2_caf_data(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_get_midi2_caf_data(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_32_to_64(ump);
 }
 // either per-note or channel
-static inline uint32_t cmidi2_ump_get_midi2_pitch_bend_data(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint32_t cmidi2_ump_get_midi2_pitch_bend_data(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_32_to_64(ump);
 }
-static inline uint8_t cmidi2_ump_get_midi2_pn_pitch_bend_note(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_midi2_pn_pitch_bend_note(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
 
-static inline uint8_t cmidi2_ump_get_sysex8_num_bytes(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_sysex8_num_bytes(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_channel(ump); // same bits
 }
-static inline uint8_t cmidi2_ump_get_sysex8_stream_id(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_sysex8_stream_id(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_byte_at(ump, 2);
 }
-static inline uint8_t cmidi2_ump_get_mds_mds_id(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint8_t cmidi2_ump_get_mds_mds_id(const cmidi2_ump* ump)
 {
   return cmidi2_ump_get_channel(ump); // same bits
 }
-static inline uint16_t cmidi2_ump_get_mds_num_chunk_bytes(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_get_mds_num_chunk_bytes(const cmidi2_ump* ump)
 {
   return (cmidi2_ump_get_byte_at(ump, 2) << 8) + cmidi2_ump_get_byte_at(ump, 3);
 }
-static inline uint16_t cmidi2_ump_get_mds_num_chunks(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_get_mds_num_chunks(const cmidi2_ump* ump)
 {
   return (cmidi2_ump_get_byte_at(ump, 4) << 8) + cmidi2_ump_get_byte_at(ump, 5);
 }
-static inline uint16_t cmidi2_ump_get_mds_chunk_index(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_get_mds_chunk_index(const cmidi2_ump* ump)
 {
   return (cmidi2_ump_get_byte_at(ump, 6) << 8) + cmidi2_ump_get_byte_at(ump, 7);
 }
-static inline uint16_t cmidi2_ump_get_mds_manufacturer_id(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_get_mds_manufacturer_id(const cmidi2_ump* ump)
 {
   return (cmidi2_ump_get_byte_at(ump, 8) << 8) + cmidi2_ump_get_byte_at(ump, 9);
 }
-static inline uint16_t cmidi2_ump_get_mds_device_id(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_get_mds_device_id(const cmidi2_ump* ump)
 {
   return (cmidi2_ump_get_byte_at(ump, 10) << 8) + cmidi2_ump_get_byte_at(ump, 11);
 }
-static inline uint16_t cmidi2_ump_get_mds_sub_id_1(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_get_mds_sub_id_1(const cmidi2_ump* ump)
 {
   return (cmidi2_ump_get_byte_at(ump, 12) << 8) + cmidi2_ump_get_byte_at(ump, 13);
 }
-static inline uint16_t cmidi2_ump_get_mds_sub_id_2(const cmidi2_ump* ump)
+LIBREMIDI_STATIC uint16_t cmidi2_ump_get_mds_sub_id_2(const cmidi2_ump* ump)
 {
   return (cmidi2_ump_get_byte_at(ump, 14) << 8) + cmidi2_ump_get_byte_at(ump, 15);
 }
@@ -1672,13 +1672,13 @@ typedef struct cmidi2_ump_binary_read_state
   enum cmidi2_ump_binary_reader_result_code resultCode;
 } cmidi2_ump_binary_read_state;
 
-static inline void cmidi2_ump_binary_read_state_reset(cmidi2_ump_binary_read_state* state)
+LIBREMIDI_STATIC void cmidi2_ump_binary_read_state_reset(cmidi2_ump_binary_read_state* state)
 {
   state->dataSize = 0;
   state->resultCode = CMIDI2_BINARY_READER_RESULT_INCOMPLETE;
 }
 
-static inline void cmidi2_ump_binary_read_state_init(
+LIBREMIDI_STATIC void cmidi2_ump_binary_read_state_init(
     cmidi2_ump_binary_read_state* state, void* context, uint8_t* dataBuffer, size_t dataCapacity,
     bool continueOnCompletion)
 {
@@ -1709,7 +1709,7 @@ typedef bool (*cmidi2_ump_binary_read_continuity_checker_func)(
     cmidi2_ump_binary_read_state* stream, cmidi2_ump* ump);
 
 // it is a special copy function that only works with sysex8 memory state at `src` that can access beyond `sizeInBytes`.
-static inline void cmidi2_internal_sysex8_copy_data_byte_swapping(
+LIBREMIDI_STATIC void cmidi2_internal_sysex8_copy_data_byte_swapping(
     uint8_t* dst, uint8_t srcHead, uint32_t* srcTail, size_t sizeInBytes)
 {
   if (sizeInBytes == 0)
@@ -1738,7 +1738,7 @@ static inline void cmidi2_internal_sysex8_copy_data_byte_swapping(
 
 /// Parse and store sysex8 binary, using some fine-tuned behavioral functions.
 /// Return the number of 32-bit ints (number of `cmidi2_ump`s)
-static inline size_t cmidi2_ump_get_sysex8_data(
+LIBREMIDI_STATIC size_t cmidi2_ump_get_sysex8_data(
     cmidi2_ump_stream_selector_func streamSelector, void* streamSelectorContext,
     cmidi2_ump_binary_read_continuity_checker_func continuityChecker, const cmidi2_ump* ump,
     const size_t umpCapacityInInt)
@@ -1808,7 +1808,7 @@ static inline size_t cmidi2_ump_get_sysex8_data(
 
 /* byte stream splitter */
 
-static inline void* cmidi2_ump_sequence_next(const void* ptr)
+LIBREMIDI_STATIC void* cmidi2_ump_sequence_next(const void* ptr)
 {
   return (uint8_t*)ptr + cmidi2_ump_get_num_bytes(cmidi2_ump_read_uint32_bytes(ptr));
 }
@@ -1818,7 +1818,7 @@ static inline void* cmidi2_ump_sequence_next(const void* ptr)
   for (uint8_t*(iter) = (uint8_t*)ptr; (iter) < ((uint8_t*)ptr) + numBytes; \
        (iter) = (uint8_t*)cmidi2_ump_sequence_next(iter))
 
-static inline void* cmidi2_ump_sequence_next_le(const void* ptr)
+LIBREMIDI_STATIC void* cmidi2_ump_sequence_next_le(const void* ptr)
 {
   return (uint8_t*)ptr + cmidi2_ump_get_num_bytes(cmidi2_ump_read_uint32_bytes_le(ptr));
 }
@@ -1827,7 +1827,7 @@ static inline void* cmidi2_ump_sequence_next_le(const void* ptr)
   for (uint8_t*(iter) = (uint8_t*)ptr; (iter) < ((uint8_t*)ptr) + numBytes; \
        (iter) = (uint8_t*)cmidi2_ump_sequence_next_le(iter))
 
-static inline void* cmidi2_ump_sequence_next_be(const void* ptr)
+LIBREMIDI_STATIC void* cmidi2_ump_sequence_next_be(const void* ptr)
 {
   return (uint8_t*)ptr + cmidi2_ump_get_num_bytes(cmidi2_ump_read_uint32_bytes_be(ptr));
 }
@@ -1900,14 +1900,14 @@ typedef struct
 } cmidi2_profile_id;
 
 // Assumes the input value is already 7-bit encoded if required.
-static inline void cmidi2_ci_direct_uint16_at(uint8_t* buf, uint16_t v)
+LIBREMIDI_STATIC void cmidi2_ci_direct_uint16_at(uint8_t* buf, uint16_t v)
 {
   buf[0] = v & 0xFF;
   buf[1] = (v >> 8) & 0xFF;
 }
 
 // Assumes the input value is already 7-bit encoded if required.
-static inline void cmidi2_ci_direct_uint32_at(uint8_t* buf, uint32_t v)
+LIBREMIDI_STATIC void cmidi2_ci_direct_uint32_at(uint8_t* buf, uint32_t v)
 {
   buf[0] = v & 0xFF;
   buf[1] = (v >> 8) & 0xFF;
@@ -1915,20 +1915,20 @@ static inline void cmidi2_ci_direct_uint32_at(uint8_t* buf, uint32_t v)
   buf[3] = (v >> 24) & 0xFF;
 }
 
-static inline void cmidi2_ci_7bit_int14_at(uint8_t* buf, uint16_t v)
+LIBREMIDI_STATIC void cmidi2_ci_7bit_int14_at(uint8_t* buf, uint16_t v)
 {
   buf[0] = v & 0x7F;
   buf[1] = (v >> 7) & 0x7F;
 }
 
-static inline void cmidi2_ci_7bit_int21_at(uint8_t* buf, uint32_t v)
+LIBREMIDI_STATIC void cmidi2_ci_7bit_int21_at(uint8_t* buf, uint32_t v)
 {
   buf[0] = v & 0x7F;
   buf[1] = (v >> 7) & 0x7F;
   buf[2] = (v >> 14) & 0x7F;
 }
 
-static inline void cmidi2_ci_7bit_int28_at(uint8_t* buf, uint32_t v)
+LIBREMIDI_STATIC void cmidi2_ci_7bit_int28_at(uint8_t* buf, uint32_t v)
 {
   buf[0] = v & 0x7F;
   buf[1] = (v >> 7) & 0x7F;
@@ -1936,7 +1936,7 @@ static inline void cmidi2_ci_7bit_int28_at(uint8_t* buf, uint32_t v)
   buf[3] = (v >> 21) & 0x7F;
 }
 
-static inline void cmidi2_ci_message_common(
+LIBREMIDI_STATIC void cmidi2_ci_message_common(
     uint8_t* buf, uint8_t destination, uint8_t sysexSubId2, uint8_t versionAndFormat,
     uint32_t sourceMUID, uint32_t destinationMUID)
 {
@@ -1951,7 +1951,7 @@ static inline void cmidi2_ci_message_common(
 
 // Discovery
 
-static inline void cmidi2_ci_discovery_common(
+LIBREMIDI_STATIC void cmidi2_ci_discovery_common(
     uint8_t* buf, uint8_t sysexSubId2, uint8_t versionAndFormat, uint32_t sourceMUID,
     uint32_t destinationMUID, uint32_t deviceManufacturer3Bytes, uint16_t deviceFamily,
     uint16_t deviceFamilyModelNumber, uint32_t softwareRevisionLevel, uint8_t ciCategorySupported,
@@ -1972,7 +1972,7 @@ static inline void cmidi2_ci_discovery_common(
   buf[29] = initiatorOutputPathId;
 }
 
-static inline void cmidi2_ci_discovery(
+LIBREMIDI_STATIC void cmidi2_ci_discovery(
     uint8_t* buf, uint8_t versionAndFormat, uint32_t sourceMUID, uint32_t deviceManufacturer,
     uint16_t deviceFamily, uint16_t deviceFamilyModelNumber, uint32_t softwareRevisionLevel,
     uint8_t ciCategorySupported, uint32_t receivableMaxSysExSize, uint8_t initiatorOutputPathId)
@@ -1983,7 +1983,7 @@ static inline void cmidi2_ci_discovery(
       ciCategorySupported, receivableMaxSysExSize, initiatorOutputPathId);
 }
 
-static inline void cmidi2_ci_discovery_reply(
+LIBREMIDI_STATIC void cmidi2_ci_discovery_reply(
     uint8_t* buf, uint8_t versionAndFormat, uint32_t sourceMUID, uint32_t destinationMUID,
     uint32_t deviceManufacturer, uint16_t deviceFamily, uint16_t deviceFamilyModelNumber,
     uint32_t softwareRevisionLevel, uint8_t ciCategorySupported, uint32_t receivableMaxSysExSize,
@@ -1996,7 +1996,7 @@ static inline void cmidi2_ci_discovery_reply(
   buf[30] = functionBlockOr7Fh;
 }
 
-static inline void cmidi2_ci_discovery_invalidate_muid(
+LIBREMIDI_STATIC void cmidi2_ci_discovery_invalidate_muid(
     uint8_t* buf, uint8_t versionAndFormat, uint32_t sourceMUID, uint32_t targetMUID)
 {
   cmidi2_ci_message_common(
@@ -2004,7 +2004,7 @@ static inline void cmidi2_ci_discovery_invalidate_muid(
   cmidi2_ci_direct_uint32_at(buf + 13, targetMUID);
 }
 
-static inline void cmidi2_ci_ack_nak_common(
+LIBREMIDI_STATIC void cmidi2_ci_ack_nak_common(
     uint8_t* buf, uint8_t deviceId, uint8_t versionAndFormat, uint32_t sourceMUID,
     uint32_t destinationMUID, uint8_t originalTransactionSubID2Class, uint8_t statusCode,
     uint8_t statusData, uint8_t* details5Bytes, uint16_t messageLength, const char* messageText)
@@ -2019,7 +2019,7 @@ static inline void cmidi2_ci_ack_nak_common(
   memcpy(buf + 23, messageText, messageLength);
 }
 
-static inline void cmidi2_ci_ack(
+LIBREMIDI_STATIC void cmidi2_ci_ack(
     uint8_t* buf, uint8_t deviceId, uint8_t versionAndFormat, uint32_t sourceMUID,
     uint32_t destinationMUID, uint8_t originalTransactionSubID2Class, uint8_t ackStatusCode,
     uint8_t ackStatusData, uint8_t* ackDetails5Bytes, uint16_t messageLength,
@@ -2030,7 +2030,7 @@ static inline void cmidi2_ci_ack(
       ackStatusCode, ackStatusData, ackDetails5Bytes, messageLength, messageText);
 }
 
-static inline void cmidi2_ci_nak(
+LIBREMIDI_STATIC void cmidi2_ci_nak(
     uint8_t* buf, uint8_t deviceId, uint8_t versionAndFormat, uint32_t sourceMUID,
     uint32_t destinationMUID, uint8_t originalTransactionSubID2Class, uint8_t nakStatusCode,
     uint8_t nakStatusData, uint8_t* nakDetails5Bytes, uint16_t messageLength,
@@ -2044,7 +2044,7 @@ static inline void cmidi2_ci_nak(
 // Protocol Negotiation
 // Note that it was removed in MIDI 2.0 specification June 2023 Updates (MIDI-CI 1.2).
 
-static inline void cmidi2_ci_protocol_info(uint8_t* buf, cmidi2_ci_protocol_type_info info)
+LIBREMIDI_STATIC void cmidi2_ci_protocol_info(uint8_t* buf, cmidi2_ci_protocol_type_info info)
 {
   buf[0] = info.type;
   buf[1] = info.version;
@@ -2053,7 +2053,7 @@ static inline void cmidi2_ci_protocol_info(uint8_t* buf, cmidi2_ci_protocol_type
   buf[4] = info.reserved2;
 }
 
-static inline void cmidi2_ci_protocols(
+LIBREMIDI_STATIC void cmidi2_ci_protocols(
     uint8_t* buf, uint8_t numSupportedProtocols, cmidi2_ci_protocol_type_info* protocolTypes)
 {
   buf[0] = numSupportedProtocols;
@@ -2061,7 +2061,7 @@ static inline void cmidi2_ci_protocols(
     cmidi2_ci_protocol_info(buf + 1 + i * 5, protocolTypes[i]);
 }
 
-static inline void cmidi2_ci_protocol_negotiation(
+LIBREMIDI_STATIC void cmidi2_ci_protocol_negotiation(
     uint8_t* buf, bool isReply, uint32_t sourceMUID, uint32_t destinationMUID,
     uint8_t authorityLevel, uint8_t numSupportedProtocols,
     cmidi2_ci_protocol_type_info* protocolTypes)
@@ -2075,7 +2075,7 @@ static inline void cmidi2_ci_protocol_negotiation(
   cmidi2_ci_protocols(buf + 14, numSupportedProtocols, protocolTypes);
 }
 
-static inline void cmidi2_ci_protocol_set(
+LIBREMIDI_STATIC void cmidi2_ci_protocol_set(
     uint8_t* buf, uint32_t sourceMUID, uint32_t destinationMUID, uint8_t authorityLevel,
     cmidi2_ci_protocol_type_info newProtocolType)
 {
@@ -2085,7 +2085,7 @@ static inline void cmidi2_ci_protocol_set(
   cmidi2_ci_protocol_info(buf + 14, newProtocolType);
 }
 
-static inline void cmidi2_ci_protocol_test(
+LIBREMIDI_STATIC void cmidi2_ci_protocol_test(
     uint8_t* buf, bool isInitiatorToResponder, uint32_t sourceMUID, uint32_t destinationMUID,
     uint8_t authorityLevel, uint8_t* testData48Bytes)
 {
@@ -2098,7 +2098,7 @@ static inline void cmidi2_ci_protocol_test(
   memcpy(buf + 14, testData48Bytes, 48);
 }
 
-static inline void cmidi2_ci_protocol_confirm_established(
+LIBREMIDI_STATIC void cmidi2_ci_protocol_confirm_established(
     uint8_t* buf, uint32_t sourceMUID, uint32_t destinationMUID, uint8_t authorityLevel)
 {
   cmidi2_ci_message_common(
@@ -2107,7 +2107,7 @@ static inline void cmidi2_ci_protocol_confirm_established(
   buf[13] = authorityLevel;
 }
 
-static inline int32_t cmidi2_ci_try_parse_new_protocol(uint8_t* buf, size_t length)
+LIBREMIDI_STATIC int32_t cmidi2_ci_try_parse_new_protocol(uint8_t* buf, size_t length)
 {
   return (length != 19 || buf[0] != 0x7E || buf[1] != 0x7F || buf[2] != CMIDI2_CI_SUB_ID
           || buf[3] != CMIDI2_CI_SUB_ID_2_SET_NEW_PROTOCOL || buf[4] != 1)
@@ -2117,7 +2117,7 @@ static inline int32_t cmidi2_ci_try_parse_new_protocol(uint8_t* buf, size_t leng
 
 // Profile Configuration
 
-static inline void cmidi2_ci_profile(uint8_t* buf, cmidi2_profile_id info)
+LIBREMIDI_STATIC void cmidi2_ci_profile(uint8_t* buf, cmidi2_profile_id info)
 {
   buf[0] = info.fixed_7e;
   buf[1] = info.bank;
@@ -2126,14 +2126,14 @@ static inline void cmidi2_ci_profile(uint8_t* buf, cmidi2_profile_id info)
   buf[4] = info.level;
 }
 
-static inline void cmidi2_ci_profile_inquiry(
+LIBREMIDI_STATIC void cmidi2_ci_profile_inquiry(
     uint8_t* buf, uint8_t source, uint32_t sourceMUID, uint32_t destinationMUID)
 {
   cmidi2_ci_message_common(
       buf, source, CMIDI2_CI_SUB_ID_2_PROFILE_INQUIRY, 1, sourceMUID, destinationMUID);
 }
 
-static inline void cmidi2_ci_profile_inquiry_reply(
+LIBREMIDI_STATIC void cmidi2_ci_profile_inquiry_reply(
     uint8_t* buf, uint8_t source, uint32_t sourceMUID, uint32_t destinationMUID,
     uint8_t numEnabledProfiles, cmidi2_profile_id* enabledProfiles, uint8_t numDisabledProfiles,
     cmidi2_profile_id* disabledProfiles)
@@ -2149,7 +2149,7 @@ static inline void cmidi2_ci_profile_inquiry_reply(
     cmidi2_ci_profile(buf + pos + i * 5, disabledProfiles[i]);
 }
 
-static inline void cmidi2_ci_profile_set(
+LIBREMIDI_STATIC void cmidi2_ci_profile_set(
     uint8_t* buf, uint8_t destination, bool turnOn, uint32_t sourceMUID, uint32_t destinationMUID,
     cmidi2_profile_id profile)
 {
@@ -2160,7 +2160,7 @@ static inline void cmidi2_ci_profile_set(
   cmidi2_ci_profile(buf + 13, profile);
 }
 
-static inline void cmidi2_ci_profile_report(
+LIBREMIDI_STATIC void cmidi2_ci_profile_report(
     uint8_t* buf, uint8_t source, bool isEnabledReport, uint32_t sourceMUID,
     cmidi2_profile_id profile)
 {
@@ -2172,7 +2172,7 @@ static inline void cmidi2_ci_profile_report(
   cmidi2_ci_profile(buf + 13, profile);
 }
 
-static inline void cmidi2_ci_profile_specific_data(
+LIBREMIDI_STATIC void cmidi2_ci_profile_specific_data(
     uint8_t* buf, uint8_t source, uint32_t sourceMUID, uint32_t destinationMUID,
     cmidi2_profile_id profile, uint32_t dataSize, void* data)
 {
@@ -2185,7 +2185,7 @@ static inline void cmidi2_ci_profile_specific_data(
 
 // Property Exchange
 
-static inline void cmidi2_ci_property_get_capabilities(
+LIBREMIDI_STATIC void cmidi2_ci_property_get_capabilities(
     uint8_t* buf, uint8_t destination, bool isReply, uint32_t sourceMUID, uint32_t destinationMUID,
     uint8_t maxSupportedRequests)
 {
@@ -2198,7 +2198,7 @@ static inline void cmidi2_ci_property_get_capabilities(
 }
 
 // common to all of: has data & reply, get data & reply, set data & reply, subscribe & reply, notify
-static inline void cmidi2_ci_property_common(
+LIBREMIDI_STATIC void cmidi2_ci_property_common(
     uint8_t* buf, uint8_t destination, uint8_t messageTypeSubId2, uint32_t sourceMUID,
     uint32_t destinationMUID, uint8_t requestId, uint16_t headerSize, void* header,
     uint16_t numChunks, uint16_t chunkIndex, uint16_t dataSize, void* data)
@@ -2213,7 +2213,7 @@ static inline void cmidi2_ci_property_common(
   memcpy(buf + 22 + headerSize, data, dataSize);
 }
 
-static inline void cmidi2_ci_property_get_capabilities_reply(
+LIBREMIDI_STATIC void cmidi2_ci_property_get_capabilities_reply(
     uint8_t* buf, uint8_t versionAndFormat, uint32_t sourceMUID, uint32_t destinationMUID,
     uint8_t maxSupportedRequests, uint8_t peMajorVersion, uint8_t peMinorVersion)
 {
@@ -2226,7 +2226,7 @@ static inline void cmidi2_ci_property_get_capabilities_reply(
   buf[15] = peMinorVersion;
 }
 
-static inline void cmidi2_ci_property_data_common(
+LIBREMIDI_STATIC void cmidi2_ci_property_data_common(
     uint8_t* buf, uint8_t subId2, uint8_t versionAndFormat, uint32_t sourceMUID,
     uint32_t destinationMUID, uint8_t requestId, size_t headerSize, const uint8_t* headerData,
     uint16_t numChunksInMessage, uint16_t currentChunk, uint16_t propertyDataLength,
@@ -2246,7 +2246,7 @@ static inline void cmidi2_ci_property_data_common(
     memcpy(buf + headerSize + 22, propertyData, propertyDataLength);
 }
 
-static inline void cmidi2_ci_property_get_data(
+LIBREMIDI_STATIC void cmidi2_ci_property_get_data(
     uint8_t* buf, uint8_t versionAndFormat, uint32_t sourceMUID, uint32_t destinationMUID,
     uint8_t requestId, size_t headerSize, const uint8_t* headerData)
 {
@@ -2255,7 +2255,7 @@ static inline void cmidi2_ci_property_get_data(
       requestId, headerSize, headerData, 1, 1, 0, NULL);
 }
 
-static inline void cmidi2_ci_property_get_data_reply(
+LIBREMIDI_STATIC void cmidi2_ci_property_get_data_reply(
     uint8_t* buf, uint8_t versionAndFormat, uint32_t sourceMUID, uint32_t destinationMUID,
     uint8_t requestId, size_t headerSize, const uint8_t* headerData, uint16_t numChunksInMessage,
     uint16_t currentChunk, uint16_t propertyDataLength, const char* propertyData)
@@ -2266,7 +2266,7 @@ static inline void cmidi2_ci_property_get_data_reply(
       propertyDataLength, propertyData);
 }
 
-static inline void cmidi2_ci_property_set_data(
+LIBREMIDI_STATIC void cmidi2_ci_property_set_data(
     uint8_t* buf, uint8_t versionAndFormat, uint32_t sourceMUID, uint32_t destinationMUID,
     uint8_t requestId, size_t headerSize, const uint8_t* headerData, uint16_t numChunksInMessage,
     uint16_t currentChunk, uint16_t propertyDataLength, const char* propertyData)
@@ -2277,7 +2277,7 @@ static inline void cmidi2_ci_property_set_data(
       propertyData);
 }
 
-static inline void cmidi2_ci_property_set_data_reply(
+LIBREMIDI_STATIC void cmidi2_ci_property_set_data_reply(
     uint8_t* buf, uint8_t versionAndFormat, uint32_t sourceMUID, uint32_t destinationMUID,
     uint8_t requestId, size_t headerSize, const uint8_t* headerData)
 {
@@ -2286,7 +2286,7 @@ static inline void cmidi2_ci_property_set_data_reply(
       destinationMUID, requestId, headerSize, headerData, 1, 1, 0, NULL);
 }
 
-static inline void cmidi2_ci_property_subscribe(
+LIBREMIDI_STATIC void cmidi2_ci_property_subscribe(
     uint8_t* buf, uint8_t versionAndFormat, uint32_t sourceMUID, uint32_t destinationMUID,
     uint8_t requestId, size_t headerSize, const uint8_t* headerData, uint16_t numChunksInMessage,
     uint16_t currentChunk, uint16_t propertyDataLength, const char* propertyData)
@@ -2297,7 +2297,7 @@ static inline void cmidi2_ci_property_subscribe(
       propertyData);
 }
 
-static inline void cmidi2_ci_property_subscribe_reply(
+LIBREMIDI_STATIC void cmidi2_ci_property_subscribe_reply(
     uint8_t* buf, uint8_t versionAndFormat, uint32_t sourceMUID, uint32_t destinationMUID,
     uint8_t requestId, size_t headerSize, const uint8_t* headerData, uint16_t numChunksInMessage,
     uint16_t currentChunk, uint16_t propertyDataLength, const char* propertyData)
@@ -2308,7 +2308,7 @@ static inline void cmidi2_ci_property_subscribe_reply(
       propertyDataLength, propertyData);
 }
 
-static inline void cmidi2_ci_property_notify(
+LIBREMIDI_STATIC void cmidi2_ci_property_notify(
     uint8_t* buf, uint8_t versionAndFormat, uint32_t sourceMUID, uint32_t destinationMUID,
     uint8_t requestId, size_t headerSize, const uint8_t* headerData, uint16_t numChunksInMessage,
     uint16_t currentChunk, uint16_t propertyDataLength, const char* propertyData)
@@ -2321,7 +2321,7 @@ static inline void cmidi2_ci_property_notify(
 
 // Process Inquiry
 
-static inline void cmidi2_ci_process_get_capabilities(
+LIBREMIDI_STATIC void cmidi2_ci_process_get_capabilities(
     uint8_t* buf, uint8_t subId2, uint8_t versionAndFormat, uint32_t sourceMUID,
     uint32_t destinationMUID)
 {
@@ -2331,7 +2331,7 @@ static inline void cmidi2_ci_process_get_capabilities(
       versionAndFormat, sourceMUID, destinationMUID);
 }
 
-static inline void cmidi2_ci_process_get_capabilities_reply(
+LIBREMIDI_STATIC void cmidi2_ci_process_get_capabilities_reply(
     uint8_t* buf, uint8_t subId2, uint8_t versionAndFormat, uint32_t sourceMUID,
     uint32_t destinationMUID, uint8_t processInquirySupportedFeatures)
 {
@@ -2343,7 +2343,7 @@ static inline void cmidi2_ci_process_get_capabilities_reply(
   buf[13] = processInquirySupportedFeatures;
 }
 
-static inline void cmidi2_ci_process_midi_report_common(
+LIBREMIDI_STATIC void cmidi2_ci_process_midi_report_common(
     uint8_t* buf, uint8_t deviceId, uint8_t subId2, uint8_t versionAndFormat, uint32_t sourceMUID,
     uint32_t destinationMUID, uint8_t messageDataControl, uint8_t requestedSystemMessages,
     uint8_t requestedChannelControllerMessages, uint8_t requestedNoteDataMessages)
@@ -2359,7 +2359,7 @@ static inline void cmidi2_ci_process_midi_report_common(
   buf[17] = requestedNoteDataMessages;
 }
 
-static inline void cmidi2_ci_process_get_midi_report(
+LIBREMIDI_STATIC void cmidi2_ci_process_get_midi_report(
     uint8_t* buf, uint8_t deviceId, uint8_t versionAndFormat, uint32_t sourceMUID,
     uint32_t destinationMUID, uint8_t messageDataControl, uint8_t requestedSystemMessages,
     uint8_t requestedChannelControllerMessages, uint8_t requestedNoteDataMessages)
@@ -2370,7 +2370,7 @@ static inline void cmidi2_ci_process_get_midi_report(
       requestedChannelControllerMessages, requestedNoteDataMessages);
 }
 
-static inline void cmidi2_ci_process_get_midi_report_reply(
+LIBREMIDI_STATIC void cmidi2_ci_process_get_midi_report_reply(
     uint8_t* buf, uint8_t deviceId, uint8_t versionAndFormat, uint32_t sourceMUID,
     uint32_t destinationMUID, uint8_t messageDataControl, uint8_t requestedSystemMessages,
     uint8_t requestedChannelControllerMessages, uint8_t requestedNoteDataMessages)
@@ -2381,7 +2381,7 @@ static inline void cmidi2_ci_process_get_midi_report_reply(
       requestedChannelControllerMessages, requestedNoteDataMessages);
 }
 
-static inline void cmidi2_ci_process_get_midi_report_end(
+LIBREMIDI_STATIC void cmidi2_ci_process_get_midi_report_end(
     uint8_t* buf, uint8_t deviceId, uint8_t versionAndFormat, uint32_t sourceMUID,
     uint32_t destinationMUID)
 {
@@ -2393,7 +2393,7 @@ static inline void cmidi2_ci_process_get_midi_report_end(
 // Miscellaneous MIDI Utilities
 
 /** Encodes `value` into `bytes` stream. Returns the length of the encoded value in bytes. */
-static inline uint8_t cmidi2_midi1_write_7bit_encoded_int(uint8_t* bytes, uint32_t value)
+LIBREMIDI_STATIC uint8_t cmidi2_midi1_write_7bit_encoded_int(uint8_t* bytes, uint32_t value)
 {
   uint8_t pos = 0;
   for (;; pos++)
@@ -2410,7 +2410,7 @@ static inline uint8_t cmidi2_midi1_write_7bit_encoded_int(uint8_t* bytes, uint32
 }
 
 /** Returns the length of `value` when it would be encoded into a byte stream. */
-static inline uint8_t cmidi2_midi1_get_7bit_encoded_int_length(uint32_t value)
+LIBREMIDI_STATIC uint8_t cmidi2_midi1_get_7bit_encoded_int_length(uint32_t value)
 {
   for (uint8_t ret = 1;; ret++)
   {
@@ -2423,7 +2423,7 @@ static inline uint8_t cmidi2_midi1_get_7bit_encoded_int_length(uint32_t value)
 }
 
 /** Returns the 7-bit encoded value in `bytes` stream of `length` bytes. */
-static inline uint32_t cmidi2_midi1_get_7bit_encoded_int(uint8_t* bytes, uint32_t length)
+LIBREMIDI_STATIC uint32_t cmidi2_midi1_get_7bit_encoded_int(uint8_t* bytes, uint32_t length)
 {
   uint8_t* start = bytes;
   uint32_t value = 0;
@@ -2440,7 +2440,7 @@ static inline uint32_t cmidi2_midi1_get_7bit_encoded_int(uint8_t* bytes, uint32_
   return value;
 }
 
-static inline uint32_t cmidi2_midi1_get_message_size(uint8_t* bytes, uint32_t length)
+LIBREMIDI_STATIC uint32_t cmidi2_midi1_get_message_size(uint8_t* bytes, uint32_t length)
 {
   switch (bytes[0])
   {
@@ -2480,13 +2480,13 @@ static inline uint32_t cmidi2_midi1_get_message_size(uint8_t* bytes, uint32_t le
   return 0;
 }
 
-static inline uint32_t cmidi2_midi1_get_message_size_live(uint8_t* bytes, uint32_t length)
+LIBREMIDI_STATIC uint32_t cmidi2_midi1_get_message_size_live(uint8_t* bytes, uint32_t length)
 {
   // 0xFF in live MIDI stream indicates reset. We handle it there.
   return cmidi2_midi1_get_message_size(bytes, length);
 }
 
-static inline uint32_t cmidi2_midi1_get_message_size_smf(uint8_t* bytes, uint32_t length)
+LIBREMIDI_STATIC uint32_t cmidi2_midi1_get_message_size_smf(uint8_t* bytes, uint32_t length)
 {
   switch (bytes[0])
   {
@@ -2605,7 +2605,7 @@ enum cmidi2_midi_conversion_result
   CMIDI2_CONVERSION_RESULT_INVALID_INPUT = 0x40,
 };
 
-static inline void
+LIBREMIDI_STATIC void
 cmidi2_midi_conversion_context_initialize(cmidi2_midi_conversion_context* context)
 {
   context->is_midi1_smf = false;
@@ -2634,7 +2634,7 @@ typedef struct cmidi2_convert_sysex_context
   size_t dst_offset;
 } cmidi2_convert_sysex_context;
 
-static inline void*
+LIBREMIDI_STATIC void*
 cmidi2_internal_convert_add_midi1_sysex7_ump_to_list(uint64_t data, void* context)
 {
   cmidi2_convert_sysex_context* s7ctx = (cmidi2_convert_sysex_context*)context;
@@ -2645,7 +2645,7 @@ cmidi2_internal_convert_add_midi1_sysex7_ump_to_list(uint64_t data, void* contex
   return NULL;
 }
 
-static inline void* cmidi2_internal_convert_add_midi1_sysex8_ump_to_list(
+LIBREMIDI_STATIC void* cmidi2_internal_convert_add_midi1_sysex8_ump_to_list(
     uint64_t data1, uint64_t data2, size_t index, void* context)
 {
   (void)index;
@@ -2659,7 +2659,7 @@ static inline void* cmidi2_internal_convert_add_midi1_sysex8_ump_to_list(
   return NULL;
 }
 
-static inline uint64_t
+LIBREMIDI_STATIC uint64_t
 cmidi2_internal_convert_midi1_dte_to_ump(cmidi2_midi_conversion_context* context, uint8_t channel)
 {
   bool isRpn = (context->context_rpn & 0x8080) == 0;
@@ -2674,7 +2674,7 @@ cmidi2_internal_convert_midi1_dte_to_ump(cmidi2_midi_conversion_context* context
                : cmidi2_ump_midi2_nrpn(context->group, channel, msb, lsb, data);
 }
 
-static inline uint32_t cmidi2_internal_swap_endian(uint32_t v)
+LIBREMIDI_STATIC uint32_t cmidi2_internal_swap_endian(uint32_t v)
 {
   return ((v & 0xFF) << 24) + (((v >> 8) & 0xFF) << 16) + (((v >> 16) & 0xFF) << 8)
          + ((v >> 24) & 0xFF);
@@ -2959,7 +2959,7 @@ static size_t cmidi2_internal_add_midi1_delta_time(
 
 /// Convert one single UMP (without JR Timestamp) to MIDI 1.0 Message (without delta time)
 /// It is a lengthy function, so it is recommended to wrap it in another non-inline function.
-static inline size_t cmidi2_convert_single_ump_to_timed_midi1(
+LIBREMIDI_STATIC size_t cmidi2_convert_single_ump_to_timed_midi1(
     uint8_t* dst, size_t maxBytes, cmidi2_ump* ump, int32_t deltaTime,
     cmidi2_midi_conversion_context* context, uint8_t* sysex7Buffer, size_t* sysex7BufferIndex)
 {
@@ -3168,7 +3168,7 @@ static inline size_t cmidi2_convert_single_ump_to_timed_midi1(
 }
 
 // Left for API backward compatibility.
-static inline size_t
+LIBREMIDI_STATIC size_t
 cmidi2_convert_single_ump_to_midi1(uint8_t* dst, size_t maxBytes, cmidi2_ump* ump)
 {
   return cmidi2_convert_single_ump_to_timed_midi1(dst, maxBytes, ump, 0, NULL, NULL, 0);
@@ -3251,7 +3251,7 @@ typedef struct cmidi2_ump_forge
   size_t offset;
 } cmidi2_ump_forge;
 
-static inline void
+LIBREMIDI_STATIC void
 cmidi2_ump_forge_init(cmidi2_ump_forge* forge, cmidi2_ump* buffer, size_t capacityInBytes)
 {
   forge->ump = buffer;
@@ -3259,7 +3259,7 @@ cmidi2_ump_forge_init(cmidi2_ump_forge* forge, cmidi2_ump* buffer, size_t capaci
   forge->offset = 0;
 }
 
-static inline bool cmidi2_ump_forge_add_packet_32(cmidi2_ump_forge* forge, uint32_t ump)
+LIBREMIDI_STATIC bool cmidi2_ump_forge_add_packet_32(cmidi2_ump_forge* forge, uint32_t ump)
 {
   int size = 4;
   if (forge->offset + size > forge->capacity)
@@ -3270,7 +3270,7 @@ static inline bool cmidi2_ump_forge_add_packet_32(cmidi2_ump_forge* forge, uint3
   return true;
 }
 
-static inline bool cmidi2_ump_forge_add_packet_64(cmidi2_ump_forge* forge, uint64_t ump)
+LIBREMIDI_STATIC bool cmidi2_ump_forge_add_packet_64(cmidi2_ump_forge* forge, uint64_t ump)
 {
   int size = 8;
   if (forge->offset + size > forge->capacity)
@@ -3281,7 +3281,7 @@ static inline bool cmidi2_ump_forge_add_packet_64(cmidi2_ump_forge* forge, uint6
   return true;
 }
 
-static inline bool
+LIBREMIDI_STATIC bool
 cmidi2_ump_forge_add_packet_128(cmidi2_ump_forge* forge, uint64_t ump1, uint64_t ump2)
 {
   int size = 16;
@@ -3293,7 +3293,7 @@ cmidi2_ump_forge_add_packet_128(cmidi2_ump_forge* forge, uint64_t ump1, uint64_t
   return true;
 }
 
-static inline bool cmidi2_ump_forge_add_single_packet(cmidi2_ump_forge* forge, cmidi2_ump* ump)
+LIBREMIDI_STATIC bool cmidi2_ump_forge_add_single_packet(cmidi2_ump_forge* forge, cmidi2_ump* ump)
 {
   int size = cmidi2_ump_get_message_size_bytes(ump);
   if (forge->offset + size > forge->capacity)
@@ -3303,7 +3303,7 @@ static inline bool cmidi2_ump_forge_add_single_packet(cmidi2_ump_forge* forge, c
   return true;
 }
 
-static inline bool
+LIBREMIDI_STATIC bool
 cmidi2_ump_forge_add_packets(cmidi2_ump_forge* forge, cmidi2_ump* ump, int32_t size)
 {
   if (forge->offset + size > forge->capacity)
@@ -3315,7 +3315,7 @@ cmidi2_ump_forge_add_packets(cmidi2_ump_forge* forge, cmidi2_ump* ump, int32_t s
 
 // UMP sequence merger
 
-static inline bool cmidi2_internal_ump_merge_sequence_write_delta_time(
+LIBREMIDI_STATIC bool cmidi2_internal_ump_merge_sequence_write_delta_time(
     int32_t timestamp1, int32_t timestamp2, int32_t* lastTimestamp, void* dst, int32_t* dIdx,
     size_t dstSize)
 {
@@ -3334,7 +3334,7 @@ static inline bool cmidi2_internal_ump_merge_sequence_write_delta_time(
   return true;
 }
 
-static inline size_t cmidi2_ump_merge_sequences(
+LIBREMIDI_STATIC size_t cmidi2_ump_merge_sequences(
     cmidi2_ump* dst, size_t dstCapacity, cmidi2_ump* seq1, size_t seq1Size, cmidi2_ump* seq2,
     size_t seq2Size)
 {

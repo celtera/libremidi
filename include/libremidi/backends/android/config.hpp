@@ -1,7 +1,7 @@
 #pragma once
 #include <libremidi/config.hpp>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 namespace android
 {

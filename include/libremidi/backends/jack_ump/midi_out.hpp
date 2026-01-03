@@ -3,7 +3,7 @@
 #include <libremidi/backends/jack_ump/config.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
-namespace libremidi::jack_ump
+NAMESPACE_LIBREMIDI::jack_ump
 {
 class midi_out_jack
     : public midi2::out_api
@@ -170,7 +170,7 @@ public:
 };
 }
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 template <>
 inline std::unique_ptr<midi_out_api>

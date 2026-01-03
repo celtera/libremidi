@@ -3,7 +3,7 @@
 #include <libremidi/backends/android/helpers.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 namespace android
 {

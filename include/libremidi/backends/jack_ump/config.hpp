@@ -1,7 +1,7 @@
 #pragma once
 #include <libremidi/backends/jack/config.hpp>
 
-namespace libremidi::jack_ump
+NAMESPACE_LIBREMIDI::jack_ump
 {
 struct input_configuration
 {

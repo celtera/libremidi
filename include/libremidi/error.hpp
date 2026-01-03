@@ -17,12 +17,12 @@
 
 #if __has_include(<source_location>) && (__cpp_lib_source_location >= 201907L)
   #include <source_location>
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 using source_location = std::source_location;
 }
 #else
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 struct source_location
 {
@@ -35,7 +35,7 @@ struct source_location
 }
 #endif
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 inline auto from_errc(int64_t ret) noexcept
 {

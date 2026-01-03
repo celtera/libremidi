@@ -5,7 +5,7 @@
 
 #include <unordered_set>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class observer_pipewire final
     : public observer_api

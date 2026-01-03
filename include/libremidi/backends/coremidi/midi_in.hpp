@@ -4,7 +4,7 @@
 #include <libremidi/detail/midi_in.hpp>
 #include <libremidi/detail/midi_stream_decoder.hpp>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class midi_in_core final
     : public midi1::in_api

@@ -6,7 +6,7 @@
 
 #include <string_view>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
 class midi_out_api : public midi_api

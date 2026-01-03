@@ -9,7 +9,7 @@
 #include <optional>
 #include <string>
 
-namespace libremidi::alsa_seq
+NAMESPACE_LIBREMIDI::alsa_seq
 {
 struct event_handle
 {

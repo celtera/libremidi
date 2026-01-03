@@ -8,9 +8,9 @@
 #include <array>
 #include <cassert>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
-static LIBREMIDI_INLINE std::unique_ptr<midi_out_api>
+LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_out_api>
 make_midi_out_impl(auto base_conf, output_api_configuration api_conf)
 {
   std::unique_ptr<midi_out_api> ptr;
@@ -28,7 +28,7 @@ make_midi_out_impl(auto base_conf, output_api_configuration api_conf)
   return ptr;
 }
 
-static LIBREMIDI_INLINE std::unique_ptr<midi_out_api>
+LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_out_api>
 make_midi_out(const output_configuration& base_conf)
 {
   for (const auto& api : available_apis())
@@ -58,7 +58,7 @@ make_midi_out(const output_configuration& base_conf)
   return std::make_unique<midi_out_dummy>(output_configuration{}, dummy_configuration{});
 }
 
-static LIBREMIDI_INLINE std::unique_ptr<midi_out_api>
+LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_out_api>
 make_midi_out(const output_configuration& base_conf, const output_api_configuration& api_conf)
 {
   if (std::get_if<unspecified_configuration>(&api_conf))

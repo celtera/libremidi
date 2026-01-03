@@ -3,12 +3,12 @@
 #include <libremidi/backends/winmidi/helpers.hpp>
 #include <libremidi/detail/observer.hpp>
 
-namespace libremidi::winmidi
+NAMESPACE_LIBREMIDI::winmidi
 {
 struct port_info
 {
-  hstring id;
-  hstring name;
+  winrt::hstring id;
+  winrt::hstring name;
 };
 
 class observer_impl final
@@ -26,8 +26,8 @@ public:
   MidiEndpointDeviceWatcher::Added_revoker m_addHandler;
   MidiEndpointDeviceWatcher::Updated_revoker m_updHandler;
   MidiEndpointDeviceWatcher::Removed_revoker m_delHandler;
-  std::map<hstring, std::vector<input_port>> m_known_input_devices;
-  std::map<hstring, std::vector<output_port>> m_known_output_devices;
+  std::map<winrt::hstring, std::vector<input_port>> m_known_input_devices;
+  std::map<winrt::hstring, std::vector<output_port>> m_known_output_devices;
   std::mutex m_devices_mtx;
   std::atomic_bool m_in_constructor{true};
 
@@ -245,7 +245,7 @@ public:
     }
   }
 
-  void remove_device(hstring eid)
+  void remove_device(winrt::hstring eid)
   {
     std::vector<input_port> to_remove_in;
     std::vector<output_port> to_remove_out;

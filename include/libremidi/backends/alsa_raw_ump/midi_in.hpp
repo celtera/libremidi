@@ -10,7 +10,7 @@
 #include <atomic>
 #include <thread>
 
-namespace libremidi::alsa_raw_ump
+NAMESPACE_LIBREMIDI::alsa_raw_ump
 {
 class midi_in_impl
     : public midi2::in_api
@@ -339,7 +339,7 @@ private:
 };
 }
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 template <>
 inline std::unique_ptr<midi_in_api> make<alsa_raw_ump::midi_in_impl>(

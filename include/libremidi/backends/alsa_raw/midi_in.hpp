@@ -10,7 +10,7 @@
 #include <chrono>
 #include <thread>
 
-namespace libremidi::alsa_raw
+NAMESPACE_LIBREMIDI::alsa_raw
 {
 class midi_in_impl
     : public midi1::in_api
@@ -343,7 +343,7 @@ private:
 };
 }
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 template <>
 inline std::unique_ptr<midi_in_api> make<alsa_raw::midi_in_impl>(

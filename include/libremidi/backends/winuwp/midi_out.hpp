@@ -4,7 +4,7 @@
 #include <libremidi/backends/winuwp/observer.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
 class midi_out_winuwp final

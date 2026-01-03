@@ -4,7 +4,7 @@
 
 #include <cstdint>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 enum class segmentation_error
 {

@@ -1,11 +1,46 @@
 #pragma once
 
+// clang-format off
+#if !defined(LIBREMIDI_BASE_NAMESPACE)
+  #define LIBREMIDI_BASE_NAMESPACE libremidi
+#endif
+#if defined(LIBREMIDI_MODULE_BUILD)
+  #define LIBREMIDI_MODULE_EXPORT export
+  #define LIBREMIDI_MODULE_BEGIN_EXPORT export {
+  #define LIBREMIDI_MODULE_END_EXPORT }
+  #define NAMESPACE_LIBREMIDI export namespace LIBREMIDI_BASE_NAMESPACE
+  #define LIBREMIDI_STATIC inline
+  #define LIBREMIDI_STATIC_IMPLEMENTATION inline
+  #define LIBREMIDI_STATIC_INLINE_IMPLEMENTATION inline
+  #define LIBREMIDI_INLINE_IMPLEMENTATION
+  #define LIBREMIDI_ANONYMOUS_NAMESPACE detail
+#else
+  #define LIBREMIDI_MODULE_EXPORT
+  #define LIBREMIDI_MODULE_BEGIN_EXPORT
+  #define LIBREMIDI_MODULE_END_EXPORT
+  #define NAMESPACE_LIBREMIDI namespace LIBREMIDI_BASE_NAMESPACE
+  #define LIBREMIDI_STATIC static inline
+
+#if defined(LIBREMIDI_HEADER_ONLY)
+  #define LIBREMIDI_STATIC_IMPLEMENTATION static
+  #define LIBREMIDI_STATIC_INLINE_IMPLEMENTATION static inline
+  #define LIBREMIDI_INLINE_IMPLEMENTATION inline
+#else
+  #define LIBREMIDI_STATIC_IMPLEMENTATION static
+  #define LIBREMIDI_STATIC_INLINE_IMPLEMENTATION static
+  #define LIBREMIDI_INLINE_IMPLEMENTATION
+#endif
+
+  #define LIBREMIDI_ANONYMOUS_NAMESPACE
+#endif
+// clang-format on
+
 #if defined(_MSC_VER)
   #define NOMINMAX 1
   #define WIN32_LEAN_AND_MEAN
 #endif
 
-#if defined(LIBREMIDI_EXPORTS)
+#if defined(LIBREMIDI_EXPORTS) || defined(LIBREMIDI_MODULE_BUILD)
   #if defined(_MSC_VER)
     #define LIBREMIDI_EXPORT __declspec(dllexport)
   #elif defined(__GNUC__) || defined(__clang__)
@@ -32,22 +67,22 @@
 
   #if LIBREMIDI_SLIM_MESSAGE > 0
     #include <boost/container/static_vector.hpp>
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 using midi_bytes = boost::container::static_vector<unsigned char, LIBREMIDI_SLIM_MESSAGE>;
 }
   #else
     #include <boost/container/small_vector.hpp>
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
-static constexpr int small_vector_minimum_size
+LIBREMIDI_STATIC constexpr int small_vector_minimum_size
     = sizeof(boost::container::small_vector<unsigned char, 1>);
 using midi_bytes = boost::container::small_vector<unsigned char, small_vector_minimum_size>;
 }
   #endif
 #else
   #include <vector>
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 using midi_bytes = std::vector<unsigned char>;
 }
