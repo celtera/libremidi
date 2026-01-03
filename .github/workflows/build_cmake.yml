@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: ${{ matrix.config.name }}-${{ matrix.config.library_mode }}-${{ matrix.config.boost }}
+    name: ${{ matrix.config.name }}-${{ matrix.library_mode }}-${{ matrix.boost }}Boost
     runs-on: ${{ matrix.config.os }}
     strategy:
       fail-fast: false
@@ -48,10 +48,10 @@ jobs:
             examples: 1
           }
         - {
-            name: "Ubuntu clang-18 libstdc++",
+            name: "Ubuntu clang-19 libstdc++",
             os: ubuntu-latest,
             generator: "",
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
             test_target: "test",
             tests: 1,
             examples: 1
@@ -204,6 +204,10 @@ jobs:
         boost: [0, 1]
         library_mode: [LIBRARY, HEADER_ONLY, MODULE]
         distro: [bookworm, trixie, testing]
+
+      exclude:
+        - distro: bookworm
+          library_mode: MODULE
 
     steps:
     - name: Add backports repo if necessary
