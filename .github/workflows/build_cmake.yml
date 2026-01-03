@@ -127,8 +127,15 @@ jobs:
       if: matrix.config.name != 'Tarball'
       shell: bash
       run: |
+        CMAKE_GENERATOR=${{ matrix.config.generator }}
+        if [[ "$RUNNER_OS" == "Linux" ]]; then
+          if [[ "${{ matrix.library_mode }}" == "MODULE" ]]; then
+            CMAKE_GENERATOR=-GNinja
+          fi
+        fi
+
         cmake -S . -B build \
-          ${{ matrix.config.generator }} \
+          $CMAKE_GENERATOR \
           ${{ matrix.config.cmakeflags }} \
           -DLIBREMIDI_FIND_BOOST=${{ matrix.boost }} \
           -DLIBREMIDI_LIBRARY_MODE=${{ matrix.library_mode }} \
@@ -179,8 +186,13 @@ jobs:
           whoami
           env
           freebsd-version
+          CMAKE_GENERATOR=
+          if [[ "${{ matrix.library_mode }}" == "MODULE" ]]; then
+            CMAKE_GENERATOR=-GNinja
+          fi
 
           cmake -S . -B build \
+            $CMAKE_GENERATOR \
             -DLIBREMIDI_FIND_BOOST=${{ matrix.boost }} \
             -DLIBREMIDI_LIBRARY_MODE=${{ matrix.library_mode }} \
             -DLIBREMIDI_EXAMPLES=1 \
@@ -239,7 +251,12 @@ jobs:
 
     - name: Configure
       run: |
+        CMAKE_GENERATOR=${{ matrix.config.generator }}
+        if [[ "${{ matrix.library_mode }}" == "MODULE" ]]; then
+          CMAKE_GENERATOR=-GNinja
+        fi
         cmake -S . -B build \
+          $CMAKE_GENERATOR \
           -DLIBREMIDI_FIND_BOOST=${{ matrix.boost }} \
           -DLIBREMIDI_LIBRARY_MODE=${{ matrix.library_mode }} \
           -DLIBREMIDI_EXAMPLES=1 \
