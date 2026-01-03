@@ -3156,7 +3156,7 @@ inline bool generic_error_domain::equivalent(const error& lhs, const error& rhs)
 
 // namespace {
 
-string_ref generic_error_code_message(std::errc code) noexcept
+inline string_ref generic_error_code_message(std::errc code) noexcept
 {
   switch (code)
   {
@@ -3419,7 +3419,7 @@ inline string_ref dynamic_exception_error_domain::message(const error& e) const 
 
 // namespace {
 
-std::errc dynamic_exception_code_to_generic_code(dynamic_exception_errc code) noexcept
+inline std::errc dynamic_exception_code_to_generic_code(dynamic_exception_errc code) noexcept
 {
   switch (code)
   {
