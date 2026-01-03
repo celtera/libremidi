@@ -119,26 +119,32 @@ jobs:
 
     - name: Install dependencies
       if: matrix.config.name != 'Tarball'
+      shell: bash
       run:  |
         if [ "$RUNNER_OS" == "Linux" ]; then
           sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
           sudo apt update
           sudo apt install cmake ninja-build libboost-dev libasound-dev libjack-jackd2-dev clang libc++-dev
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          brew install ninja
         else
           curl -L https://github.com/ossia/sdk/releases/download/sdk31/boost_1_90_0.tar.gz > boost.tar.gz
           tar -xzf boost.tar.gz
           rm boost.tar.gz
         fi
-      shell: bash
 
     - name: Configure
       if: matrix.config.name != 'Tarball'
       shell: bash
       run: |
         CMAKE_GENERATOR=${{ matrix.config.generator }}
-        if [[ "$RUNNER_OS" == "Linux" ]]; then
+        if [[ "$CMAKE_GENERATOR" != "" ]]; then
           if [[ "${{ matrix.library_mode }}" == "MODULE" ]]; then
-            CMAKE_GENERATOR=-GNinja
+            if [[ "$RUNNER_OS" == "Linux" ]]; then
+              CMAKE_GENERATOR=-GNinja
+            elif [[ "$RUNNER_OS" == "macOS" ]]; then
+              CMAKE_GENERATOR=-GNinja
+            fi
           fi
         fi
 
