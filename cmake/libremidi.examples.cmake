@@ -118,6 +118,7 @@ if(NOT LIBREMIDI_MODULE_BUILD)
   endif()
 endif()
 
-
-add_executable(libremidi_modules examples/modules.cpp)
-target_link_libraries(libremidi_modules PRIVATE libremidi)
+if(LIBREMIDI_MODULE_BUILD)
+  add_executable(libremidi_modules examples/modules.cpp)
+  target_link_libraries(libremidi_modules PRIVATE libremidi)
+endif()
