@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   build:
-    name: ${{ matrix.config.name }}-${{ matrix.library_mode }}-${{ matrix.boost }}Boost
+    name: ${{ matrix.config.name }} ${{ matrix.library_mode }} ${{ matrix.boost && 'Boost' }}
     runs-on: ${{ matrix.config.os }}
     strategy:
       fail-fast: false
@@ -214,7 +214,7 @@ jobs:
           cmake --build build --target test
 
   build_debian:
-    name: Debian ${{ matrix.distro }}
+    name: Debian ${{ matrix.distro }} ${{ matrix.library_mode }} ${{ matrix.boost && 'Boost' }}
     runs-on: ubuntu-latest
     container:
       image: debian:${{ matrix.distro }}
