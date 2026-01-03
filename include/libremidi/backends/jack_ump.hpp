@@ -5,7 +5,7 @@
 
 #include <string_view>
 
-namespace libremidi::jack_ump
+NAMESPACE_LIBREMIDI::jack_ump
 {
 struct backend
 {

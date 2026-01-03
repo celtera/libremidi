@@ -10,7 +10,7 @@
 #ifdef LIBREMIDI_JACK
   #include <libremidi/backends/jack/shared_handler.hpp>
 #endif
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 LIBREMIDI_INLINE
 shared_configurations

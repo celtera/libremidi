@@ -7,10 +7,10 @@
 
 #include <utility>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
-static LIBREMIDI_INLINE std::unique_ptr<observer_api> make_observer(const auto& base_conf)
+LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<observer_api> make_observer(const auto& base_conf)
 {
   for (const auto& api : available_apis())
   {

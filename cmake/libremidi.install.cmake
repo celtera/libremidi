@@ -1,17 +1,22 @@
-if(NOT LIBREMIDI_HEADER_ONLY)
+if(LIBREMIDI_MODULE_BUILD)
+  message("Install not supported yet as of CMake 4.2")
+  return()
+elseif(NOT LIBREMIDI_HEADER_ONLY)
   install(TARGETS libremidi
           EXPORT libremidi-targets
           ARCHIVE
           RUNTIME
           LIBRARY
   )
+  install(EXPORT libremidi-targets
+          DESTINATION lib/cmake/libremidi)
 else()
   install(TARGETS libremidi
           EXPORT libremidi-targets
   )
+  install(EXPORT libremidi-targets
+          DESTINATION lib/cmake/libremidi)
 endif()
-install(EXPORT libremidi-targets
-        DESTINATION lib/cmake/libremidi)
 install(DIRECTORY include
         DESTINATION .)
 

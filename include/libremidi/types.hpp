@@ -5,7 +5,7 @@
 #include <string>
 #include <variant>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 /// MIDI protocol supported by an endpoint or function block
 enum class midi_protocol : uint8_t

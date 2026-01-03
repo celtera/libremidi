@@ -2,6 +2,10 @@ name: Build
 
 on:
   push:
+    branches:
+      - master
+    tags:
+      - v*
     paths-ignore:
       - 'docs/**'
       - '**.md'
@@ -10,36 +14,40 @@ on:
       - '**.md'
       - 'docs/**'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    name: ${{ matrix.config.name }}
+    name: ${{ matrix.config.name }}-${{ matrix.library_mode }}-${{ matrix.boost }}Boost
     runs-on: ${{ matrix.config.os }}
     strategy:
       fail-fast: false
       matrix:
         boost: [0, 1]
-        header_only: [0, 1]
+        library_mode: [LIBRARY, HEADER_ONLY, MODULE]
         config:
         - {
-            name: "Windows (MSVC)",
+            name: "MSVC x86_64",
             os: windows-latest,
             generator: "",
-            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_86_0",
+            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "RUN_TESTS",
             tests: 1,
             examples: 1
           }
         - {
-            name: "Windows (MSVC, arm64)",
+            name: "MSVC arm64",
             os: windows-11-arm,
             generator: "",
-            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_86_0",
+            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "RUN_TESTS",
             tests: 1,
             examples: 1
           }
         - {
-            name: "Ubuntu (gcc)",
+            name: "Ubuntu gcc",
             os: ubuntu-latest,
             generator: "",
             cmakeflags: "-DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_PEDANTIC=1 -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SANITIZE_VECTOR=1'",
@@ -48,16 +56,16 @@ jobs:
             examples: 1
           }
         - {
-            name: "Ubuntu (clang-18, libstdc++)",
+            name: "Ubuntu clang-19 libstdc++",
             os: ubuntu-latest,
             generator: "",
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
             test_target: "test",
             tests: 1,
             examples: 1
           }
         - {
-            name: "Ubuntu (clang, libc++)",
+            name: "Ubuntu clang libc++",
             os: ubuntu-latest,
             generator: "",
             cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-stdlib=libc++ -Werror=return-type'",
@@ -76,18 +84,18 @@ jobs:
           }
         - {
             name: "macOS",
-            os: macos-14,
+            os: macos-latest,
             generator: "",
-            cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DBOOST_ROOT=$PWD/boost_1_86_0",
+            cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "test",
             tests: 1,
             examples: 1
           }
         - {
             name: "iOS",
-            os: macos-14,
+            os: macos-latest,
             generator: "-GXcode",
-            cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DBOOST_ROOT=$PWD/boost_1_86_0 -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_XCODE_EFFECTIVE_PLATFORMS=-iphoneos",
+            cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DBOOST_ROOT=$PWD/boost_1_90_0 -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_XCODE_EFFECTIVE_PLATFORMS=-iphoneos",
             test_target: "test",
             tests: 0,
             examples: 0
@@ -117,7 +125,7 @@ jobs:
           sudo apt update
           sudo apt install cmake libboost-dev libasound-dev libjack-jackd2-dev clang libc++-dev
         else
-          curl -L https://github.com/ossia/sdk/releases/download/sdk31/boost_1_86_0.tar.gz > boost.tar.gz
+          curl -L https://github.com/ossia/sdk/releases/download/sdk31/boost_1_90_0.tar.gz > boost.tar.gz
           tar -xzf boost.tar.gz
           rm boost.tar.gz
         fi
@@ -127,11 +135,18 @@ jobs:
       if: matrix.config.name != 'Tarball'
       shell: bash
       run: |
+        CMAKE_GENERATOR=${{ matrix.config.generator }}
+        if [[ "$RUNNER_OS" == "Linux" ]]; then
+          if [[ "${{ matrix.library_mode }}" == "MODULE" ]]; then
+            CMAKE_GENERATOR=-GNinja
+          fi
+        fi
+
         cmake -S . -B build \
-          ${{ matrix.config.generator }} \
+          $CMAKE_GENERATOR \
           ${{ matrix.config.cmakeflags }} \
           -DLIBREMIDI_FIND_BOOST=${{ matrix.boost }} \
-          -DLIBREMIDI_HEADER_ONLY=${{ matrix.header_only }} \
+          -DLIBREMIDI_LIBRARY_MODE=${{ matrix.library_mode }} \
           -DLIBREMIDI_EXAMPLES=${{ matrix.config.examples }}  \
           -DLIBREMIDI_TESTS=${{ matrix.config.tests }} \
           -DLIBREMIDI_CI=1 \
@@ -163,7 +178,7 @@ jobs:
       fail-fast: false
       matrix:
         boost: [0, 1]
-        header_only: [0, 1]
+        library_mode: [LIBRARY, HEADER_ONLY, MODULE]
     steps:
     - uses: actions/checkout@v4
 
@@ -179,10 +194,15 @@ jobs:
           whoami
           env
           freebsd-version
+          CMAKE_GENERATOR=
+          if [[ "${{ matrix.library_mode }}" == "MODULE" ]]; then
+            CMAKE_GENERATOR=-GNinja
+          fi
 
           cmake -S . -B build \
+            $CMAKE_GENERATOR \
             -DLIBREMIDI_FIND_BOOST=${{ matrix.boost }} \
-            -DLIBREMIDI_HEADER_ONLY=${{ matrix.header_only }} \
+            -DLIBREMIDI_LIBRARY_MODE=${{ matrix.library_mode }} \
             -DLIBREMIDI_EXAMPLES=1 \
             -DLIBREMIDI_TESTS=1 \
             -DLIBREMIDI_CI=1 \
@@ -202,8 +222,12 @@ jobs:
       fail-fast: false
       matrix:
         boost: [0, 1]
-        header_only: [0, 1]
-        distro: [bookworm, trixie]
+        library_mode: [LIBRARY, HEADER_ONLY, MODULE]
+        distro: [bookworm, trixie, testing]
+
+        exclude:
+          - distro: bookworm
+            library_mode: MODULE
 
     steps:
     - name: Add backports repo if necessary
@@ -230,19 +254,19 @@ jobs:
           libasound-dev \
           libjack-jackd2-dev \
           libudev-dev \
-          libpipewire-0.3-dev
-
-        if [[ "${{matrix.distro}}" == 'bullseye' ]]; then
-          apt-get install -qq --force-yes cmake/bullseye-backports
-        else
-          apt-get install -qq --force-yes cmake
-        fi
+          libpipewire-0.3-dev \
+          cmake
 
     - name: Configure
       run: |
+        CMAKE_GENERATOR=${{ matrix.config.generator }}
+        if [[ "${{ matrix.library_mode }}" == "MODULE" ]]; then
+          CMAKE_GENERATOR=-GNinja
+        fi
         cmake -S . -B build \
+          $CMAKE_GENERATOR \
           -DLIBREMIDI_FIND_BOOST=${{ matrix.boost }} \
-          -DLIBREMIDI_HEADER_ONLY=${{ matrix.header_only }} \
+          -DLIBREMIDI_LIBRARY_MODE=${{ matrix.library_mode }} \
           -DLIBREMIDI_EXAMPLES=1 \
           -DLIBREMIDI_TESTS=1 \
           -DLIBREMIDI_CI=1 \

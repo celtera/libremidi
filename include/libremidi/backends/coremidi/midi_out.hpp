@@ -3,7 +3,7 @@
 #include <libremidi/backends/coremidi/helpers.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class midi_out_core final
     : public midi1::out_api

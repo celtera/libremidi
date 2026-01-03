@@ -9,7 +9,7 @@
 // https://ccrma.stanford.edu/~craig/articles/linuxmidi/alsa-1.0/alsarawportlist.c
 // Thanks Craig Stuart Sapp <craig@ccrma.stanford.edu>
 
-namespace libremidi::alsa_raw
+NAMESPACE_LIBREMIDI::alsa_raw
 {
 struct backend
 {

@@ -5,7 +5,7 @@
 
 #include <string_view>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 struct winuwp_backend
 {
@@ -21,4 +21,4 @@ struct winuwp_backend
 
   static constexpr inline bool available() noexcept { return true; }
 };
-} // namespace libremidi
+} // NAMESPACE_LIBREMIDI

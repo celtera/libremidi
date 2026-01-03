@@ -18,7 +18,7 @@
 //  http://msdn.microsoft.com/library/default.asp?url=/library/en-us/multimed/htm/_win32_midi_reference.asp
 
 // Thanks to Jean-Baptiste Berruchon for the sysex code.
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
 struct winmm_backend

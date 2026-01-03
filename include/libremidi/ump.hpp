@@ -5,7 +5,7 @@
   #include <midi/universal_packet.h>
 #endif
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 namespace midi2
 {

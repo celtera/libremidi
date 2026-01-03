@@ -5,7 +5,7 @@
 
 #include <unordered_set>
 
-namespace libremidi::jack_ump
+NAMESPACE_LIBREMIDI::jack_ump
 {
 class observer_jack final
     : public observer_api

@@ -7,7 +7,7 @@
 
 #include <string_view>
 
-namespace libremidi::alsa_raw_ump
+NAMESPACE_LIBREMIDI::alsa_raw_ump
 {
 struct backend
 {

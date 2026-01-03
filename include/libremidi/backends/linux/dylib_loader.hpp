@@ -1,10 +1,11 @@
 #pragma once
+#include <libremidi/config.hpp>
 #if __has_include(<dlfcn.h>)
   #include <dlfcn.h>
 
   #include <cassert>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class dylib_loader
 {

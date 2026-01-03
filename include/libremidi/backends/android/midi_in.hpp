@@ -8,7 +8,7 @@
 #include <chrono>
 #include <thread>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 namespace android
 {

@@ -4,7 +4,7 @@
 #include <libremidi/backends/android/midi_out.hpp>
 #include <libremidi/backends/android/observer.hpp>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 namespace android
 {

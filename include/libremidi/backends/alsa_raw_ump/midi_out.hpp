@@ -13,7 +13,7 @@
 #include <system_error>
 #include <utility>
 
-namespace libremidi::alsa_raw_ump
+NAMESPACE_LIBREMIDI::alsa_raw_ump
 {
 class midi_out_impl final
     : public midi2::out_api

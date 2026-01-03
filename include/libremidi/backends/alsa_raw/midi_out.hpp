@@ -8,7 +8,7 @@
 #include <atomic>
 #include <thread>
 
-namespace libremidi::alsa_raw
+NAMESPACE_LIBREMIDI::alsa_raw
 {
 class midi_out_impl final
     : public midi1::out_api

@@ -10,12 +10,12 @@
 
 #if __has_include(<poll.h>)
   #include <poll.h>
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 using poll_descriptors = pollfd;
 }
 #else
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 struct poll_descriptors
 {
@@ -26,7 +26,7 @@ struct poll_descriptors
 }
 #endif
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
 /**

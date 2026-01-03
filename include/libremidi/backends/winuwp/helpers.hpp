@@ -14,7 +14,7 @@
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Storage.Streams.h>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 inline void winrt_init()
 {
@@ -24,8 +24,6 @@ inline void winrt_init()
   // winrt::init_apartment();
 }
 
-namespace
-{
 using namespace winrt;
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Devices::Midi;
@@ -37,7 +35,7 @@ using namespace winrt::Windows::Storage::Streams;
 // get() function from winrt is that we avoid an assertion if waiting
 // from the STA thread.
 template <typename T>
-auto get(T const& async)
+LIBREMIDI_STATIC auto get(T const& async)
 {
   if (async.Status() != AsyncStatus::Completed)
   {
@@ -59,6 +57,5 @@ auto get(T const& async)
   }
 
   return async.GetResults();
-}
 }
 }

@@ -11,7 +11,7 @@ typedef uint32_t jack_nframes_t;
 typedef int (*JackProcessCallback)(jack_nframes_t nframes, void* arg);
 }
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 using jack_callback_function = std::function<void(int nframes)>;
 struct jack_callback

@@ -4,7 +4,7 @@
 #include <libremidi/detail/midi_in.hpp>
 #include <libremidi/detail/midi_stream_decoder.hpp>
 
-namespace libremidi::coremidi_ump
+NAMESPACE_LIBREMIDI::coremidi_ump
 {
 
 class midi_in_impl final

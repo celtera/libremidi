@@ -5,7 +5,7 @@
 #include <libremidi/detail/midi_stream_decoder.hpp>
 
 #include <thread>
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 template <typename Impl, typename F>
 struct osc_parser
@@ -115,7 +115,7 @@ struct osc_parser
 
 }
 
-namespace libremidi::net
+NAMESPACE_LIBREMIDI::net
 {
 
 struct osc_parser_midi1
@@ -264,7 +264,7 @@ public:
 };
 }
 
-namespace libremidi::net_ump
+NAMESPACE_LIBREMIDI::net_ump
 {
 struct osc_parser_midi2
 {

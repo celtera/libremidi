@@ -2,7 +2,7 @@
 #include <libremidi/backends/coremidi/observer.hpp>
 #include <libremidi/backends/coremidi_ump/config.hpp>
 
-namespace libremidi::coremidi_ump
+NAMESPACE_LIBREMIDI::coremidi_ump
 {
 
 class observer_impl final : public libremidi::observer_core

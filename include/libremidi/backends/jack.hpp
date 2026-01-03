@@ -13,7 +13,7 @@
 //
 //  *********************************************************************//
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 struct jack_backend
 {

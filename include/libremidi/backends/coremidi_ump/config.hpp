@@ -1,7 +1,7 @@
 #pragma once
 #include <libremidi/backends/coremidi/config.hpp>
 
-namespace libremidi::coremidi_ump
+NAMESPACE_LIBREMIDI::coremidi_ump
 {
 struct input_configuration
 {

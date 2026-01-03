@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 struct eventfd_notifier
 {

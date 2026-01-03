@@ -55,18 +55,18 @@ std::ostream& operator<<(std::ostream& s, const libremidi::message& m)
 }
 #endif
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 namespace util
 {
 struct no_validator
 {
-  static inline bool validate_track([[maybe_unused]] const midi_track& track) { return true; }
+  static bool validate_track([[maybe_unused]] const midi_track& track) { return true; }
 };
 
 struct validator
 {
-  static inline bool validate_track(const midi_track& track)
+  static bool validate_track(const midi_track& track)
   {
     if (track.empty())
     {
@@ -108,13 +108,13 @@ struct read_unchecked
 {
   // Read a MIDI-style variable-length integer (big-endian value in groups of 7 bits,
   // with top bit set to signify that another byte follows).
-  static inline void ensure_size(
+  static void ensure_size(
       [[maybe_unused]] const uint8_t* begin, [[maybe_unused]] const uint8_t* end,
       [[maybe_unused]] int64_t needed)
   {
   }
 
-  static inline uint32_t
+  static uint32_t
   read_variable_length(uint8_t const*& data, [[maybe_unused]] uint8_t const* end)
   {
     uint32_t result = 0;
@@ -133,7 +133,7 @@ struct read_unchecked
     }
   }
 
-  static inline void read_bytes(
+  static void read_bytes(
       midi_bytes& buffer, uint8_t const*& data, [[maybe_unused]] const uint8_t* end,
       const std::size_t num)
   {
@@ -142,20 +142,20 @@ struct read_unchecked
       buffer.push_back(*data++);
   }
 
-  static inline void read_bytes(
+  static void read_bytes(
       midi_bytes& buffer, uint8_t const*& data, [[maybe_unused]] const uint8_t* end, const int num)
   {
     read_bytes(buffer, data, end, static_cast<std::size_t>(num));
   }
 
-  static inline uint16_t read_uint16_be(uint8_t const*& data, [[maybe_unused]] const uint8_t* end)
+  static uint16_t read_uint16_be(uint8_t const*& data, [[maybe_unused]] const uint8_t* end)
   {
     uint16_t result = *data++ << 8u;
     result += *data++;
     return result;
   }
 
-  static inline uint32_t read_uint24_be(uint8_t const*& data, [[maybe_unused]] const uint8_t* end)
+  static uint32_t read_uint24_be(uint8_t const*& data, [[maybe_unused]] const uint8_t* end)
   {
     uint32_t result = *data++ << 16u;
     result += static_cast<uint32_t>(*data++ << 8u);
@@ -163,7 +163,7 @@ struct read_unchecked
     return result;
   }
 
-  static inline uint32_t read_uint32_be(uint8_t const*& data, [[maybe_unused]] const uint8_t* end)
+  static uint32_t read_uint32_be(uint8_t const*& data, [[maybe_unused]] const uint8_t* end)
   {
     uint32_t result = *data++ << 24u;
     result += static_cast<uint32_t>(*data++ << 16u);
@@ -178,14 +178,14 @@ struct read_checked
 {
   // Read a MIDI-style variable-length integer (big-endian value in groups of 7 bits,
   // with top bit set to signify that another byte follows).
-  static inline void
+  static void
   ensure_size(const uint8_t* begin, const uint8_t* end, const std::size_t needed)
   {
     if (const auto available = static_cast<std::size_t>(end - begin); available < needed)
       throw std::runtime_error("MIDI reader: not enough data to process");
   }
 
-  static inline std::size_t read_variable_length(uint8_t const*& data, uint8_t const* end)
+  static std::size_t read_variable_length(uint8_t const*& data, uint8_t const* end)
   {
     std::size_t result = 0;
     while (true)
@@ -204,26 +204,26 @@ struct read_checked
     }
   }
 
-  static inline void
+  static void
   read_bytes(midi_bytes& buffer, uint8_t const*& data, uint8_t const* end, const std::size_t num)
   {
     ensure_size(data, end, num);
     read_unchecked::read_bytes(buffer, data, end, num);
   }
 
-  static inline uint16_t read_uint16_be(uint8_t const*& data, uint8_t const* end)
+  static uint16_t read_uint16_be(uint8_t const*& data, uint8_t const* end)
   {
     ensure_size(data, end, 2);
     return read_unchecked::read_uint16_be(data, end);
   }
 
-  static inline uint32_t read_uint24_be(uint8_t const*& data, uint8_t const* end)
+  static uint32_t read_uint24_be(uint8_t const*& data, uint8_t const* end)
   {
     ensure_size(data, end, 3);
     return read_unchecked::read_uint24_be(data, end);
   }
 
-  static inline uint32_t read_uint32_be(uint8_t const*& data, uint8_t const* end)
+  static uint32_t read_uint32_be(uint8_t const*& data, uint8_t const* end)
   {
     ensure_size(data, end, 4);
     return read_unchecked::read_uint32_be(data, end);
@@ -537,7 +537,7 @@ LIBREMIDI_INLINE
 auto reader::parse(const uint8_t* dataPtr, std::size_t size) noexcept -> parse_result
 try
 {
-  using namespace libremidi::util;
+  using namespace util;
 
   tracks.clear();
 

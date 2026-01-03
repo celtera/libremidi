@@ -9,7 +9,7 @@
 #endif
 #include <libremidi/detail/observer.hpp>
 
-namespace libremidi::alsa_raw
+NAMESPACE_LIBREMIDI::alsa_raw
 {
 template <typename Enumerator>
 class observer_impl_base
@@ -256,7 +256,7 @@ public:
 };
 }
 
-namespace libremidi::alsa_raw
+NAMESPACE_LIBREMIDI::alsa_raw
 {
 struct observer_impl : observer_impl_base<alsa_raw::midi1_enumerator>
 {

@@ -81,7 +81,7 @@
   #include <libremidi/backends/android/android.hpp>
 #endif
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 // The order here will control the order of the API search in
 // the constructor.
@@ -93,7 +93,7 @@ constexpr auto make_tl(unused, Args...)
 
 namespace midi1
 {
-static constexpr auto available_backends = make_tl(
+LIBREMIDI_STATIC constexpr auto available_backends = make_tl(
     0
 #if defined(LIBREMIDI_ALSA)
     ,
@@ -167,7 +167,7 @@ auto for_backend(libremidi::API api, F&& f)
 
 namespace midi2
 {
-static constexpr auto available_backends = make_tl(
+LIBREMIDI_STATIC constexpr auto available_backends = make_tl(
     0
 #if defined(LIBREMIDI_ALSA) && LIBREMIDI_ALSA_HAS_UMP
     ,

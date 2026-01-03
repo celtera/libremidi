@@ -21,26 +21,14 @@
   #define LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS 1
 
 #define LIBREMIDI_DEFINE_GUID_CONSTEXPR(type,name,l,w1,w2,b1,b2,b3,b4,b5,b6,b7,b8) \
-        static constexpr const type name = {l,w1,w2,{b1,b2,b3,b4,b5,b6,b7,b8}}
+        LIBREMIDI_STATIC constexpr const type name = {l,w1,w2,{b1,b2,b3,b4,b5,b6,b7,b8}}
 
-namespace libremidi {
-  LIBREMIDI_DEFINE_GUID_CONSTEXPR(IID, IID_IMidiEndpointConnectionMessagesReceivedCallback,0x8087b303,0x0519,0x31d1,0x31,0xd1,0x00,0x00,0x00,0x00,0x00,0x10);
-  LIBREMIDI_DEFINE_GUID_CONSTEXPR(IID, IID_IMidiEndpointConnectionRaw,0x8087b303,0x0519,0x31d1,0x31,0xd1,0x00,0x00,0x00,0x00,0x00,0x20);
+NAMESPACE_LIBREMIDI {
+  LIBREMIDI_DEFINE_GUID_CONSTEXPR(IID, IID_IMidiEndpointConnectionMessagesReceivedCallback, 0x8087b303,0x0519,0x31d1,0x31,0xd1,0x00,0x00,0x00,0x00,0x00,0x10);
+  LIBREMIDI_DEFINE_GUID_CONSTEXPR(IID, IID_IMidiEndpointConnectionRaw, 0x8087b303,0x0519,0x31d1,0x31,0xd1,0x00,0x00,0x00,0x00,0x00,0x20);
+  LIBREMIDI_DEFINE_GUID_CONSTEXPR(IID, IID_IMidiClientInitializer, 0x8087b303, 0xd551, 0xbce2, 0x1e, 0xad, 0xa2, 0x50, 0x0d, 0x50, 0xc5, 0x80);
+  LIBREMIDI_DEFINE_GUID_CONSTEXPR(IID, IID_MidiClientInitializerUuid, 0xc3263827, 0xc3b0, 0xbdbd, 0x25, 0x00, 0xce, 0x63, 0xa3, 0xf3, 0xf2, 0xc3);
 }
-#endif
-
-// MinGW support
-#if !defined(_MSC_VER)
-namespace Microsoft::Windows::Devices::Midi2::Initialization
-{
-struct IMidiClientInitializer;
-struct MidiClientInitializerUuid;
-}
-
-__CRT_UUID_DECL(Microsoft::Windows::Devices::Midi2::Initialization::IMidiClientInitializer,
- 0x8087b303, 0xd551, 0xbce2, 0x1e, 0xad, 0xa2, 0x50, 0x0d, 0x50, 0xc5, 0x80);
-__CRT_UUID_DECL(Microsoft::Windows::Devices::Midi2::Initialization::MidiClientInitializerUuid,
- 0xc3263827, 0xc3b0, 0xbdbd, 0x25, 0x00, 0xce, 0x63, 0xa3, 0xf3, 0xf2, 0xc3);
 #endif
 
 #include <init/Microsoft.Windows.Devices.Midi2.Initialization.hpp>
@@ -49,7 +37,7 @@ __CRT_UUID_DECL(Microsoft::Windows::Devices::Midi2::Initialization::MidiClientIn
 namespace midi2 = winrt::Microsoft::Windows::Devices::Midi2;
 namespace foundation = winrt::Windows::Foundation;
 
-namespace libremidi::winmidi
+NAMESPACE_LIBREMIDI::winmidi
 {
 using namespace winrt;
 using namespace winrt::Windows::Foundation;

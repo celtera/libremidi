@@ -16,7 +16,7 @@ EMSCRIPTEN_KEEPALIVE
 void libremidi_devices_input(int port, double timestamp, int len, char* bytes);
 }
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 namespace webmidi_helpers
 {

@@ -4,7 +4,7 @@
 #include <chrono>
 #include <functional>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
 struct winmm_input_configuration

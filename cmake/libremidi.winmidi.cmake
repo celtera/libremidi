@@ -46,7 +46,6 @@ if(CPPWINRT_TOOL)
     COMMAND "${CPPWINRT_TOOL}"
       "@${CMAKE_BINARY_DIR}/cppwinrt-src/cppwinrt-winmidi.rsp"
       -output "${CMAKE_BINARY_DIR}/cppwinrt-winmidi"
-      -verbose
   )
 
   file(

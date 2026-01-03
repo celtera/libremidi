@@ -4,7 +4,7 @@
 
 #include <string_view>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 struct kbd_backend
 {

@@ -24,10 +24,10 @@ struct libremidi_midi_out_handle
   libremidi::midi_out self;
 };
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
-static void assign_error_callback(const auto& src, auto& dst)
+LIBREMIDI_STATIC void assign_error_callback(const auto& src, auto& dst)
 {
   if (src.callback)
   {
