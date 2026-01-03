@@ -1,5 +1,6 @@
 import libremidi;
 
+#define LIBREMIDI_USE_MODULES 1
 #include "utils.hpp"
 
 #include <cstdlib>
