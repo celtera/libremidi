@@ -123,7 +123,7 @@ jobs:
         if [ "$RUNNER_OS" == "Linux" ]; then
           sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
           sudo apt update
-          sudo apt install cmake libboost-dev libasound-dev libjack-jackd2-dev clang libc++-dev
+          sudo apt install cmake ninja-build libboost-dev libasound-dev libjack-jackd2-dev clang libc++-dev
         else
           curl -L https://github.com/ossia/sdk/releases/download/sdk31/boost_1_90_0.tar.gz > boost.tar.gz
           tar -xzf boost.tar.gz
@@ -186,7 +186,7 @@ jobs:
       with:
         usesh: true
         prepare: |
-          pkg install -y jackit boost-libs cmake git
+          pkg install -y jackit boost-libs cmake git ninja
 
         run: |
           pwd
@@ -230,11 +230,6 @@ jobs:
             library_mode: MODULE
 
     steps:
-    - name: Add backports repo if necessary
-      if: matrix.distro == 'bullseye'
-      run: |
-        echo "deb http://ftp.debian.org/debian/ ${{ matrix.distro }}-backports main non-free contrib" > /etc/apt/sources.list.d/${{ matrix.distro }}-backports.list
-
     - name: Install git
       run: |
         apt-get update -qq
@@ -255,7 +250,7 @@ jobs:
           libjack-jackd2-dev \
           libudev-dev \
           libpipewire-0.3-dev \
-          cmake
+          cmake ninja-build
 
     - name: Configure
       shell: bash
