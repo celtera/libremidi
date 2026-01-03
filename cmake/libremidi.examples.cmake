@@ -110,7 +110,7 @@ if(Boost_cobalt_FOUND)
   target_link_libraries(coroutines PRIVATE Boost::cobalt)
 endif()
 
-if(NOT LIBREMIDI_MODULES_BUILD)
+if(NOT LIBREMIDI_MODULE_BUILD)
   add_executable(libremidi_c_api examples/c_api.c)
   target_link_libraries(libremidi_c_api PRIVATE libremidi)
   if(LIBREMIDI_HEADER_ONLY)
@@ -119,5 +119,5 @@ if(NOT LIBREMIDI_MODULES_BUILD)
 endif()
 
 
-add_executable(libremidi_modules examples/modules.cppm)
+add_executable(libremidi_modules examples/modules.cpp)
 target_link_libraries(libremidi_modules PRIVATE libremidi)
