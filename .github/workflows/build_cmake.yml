@@ -258,6 +258,7 @@ jobs:
           cmake
 
     - name: Configure
+      shell: bash
       run: |
         CMAKE_GENERATOR=${{ matrix.config.generator }}
         if [[ "${{ matrix.library_mode }}" == "MODULE" ]]; then
