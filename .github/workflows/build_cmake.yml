@@ -56,10 +56,10 @@ jobs:
             examples: 1
           }
         - {
-            name: "Ubuntu clang-19 libstdc++",
+            name: "Ubuntu clang-21 libstdc++",
             os: ubuntu-latest,
             generator: "",
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-21 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
             test_target: "test",
             tests: 1,
             examples: 1
@@ -138,7 +138,7 @@ jobs:
       shell: bash
       run: |
         CMAKE_GENERATOR=${{ matrix.config.generator }}
-        if [[ "$CMAKE_GENERATOR" != "" ]]; then
+        if [[ -z "$CMAKE_GENERATOR" ]]; then
           if [[ "${{ matrix.library_mode }}" == "MODULE" ]]; then
             if [[ "$RUNNER_OS" == "Linux" ]]; then
               CMAKE_GENERATOR=-GNinja
@@ -261,7 +261,7 @@ jobs:
     - name: Configure
       shell: bash
       run: |
-        CMAKE_GENERATOR=${{ matrix.config.generator }}
+        CMAKE_GENERATOR=
         if [[ "${{ matrix.library_mode }}" == "MODULE" ]]; then
           CMAKE_GENERATOR=-GNinja
         fi
