@@ -5,7 +5,7 @@
 
 #include <readerwriterqueue.h>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class midi_out_pipewire
     : public midi1::out_api

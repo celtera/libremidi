@@ -4,7 +4,7 @@
 #include <chrono>
 #include <functional>
 
-namespace libremidi::alsa_raw_ump
+NAMESPACE_LIBREMIDI::alsa_raw_ump
 {
 struct input_configuration
 {

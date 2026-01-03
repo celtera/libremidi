@@ -4,7 +4,7 @@
 #include <functional>
 #include <map>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 enum kbd_event
 {
@@ -36,7 +36,7 @@ enum kbd_event
 // actually based on macOS virtual codes as it seems
 // impossible to get raw scan codes.
 // https://eastmanreference.com/complete-list-of-applescript-key-codes
-static inline const std::map<int, int>& scancode_map_macos(){
+LIBREMIDI_STATIC const std::map<int, int>& scancode_map_macos(){
   static const std::map<int, int> ret{
   {  0, NOTE_0}, // C0
   { 13, NOTE_0 + 1},
@@ -83,7 +83,7 @@ static inline const std::map<int, int>& scancode_map_macos(){
 
 // Use: https://kbdlayout.info/KBDUSX/scancodes
 // Also valid for windows
-static inline const std::map<int, int>& scancode_map_linux() {
+LIBREMIDI_STATIC const std::map<int, int>& scancode_map_linux() {
   static const std::map<int, int> ret{
   { 0x1E, NOTE_0}, // C0
   { 0x11, NOTE_0 + 1},

@@ -4,7 +4,7 @@
 #include <libremidi/detail/midi_in.hpp>
 #include <libremidi/detail/midi_stream_decoder.hpp>
 
-namespace libremidi::pipewire_ump
+NAMESPACE_LIBREMIDI::pipewire_ump
 {
 class midi_in_pipewire final
     : public midi2::in_api

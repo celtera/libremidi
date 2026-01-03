@@ -4,7 +4,7 @@
 #include <libremidi/ump.hpp>
 
 // FIXME! we need to review them all to check the channels
-namespace libremidi::ump_events
+NAMESPACE_LIBREMIDI::ump_events
 {
 inline libremidi::ump note_on(uint8_t group, uint8_t channel, uint8_t pitch, uint32_t vel)
 {
@@ -63,7 +63,7 @@ inline libremidi::ump pitch_bend(uint8_t group, uint8_t channel, uint32_t value)
 }
 }
 
-namespace libremidi::from_midi1
+NAMESPACE_LIBREMIDI::from_midi1
 {
 inline libremidi::ump note_on(uint8_t channel, uint8_t pitch, uint8_t vel)
 {
@@ -122,7 +122,7 @@ inline libremidi::ump pitch_bend(uint8_t channel, uint16_t value)
 }
 }
 
-namespace libremidi::from_01
+NAMESPACE_LIBREMIDI::from_01
 {
 inline libremidi::ump note_on(uint8_t channel, uint8_t pitch, double vel)
 {
@@ -179,7 +179,7 @@ inline libremidi::ump pitch_bend(uint8_t channel, double value)
 }
 }
 
-namespace libremidi::as_midi1
+NAMESPACE_LIBREMIDI::as_midi1
 {
 inline auto note_off(const libremidi::ump& mess)
 {
@@ -281,7 +281,7 @@ inline auto pitch_bend(const libremidi::ump& mess)
 }
 }
 
-namespace libremidi::as_01
+NAMESPACE_LIBREMIDI::as_01
 {
 inline auto note_off(const libremidi::ump& mess)
 {

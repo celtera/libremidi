@@ -3,7 +3,7 @@
 
 #include <string>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 namespace webmidi_helpers
 {

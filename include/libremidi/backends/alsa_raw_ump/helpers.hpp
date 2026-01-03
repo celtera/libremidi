@@ -5,7 +5,7 @@
 
 #include <cstdio>
 
-namespace libremidi::alsa_raw_ump
+NAMESPACE_LIBREMIDI::alsa_raw_ump
 {
 struct midi2_enumerator : alsa_raw::enumerator
 {

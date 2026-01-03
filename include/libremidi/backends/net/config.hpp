@@ -7,7 +7,7 @@ namespace boost::asio
 struct io_context;
 }
 
-namespace libremidi::net
+NAMESPACE_LIBREMIDI::net
 {
 enum class protocol
 {
@@ -46,7 +46,7 @@ struct dgram_observer_configuration
 
 }
 
-namespace libremidi::net_ump
+NAMESPACE_LIBREMIDI::net_ump
 {
 enum class protocol
 {

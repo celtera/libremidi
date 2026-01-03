@@ -9,7 +9,7 @@
 
 #include <string_view>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 template <>
 inline std::unique_ptr<observer_api>
@@ -42,7 +42,7 @@ inline std::unique_ptr<midi_in_api> make<
 
 }
 
-namespace libremidi::alsa_seq_ump
+NAMESPACE_LIBREMIDI::alsa_seq_ump
 {
 struct backend
 {

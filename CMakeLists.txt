@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.22..4.2.0 FATAL_ERROR)
 project(libremidi
   VERSION 5.3.1
   DESCRIPTION "A cross-platform MIDI library"
@@ -17,6 +17,7 @@ include(FetchContent)
 include(GNUInstallDirs)
 
 ### Options ###
+option(LIBREMIDI_MODULE_BUILD "C++ module mode" OFF)
 option(LIBREMIDI_HEADER_ONLY "Header-only mode" OFF)
 
 cmake_dependent_option(LIBREMIDI_NO_COREMIDI "Disable CoreMidi back-end" OFF "APPLE" OFF)

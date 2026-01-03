@@ -5,7 +5,7 @@
 #include <libremidi/detail/midi_out.hpp>
 #include <libremidi/detail/ump_stream.hpp>
 
-namespace libremidi::alsa_seq_ump
+NAMESPACE_LIBREMIDI::alsa_seq_ump
 {
 
 class midi_out_impl final

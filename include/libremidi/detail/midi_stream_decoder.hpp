@@ -10,9 +10,9 @@
 #include <cstdint>
 #include <span>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
-static inline int64_t system_ns() noexcept
+LIBREMIDI_STATIC int64_t system_ns() noexcept
 {
   namespace clk = std::chrono;
   return clk::duration_cast<clk::nanoseconds>(clk::steady_clock::now().time_since_epoch()).count();

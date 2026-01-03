@@ -5,7 +5,7 @@
 
 #include <string_view>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 struct core_backend
 {

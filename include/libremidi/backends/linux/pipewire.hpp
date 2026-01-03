@@ -4,7 +4,7 @@
 
 #include <pipewire/pipewire.h>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
 #pragma GCC diagnostic push

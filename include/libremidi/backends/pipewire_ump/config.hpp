@@ -2,7 +2,7 @@
 #include <libremidi/backends/pipewire/config.hpp>
 #include <libremidi/config.hpp>
 
-namespace libremidi::pipewire_ump
+NAMESPACE_LIBREMIDI::pipewire_ump
 {
 struct input_configuration
 {

@@ -7,7 +7,7 @@
 
 #include <cmath>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
 LIBREMIDI_INLINE

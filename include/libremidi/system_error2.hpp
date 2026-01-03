@@ -1,3 +1,4 @@
+#pragma once
 #ifndef STDX_COMPILER_HPP
   #define STDX_COMPILER_HPP
 
@@ -2856,7 +2857,7 @@ struct is_error_code_enum<stdx::dynamic_exception_errc> : std::true_type
 
 namespace stdx {
 
-namespace {
+// namespace {
 
 inline const char* dynamic_exception_errc_str(unsigned ev) noexcept
 {
@@ -2934,7 +2935,7 @@ inline const std::error_category& dynamic_exception_category() noexcept
   return dynamic_exception_error_category_instance;
 }
 
-} // end anonymous namespace
+//} // end anonymous namespace
 
 inline std::error_code make_error_code(dynamic_exception_errc code) noexcept
 {

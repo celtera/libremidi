@@ -6,7 +6,7 @@
 
 #include <functional>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 //! Specify how timestamps are handled in the system
 enum timestamp_mode

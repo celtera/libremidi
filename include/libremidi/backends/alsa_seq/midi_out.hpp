@@ -3,7 +3,7 @@
 #include <libremidi/backends/alsa_seq/helpers.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
-namespace libremidi::alsa_seq
+NAMESPACE_LIBREMIDI::alsa_seq
 {
 
 class midi_out_impl final

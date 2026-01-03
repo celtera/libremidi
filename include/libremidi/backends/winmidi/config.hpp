@@ -3,15 +3,17 @@
 
 #include <string>
 
+#if !defined(LIBREMIDI_MODULE_BUILD)
 namespace winrt::Microsoft::Windows::Devices::Midi2
 {
-class MidiSession;
-class MidiEndpointDeviceInformation;
-class MidiEndpointConnection;
+struct MidiSession;
+struct MidiEndpointDeviceInformation;
+struct MidiEndpointConnection;
 }
+#endif
 
 // TODO allow to share midi session and endpoints
-namespace libremidi::winmidi
+NAMESPACE_LIBREMIDI::winmidi
 {
 
 struct input_configuration

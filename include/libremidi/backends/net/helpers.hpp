@@ -35,7 +35,7 @@ public:
 */
 }
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 template <typename T>
 struct optionally_owned

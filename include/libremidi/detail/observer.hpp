@@ -7,7 +7,7 @@
 #include <memory>
 #include <vector>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class observer_api
 {

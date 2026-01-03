@@ -8,7 +8,7 @@
 #include <boost/asio/ip/udp.hpp>
 #include <boost/endian.hpp>
 
-namespace libremidi::net
+NAMESPACE_LIBREMIDI::net
 {
 
 struct osc_midi1_packet
@@ -146,7 +146,7 @@ public:
 
 }
 
-namespace libremidi::net_ump
+NAMESPACE_LIBREMIDI::net_ump
 {
 struct osc_midi2_packet
 {

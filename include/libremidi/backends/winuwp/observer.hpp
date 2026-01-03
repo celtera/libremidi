@@ -3,15 +3,15 @@
 #include <libremidi/backends/winuwp/helpers.hpp>
 #include <libremidi/detail/observer.hpp>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class observer_winuwp_internal
 {
 public:
   struct port_info
   {
-    hstring id;
-    hstring name;
+    winrt::hstring id;
+    winrt::hstring name;
   };
   struct callback
   {
@@ -43,7 +43,7 @@ public:
     }
   };
 
-  explicit observer_winuwp_internal(hstring deviceSelector) { initialize(deviceSelector); }
+  explicit observer_winuwp_internal(winrt::hstring deviceSelector) { initialize(deviceSelector); }
   ~observer_winuwp_internal() { terminate(); }
 
   std::vector<port_info> get_ports() const
@@ -67,10 +67,10 @@ public:
     return true;
   }
 
-  hstring get_port_id(unsigned int portNumber) const
+  winrt::hstring get_port_id(unsigned int portNumber) const
   {
     std::lock_guard<std::mutex> lock(portListMutex_);
-    return portNumber < portList_.size() ? portList_[portNumber].id : hstring{};
+    return portNumber < portList_.size() ? portList_[portNumber].id : winrt::hstring{};
   }
 
   std::string get_port_name(unsigned int portNumber) const
@@ -98,7 +98,7 @@ private:
   observer_winuwp_internal& operator=(const observer_winuwp_internal&) = delete;
 
 private:
-  void initialize(hstring deviceSelector)
+  void initialize(winrt::hstring deviceSelector)
   {
     deviceWatcher_ = DeviceInformation::CreateWatcher(deviceSelector);
 
@@ -139,7 +139,7 @@ private:
     const auto id = deviceUpdate.Id();
     auto pred = [&id](const port_info& portInfo) { return portInfo.id == id; };
     std::optional<port_info> p;
-    hstring name;
+    winrt::hstring name;
     {
       std::lock_guard<std::mutex> lock(portListMutex_);
       auto iter = std::find_if(portList_.begin(), portList_.end(), pred);

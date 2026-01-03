@@ -19,7 +19,7 @@
   #endif
 #endif
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
 struct libasound

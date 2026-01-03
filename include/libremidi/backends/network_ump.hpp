@@ -6,7 +6,7 @@
 
 #include <string_view>
 
-namespace libremidi::net_ump
+NAMESPACE_LIBREMIDI::net_ump
 {
 struct backend
 {

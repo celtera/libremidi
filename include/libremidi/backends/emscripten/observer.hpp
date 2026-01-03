@@ -5,7 +5,7 @@
 
 #include <vector>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class observer_emscripten final : public observer_api
 {

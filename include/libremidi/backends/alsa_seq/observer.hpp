@@ -13,7 +13,7 @@
 
 #include <map>
 
-namespace libremidi::alsa_seq
+NAMESPACE_LIBREMIDI::alsa_seq
 {
 
 struct client_info
@@ -487,7 +487,7 @@ public:
 };
 }
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 template <>
 inline std::unique_ptr<observer_api>

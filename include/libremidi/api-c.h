@@ -1,13 +1,15 @@
 #pragma once
+#ifndef LIBREMIDI_API_C_H
+#define LIBREMIDI_API_C_H
 
-#if __cplusplus
+#if __cplusplus && !defined(LIBREMIDI_MODULE_BUILD)
 extern "C" {
 #endif
 
 //! MIDI API specifier arguments.
 //! To get information on which feature is supported by each back-end, check their backend file
 //! in e.g. backends/winmm.hpp, etc.
-typedef enum libremidi_api
+enum libremidi_api
 {
   UNSPECIFIED = 0x0, /*!< Search for a working compiled API. */
 
@@ -36,8 +38,11 @@ typedef enum libremidi_api
   PIPEWIRE_UMP,          /*!< MIDI2 over PipeWire. Requires v1.4+. */
 
   DUMMY = 0xFFFF /*!< A compilable but non-functional API. */
-} libremidi_api;
+};
 
-#if __cplusplus
+typedef enum libremidi_api libremidi_api;
+
+#if __cplusplus && !defined(LIBREMIDI_MODULE_BUILD)
 }
+#endif
 #endif

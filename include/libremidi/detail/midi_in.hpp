@@ -4,7 +4,7 @@
 #include <libremidi/input_configuration.hpp>
 #include <libremidi/observer_configuration.hpp>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class midi_in_api : public midi_api
 {
