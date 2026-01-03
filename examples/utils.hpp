@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <variant>
 
 inline std::ostream& operator<<(std::ostream& s, libremidi::port_information::port_type t)
 {

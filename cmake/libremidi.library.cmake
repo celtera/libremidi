@@ -1,6 +1,6 @@
 ### Create the library ###
 if(LIBREMIDI_MODULE_BUILD)
-  add_library(libremidi STATIC)
+  add_library(libremidi)
   set(_public PUBLIC)
   set(_private PRIVATE)
   target_sources(libremidi

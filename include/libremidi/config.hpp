@@ -1,4 +1,6 @@
 #pragma once
+#ifndef LIBREMIDI_CONFIG_HPP
+  #define LIBREMIDI_CONFIG_HPP
 
 // clang-format off
 #if !defined(LIBREMIDI_BASE_NAMESPACE)
@@ -9,6 +11,7 @@
   #define LIBREMIDI_MODULE_BEGIN_EXPORT export {
   #define LIBREMIDI_MODULE_END_EXPORT }
   #define NAMESPACE_LIBREMIDI export namespace LIBREMIDI_BASE_NAMESPACE
+  #define NAMESPACE_STDX export namespace stdx
   #define LIBREMIDI_STATIC inline
   #define LIBREMIDI_STATIC_IMPLEMENTATION inline
   #define LIBREMIDI_STATIC_INLINE_IMPLEMENTATION inline
@@ -19,6 +22,7 @@
   #define LIBREMIDI_MODULE_BEGIN_EXPORT
   #define LIBREMIDI_MODULE_END_EXPORT
   #define NAMESPACE_LIBREMIDI namespace LIBREMIDI_BASE_NAMESPACE
+  #define NAMESPACE_STDX namespace stdx
   #define LIBREMIDI_STATIC static inline
 
 #if defined(LIBREMIDI_HEADER_ONLY)
@@ -102,4 +106,5 @@ using midi_bytes = std::vector<unsigned char>;
   #define LIBREMIDI_PRECONDITION(...) pre(__VA_ARGS__)
 #else
   #define LIBREMIDI_PRECONDITION(...)
+#endif
 #endif

@@ -42,8 +42,6 @@ struct event_handle
   ~event_handle() { snd.seq.free_event(ev); }
 };
 
-namespace
-{
 inline constexpr port_handle seq_to_port_handle(uint64_t client, uint64_t port) noexcept
 {
   return (port << 32) + client;
@@ -157,7 +155,6 @@ inline unsigned int iterate_port_info(
   if (portNumber < 0)
     return count;
   return 0;
-}
 }
 
 // A structure to hold variables related to the ALSA API

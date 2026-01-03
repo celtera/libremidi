@@ -1,3 +1,4 @@
+if(NOT LIBREMIDI_MODULE_BUILD)
 macro(setup_example _example)
   target_link_libraries("${_example}" PRIVATE libremidi)
 endmacro()
@@ -110,15 +111,23 @@ if(Boost_cobalt_FOUND)
   target_link_libraries(coroutines PRIVATE Boost::cobalt)
 endif()
 
-if(NOT LIBREMIDI_MODULE_BUILD)
-  add_executable(libremidi_c_api examples/c_api.c)
-  target_link_libraries(libremidi_c_api PRIVATE libremidi)
-  if(LIBREMIDI_HEADER_ONLY)
-    target_sources(libremidi_c_api PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/libremidi/libremidi-c.cpp")
-  endif()
+add_executable(libremidi_c_api examples/c_api.c)
+target_link_libraries(libremidi_c_api PRIVATE libremidi)
+if(LIBREMIDI_HEADER_ONLY)
+  target_sources(libremidi_c_api PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/libremidi/libremidi-c.cpp")
+endif()
 endif()
 
 if(LIBREMIDI_MODULE_BUILD)
-  add_executable(libremidi_modules examples/modules.cpp)
+  add_executable(libremidi_modules
+    examples/modules.cpp
+  )
   target_link_libraries(libremidi_modules PRIVATE libremidi)
+
+  target_sources(libremidi_modules
+    PUBLIC
+      FILE_SET CXX_MODULES
+      FILES
+        "src/libremidi.ixx"
+  )
 endif()
