@@ -11,6 +11,11 @@
 #include <atomic>
 #include <thread>
 
+#if defined(__clang__)
+  #pragma clang diagnostic push
+  #pragma clang diagnostic ignored "-Wsign-compare"
+#endif
+
 NAMESPACE_LIBREMIDI
 {
 struct pipewire_helpers
@@ -476,3 +481,7 @@ struct pipewire_helpers
   }
 };
 }
+
+#if defined(__clang__)
+  #pragma clang diagnostic pop
+#endif
