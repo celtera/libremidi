@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   build:
-    name: ${{ matrix.config.name }}-${{ matrix.library_mode }}-${{ matrix.boost }}Boost
+    name: ${{ matrix.config.name }} ${{ matrix.library_mode }} ${{ matrix.boost && 'Boost' }}
     runs-on: ${{ matrix.config.os }}
     strategy:
       fail-fast: false
@@ -32,7 +32,7 @@ jobs:
             name: "MSVC x86_64",
             os: windows-latest,
             generator: "",
-            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_90_0",
+            cmakeflags: "-DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "RUN_TESTS",
             tests: 1,
             examples: 1
@@ -41,13 +41,13 @@ jobs:
             name: "MSVC arm64",
             os: windows-11-arm,
             generator: "",
-            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_90_0",
+            cmakeflags: "-DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "RUN_TESTS",
             tests: 1,
             examples: 1
           }
         - {
-            name: "Ubuntu gcc",
+            name: "Ubuntu gcc-13",
             os: ubuntu-latest,
             generator: "",
             cmakeflags: "-DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_PEDANTIC=1 -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SANITIZE_VECTOR=1'",
@@ -56,10 +56,19 @@ jobs:
             examples: 1
           }
         - {
-            name: "Ubuntu clang-19 libstdc++",
+            name: "Ubuntu gcc-14",
             os: ubuntu-latest,
             generator: "",
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_PEDANTIC=1 -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SANITIZE_VECTOR=1' -DBOOST_ROOT=$PWD/boost_1_90_0",
+            test_target: "test",
+            tests: 1,
+            examples: 1
+          }
+        - {
+            name: "Ubuntu clang-20 libstdc++",
+            os: ubuntu-latest,
+            generator: "",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined' -DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "test",
             tests: 1,
             examples: 1
@@ -68,7 +77,7 @@ jobs:
             name: "Ubuntu clang libc++",
             os: ubuntu-latest,
             generator: "",
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-stdlib=libc++ -Werror=return-type'",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-stdlib=libc++ -Werror=return-type' -DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "test",
             tests: 1,
             examples: 1
@@ -105,6 +114,31 @@ jobs:
           - config: { name: "iOS" }
             boost: 1
 
+          # Modules not yet working on VS2022
+          - config: { name: "MSVC x86_64" }
+            library_mode: MODULE
+          - config: { name: "MSVC arm64" }
+            library_mode: MODULE
+
+          # Modules not supported at all on gcc 13
+          - config: { name: "Ubuntu gcc-13" }
+            library_mode: MODULE
+
+          # ICE
+          - config: { name: "Ubuntu gcc-14" }
+            library_mode: MODULE
+
+          # Modules not yet supported by ubuntu 24.04 default clang version
+          - config: { name: "Ubuntu clang libc++" }
+            library_mode: MODULE
+
+          # Modules not supported at all by AppleClang as of Xcode 26
+          - config: { name: "macOS" }
+            library_mode: MODULE
+
+          - config: { name: "iOS" }
+            library_mode: MODULE
+
     steps:
     - uses: actions/checkout@v4
 
@@ -119,26 +153,32 @@ jobs:
 
     - name: Install dependencies
       if: matrix.config.name != 'Tarball'
+      shell: bash
       run:  |
         if [ "$RUNNER_OS" == "Linux" ]; then
           sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
           sudo apt update
-          sudo apt install cmake libboost-dev libasound-dev libjack-jackd2-dev clang libc++-dev
-        else
-          curl -L https://github.com/ossia/sdk/releases/download/sdk31/boost_1_90_0.tar.gz > boost.tar.gz
-          tar -xzf boost.tar.gz
-          rm boost.tar.gz
+          sudo apt install cmake ninja-build curl libboost-dev libasound-dev libjack-jackd2-dev clang libc++-dev gcc gcc-14
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          brew install ninja
         fi
-      shell: bash
+        
+        curl -L https://github.com/ossia/sdk/releases/download/sdk31/boost_1_90_0.tar.gz > boost.tar.gz
+        tar -xzf boost.tar.gz
+        rm boost.tar.gz
 
     - name: Configure
       if: matrix.config.name != 'Tarball'
       shell: bash
       run: |
         CMAKE_GENERATOR=${{ matrix.config.generator }}
-        if [[ "$RUNNER_OS" == "Linux" ]]; then
+        if [[ -z "$CMAKE_GENERATOR" ]]; then
           if [[ "${{ matrix.library_mode }}" == "MODULE" ]]; then
-            CMAKE_GENERATOR=-GNinja
+            if [[ "$RUNNER_OS" == "Linux" ]]; then
+              CMAKE_GENERATOR=-GNinja
+            elif [[ "$RUNNER_OS" == "macOS" ]]; then
+              CMAKE_GENERATOR=-GNinja
+            fi
           fi
         fi
 
@@ -160,7 +200,7 @@ jobs:
         cmake --build build --config Debug --target install
 
     - name: Test
-      if: matrix.config.name != 'Tarball' && matrix.config.name != 'iOS'
+      if: matrix.config.name != 'Tarball' && matrix.config.name != 'iOS' && matrix.library_mode != 'MODULE'
       run: |
         # Not available on GH actions...
         # if [ "$RUNNER_OS" == "Linux" ]; then
@@ -185,8 +225,9 @@ jobs:
     - uses: vmactions/freebsd-vm@v1
       with:
         usesh: true
+        
         prepare: |
-          pkg install -y jackit boost-libs cmake git
+          pkg install -y jackit boost-libs cmake git ninja
 
         run: |
           pwd
@@ -195,7 +236,7 @@ jobs:
           env
           freebsd-version
           CMAKE_GENERATOR=
-          if [[ "${{ matrix.library_mode }}" == "MODULE" ]]; then
+          if [ "${{ matrix.library_mode }}" = "MODULE" ]; then
             CMAKE_GENERATOR=-GNinja
           fi
 
@@ -210,11 +251,13 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=install
 
           cmake --build build
-          cmake --build build --target install
-          cmake --build build --target test
+          if [ "${{ matrix.library_mode }}" != "MODULE" ]; then
+            cmake --build build --target install
+            cmake --build build --target test
+          fi
 
   build_debian:
-    name: Debian ${{ matrix.distro }}
+    name: Debian ${{ matrix.distro }} ${{ matrix.library_mode }} ${{ matrix.cxx }} ${{ matrix.boost && 'Boost' }}
     runs-on: ubuntu-latest
     container:
       image: debian:${{ matrix.distro }}
@@ -224,17 +267,18 @@ jobs:
         boost: [0, 1]
         library_mode: [LIBRARY, HEADER_ONLY, MODULE]
         distro: [bookworm, trixie, testing]
+        cxx: [c++, clang++]
 
         exclude:
           - distro: bookworm
             library_mode: MODULE
+          - distro: trixie
+            library_mode: MODULE
+          - distro: testing
+            library_mode: MODULE
+            cxx: c++
 
     steps:
-    - name: Add backports repo if necessary
-      if: matrix.distro == 'bullseye'
-      run: |
-        echo "deb http://ftp.debian.org/debian/ ${{ matrix.distro }}-backports main non-free contrib" > /etc/apt/sources.list.d/${{ matrix.distro }}-backports.list
-
     - name: Install git
       run: |
         apt-get update -qq
@@ -255,23 +299,30 @@ jobs:
           libjack-jackd2-dev \
           libudev-dev \
           libpipewire-0.3-dev \
-          cmake
+          cmake ninja-build curl
+    
+        curl -L https://github.com/ossia/sdk/releases/download/sdk31/boost_1_90_0.tar.gz > boost.tar.gz
+        tar -xzf boost.tar.gz
+        rm boost.tar.gz
 
     - name: Configure
+      shell: bash
       run: |
-        CMAKE_GENERATOR=${{ matrix.config.generator }}
+        CMAKE_GENERATOR=
         if [[ "${{ matrix.library_mode }}" == "MODULE" ]]; then
           CMAKE_GENERATOR=-GNinja
         fi
         cmake -S . -B build \
           $CMAKE_GENERATOR \
+          -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
           -DLIBREMIDI_FIND_BOOST=${{ matrix.boost }} \
           -DLIBREMIDI_LIBRARY_MODE=${{ matrix.library_mode }} \
           -DLIBREMIDI_EXAMPLES=1 \
           -DLIBREMIDI_TESTS=1 \
           -DLIBREMIDI_CI=1 \
           -DCMAKE_CTEST_ARGUMENTS="--rerun-failed;--output-on-failure" \
-          -DCMAKE_INSTALL_PREFIX=install
+          -DCMAKE_INSTALL_PREFIX=install \
+          -DBOOST_ROOT=$PWD/boost_1_90_0
 
     - name: Build
       run: |
@@ -279,6 +330,7 @@ jobs:
         cmake --build build --config Debug --target install
 
     - name: Test
+      if: matrix.library_mode != 'MODULE'
       run: |
         cmake --build build --config Debug --target test
 

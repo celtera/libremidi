@@ -78,7 +78,7 @@
 
   #include <type_traits>
 
-namespace stdx {
+NAMESPACE_STDX {
 
 // Implementation of std::void_t for use with pre-C++17 compilers.
 //
@@ -225,7 +225,7 @@ struct is_trivially_relocatable : is_trivially_copyable<T> { };
   #include <cstring>
 
 
-namespace stdx {
+NAMESPACE_STDX {
 
 namespace detail {
 
@@ -385,7 +385,7 @@ struct is_bit_castable
   #include <atomic>
   #include <memory>
 
-namespace stdx {
+NAMESPACE_STDX {
 
 struct default_intrusive_reference_count;
 class default_intrusive_reference_control;
@@ -1162,7 +1162,7 @@ struct is_trivially_relocatable<intrusive_ptr<Y,G,D,P>> : std::true_type
   #include <cstddef>
   #include <atomic>
 
-namespace stdx {
+NAMESPACE_STDX {
 
 class string_ref;
 
@@ -1607,7 +1607,7 @@ public:
   #include <new>
 
 
-namespace stdx {
+NAMESPACE_STDX {
 
   #if __cplusplus >= 201703L
     #if defined(__cpp_lib_launder)
@@ -1649,7 +1649,7 @@ constexpr T* launder(T* p) noexcept
   #include <cassert>
 
 
-namespace stdx {
+NAMESPACE_STDX {
 
 class error;
 
@@ -1696,7 +1696,7 @@ constexpr auto construct_error_from_adl(Args&&... args) noexcept(
 
 } // end namespace stdx_adl
 
-namespace stdx {
+NAMESPACE_STDX {
 
 enum class dynamic_exception_errc
 {
@@ -2855,7 +2855,7 @@ struct is_error_code_enum<stdx::dynamic_exception_errc> : std::true_type
 
 #include <functional>
 
-namespace stdx {
+NAMESPACE_STDX {
 
 // namespace {
 
@@ -3154,9 +3154,9 @@ inline bool generic_error_domain::equivalent(const error& lhs, const error& rhs)
   return false;
 }
 
-namespace {
+// namespace {
 
-string_ref generic_error_code_message(std::errc code) noexcept
+inline string_ref generic_error_code_message(std::errc code) noexcept
 {
   switch (code)
   {
@@ -3323,7 +3323,7 @@ string_ref generic_error_code_message(std::errc code) noexcept
   }
 }
 
-} // end anonymous namespace
+// } // end anonymous namespace
 
 inline string_ref generic_error_domain::message(const error& e) const noexcept
 {
@@ -3417,9 +3417,9 @@ inline string_ref dynamic_exception_error_domain::message(const error& e) const 
   return string_ref{"Unknown dynamic exception"};
 }
 
-namespace {
+// namespace {
 
-std::errc dynamic_exception_code_to_generic_code(dynamic_exception_errc code) noexcept
+inline std::errc dynamic_exception_code_to_generic_code(dynamic_exception_errc code) noexcept
 {
   switch (code)
   {
@@ -3443,7 +3443,7 @@ std::errc dynamic_exception_code_to_generic_code(dynamic_exception_errc code) no
   return std::errc{};
 }
 
-} // end anonymous namespace
+// } // end anonymous namespace
 
 inline bool dynamic_exception_error_domain::equivalent(const error& lhs, const error& rhs) const noexcept
 {

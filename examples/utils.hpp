@@ -14,29 +14,29 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <variant>
 
 inline std::ostream& operator<<(std::ostream& s, libremidi::port_information::port_type t)
 {
-  using enum libremidi::port_information::port_type;
-  if (t & software)
+  if (t & libremidi::transport_type::software)
   {
     s << "software";
-    if (t & loopback)
+    if (t & libremidi::transport_type::loopback)
       s << ", loopback";
   }
 
-  if (t & hardware)
+  if (t & libremidi::transport_type::hardware)
   {
     s << "hardware";
-    if (t & usb)
+    if (t & libremidi::transport_type::usb)
       s << ", usb";
-    if (t & bluetooth)
+    if (t & libremidi::transport_type::bluetooth)
       s << ", bt";
-    if (t & pci)
+    if (t & libremidi::transport_type::pci)
       s << ", pci";
   }
 
-  if (t & network)
+  if (t & libremidi::transport_type::network)
     s << "network";
   return s;
 }

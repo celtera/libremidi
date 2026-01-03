@@ -44,13 +44,9 @@ target_sources(libremidi PRIVATE
 
     include/libremidi/backends/emscripten/config.hpp
     include/libremidi/backends/emscripten/helpers.hpp
-    include/libremidi/backends/emscripten/midi_access.cpp
     include/libremidi/backends/emscripten/midi_access.hpp
-    include/libremidi/backends/emscripten/midi_in.cpp
     include/libremidi/backends/emscripten/midi_in.hpp
-    include/libremidi/backends/emscripten/midi_out.cpp
     include/libremidi/backends/emscripten/midi_out.hpp
-    include/libremidi/backends/emscripten/observer.cpp
     include/libremidi/backends/emscripten/observer.hpp
     include/libremidi/backends/emscripten.hpp
 
@@ -150,6 +146,12 @@ target_sources(libremidi PRIVATE
     include/libremidi/reader.hpp
     include/libremidi/writer.hpp
 
+    include/libremidi/api-c.h
+    include/libremidi/libremidi-c.h
+)
+
+if(NOT LIBREMIDI_HEADER_ONLY AND NOT LIBREMIDI_MODULE_BUILD)
+  target_sources(libremidi PRIVATE
     include/libremidi/libremidi.cpp
     include/libremidi/midi_in.cpp
     include/libremidi/midi_out.cpp
@@ -157,7 +159,11 @@ target_sources(libremidi PRIVATE
     include/libremidi/reader.cpp
     include/libremidi/writer.cpp
 
-    include/libremidi/api-c.h
-    include/libremidi/libremidi-c.h
+    include/libremidi/backends/emscripten/midi_access.cpp
+    include/libremidi/backends/emscripten/midi_in.cpp
+    include/libremidi/backends/emscripten/midi_out.cpp
+    include/libremidi/backends/emscripten/observer.cpp
+
     include/libremidi/libremidi-c.cpp
-)
+  )
+endif()

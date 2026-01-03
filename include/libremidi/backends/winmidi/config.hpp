@@ -3,7 +3,7 @@
 
 #include <string>
 
-#if !defined(LIBREMIDI_MODULE_BUILD)
+#if !defined(LIBREMIDI_MODULE_BUILD) || !defined(_WIN32)
 namespace winrt::Microsoft::Windows::Devices::Midi2
 {
 struct MidiSession;

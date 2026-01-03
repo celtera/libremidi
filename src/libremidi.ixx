@@ -124,6 +124,8 @@ module;
   #include <midi/universal_packet.h>
 #endif
 
+#include <cmath>
+
 #include <algorithm>
 #include <any>
 #include <array>
@@ -134,12 +136,8 @@ module;
 #include <cerrno>
 #include <chrono>
 #include <cinttypes>
-#include <cmath>
 #include <compare>
-#include <cstdbool>
 #include <cstddef>
-#include <cstddef>
-#include <cstdint>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -193,6 +191,12 @@ export module libremidi;
 
 #include <libremidi/config.hpp>
 
+#undef LIBREMIDI_STATIC
+#undef LIBREMIDI_STATIC_IMPLEMENTATION
+#undef LIBREMIDI_STATIC_INLINE_IMPLEMENTATION
+#undef LIBREMIDI_INLINE_IMPLEMENTATION
+#undef LIBREMIDI_ANONYMOUS_NAMESPACE
+#undef LIBREMIDI_INLINE
 #define LIBREMIDI_STATIC
 #define LIBREMIDI_STATIC_IMPLEMENTATION
 #define LIBREMIDI_STATIC_INLINE_IMPLEMENTATION
@@ -229,6 +233,12 @@ export module libremidi;
 #include <libremidi/ump.hpp>
 #include <libremidi/writer.hpp>
 
+#if defined(__clang__) || defined(_MSC_VER)
+module :private;
+#endif
+
+#undef NAMESPACE_LIBREMIDI
+#define NAMESPACE_LIBREMIDI namespace libremidi
 #include <libremidi/libremidi.cpp>
 #include <libremidi/midi_in.cpp>
 #include <libremidi/midi_out.cpp>
