@@ -225,9 +225,9 @@ jobs:
         library_mode: [LIBRARY, HEADER_ONLY, MODULE]
         distro: [bookworm, trixie, testing]
 
-      exclude:
-        - distro: bookworm
-          library_mode: MODULE
+        exclude:
+          - distro: bookworm
+            library_mode: MODULE
 
     steps:
     - name: Add backports repo if necessary
