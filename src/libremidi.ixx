@@ -124,6 +124,8 @@ module;
   #include <midi/universal_packet.h>
 #endif
 
+#include <cmath>
+
 #include <algorithm>
 #include <any>
 #include <array>
@@ -134,12 +136,8 @@ module;
 #include <cerrno>
 #include <chrono>
 #include <cinttypes>
-#include <cmath>
 #include <compare>
-#include <cstdbool>
 #include <cstddef>
-#include <cstddef>
-#include <cstdint>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>

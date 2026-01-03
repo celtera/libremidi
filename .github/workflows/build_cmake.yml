@@ -56,10 +56,10 @@ jobs:
             examples: 1
           }
         - {
-            name: "Ubuntu clang-21 libstdc++",
+            name: "Ubuntu clang-20 libstdc++",
             os: ubuntu-latest,
             generator: "",
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-21 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
             test_target: "test",
             tests: 1,
             examples: 1
