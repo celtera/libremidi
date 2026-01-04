@@ -34,19 +34,25 @@ if(LIBREMIDI_NO_BOOST AND LIBREMIDI_FIND_BOOST)
 endif()
 
 if(LIBREMIDI_FIND_BOOST)
-  find_package(Boost OPTIONAL_COMPONENTS cobalt)
+  set(BOOST_INCLUDE_LIBRARIES headers container)
+  if(NOT LIBREMIDI_NO_NETWORK)
+    list(APPEND BOOST_INCLUDE_LIBRARIES asio)
+  endif()
+  if(LIBREMIDI_EXAMPLES)
+    list(APPEND BOOST_INCLUDE_LIBRARIES cobalt)
+  endif()
+  if(LIBREMIDI_PYTHON)
+    list(APPEND BOOST_INCLUDE_LIBRARIES variant2)
+  endif()
+  find_package(Boost 1.90 OPTIONAL_COMPONENTS ${BOOST_INCLUDE_LIBRARIES})
 
   if(NOT Boost_FOUND)
     set(BOOST_ENABLE_CMAKE ON)
-    set(BOOST_INCLUDE_LIBRARIES container asio variant2 cobalt)
 
     FetchContent_Declare(
             Boost
-            GIT_REPOSITORY https://github.com/boostorg/boost.git
-            GIT_TAG boost-1.89.0
-            GIT_PROGRESS ON
-            GIT_SHALLOW TRUE
             OVERRIDE_FIND_PACKAGE TRUE
+            URL "https://github.com/boostorg/boost/releases/download/boost-1.90.0/boost-1.90.0-cmake.tar.xz"
     )
 
     FetchContent_MakeAvailable(Boost)

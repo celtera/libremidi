@@ -115,6 +115,3 @@ build-dir = "build/{wheel_tag}"
 
 # Build stable ABI wheels for CPython 3.10+
 wheel.py-api = "cp310"
-
-[tool.cibuildwheel]
-before-all = "yum install -y boost-devel || apt-get update && apt-get install -y libboost-all-dev || apk add boost-dev"
