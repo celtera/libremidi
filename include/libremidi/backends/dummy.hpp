@@ -7,7 +7,7 @@
 
 #include <string_view>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class observer_dummy : public observer_api
 {

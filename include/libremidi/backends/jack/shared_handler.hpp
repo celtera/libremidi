@@ -8,7 +8,7 @@
 
   #include <variant>
 
-namespace libremidi::jack
+NAMESPACE_LIBREMIDI::jack
 {
 
 // Create a JACK client which will be shared across objects

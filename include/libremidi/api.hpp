@@ -5,7 +5,7 @@
 #include <string_view>
 #include <vector>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 //! MIDI API specifier arguments.
 //! To get information on which feature is supported by each back-end, check their backend file

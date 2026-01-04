@@ -11,7 +11,7 @@
   #include <jack/ringbuffer.h>
 #endif
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 struct jack_error_domain : public stdx::error_domain
 {

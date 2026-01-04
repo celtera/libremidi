@@ -2,7 +2,7 @@
 #include <libremidi/backends/android/midi_in.hpp>
 #include <libremidi/backends/android/midi_out.hpp>
 
-namespace libremidi::android
+NAMESPACE_LIBREMIDI::android
 {
 // Main source of knowledge is RtMidi implementation
 // which was done by Yellow Labrador

@@ -4,7 +4,7 @@
 
   #include <cassert>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 LIBREMIDI_INLINE observer_emscripten::observer_emscripten(
     observer_configuration&& conf, emscripten_observer_configuration&& apiconf)

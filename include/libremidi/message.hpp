@@ -9,7 +9,7 @@
   #include <stdexcept>
 #endif
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 enum class message_type : uint8_t
 {

@@ -70,7 +70,7 @@
   #include <midi/universal_packet.h>
 #endif
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 //! Main class for observing hotplug of MIDI 1.0 and 2.0 devices.
 //! The callbacks will be called whenever a device is added or removed

@@ -5,7 +5,7 @@
 
   #include <chrono>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 LIBREMIDI_INLINE midi_in_emscripten::midi_in_emscripten(
     input_configuration&& conf, emscripten_input_configuration&& apiconf)

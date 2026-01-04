@@ -3,7 +3,7 @@
 #include <libremidi/backends/coremidi/helpers.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class midi_out_core final
     : public midi1::out_api
@@ -111,8 +111,8 @@ public:
     const MIDITimeStamp timestamp = LIBREMIDI_AUDIO_GET_CURRENT_HOST_TIME();
 
     const ByteCount bufsize = nBytes > 65535 ? 65535 : nBytes;
-    Byte buffer[bufsize + 16]; // pad for other struct members
-    ByteCount listSize = sizeof(buffer);
+    Byte* buffer = (Byte*)alloca(bufsize + 16); // pad for other struct members
+    ByteCount listSize = bufsize + 16;
     MIDIPacketList* packetList = (MIDIPacketList*)buffer;
 
     ByteCount remainingBytes = nBytes;

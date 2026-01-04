@@ -12,7 +12,7 @@ struct pw_filter;
 struct spa_io_position;
 }
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 using pipewire_callback_function = std::function<void(spa_io_position*)>;
 struct pipewire_callback

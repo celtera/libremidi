@@ -1,8 +1,10 @@
 #pragma once
 
+#if !defined(LIBREMIDI_USE_MODULES)
 #include <libremidi/libremidi.hpp>
 // Credits to https://raw.githubusercontent.com/atsushieno/cmidi2
 #include <libremidi/cmidi2.hpp>
+#endif
 #if LIBREMIDI_USE_NI_MIDI2
   #include <midi/universal_packet.h>
 #endif
@@ -12,6 +14,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <variant>
 
 inline std::ostream& operator<<(std::ostream& s, libremidi::port_information::port_type t)
 {

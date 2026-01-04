@@ -3,7 +3,7 @@
 
 #include <CoreMIDI/CoreMIDI.h>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 struct coremidi_error_domain : public stdx::error_domain
 {

@@ -4,7 +4,7 @@
 
 #include <string>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
 // Convert a nullptr-terminated wide string or ANSI-encoded string to UTF-8.

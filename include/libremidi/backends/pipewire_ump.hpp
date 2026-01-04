@@ -8,7 +8,7 @@
 
 #include <string_view>
 
-namespace libremidi::pipewire_ump
+NAMESPACE_LIBREMIDI::pipewire_ump
 {
 struct backend
 {

@@ -5,7 +5,7 @@
 
 #include <string_view>
 
-namespace libremidi::coremidi_ump
+NAMESPACE_LIBREMIDI::coremidi_ump
 {
 struct backend
 {

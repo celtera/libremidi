@@ -2,7 +2,7 @@
 #include <libremidi/api.hpp>
 #include <libremidi/configurations.hpp>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
 class shared_context

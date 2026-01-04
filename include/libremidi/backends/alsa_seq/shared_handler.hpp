@@ -9,7 +9,7 @@
 
   #include <variant>
 
-namespace libremidi::alsa_seq
+NAMESPACE_LIBREMIDI::alsa_seq
 {
 
 struct shared_handler : public libremidi::shared_context

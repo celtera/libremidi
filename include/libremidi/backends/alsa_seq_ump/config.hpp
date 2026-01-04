@@ -11,7 +11,7 @@ extern "C" {
 typedef struct snd_seq_ump_event snd_seq_ump_event_t;
 }
 
-namespace libremidi::alsa_seq_ump
+NAMESPACE_LIBREMIDI::alsa_seq_ump
 {
 
 struct poll_parameters

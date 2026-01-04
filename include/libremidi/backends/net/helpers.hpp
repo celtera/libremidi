@@ -23,7 +23,7 @@ public:
 
   string_ref message(const error& e) const noexcept override {
     auto err = e.m_value;
-    
+
   }
 
   [[noreturn]] void throw_exception(const error& e) const override
@@ -35,7 +35,7 @@ public:
 */
 }
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 template <typename T>
 struct optionally_owned

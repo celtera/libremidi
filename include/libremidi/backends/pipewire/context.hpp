@@ -25,7 +25,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 template <typename K, typename V>
 using hash_map = std::unordered_map<K, V>;

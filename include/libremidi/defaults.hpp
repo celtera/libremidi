@@ -8,7 +8,7 @@
 
 #include <optional>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class midi_in;
 class midi_out;

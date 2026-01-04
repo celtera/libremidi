@@ -5,7 +5,7 @@
 
 #include <string_view>
 
-namespace libremidi::winmidi
+NAMESPACE_LIBREMIDI::winmidi
 {
 struct backend
 {
@@ -19,6 +19,8 @@ struct backend
   static const constexpr std::string_view name = "winmidi";
   static const constexpr std::string_view display_name = "Windows MIDI Services";
 
-  static constexpr inline bool available() noexcept { return true; }
+  static inline bool available() noexcept {
+    return libremidi::instance<winmidi_shared_data_instance>()->ready;
+  }
 };
-} // namespace libremidi
+} // NAMESPACE_LIBREMIDI

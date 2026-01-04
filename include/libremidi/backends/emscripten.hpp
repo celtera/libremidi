@@ -9,7 +9,7 @@
 
   #include <string_view>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
 struct emscripten_backend

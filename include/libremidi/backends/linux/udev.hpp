@@ -8,7 +8,7 @@
 #include <cassert>
 #include <optional>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 
 struct libudev

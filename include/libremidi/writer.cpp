@@ -47,12 +47,12 @@ constexpr R bit_cast(const T& v) noexcept
 }
 }
 #endif
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 namespace util
 {
 template <typename T>
-static LIBREMIDI_INLINE std::ostream& write_be(std::ostream& out, T value)
+LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::ostream& write_be(std::ostream& out, T value)
 {
   static_assert(
       std::endian::native == std::endian::big || std::endian::native == std::endian::little);
@@ -77,7 +77,7 @@ static LIBREMIDI_INLINE std::ostream& write_be(std::ostream& out, T value)
 // Write a number to the midifile
 // as a variable length value which segments a file into 7-bit
 // values.  Maximum size of aValue is 0x7fffffff
-static LIBREMIDI_INLINE void write_variable_length(uint32_t aValue, std::vector<uint8_t>& outdata)
+LIBREMIDI_STATIC_INLINE_IMPLEMENTATION void write_variable_length(uint32_t aValue, std::vector<uint8_t>& outdata)
 {
   uint8_t bytes[5] = {0};
 
@@ -99,7 +99,7 @@ static LIBREMIDI_INLINE void write_variable_length(uint32_t aValue, std::vector<
   outdata.push_back(bytes[4]);
 }
 
-static LIBREMIDI_INLINE void
+LIBREMIDI_STATIC_INLINE_IMPLEMENTATION void
 add_event_track_count_check(std::vector<midi_track>& tracks, int track)
 {
   if (track < 0)

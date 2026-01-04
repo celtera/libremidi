@@ -7,7 +7,7 @@
 
 #include <bit>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 class observer_core
     : public observer_api
@@ -219,7 +219,7 @@ private:
 };
 }
 
-namespace libremidi::coremidi
+NAMESPACE_LIBREMIDI::coremidi
 {
 struct observer_impl : observer_core
 {

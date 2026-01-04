@@ -1,5 +1,19 @@
 ### Create the library ###
-if(LIBREMIDI_HEADER_ONLY)
+if(LIBREMIDI_MODULE_BUILD)
+  add_library(libremidi)
+  set(_public PUBLIC)
+  set(_private PRIVATE)
+  target_sources(libremidi
+    PUBLIC
+      FILE_SET CXX_MODULES
+      FILES
+        "src/libremidi.ixx"
+  )
+  target_compile_options(libremidi PRIVATE
+    $<$<CXX_COMPILER_ID:Clang>:-Wno-include-angled-in-module-purview>
+    $<$<CXX_COMPILER_ID:AppleClang>:-Wno-include-angled-in-module-purview>
+  )
+elseif(LIBREMIDI_HEADER_ONLY)
   add_library(libremidi INTERFACE)
   set(_public INTERFACE)
   set(_private INTERFACE)

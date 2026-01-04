@@ -10,7 +10,7 @@
 
 #include <cmath>
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
 struct cmidi2_error_domain : public stdx::error_domain
 {
@@ -68,7 +68,7 @@ inline stdx::error from_cmidi2_result(cmidi2_midi_conversion_result ret) noexcep
 }
 }
 
-static inline void cmidi2_reverse(int64_t v, cmidi2_ump* output)
+LIBREMIDI_STATIC void cmidi2_reverse(int64_t v, cmidi2_ump* output)
 {
   union
   {
@@ -81,26 +81,26 @@ static inline void cmidi2_reverse(int64_t v, cmidi2_ump* output)
   memcpy(output, &e1, 8);
 }
 
-static inline auto u7_to_u16(uint8_t in) -> uint16_t
+LIBREMIDI_STATIC auto u7_to_u16(uint8_t in) -> uint16_t
 {
   static constexpr auto ratio = float(std::numeric_limits<uint16_t>::max()) / 127.f;
   return std::clamp(std::round(in * ratio), 0.f, float(std::numeric_limits<uint16_t>::max()));
 };
 
-static inline auto u7_to_u32(uint8_t in) -> uint32_t
+LIBREMIDI_STATIC auto u7_to_u32(uint8_t in) -> uint32_t
 {
   static constexpr auto ratio = double(std::numeric_limits<uint32_t>::max()) / 127.;
   return std::clamp(std::round(in * ratio), 0., double(std::numeric_limits<uint32_t>::max()));
 };
 
-static inline auto u16_to_u32(uint16_t in) -> uint32_t
+LIBREMIDI_STATIC auto u16_to_u32(uint16_t in) -> uint32_t
 {
   static constexpr auto ratio = double(std::numeric_limits<uint32_t>::max())
                                 / double(std::numeric_limits<uint16_t>::max());
   return std::clamp(std::round(in * ratio), 0., double(std::numeric_limits<uint32_t>::max()));
 };
 
-static inline bool
+LIBREMIDI_STATIC bool
 cmidi2_midi1_channel_voice_to_midi2(const uint8_t* bytes, std::size_t sz, cmidi2_ump* output)
 {
   if (sz < 2)
@@ -157,7 +157,7 @@ cmidi2_midi1_channel_voice_to_midi2(const uint8_t* bytes, std::size_t sz, cmidi2
   return true;
 }
 
-static inline bool
+LIBREMIDI_STATIC bool
 cmidi2_ump_upgrade_midi1_channel_voice_to_midi2(const cmidi2_ump* input, cmidi2_ump* output)
 {
   if (cmidi2_ump_get_message_type(input) != CMIDI2_MESSAGE_TYPE_MIDI_1_CHANNEL)
@@ -223,9 +223,9 @@ cmidi2_ump_upgrade_midi1_channel_voice_to_midi2(const cmidi2_ump* input, cmidi2_
   return true;
 }
 
-namespace libremidi
+NAMESPACE_LIBREMIDI
 {
-static inline libremidi::message midi1_from_ump(libremidi::ump u)
+LIBREMIDI_STATIC libremidi::message midi1_from_ump(libremidi::ump u)
 {
   libremidi::message ret;
   ret.bytes.resize(4);
@@ -241,7 +241,7 @@ static inline libremidi::message midi1_from_ump(libremidi::ump u)
   return ret;
 }
 
-static inline libremidi::ump ump_from_midi1(libremidi::message u)
+LIBREMIDI_STATIC libremidi::ump ump_from_midi1(libremidi::message u)
 {
   libremidi::ump ret;
   if (!u.bytes.empty())

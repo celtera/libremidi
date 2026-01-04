@@ -20,7 +20,7 @@
 
 #include <string_view>
 
-namespace libremidi::alsa_seq
+NAMESPACE_LIBREMIDI::alsa_seq
 {
 
 struct backend

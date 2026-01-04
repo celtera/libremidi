@@ -9,7 +9,7 @@
 
 #include <string_view>
 
-namespace libremidi::pipewire
+NAMESPACE_LIBREMIDI::pipewire
 {
 struct backend
 {
