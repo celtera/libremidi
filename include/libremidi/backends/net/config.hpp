@@ -2,10 +2,13 @@
 #include <libremidi/config.hpp>
 
 #include <string>
+
+#if !defined(LIBREMIDI_MODULE_BUILD)
 namespace boost::asio
 {
 struct io_context;
 }
+#endif
 
 NAMESPACE_LIBREMIDI::net
 {
