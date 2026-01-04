@@ -123,11 +123,4 @@ if(LIBREMIDI_MODULE_BUILD)
     examples/modules.cpp
   )
   target_link_libraries(libremidi_modules PRIVATE libremidi)
-
-  target_sources(libremidi_modules
-    PUBLIC
-      FILE_SET CXX_MODULES
-      FILES
-        "src/libremidi.ixx"
-  )
 endif()
