@@ -187,6 +187,11 @@ export module libremidi;
 #define LIBREMIDI_MODULE_BUILD 1
 // #define LIBREMIDI_HEADER_ONLY 1
 
+#if !defined(_MSC_VER)
+  #pragma clang diagnostic push
+  #pragma clang diagnostic ignored "-Winclude-angled-in-module-purview"
+#endif
+
 // Internal libremidi headers
 
 #include <libremidi/config.hpp>
@@ -233,7 +238,9 @@ export module libremidi;
 #include <libremidi/ump.hpp>
 #include <libremidi/writer.hpp>
 
+#if defined(__clang__) || defined(_MSC_VER)
 module :private;
+#endif
 
 #undef NAMESPACE_LIBREMIDI
 #define NAMESPACE_LIBREMIDI namespace libremidi
@@ -244,3 +251,7 @@ module :private;
 #include <libremidi/reader.cpp>
 #include <libremidi/writer.cpp>
 // #include <libremidi/libremidi-c.cpp>
+
+#if !defined(_MSC_VER)
+  #pragma clang diagnostic pop
+#endif
