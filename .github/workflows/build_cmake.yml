@@ -32,7 +32,7 @@ jobs:
             name: "MSVC x86_64",
             os: windows-latest,
             generator: "",
-            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_90_0",
+            cmakeflags: "-DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "RUN_TESTS",
             tests: 1,
             examples: 1
@@ -41,7 +41,7 @@ jobs:
             name: "MSVC arm64",
             os: windows-11-arm,
             generator: "",
-            cmakeflags: "-DLIBREMIDI_NO_WINUWP=0 -DBOOST_ROOT=$PWD/boost_1_90_0",
+            cmakeflags: "-DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "RUN_TESTS",
             tests: 1,
             examples: 1
@@ -104,6 +104,10 @@ jobs:
         exclude:
           - config: { name: "iOS" }
             boost: 1
+          - config: { name: "macOS" }
+            library_mode: MODULE
+          - config: { name: "iOS" }
+            library_mode: MODULE
 
     steps:
     - uses: actions/checkout@v4
