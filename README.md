@@ -30,6 +30,33 @@ If you use this work as part of academic research, please kindly cite the [paper
 
 ## Changelog 
 
+### Since v5.4
+
+* ALSA: observation will now slightly be delayed as otherwise udev fields are sometimes not populated yet.
+* Port the Android backend from RtMidi, developed by @YellowLabrador.
+* C++: add initial C++ modules support: `import libremidi;`. So far compilers other than Clang 20+ crash. Enable with `-DLIBREMIDI_LIBRARY_MODE=MODULE`. Note that one cannot mix a module-based and a non-module based API. An example is provided in `examples/modules.cpp`
+* Add a utility `libremidi::set_client_name` / `client_name` function to simplify construction of an API object with a custom client name.
+* Many improvements to MIDI 1 <-> MIDI 2 conversion, every MIDI 1 message is supported now.
+* Port information: add as much metadata as we can get from the host API.
+* Port information: remove sorting and comparison as there's no generally correct way to compare two `port_information` / `input_port` / `output_port` objects. Multiple ways of doing this comparison depending on the use case have been provided as examples in `<libremidi/port_comparison.hpp>`.
+* Port information: added a heuristics-based `libremidi::find_closest_port(query, existing_ports)` utility function which tries to lookup the most likely candidate for a MIDI port across backends with the lookup information that can be provided.
+* Python: add a pyproject.toml to facilitate integration with the Python ecosystem. Thanks @TheStaticTurtle!
+* Windows MIDI Services: support updated to the [RC1 release](https://github.com/microsoft/MIDI/releases/) headers.
+* Windows MIDI Services: add support for the newly introduced COM fast-path to provide maximum performance.
+
+### Since v5.3
+
+* Minor bugfixes
+* More MinGW CI
+* Add an example of converting MIDI files to .pat format
+* MSVC ARM64 CI
+
+### Since v5.2
+
+* Minor bugfixes
+* Support detecting presence of ALSA sequencer at runtime
+* Add conversion functions for MIDI 1 <-> 2
+
 ### Since v5.1
 
 * Report USB device identifiers with ALSA and udev
