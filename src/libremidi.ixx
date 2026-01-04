@@ -233,6 +233,10 @@ export module libremidi;
 #include <libremidi/ump.hpp>
 #include <libremidi/writer.hpp>
 
+module :private;
+
+#undef NAMESPACE_LIBREMIDI
+#define NAMESPACE_LIBREMIDI namespace libremidi
 #include <libremidi/libremidi.cpp>
 #include <libremidi/midi_in.cpp>
 #include <libremidi/midi_out.cpp>
