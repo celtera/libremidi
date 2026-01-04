@@ -59,7 +59,7 @@ jobs:
             name: "Ubuntu gcc-14",
             os: ubuntu-latest,
             generator: "",
-            cmakeflags: "-DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_PEDANTIC=1 -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SANITIZE_VECTOR=1'",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_PEDANTIC=1 -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SANITIZE_VECTOR=1' -DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "test",
             tests: 1,
             examples: 1
@@ -68,7 +68,7 @@ jobs:
             name: "Ubuntu clang-20 libstdc++",
             os: ubuntu-latest,
             generator: "",
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined'",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined' -DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "test",
             tests: 1,
             examples: 1
@@ -77,7 +77,7 @@ jobs:
             name: "Ubuntu clang libc++",
             os: ubuntu-latest,
             generator: "",
-            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-stdlib=libc++ -Werror=return-type'",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-stdlib=libc++ -Werror=return-type' -DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "test",
             tests: 1,
             examples: 1
@@ -142,11 +142,11 @@ jobs:
           sudo apt install cmake ninja-build libboost-dev libasound-dev libjack-jackd2-dev clang libc++-dev gcc gcc-14
         elif [ "$RUNNER_OS" == "macOS" ]; then
           brew install ninja
-        else
-          curl -L https://github.com/ossia/sdk/releases/download/sdk31/boost_1_90_0.tar.gz > boost.tar.gz
-          tar -xzf boost.tar.gz
-          rm boost.tar.gz
         fi
+        
+        curl -L https://github.com/ossia/sdk/releases/download/sdk31/boost_1_90_0.tar.gz > boost.tar.gz
+        tar -xzf boost.tar.gz
+        rm boost.tar.gz
 
     - name: Configure
       if: matrix.config.name != 'Tarball'
@@ -272,6 +272,10 @@ jobs:
           libudev-dev \
           libpipewire-0.3-dev \
           cmake ninja-build
+    
+        curl -L https://github.com/ossia/sdk/releases/download/sdk31/boost_1_90_0.tar.gz > boost.tar.gz
+        tar -xzf boost.tar.gz
+        rm boost.tar.gz
 
     - name: Configure
       shell: bash
@@ -288,7 +292,8 @@ jobs:
           -DLIBREMIDI_TESTS=1 \
           -DLIBREMIDI_CI=1 \
           -DCMAKE_CTEST_ARGUMENTS="--rerun-failed;--output-on-failure" \
-          -DCMAKE_INSTALL_PREFIX=install
+          -DCMAKE_INSTALL_PREFIX=install \
+          -DBOOST_ROOT=$PWD/boost_1_90_0
 
     - name: Build
       run: |

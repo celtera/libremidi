@@ -9,6 +9,10 @@ if(LIBREMIDI_MODULE_BUILD)
       FILES
         "src/libremidi.ixx"
   )
+  target_compile_options(libremidi PRIVATE
+    $<$<CXX_COMPILER_ID:Clang>:-Wno-include-angled-in-module-purview>
+    $<$<CXX_COMPILER_ID:AppleClang>:-Wno-include-angled-in-module-purview>
+  )
 elseif(LIBREMIDI_HEADER_ONLY)
   add_library(libremidi INTERFACE)
   set(_public INTERFACE)
