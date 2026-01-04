@@ -7,7 +7,7 @@ name = "pylibremidi"
 version = "5.3.1"
 description = "A modern C++ MIDI 1 / MIDI 2 real-time & file I/O library. Supports Windows, macOS, Linux and WebMIDI."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 authors = [
     # Git history
     { name = "Celerier Jean-Michaël", email = "jeanmichael.celerier@gmail.com" },
