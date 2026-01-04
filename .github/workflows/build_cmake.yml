@@ -47,7 +47,16 @@ jobs:
             examples: 1
           }
         - {
-            name: "Ubuntu gcc",
+            name: "Ubuntu gcc-13",
+            os: ubuntu-latest,
+            generator: "",
+            cmakeflags: "-DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_PEDANTIC=1 -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SANITIZE_VECTOR=1'",
+            test_target: "test",
+            tests: 1,
+            examples: 1
+          }
+        - {
+            name: "Ubuntu gcc-14",
             os: ubuntu-latest,
             generator: "",
             cmakeflags: "-DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_PEDANTIC=1 -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SANITIZE_VECTOR=1'",
@@ -104,6 +113,8 @@ jobs:
         exclude:
           - config: { name: "iOS" }
             boost: 1
+          - config: { name: "Ubuntu gcc-13" }
+            library_mode: MODULE
           - config: { name: "macOS" }
             library_mode: MODULE
           - config: { name: "iOS" }
@@ -128,7 +139,7 @@ jobs:
         if [ "$RUNNER_OS" == "Linux" ]; then
           sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
           sudo apt update
-          sudo apt install cmake ninja-build libboost-dev libasound-dev libjack-jackd2-dev clang libc++-dev
+          sudo apt install cmake ninja-build libboost-dev libasound-dev libjack-jackd2-dev clang libc++-dev gcc gcc-14
         elif [ "$RUNNER_OS" == "macOS" ]; then
           brew install ninja
         else
