@@ -3,7 +3,7 @@
 
 #include <string>
 
-#if !defined(LIBREMIDI_MODULE_BUILD)
+#if !defined(BOOST_ASIO_IO_CONTEXT_HPP)
 namespace boost::asio
 {
 struct io_context;
