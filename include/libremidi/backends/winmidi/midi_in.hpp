@@ -92,7 +92,7 @@ public:
 
   stdx::error open_port(const input_port& port, std::string_view) override
   {
-    auto device_id = std::get_if<std::string>(&port.device);
+    auto device_id = get_if<std::string>(&port.device);
     if (!device_id)
       return std::errc::invalid_argument;
 

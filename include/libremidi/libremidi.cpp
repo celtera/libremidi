@@ -59,7 +59,7 @@ libremidi::API midi_api(const input_api_configuration& conf)
 {
   libremidi::API ret = libremidi::API::UNSPECIFIED;
   midi_any::for_all_backends([&]<typename T>(T) {
-    if (std::get_if<typename T::midi_in_configuration>(&conf))
+    if (get_if<typename T::midi_in_configuration>(&conf))
     {
       ret = T::API;
     }
@@ -71,7 +71,7 @@ libremidi::API midi_api(const output_api_configuration& conf)
 {
   libremidi::API ret = libremidi::API::UNSPECIFIED;
   midi_any::for_all_backends([&]<typename T>(T) {
-    if (std::get_if<typename T::midi_out_configuration>(&conf))
+    if (get_if<typename T::midi_out_configuration>(&conf))
     {
       ret = T::API;
     }
@@ -83,7 +83,7 @@ libremidi::API midi_api(const observer_api_configuration& conf)
 {
   libremidi::API ret = libremidi::API::UNSPECIFIED;
   midi_any::for_all_backends([&]<typename T>(T) {
-    if (std::get_if<typename T::midi_observer_configuration>(&conf))
+    if (get_if<typename T::midi_observer_configuration>(&conf))
     {
       ret = T::API;
     }

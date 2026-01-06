@@ -206,7 +206,7 @@ private:
   template <typename T>
   void score_variant(int& score, const T& target_v, const T& cand_v, int reward, int penalty) const
   {
-    if (std::holds_alternative<std::monostate>(target_v))
+    if (holds_alternative<libremidi_variant_alias::monostate>(target_v))
       return;
 
     // For those we want an exact search
@@ -214,7 +214,7 @@ private:
     {
       score += reward;
     }
-    else if (!std::holds_alternative<std::monostate>(cand_v))
+    else if (!holds_alternative<libremidi_variant_alias::monostate>(cand_v))
     {
       // Candidate has a specific ID, and it differs from Target's specific ID.
       score += penalty;

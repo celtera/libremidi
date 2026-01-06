@@ -234,7 +234,7 @@ auto for_backend(libremidi::API api, F&& f)
 void for_input_configuration(auto f, libremidi::input_api_configuration& api_conf)
 {
   auto from_api = [&]<typename T>(T& /*backend*/) mutable {
-    if (auto conf = std::get_if<typename T::midi_in_configuration>(&api_conf))
+    if (auto conf = get_if<typename T::midi_in_configuration>(&api_conf))
     {
       f(*conf);
       return true;
@@ -249,7 +249,7 @@ void for_input_configuration(auto f, libremidi::input_api_configuration& api_con
 void for_output_configuration(auto f, libremidi::output_api_configuration& api_conf)
 {
   auto from_api = [&]<typename T>(T& /*backend*/) mutable {
-    if (auto conf = std::get_if<typename T::midi_out_configuration>(&api_conf))
+    if (auto conf = get_if<typename T::midi_out_configuration>(&api_conf))
     {
       f(*conf);
       return true;
@@ -264,7 +264,7 @@ void for_output_configuration(auto f, libremidi::output_api_configuration& api_c
 void for_observer_configuration(auto f, libremidi::observer_api_configuration& api_conf)
 {
   auto from_api = [&]<typename T>(T& /*backend*/) mutable {
-    if (auto conf = std::get_if<typename T::midi_observer_configuration>(&api_conf))
+    if (auto conf = get_if<typename T::midi_observer_configuration>(&api_conf))
     {
       f(*conf);
       return true;

@@ -1,4 +1,6 @@
 #pragma once
+#include <libremidi/config.hpp>
+
 #include <array>
 #include <compare>
 #include <cstdint>
@@ -60,8 +62,10 @@ struct usb_device_identifier
   std::strong_ordering operator<=>(const usb_device_identifier& other) const noexcept = default;
 };
 
-using container_identifier = std::variant<std::monostate, uuid, std::string, std::uint64_t>;
-using device_identifier
-    = std::variant<std::monostate, std::string, std::uint64_t, usb_device_identifier>;
-using endpoint_identifier = std::variant<std::monostate, std::string, std::uint64_t>;
+using container_identifier = libremidi_variant_alias::variant<
+    libremidi_variant_alias::monostate, uuid, std::string, std::uint64_t>;
+using device_identifier = libremidi_variant_alias::variant<
+    libremidi_variant_alias::monostate, std::string, std::uint64_t, usb_device_identifier>;
+using endpoint_identifier = libremidi_variant_alias::variant<
+    libremidi_variant_alias::monostate, std::string, std::uint64_t>;
 }
