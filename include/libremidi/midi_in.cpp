@@ -67,7 +67,7 @@ make_midi_in(auto base_conf, input_api_configuration api_conf, auto backends)
   assert(base_conf.on_message || base_conf.on_raw_data);
 
   auto from_api = [&]<typename T>(T& /*backend*/) mutable {
-    if (auto conf = std::get_if<typename T::midi_in_configuration>(&api_conf))
+    if (auto conf = get_if<typename T::midi_in_configuration>(&api_conf))
     {
       ptr = libremidi::make<typename T::midi_in>(std::move(base_conf), std::move(*conf));
       return true;
@@ -135,11 +135,11 @@ LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_in_api> make_midi1_i
 LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_in_api>
 make_midi1_in(const input_configuration& base_conf, const input_api_configuration& api_conf)
 {
-  if (std::get_if<unspecified_configuration>(&api_conf))
+  if (get_if<unspecified_configuration>(&api_conf))
   {
     return make_midi1_in(base_conf);
   }
-  else if (auto api_p = std::get_if<libremidi::API>(&api_conf))
+  else if (auto api_p = get_if<libremidi::API>(&api_conf))
   {
     if (*api_p == libremidi::API::UNSPECIFIED)
     {
@@ -233,11 +233,11 @@ LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_in_api> make_midi2_i
 LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_in_api>
 make_midi2_in(const ump_input_configuration& base_conf, const input_api_configuration& api_conf)
 {
-  if (std::get_if<unspecified_configuration>(&api_conf))
+  if (get_if<unspecified_configuration>(&api_conf))
   {
     return make_midi2_in(base_conf);
   }
-  else if (auto api_p = std::get_if<libremidi::API>(&api_conf))
+  else if (auto api_p = get_if<libremidi::API>(&api_conf))
   {
     if (*api_p == libremidi::API::UNSPECIFIED)
     {

@@ -31,18 +31,18 @@ struct dummy_configuration
 {
 };
 
-using input_api_configuration = std::variant<
+using input_api_configuration = libremidi_variant_alias::variant<
     unspecified_configuration, dummy_configuration, alsa_raw_input_configuration,
     alsa_raw_ump::input_configuration, alsa_seq::input_configuration,
     alsa_seq_ump::input_configuration, coremidi_input_configuration,
     coremidi_ump::input_configuration, emscripten_input_configuration, jack_input_configuration,
-    kbd_input_configuration, kdmapi::input_configuration, libremidi::net::dgram_input_configuration,
-    libremidi::net_ump::dgram_input_configuration, pipewire_input_configuration,
-    winmidi::input_configuration, winmm_input_configuration, winuwp_input_configuration,
-    jack_ump::input_configuration, pipewire_ump::input_configuration, android::input_configuration,
-    libremidi::API>;
+    kbd_input_configuration, kdmapi::input_configuration,
+    libremidi::net::dgram_input_configuration, libremidi::net_ump::dgram_input_configuration,
+    pipewire_input_configuration, winmidi::input_configuration, winmm_input_configuration,
+    winuwp_input_configuration, jack_ump::input_configuration, pipewire_ump::input_configuration,
+    android::input_configuration, libremidi::API>;
 
-using output_api_configuration = std::variant<
+using output_api_configuration = libremidi_variant_alias::variant<
     unspecified_configuration, dummy_configuration, alsa_raw_output_configuration,
     alsa_raw_ump::output_configuration, alsa_seq::output_configuration,
     alsa_seq_ump::output_configuration, coremidi_output_configuration,
@@ -53,7 +53,7 @@ using output_api_configuration = std::variant<
     jack_ump::output_configuration, pipewire_ump::output_configuration,
     android::output_configuration, libremidi::API>;
 
-using observer_api_configuration = std::variant<
+using observer_api_configuration = libremidi_variant_alias::variant<
     unspecified_configuration, dummy_configuration, alsa_raw_observer_configuration,
     alsa_raw_ump::observer_configuration, alsa_seq::observer_configuration,
     alsa_seq_ump::observer_configuration, coremidi_observer_configuration,

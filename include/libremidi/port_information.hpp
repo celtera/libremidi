@@ -43,7 +43,7 @@ struct LIBREMIDI_EXPORT port_information
   //        this is not the string but the binary representation).
   // WinMM: unavailable
   // WinUWP: unavailable
-  container_identifier container = std::monostate{};
+  container_identifier container = libremidi_variant_alias::monostate{};
 
   /// Device identifier if the API provides one
   // Android: unavailable
@@ -54,7 +54,7 @@ struct LIBREMIDI_EXPORT port_information
   // WinMIDI: EndpointDeviceId (std::string), e.g. "\\?\swd#midisrv#midiu_ksa..."
   // WinMM: MIDI{IN,OUT}CAPS mId / pId { uint16_t manufacturer_id, uint16_t product_id; }
   // WinUWP: unavailable
-  device_identifier device = std::monostate{};
+  device_identifier device = libremidi_variant_alias::monostate{};
 
   /// Handle to the port identifier if the API provides one
   // Android: index of the MIDI device in the list provided by the OS.

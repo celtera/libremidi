@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LIBREMIDI_CONFIG_HPP
-  #define LIBREMIDI_CONFIG_HPP
+
+#define LIBREMIDI_VERSION "5.4.1"
 
 // clang-format off
 #if !defined(LIBREMIDI_BASE_NAMESPACE)
@@ -44,6 +44,7 @@
   #define WIN32_LEAN_AND_MEAN
 #endif
 
+// Dynamic exports
 #if defined(LIBREMIDI_EXPORTS) || defined(LIBREMIDI_MODULE_BUILD)
   #if defined(_MSC_VER)
     #define LIBREMIDI_EXPORT __declspec(dllexport)
@@ -54,8 +55,7 @@
   #define LIBREMIDI_EXPORT
 #endif
 
-#define LIBREMIDI_VERSION "5.4.1"
-
+// Boost check to prevent ABI issues
 #if defined(LIBREMIDI_USE_BOOST)
   #if !__has_include(<boost/container/small_vector.hpp>)
     #error \
@@ -67,8 +67,8 @@
   #endif
 #endif
 
+// Use boost::small_vector if available
 #if __has_include(<boost/container/small_vector.hpp>) && !defined(LIBREMIDI_NO_BOOST)
-
   #if LIBREMIDI_SLIM_MESSAGE > 0
     #include <boost/container/static_vector.hpp>
 NAMESPACE_LIBREMIDI
@@ -92,6 +92,50 @@ using midi_bytes = std::vector<unsigned char>;
 }
 #endif
 
+// Use boost::variant2 if available
+#if __has_include(<boost/variant2.hpp>) && !defined(LIBREMIDI_NO_BOOST_VARIANT2)
+  #if __has_include(<boost/variant2.hpp>)
+    #include <boost/variant2.hpp>
+namespace libremidi_variant_alias = boost::variant2;
+  #else
+    #include <variant>
+namespace libremidi_variant_alias = std;
+  #endif
+
+namespace libremidi
+{
+using monostate = libremidi_variant_alias::monostate;
+template <typename T>
+concept nothrow_move_constructible = std::is_nothrow_move_constructible_v<T>;
+
+template <nothrow_move_constructible... Args>
+using variant = libremidi_variant_alias::variant<Args...>;
+
+template <typename... Args>
+using slow_variant = libremidi_variant_alias::variant<Args...>;
+
+template <std::size_t N, typename T>
+using variant_element = libremidi_variant_alias::variant_alternative<N, T>;
+template <std::size_t N, typename T>
+using variant_element_t = libremidi_variant_alias::variant_alternative_t<N, T>;
+
+using libremidi_variant_alias::operator==;
+using libremidi_variant_alias::operator!=;
+using libremidi_variant_alias::operator<;
+using libremidi_variant_alias::operator>;
+using libremidi_variant_alias::operator<=;
+using libremidi_variant_alias::operator>=;
+
+// using boost::variant2::in_place;
+// using libremidi_variant_alias::in_place;
+using libremidi_variant_alias::get;
+using libremidi_variant_alias::get_if;
+using libremidi_variant_alias::in_place_index;
+using libremidi_variant_alias::in_place_type;
+using libremidi_variant_alias::visit;
+}
+#endif
+
 #if __has_include(<midi/universal_packet.h>) && defined(LIBREMIDI_USE_NI_MIDI2)
   #define LIBREMIDI_NI_MIDI2_COMPAT 1
 #endif
@@ -106,5 +150,4 @@ using midi_bytes = std::vector<unsigned char>;
   #define LIBREMIDI_PRECONDITION(...) pre(__VA_ARGS__)
 #else
   #define LIBREMIDI_PRECONDITION(...)
-#endif
 #endif

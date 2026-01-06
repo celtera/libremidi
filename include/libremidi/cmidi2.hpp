@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <libremidi/config.hpp>
+
 #if !defined(_MSC_VER)
 #pragma GCC system_header
 #pragma clang system_header

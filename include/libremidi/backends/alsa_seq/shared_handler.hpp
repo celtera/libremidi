@@ -127,13 +127,13 @@ struct shared_handler : public libremidi::shared_context
           {
             case callback_added: {
               auto [addr, cb]
-                  = std::move(*std::get_if<libremidi::alsa_seq::poll_parameters>(&ev.payload));
+                  = std::move(*get_if<libremidi::alsa_seq::poll_parameters>(&ev.payload));
               addresses.push_back(addr);
               callbacks.push_back(std::move(cb));
               break;
             }
             case callback_removed:
-              auto addr = *std::get_if<snd_seq_addr_t>(&ev.payload);
+              auto addr = *get_if<snd_seq_addr_t>(&ev.payload);
               if (auto index = index_of_address(addr); index >= 0)
               {
                 addresses.erase(addresses.begin() + index);
@@ -179,7 +179,7 @@ struct shared_handler : public libremidi::shared_context
   struct event
   {
     event_type type;
-    std::variant<libremidi::alsa_seq::poll_parameters, snd_seq_addr_t> payload;
+    libremidi_variant_alias::variant<libremidi::alsa_seq::poll_parameters, snd_seq_addr_t> payload;
   };
 
   snd_seq_t* client{};
