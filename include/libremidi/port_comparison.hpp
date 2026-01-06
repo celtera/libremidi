@@ -1,9 +1,23 @@
 #pragma once
 #include <libremidi/observer_configuration.hpp>
-
-#include <span>
-#include <variant>
+#if __has_include(<boost/container/flat_map.hpp>)
+  #include <boost/container/flat_map.hpp>
+namespace libremidi
+{
+template <typename K, typename V>
+using temp_map_type = boost::container::flat_map<K, V>;
+}
+#else
+  #include <map>
+namespace libremidi
+{
+template <typename K, typename V>
+using temp_map_type = std::map<K, V>;
+}
+#endif
+#include <algorithm>
 #include <limits>
+#include <span>
 #include <tuple>
 
 namespace libremidi
@@ -44,6 +58,29 @@ struct port_identity_less
   bool operator()(const port_information& lhs, const port_information& rhs)
   {
     return std::tie(lhs.api, lhs.port) < std::tie(rhs.api, rhs.port);
+  }
+};
+
+struct port_exactly_equal
+{
+  bool operator()(const port_information& lhs, const port_information& rhs)
+  {
+    return lhs.api == rhs.api && lhs.container == rhs.container && lhs.device == rhs.device
+           && lhs.port == rhs.port && lhs.manufacturer == rhs.manufacturer
+           && lhs.product == rhs.product && lhs.serial == rhs.serial
+           && lhs.device_name == rhs.device_name && lhs.port_name == rhs.port_name
+           && lhs.display_name == rhs.display_name;
+  }
+};
+
+struct port_mostly_equal
+{
+  bool operator()(const port_information& lhs, const port_information& rhs)
+  {
+    return lhs.api == rhs.api && lhs.container == rhs.container && lhs.device == rhs.device
+           && lhs.port == rhs.port && lhs.manufacturer == rhs.manufacturer
+           && lhs.product == rhs.product && lhs.serial == rhs.serial
+           && lhs.device_name == rhs.device_name && lhs.port_name == rhs.port_name;
   }
 };
 
@@ -222,20 +259,20 @@ private:
   }
 };
 
-struct input_port_search_result
+template <typename T>
+struct port_search_result
 {
-  const input_port* port = nullptr;
+  const T* port = nullptr;
   int score = 0;
   bool found = false;
 };
 
-inline input_port_search_result find_closest_port(
-    const input_port& target,
-    std::span<input_port> candidates)
+template <typename T>
+inline port_search_result<T> find_closest_port(const T& target, std::span<const T> candidates)
 {
   port_heuristic_matcher matcher{};
 
-  const input_port* best_match = nullptr;
+  const T* best_match = nullptr;
   port_heuristic_matcher::match_score best_score;
   best_score.score = -1;
 
@@ -256,37 +293,273 @@ inline input_port_search_result find_closest_port(
   return { nullptr, 0, false };
 }
 
-struct output_port_search_result
+template <typename T>
+inline std::vector<const T*>
+optimistic_serialized_port_lookup(const T& target, std::span<const T> ports)
 {
-  const output_port* port = nullptr;
-  int score = 0;
-  bool found = false;
-};
+  if (ports.empty())
+    return {};
 
-inline output_port_search_result find_closest_port(
-    const output_port& target,
-    std::span<output_port> candidates)
-{
-  port_heuristic_matcher matcher{};
-
-  const output_port* best_match = nullptr;
-  port_heuristic_matcher::match_score best_score{};
-  best_score.score = -1;
-
-  for (const auto& candidate : candidates)
+  // 1. Look for an exact match on all fields
+  std::vector<const T*> candidates;
+  for (auto& candidate : ports)
   {
-    port_heuristic_matcher::match_score current = matcher.calculate(target, candidate);
+    if (port_mostly_equal{}(target, candidate))
+      candidates.push_back(&candidate);
+  }
+  switch (candidates.size())
+  {
+    case 0: {
+      break;
+    }
+    case 1: {
+      return candidates;
+    }
+    default: {
+      // If we have an exact match return it
+      for (auto* candidate : candidates)
+        if (target.display_name == candidate->display_name)
+          return {candidate};
 
-    if (current.is_match() && current > best_score)
-    {
-      best_score = current;
-      best_match = &candidate;
+      // Else return the entire bunch as we have no way to differentiate
+      return candidates;
     }
   }
 
-  if (best_match)
-    return {best_match, best_score.score, true};
+  // 2. Heuristics
 
-  return {nullptr, 0, false};
+  // Look for candidates in the same API
+  candidates.clear();
+  for (auto& candidate : ports)
+  {
+    if (target.api != libremidi::API::UNSPECIFIED)
+    {
+      if (target.api == candidate.api)
+      {
+        // Port was set, let's give a high trust to this
+        if (target.port != static_cast<port_handle>(-1))
+        {
+          if (target.port == candidate.port)
+          {
+            if (target.port_name == candidate.port_name
+                && target.device_name == candidate.device_name)
+            {
+              // We can be 99% confident it's the right one
+              candidates.push_back(&candidate);
+            }
+            else if (
+                port_heuristic_matcher::fuzzy_match_name(target.port_name, candidate.port_name)
+                    >= 0.8
+                && port_heuristic_matcher::fuzzy_match_name(
+                       target.device_name, candidate.device_name)
+                       >= 0.8)
+            {
+              candidates.push_back(&candidate);
+            }
+            else
+            {
+              // Same API & same port, different port_name & device_name:
+              // very likely it's the wrong one
+              continue;
+            }
+          }
+        }
+        else
+        {
+#define do_compare(MEMBER)                                            \
+  {                                                                   \
+    ok &= target.MEMBER == candidate.MEMBER || target.MEMBER.empty(); \
+    if (!ok)                                                          \
+      continue;                                                       \
+  }
+          bool ok = true;
+
+          // These three are compared later
+          // do_compare(display_name);
+          // do_compare(container);
+          // do_compare(device);
+          do_compare(manufacturer);
+          do_compare(product);
+          do_compare(serial);
+          do_compare(device_name);
+          do_compare(port_name);
+
+#undef do_compare
+          // If we got there it's a very good candidate
+          candidates.push_back(&candidate);
+        }
+      }
+    }
+  }
+
+  switch (candidates.size())
+  {
+    case 0: {
+      break;
+    }
+    case 1: {
+      // One candidate in the same API
+      return {candidates[0]};
+    }
+    default: {
+      // Let's look if we have one that has the same container
+      if (!get_if<libremidi_variant_alias::monostate>(&target.container)
+          && !get_if<libremidi_variant_alias::monostate>(&target.device)
+          && !target.display_name.empty())
+      {
+        for (auto* candidate : candidates)
+          if (target.container == candidate->container && target.device == candidate->device
+              && target.display_name == candidate->display_name)
+            return {candidate};
+        for (auto* candidate : candidates)
+          if (target.display_name == candidate->display_name)
+            return {candidate};
+        for (auto* candidate : candidates)
+          if (target.container == candidate->container && target.device == candidate->device)
+            return {candidate};
+        for (auto* candidate : candidates)
+          if (target.container == candidate->container)
+            return {candidate};
+        for (auto* candidate : candidates)
+          if (target.device == candidate->device)
+            return {candidate};
+      }
+      else if (
+          !get_if<libremidi_variant_alias::monostate>(&target.container)
+          && !target.display_name.empty())
+      {
+        for (auto* candidate : candidates)
+          if (target.container == candidate->container
+              && target.display_name == candidate->display_name)
+            return {candidate};
+        for (auto* candidate : candidates)
+          if (target.display_name == candidate->display_name)
+            return {candidate};
+        for (auto* candidate : candidates)
+          if (target.container == candidate->container)
+            return {candidate};
+      }
+      else if (
+          !get_if<libremidi_variant_alias::monostate>(&target.device)
+          && !target.display_name.empty())
+      {
+        for (auto* candidate : candidates)
+          if (target.device == candidate->device && target.display_name == candidate->display_name)
+            return {candidate};
+        for (auto* candidate : candidates)
+          if (target.display_name == candidate->display_name)
+            return {candidate};
+        for (auto* candidate : candidates)
+          if (target.device == candidate->device)
+            return {candidate};
+      }
+      // Else return them all as we have no way to differentiate
+      return candidates;
+    }
+  }
+
+  // Look for candidates in different APIs.
+  // Here most informations are different, so we only do a fuzzy match
+  candidates.clear();
+  libremidi::temp_map_type<int, const T*> ranked_candidates;
+  for (auto& candidate : ports)
+  {
+    int score = 0;
+    if (!target.port_name.empty() && !candidate.port_name.empty())
+    {
+      float res = port_heuristic_matcher::fuzzy_match_name(target.port_name, candidate.port_name);
+      if (res > 0.7)
+      {
+        score += res;
+      }
+    }
+    if (!target.device_name.empty() && !candidate.device_name.empty())
+    {
+      float res
+          = port_heuristic_matcher::fuzzy_match_name(target.device_name, candidate.device_name);
+      if (res > 0.7)
+      {
+        score += res;
+      }
+    }
+    if (!target.display_name.empty() && !candidate.display_name.empty())
+    {
+      float res
+          = port_heuristic_matcher::fuzzy_match_name(target.display_name, candidate.display_name);
+      if (res > 0.7)
+      {
+        score += res;
+      }
+    }
+    if (!target.display_name.empty() && !candidate.port_name.empty())
+    {
+      float res
+          = port_heuristic_matcher::fuzzy_match_name(target.display_name, candidate.port_name);
+      if (res > 0.7)
+      {
+        score += res;
+      }
+    }
+    if (!target.port_name.empty() && !candidate.display_name.empty())
+    {
+      float res
+          = port_heuristic_matcher::fuzzy_match_name(target.port_name, candidate.display_name);
+      if (res > 0.7)
+      {
+        score += res;
+      }
+    }
+    if (!target.display_name.empty() && !candidate.device_name.empty())
+    {
+      float res
+          = port_heuristic_matcher::fuzzy_match_name(target.display_name, candidate.device_name);
+      if (res > 0.7)
+      {
+        score += res;
+      }
+    }
+    if (!target.device_name.empty() && !candidate.display_name.empty())
+    {
+      float res
+          = port_heuristic_matcher::fuzzy_match_name(target.device_name, candidate.display_name);
+      if (res > 0.7)
+      {
+        score += res;
+      }
+    }
+    if (!target.manufacturer.empty() && !candidate.manufacturer.empty())
+    {
+      float res
+          = port_heuristic_matcher::fuzzy_match_name(target.manufacturer, candidate.manufacturer);
+      if (res > 0.7)
+      {
+        score += 3 * res;
+      }
+    }
+    if (!target.product.empty() && !candidate.product.empty())
+    {
+      float res = port_heuristic_matcher::fuzzy_match_name(target.product, candidate.product);
+      if (res > 0.7)
+      {
+        score += 5 * res;
+      }
+    }
+    if (!target.serial.empty() && !candidate.serial.empty())
+    {
+      float res = port_heuristic_matcher::fuzzy_match_name(target.serial, candidate.serial);
+      if (res > 0.7)
+      {
+        score += 10 * res;
+      }
+    }
+    if (score > 0)
+      ranked_candidates[score] = &candidate;
+  }
+
+  candidates.clear();
+  candidates.reserve(ranked_candidates.size());
+  for (auto [score, candidate] : ranked_candidates)
+    candidates.insert(candidates.begin(), candidate);
+  return candidates;
 }
 }

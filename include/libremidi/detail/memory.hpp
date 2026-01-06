@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libremidi/config.hpp>
+
 #include <memory>
 #include <mutex>
 
