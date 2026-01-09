@@ -115,3 +115,6 @@ build-dir = "build/{wheel_tag}"
 
 # Build stable ABI wheels for CPython 3.10+
 wheel.py-api = "cp310"
+
+[tool.cibuildwheel]
+config-settings = "cmake.build-type=Release"
