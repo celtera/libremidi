@@ -5,7 +5,6 @@
 #include <compare>
 #include <cstdint>
 #include <string>
-#include <variant>
 
 NAMESPACE_LIBREMIDI
 {

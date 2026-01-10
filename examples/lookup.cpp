@@ -34,7 +34,8 @@ void lookup_api(libremidi::API api, const libremidi::input_port& searched)
   {
     // Check inputs.
     auto ports = midi.get_input_ports();
-    auto res = libremidi::find_closest_port(searched, ports);
+    auto res
+        = libremidi::find_closest_port(searched, std::span<const libremidi::input_port>(ports));
     if (res.found) {
       std::cout << "Found: " << *res.port << "\n";
     }

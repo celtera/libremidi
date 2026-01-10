@@ -49,9 +49,9 @@ inline std::ostream& operator<<(std::ostream& s, const libremidi::container_iden
     void operator()(libremidi::uuid u) { s << "uuid"; }
     void operator()(std::string u) { s << u; }
     void operator()(uint64_t u) { s << u; }
-    void operator()(std::monostate) { }
+    void operator()(libremidi::monostate) { }
   } vis{s};
-  std::visit(vis, id);
+  visit(vis, id);
   return s;
 }
 
@@ -73,9 +73,9 @@ inline std::ostream& operator<<(std::ostream& s, const libremidi::device_identif
         << std::setfill('0') << std::setw(4) << (res & 0x0000FFFF);
       s.flags(f);
     }
-    void operator()(std::monostate) { }
+    void operator()(libremidi::monostate) { }
   } vis{s};
-  std::visit(vis, id);
+  visit(vis, id);
   return s;
 }
 

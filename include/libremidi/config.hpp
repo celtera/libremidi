@@ -93,14 +93,19 @@ using midi_bytes = std::vector<unsigned char>;
 #endif
 
 // Use boost::variant2 if available
+#define LIBREMIDI_NO_BOOST_VARIANT2 1
 #if __has_include(<boost/variant2.hpp>) && !defined(LIBREMIDI_NO_BOOST_VARIANT2)
   #if __has_include(<boost/variant2.hpp>)
     #include <boost/variant2.hpp>
+    #define LIBREMIDI_VARIANT_IS_BOOST_VARIANT2
 namespace libremidi_variant_alias = boost::variant2;
-  #else
-    #include <variant>
-namespace libremidi_variant_alias = std;
   #endif
+#endif
+
+#if !defined(LIBREMIDI_VARIANT_IS_BOOST_VARIANT2)
+  #include <variant>
+namespace libremidi_variant_alias = std;
+#endif
 
 namespace libremidi
 {
@@ -134,7 +139,6 @@ using libremidi_variant_alias::in_place_index;
 using libremidi_variant_alias::in_place_type;
 using libremidi_variant_alias::visit;
 }
-#endif
 
 #if __has_include(<midi/universal_packet.h>) && defined(LIBREMIDI_USE_NI_MIDI2)
   #define LIBREMIDI_NI_MIDI2_COMPAT 1
