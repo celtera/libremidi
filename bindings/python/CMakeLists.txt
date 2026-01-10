@@ -11,7 +11,8 @@ set(LIBREMIDI_NEEDS_READERWRITERQUEUE 1)
 
 add_subdirectory(../.. libremidi-src)
 
-find_package(Python 3.9 COMPONENTS Interpreter Development.Module REQUIRED)
+find_package(Python 3.10 COMPONENTS Interpreter Development.Module REQUIRED)
+find_package(Python 3.10 COMPONENTS Development.SABIModule QUIET)
 
 if(NOT readerwriterqueue_FOUND AND NOT TARGET readerwriterqueue)
     FetchContent_Declare(
@@ -30,12 +31,26 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(nanobind)
-nanobind_add_module(pylibremidi pylibremidi.cpp)
+
+if(Python_VERSION VERSION_GREATER_EQUAL "3.12")
+    nanobind_add_module(pylibremidi STABLE_ABI NB_STATIC pylibremidi.cpp)
+else()
+    nanobind_add_module(pylibremidi NB_STATIC pylibremidi.cpp)
+endif()
 target_link_libraries(pylibremidi PUBLIC libremidi readerwriterqueue Boost::headers Boost::variant2 Boost::container)
+
+nanobind_add_stub(
+    pylibremidi_stub
+    MODULE pylibremidi
+    OUTPUT pylibremidi.pyi
+    PYTHON_PATH $<TARGET_FILE_DIR:pylibremidi>
+    DEPENDS pylibremidi
+)
 
 install(TARGETS pylibremidi LIBRARY DESTINATION .)
 
 install(
-    FILES __init__.py
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/pylibremidi.pyi
     DESTINATION .
+    OPTIONAL
 )

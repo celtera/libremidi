@@ -113,8 +113,30 @@ cmake.source-dir = "./bindings/python"
 # Setuptools-style build caching in a local directory
 build-dir = "build/{wheel_tag}"
 
-# Build stable ABI wheels for CPython 3.10+
-wheel.py-api = "cp310"
-
 [tool.cibuildwheel]
+# Build for Python 3.10, 3.11 (version-specific) and 3.12+ (stable ABI)
+build = "cp310-* cp311-* cp312-*"
 config-settings = "cmake.build-type=Release"
+
+# Skip 32-bit builds, musl, and PyPy
+skip = "*-win32 *-manylinux_i686 *-musllinux_* pp*"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "aarch64"]
+# Use manylinux_2_28 for pipewire availability (AlmaLinux 8 based)
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
+before-all = "dnf install -y alsa-lib-devel pipewire-devel jack-audio-connection-kit-devel"
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64", "ARM64"]
+
+# For Python 3.12+, use stable ABI
+[[tool.cibuildwheel.overrides]]
+select = "cp312-*"
+config-settings = "cmake.build-type=Release"
+inherit.environment = "append"
+environment = { SKBUILD_WHEEL_PY_API = "cp312" }
