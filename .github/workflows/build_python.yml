@@ -100,8 +100,10 @@ jobs:
           -DLIBREMIDI_CI=1
 
     - name: Build
+      shell: bash
       run: |
-        cmake --build build --config Debug
+        export ASAN_OPTIONS=detect_leaks=0
+        ${{matrix.config.environment}} cmake --build build --config Debug
 
     - name: Test
       if: runner.os == 'Windows'
