@@ -13,6 +13,10 @@ module;
   #endif
 #endif
 
+#if __has_include(<boost/variant2.hpp>) && !defined(LIBREMIDI_NO_BOOST_VARIANT2)
+  #include <boost/variant2.hpp>
+#endif
+
 // Platform headers
 #if defined(LIBREMIDI_ALSA)
   #include <alsa/asoundlib.h>

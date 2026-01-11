@@ -94,11 +94,9 @@ using midi_bytes = std::vector<unsigned char>;
 
 // Use boost::variant2 if available
 #if __has_include(<boost/variant2.hpp>) && !defined(LIBREMIDI_NO_BOOST_VARIANT2)
-  #if __has_include(<boost/variant2.hpp>)
-    #include <boost/variant2.hpp>
-    #define LIBREMIDI_VARIANT_IS_BOOST_VARIANT2
+  #include <boost/variant2.hpp>
+  #define LIBREMIDI_VARIANT_IS_BOOST_VARIANT2
 namespace libremidi_variant_alias = boost::variant2;
-  #endif
 #endif
 
 #if !defined(LIBREMIDI_VARIANT_IS_BOOST_VARIANT2)
