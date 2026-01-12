@@ -34,25 +34,42 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(nanobind)
 
-if(Python_VERSION VERSION_GREATER_EQUAL "3.12")
+if(Python_VERSION VERSION_GREATER_EQUAL "3.12" AND Python_SABIModule_FOUND)
+    message(STATUS "Building with Python stable ABI (abi3)")
     nanobind_add_module(pylibremidi STABLE_ABI NB_STATIC pylibremidi.cpp)
 else()
+    message(STATUS "Building with Python version-specific ABI")
     nanobind_add_module(pylibremidi NB_STATIC pylibremidi.cpp)
 endif()
 target_link_libraries(pylibremidi PUBLIC libremidi readerwriterqueue Boost::headers Boost::variant2 Boost::container)
 
-nanobind_add_stub(
-    pylibremidi_stub
-    MODULE pylibremidi
-    OUTPUT pylibremidi.pyi
-    PYTHON_PATH $<TARGET_FILE_DIR:pylibremidi>
-    DEPENDS pylibremidi
-)
-
 install(TARGETS pylibremidi LIBRARY DESTINATION .)
 
-install(
-    FILES ${CMAKE_CURRENT_BINARY_DIR}/pylibremidi.pyi
-    DESTINATION .
-    OPTIONAL
-)
+set(CAN_RUN_STUB_GENERATOR TRUE)
+if(APPLE)
+    execute_process(COMMAND uname -m OUTPUT_VARIABLE HOST_ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(CMAKE_OSX_ARCHITECTURES)
+        set(TARGET_ARCH "${CMAKE_OSX_ARCHITECTURES}")
+    else()
+        set(TARGET_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+    endif()
+    if(NOT HOST_ARCH STREQUAL TARGET_ARCH)
+        set(CAN_RUN_STUB_GENERATOR FALSE)
+    endif()
+endif()
+
+if(CAN_RUN_STUB_GENERATOR)
+    nanobind_add_stub(
+        pylibremidi_stub
+        MODULE pylibremidi
+        OUTPUT pylibremidi.pyi
+        PYTHON_PATH $<TARGET_FILE_DIR:pylibremidi>
+        DEPENDS pylibremidi
+    )
+
+    install(
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/pylibremidi.pyi
+        DESTINATION .
+        OPTIONAL
+    )
+endif()

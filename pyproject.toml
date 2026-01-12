@@ -136,9 +136,8 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "10.14" }
 [tool.cibuildwheel.windows]
 archs = ["AMD64", "ARM64"]
 
-# For Python 3.12+, use stable ABI
 [[tool.cibuildwheel.overrides]]
-select = "cp312-*"
+select = "cp312-macosx_* cp312-manylinux_*"
 config-settings = "cmake.build-type=Release"
 inherit.environment = "append"
 environment = { SKBUILD_WHEEL_PY_API = "cp312" }
