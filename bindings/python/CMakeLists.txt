@@ -9,6 +9,8 @@ set(LIBREMIDI_FIND_BOOST 1)
 set(LIBREMIDI_HEADER_ONLY 1)
 set(LIBREMIDI_NEEDS_READERWRITERQUEUE 1)
 
+set(BOOST_EXCLUDE_LIBRARIES context coroutine)
+
 add_subdirectory(../.. libremidi-src)
 
 find_package(Python 3.10 COMPONENTS Interpreter Development.Module REQUIRED)
