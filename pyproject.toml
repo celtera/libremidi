@@ -122,19 +122,14 @@ config-settings = "cmake.build-type=Release"
 skip = "*-win32 *-manylinux_i686 *-musllinux_*"
 
 [tool.cibuildwheel.linux]
-archs = ["x86_64", "aarch64"]
 # Use manylinux_2_28 for pipewire availability (AlmaLinux 8 based)
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 before-all = "dnf install -y alsa-lib-devel pipewire-devel jack-audio-connection-kit-devel"
 
 [tool.cibuildwheel.macos]
-archs = ["x86_64", "arm64"]
 # macOS 10.14+ required for C++17 aligned allocation used by nanobind
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.14" }
-
-[tool.cibuildwheel.windows]
-archs = ["AMD64", "ARM64"]
 
 [[tool.cibuildwheel.overrides]]
 select = "cp312-macosx_* cp312-manylinux_*"
