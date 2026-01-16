@@ -30,6 +30,7 @@ add_example(sysextest)
 add_example(minimal)
 add_example(midi2_echo)
 add_example(rawmidiin)
+add_example(ump_endpoint_example)
 
 if(LIBREMIDI_HAS_STD_FLAT_SET AND LIBREMIDI_HAS_STD_PRINTLN)
   add_example(midi_to_pattern)

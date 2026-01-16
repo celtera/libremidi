@@ -80,6 +80,12 @@ struct dummy_backend
   using midi_in_configuration = dummy_configuration;
   using midi_out_configuration = dummy_configuration;
   using midi_observer_configuration = dummy_configuration;
+
+  using midi_endpoint = void;
+  using midi_endpoint_observer = void;
+  using midi_endpoint_configuration = void;
+  using midi_endpoint_observer_configuration = void;
+
   static const constexpr auto API = libremidi::API::DUMMY;
   static const constexpr std::string_view name = "dummy";
   static const constexpr std::string_view display_name = "Dummy";
