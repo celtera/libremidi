@@ -4,6 +4,7 @@
 #include <libremidi/backends/linux/helpers.hpp>
 #include <libremidi/detail/midi_api.hpp>
 #include <libremidi/detail/observer.hpp>
+#include <libremidi/detail/ump_endpoint_api.hpp>
 
 #include <alsa/asoundlib.h>
 
@@ -218,6 +219,7 @@ public:
 
   void init_all_ports()
   {
+    enumerate_endpoints();
     alsa_seq::for_all_ports(
         snd, this->seq, [this](snd_seq_client_info_t& client, snd_seq_port_info_t& port) {
       int clt = snd.seq.client_info_get_client(&client);
@@ -261,6 +263,148 @@ public:
     });
     return ret;
   }
+
+  void enumerate_endpoints()
+  {
+    // In ALSA, a given client is always a single endpoint
+    // Group ports by client to form endpoints
+    alsa_seq::for_all_clients(snd, seq, [this](snd_seq_client_info_t& cinfo) {
+      int client = snd.seq.client_info_get_client(&cinfo);
+      // Skip our own client
+      if (client == snd.seq.client_id(seq))
+        return;
+
+      // Skip system client
+      if (client == 0)
+        return;
+
+      if (auto client_opt = get_client_info(client, cinfo))
+        create_endpoint_from_ports(cinfo, *client_opt);
+    });
+  }
+
+  void create_endpoint_from_ports(snd_seq_client_info_t& cinfo, const client_info& client)
+  {
+    ump_endpoint_info ep_info;
+
+    ep_info.endpoint_id = std::uint64_t(client.client_id);
+    ep_info.name = client.client_name;
+    ep_info.display_name = client.client_name; // FIXME
+    ep_info.manufacturer = "";                 // FIXME
+
+    // ALSA Seq UMP always supports both
+    ep_info.supported_protocols = midi_protocol::both;
+    ep_info.active_protocol = midi_protocol::midi2;
+
+    std::vector<port_info> ports;
+    alsa_seq::for_all_ports(snd, seq, client.client_id, [&](snd_seq_port_info_t& pinfo) {
+      int port = snd.seq.port_info_get_port(&pinfo);
+      auto port_opt = get_info(client.client_id, port, cinfo, pinfo);
+      if (port_opt)
+        ports.push_back(*port_opt);
+    });
+    if (ports.empty())
+      return;
+
+    auto& first_port = ports.front();
+
+    // Transport type
+    // FIXME
+    if (first_port.type & libremidi::transport_type::hardware)
+      ep_info.transport = endpoint_transport_type::usb;
+    else
+      ep_info.transport = endpoint_transport_type::virtual_port;
+
+    {
+      snd_ump_endpoint_info_t* ptr{};
+      snd_ump_endpoint_info_alloca(&ptr);
+      if (auto ok = snd.seq.get_ump_endpoint_info(seq, client.client_id, &ptr); ok >= 0)
+      {
+        // The client provides an UMP information: all good
+        snd.ump.endpoint_info_get_name(ptr);
+        snd.ump.endpoint_info_get_card(ptr);
+        snd.ump.endpoint_info_get_device(ptr);
+        snd.ump.endpoint_info_get_flags(ptr);
+        snd.ump.endpoint_info_get_protocol(ptr);
+        snd.ump.endpoint_info_get_protocol_caps(ptr);
+        snd.ump.endpoint_info_get_num_blocks(ptr);
+        snd.ump.endpoint_info_get_version(ptr);
+        snd.ump.endpoint_info_get_manufacturer_id(ptr);
+        snd.ump.endpoint_info_get_family_id(ptr);
+        snd.ump.endpoint_info_get_model_id(ptr);
+        snd.ump.endpoint_info_get_product_id(ptr);
+        snd.ump.endpoint_info_get_sw_revision(ptr);
+      }
+      else
+      {
+        // No ump endpoint: let's revert back to a simulated endpoint
+        // by assigning each port to a group / fb, + having group 0 be omni
+        uint8_t block_id = 0;
+
+        // Create function blocks from ports
+        for (const auto& port : ports)
+        {
+          function_block_info fb;
+          fb.block_id = block_id++;
+          fb.active = true;
+          fb.name = port.port_name;
+
+          // Determine direction from port capabilities
+          if (port.is_input && port.is_output)
+            fb.direction = function_block_direction::bidirectional;
+          else if (port.is_input)
+            fb.direction = function_block_direction::input;
+          else if (port.is_output)
+            fb.direction = function_block_direction::output;
+          else
+            continue; // Skip ports with no direction
+
+          // Set UI hint based on direction
+          if (port.is_input && port.is_output)
+            fb.ui_hint = function_block_ui_hint::both;
+          else if (port.is_input)
+            fb.ui_hint = function_block_ui_hint::sender;
+          else
+            fb.ui_hint = function_block_ui_hint::receiver;
+
+          // Single group per block, matching the ALSA port
+          fb.groups.first_group = static_cast<uint8_t>(port.port);
+          fb.groups.num_groups = 1;
+
+          ep_info.function_blocks.push_back(std::move(fb));
+        }
+
+        m_known_endpoints.push_back(std::move(ep_info));
+      }
+    }
+  }
+
+  void register_client(int client_id)
+  {
+    // Skip our own client
+    if (client_id == snd.seq.client_id(seq))
+      return;
+
+    // Skip system client
+    if (client_id == 0)
+      return;
+
+    snd_seq_client_info_t* cinfo{};
+    snd_seq_client_info_alloca(&cinfo);
+
+    if (snd.seq.get_any_client_info(seq, client_id, cinfo) < 0)
+      return;
+
+    if (auto client_opt = get_client_info(client_id, *cinfo))
+      create_endpoint_from_ports(*cinfo, *client_opt);
+
+    if (configuration.endpoint_added)
+    {
+      configuration.endpoint_added(m_known_endpoints.back());
+    }
+  }
+
+  void unregister_client(int client) { }
 
   void register_port(int client, int port)
   {
@@ -308,15 +452,14 @@ public:
     switch (ev.type)
     {
       case SND_SEQ_EVENT_CLIENT_START: {
-        // TODO
+        this->register_client(ev.data.addr.client);
         break;
       }
       case SND_SEQ_EVENT_CLIENT_EXIT: {
-        // TODO
+        this->unregister_client(ev.data.addr.client);
         break;
       }
       case SND_SEQ_EVENT_CLIENT_CHANGE: {
-        // TODO
         break;
       }
 #if LIBREMIDI_ALSA_HAS_UMP_SEQ_EVENTS
@@ -359,6 +502,8 @@ public:
 
 private:
   std::map<std::pair<int, int>, port_info> m_knownClients;
+
+  std::vector<ump_endpoint_info> m_known_endpoints;
 
 #if LIBREMIDI_HAS_UDEV
   udev_helper m_udev{};

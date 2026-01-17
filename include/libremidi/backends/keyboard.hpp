@@ -14,6 +14,12 @@ struct kbd_backend
   using midi_observer = observer_dummy;
   using midi_out_configuration = dummy_configuration;
   using midi_observer_configuration = dummy_configuration;
+
+  using midi_endpoint = void;
+  using midi_endpoint_observer = void;
+  using midi_endpoint_configuration = void;
+  using midi_endpoint_observer_configuration = void;
+
   static const constexpr auto API = libremidi::API::KEYBOARD;
   static const constexpr std::string_view name = "keyboard";
   static const constexpr std::string_view display_name = "Computer keyboard";

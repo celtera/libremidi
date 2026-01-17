@@ -125,6 +125,36 @@ observer_api_configuration observer_configuration_for(libremidi::API api)
 }
 
 LIBREMIDI_INLINE
+endpoint_api_configuration midi_endpoint_configuration_for(libremidi::API api)
+{
+  endpoint_api_configuration ret;
+  midi2::for_backend(api, [&]<typename Backend>(Backend) {
+    if constexpr (!std::is_void_v<typename Backend::midi_endpoint_configuration>)
+    {
+      using conf_type = typename Backend::midi_endpoint_configuration;
+      ret = conf_type{};
+    }
+  });
+  return ret;
+}
+
+LIBREMIDI_INLINE
+libremidi::API midi_api(const endpoint_api_configuration& conf)
+{
+  libremidi::API ret = libremidi::API::UNSPECIFIED;
+  midi2::for_all_backends([&]<typename Backend>(Backend) {
+    if constexpr (!std::is_void_v<typename Backend::midi_endpoint_configuration>)
+    {
+      if (std::get_if<typename Backend::midi_endpoint_configuration>(&conf))
+      {
+        ret = Backend::API;
+      }
+    }
+  });
+  return ret;
+}
+
+LIBREMIDI_INLINE
 input_api_configuration midi_in_configuration_for(const libremidi::observer& obs)
 {
   return midi_in_configuration_for(obs.get_current_api());

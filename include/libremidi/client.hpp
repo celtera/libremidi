@@ -1,10 +1,11 @@
-#pragma once
-#include <libremidi/configurations.hpp>
-#include <libremidi/libremidi.hpp>
-#include <libremidi/shared_context.hpp>
+#if 0
+  #pragma once
+  #include <libremidi/configurations.hpp>
+  #include <libremidi/libremidi.hpp>
+  #include <libremidi/shared_context.hpp>
 
-#include <map>
-#include <utility>
+  #include <map>
+  #include <utility>
 
 NAMESPACE_LIBREMIDI::midi1
 {
@@ -200,6 +201,7 @@ private:
   observer m_observer;
 };
 }
-#if defined(LIBREMIDI_HEADER_ONLY)
-  #include "client.cpp"
+  #if defined(LIBREMIDI_HEADER_ONLY)
+    #include "client.cpp"
+  #endif
 #endif

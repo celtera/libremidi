@@ -64,6 +64,7 @@
 #include <libremidi/message.hpp>
 #include <libremidi/observer_configuration.hpp>
 #include <libremidi/output_configuration.hpp>
+#include <libremidi/ump_endpoint.hpp>
 
 #if LIBREMIDI_NI_MIDI2_COMPAT
   #include <midi/sysex.h>
@@ -83,8 +84,9 @@ public:
   //! * api_conf can be an instance of observer_configuration,
   //!   such as jack_observer_configuration, winmm_observer_configuration, etc...
   //! * if no callbacks are passed, no secondary thread will be created unless absolutely necessary
-  explicit observer(const observer_configuration& conf = {}) noexcept;
-  explicit observer(const observer_configuration& conf, observer_api_configuration api_conf);
+  explicit observer(const libremidi::observer_configuration& conf = {}) noexcept;
+  explicit observer(
+      const libremidi::observer_configuration& conf, observer_api_configuration api_conf);
   observer(const observer&) = delete;
   observer(observer&& other) noexcept;
   observer& operator=(const observer&) = delete;
@@ -96,6 +98,9 @@ public:
   //! Return identifiers for the available MIDI ports
   [[nodiscard]] std::vector<libremidi::input_port> get_input_ports() const noexcept;
   [[nodiscard]] std::vector<libremidi::output_port> get_output_ports() const noexcept;
+
+  /// Get all currently available UMP endpoints
+  [[nodiscard]] std::vector<ump_endpoint_info> get_endpoints() const noexcept;
 
 private:
   std::unique_ptr<class observer_api> m_impl;
@@ -269,6 +274,7 @@ private:
   #include <libremidi/midi_in.cpp>
   #include <libremidi/midi_out.cpp>
   #include <libremidi/observer.cpp>
+  #include <libremidi/ump_endpoint.cpp>
 
   #if defined(__EMSCRIPTEN__)
     #include <libremidi/backends/emscripten/midi_access.cpp>
