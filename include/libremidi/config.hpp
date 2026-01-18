@@ -1,6 +1,6 @@
 #pragma once
 
-#define LIBREMIDI_VERSION "5.4.2"
+#define LIBREMIDI_VERSION "5.4.3"
 
 // clang-format off
 #if !defined(LIBREMIDI_BASE_NAMESPACE)

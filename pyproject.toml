@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pylibremidi"
-version = "5.4.2"
+version = "5.4.3"
 description = "A modern C++ MIDI 1 / MIDI 2 real-time & file I/O library. Supports Windows, macOS, Linux and WebMIDI."
 readme = "README.md"
 requires-python = ">=3.10"
