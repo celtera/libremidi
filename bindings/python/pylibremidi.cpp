@@ -468,7 +468,7 @@ NB_MODULE(pylibremidi, m) {
       // clang-format off
       .def("send_message", [](libremidi::midi_out_poll_wrapper &self, const libremidi::message& m) { return self.impl.send_message(m); })
       .def("send_message", [](libremidi::midi_out_poll_wrapper &self, const unsigned char* m, size_t size) { return self.impl.send_message(m, size); })
-      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, std::span<const unsigned char> m)  { return self.impl.send_message(m); })
+      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, std::vector<unsigned char> m)  { return self.impl.send_message(m); })
       .def("send_message", [](libremidi::midi_out_poll_wrapper &self, unsigned char b0)  { return self.impl.send_message(b0); })
       .def("send_message", [](libremidi::midi_out_poll_wrapper &self, unsigned char b0, unsigned char  b1)  { return self.impl.send_message(b0, b1); })
       .def("send_message", [](libremidi::midi_out_poll_wrapper &self, unsigned char b0, unsigned char  b1, unsigned char b2)  { return self.impl.send_message(b0, b1, b2); })
@@ -477,7 +477,7 @@ NB_MODULE(pylibremidi, m) {
 
       .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, const libremidi::ump& m) { return self.impl.send_ump(m); })
       .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, const uint32_t* ump, size_t size) { return self.impl.send_ump(ump, size); })
-      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, std::span<const uint32_t> m) { return self.impl.send_ump(m); })
+      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, std::vector<uint32_t> m) { return self.impl.send_ump(m); })
       .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0) { return self.impl.send_ump(u0); })
       .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0, uint32_t u1) { return self.impl.send_ump(u0, u1); })
       .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0, uint32_t u1, uint32_t u2) { return self.impl.send_ump(u0, u1, u2); })
