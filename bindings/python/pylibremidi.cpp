@@ -12,6 +12,20 @@
 
 #include <readerwriterqueue.h>
 
+#if __has_include(<boost/container/small_vector.hpp>)
+#include <boost/container/small_vector.hpp>
+#include <boost/container/static_vector.hpp>
+#endif
+
+NAMESPACE_BEGIN(NB_NAMESPACE)
+NAMESPACE_BEGIN(detail)
+
+template <typename Type, std::size_t N> struct type_caster<boost::container::small_vector<Type, N>> : list_caster<boost::container::small_vector<Type, N>, Type> {};
+template <typename Type, std::size_t N> struct type_caster<boost::container::static_vector<Type, N>> : list_caster<boost::container::static_vector<Type, N>, Type> {};
+
+NAMESPACE_END(detail)
+NAMESPACE_END(NB_NAMESPACE)
+
 namespace libremidi {
 namespace poll_queue {
 struct error_message {
