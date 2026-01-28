@@ -23,6 +23,12 @@ struct jack_backend
   using midi_in_configuration = jack_input_configuration;
   using midi_out_configuration = jack_output_configuration;
   using midi_observer_configuration = jack_observer_configuration;
+
+  using midi_endpoint = void;
+  using midi_endpoint_observer = void;
+  using midi_endpoint_configuration = void;
+  using midi_endpoint_observer_configuration = void;
+
   static const constexpr auto API = libremidi::API::JACK_MIDI;
   static const constexpr std::string_view name = "jack";
   static const constexpr std::string_view display_name = "JACK";

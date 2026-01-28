@@ -3,8 +3,10 @@
 #include <libremidi/api.hpp>
 #include <libremidi/backends/alsa_raw/config.hpp>
 #include <libremidi/backends/alsa_raw_ump/config.hpp>
+#include <libremidi/backends/alsa_raw_ump/endpoint_config.hpp>
 #include <libremidi/backends/alsa_seq/config.hpp>
 #include <libremidi/backends/alsa_seq_ump/config.hpp>
+#include <libremidi/backends/alsa_seq_ump/endpoint_config.hpp>
 #include <libremidi/backends/android/config.hpp>
 #include <libremidi/backends/coremidi/config.hpp>
 #include <libremidi/backends/coremidi_ump/config.hpp>
@@ -64,12 +66,19 @@ using observer_api_configuration = libremidi_variant_alias::variant<
     winuwp_observer_configuration, jack_ump::observer_configuration,
     pipewire_ump::observer_configuration, android::observer_configuration, libremidi::API>;
 
+// Configuration for the new bidirectional UMP endpoint API
+using endpoint_api_configuration = std::variant<
+    unspecified_configuration, dummy_configuration, alsa_raw_ump::endpoint_api_configuration,
+    alsa_seq_ump::endpoint_api_configuration, libremidi::API>;
+
 LIBREMIDI_EXPORT
 libremidi::API midi_api(const input_api_configuration& conf);
 LIBREMIDI_EXPORT
 libremidi::API midi_api(const output_api_configuration& conf);
 LIBREMIDI_EXPORT
 libremidi::API midi_api(const observer_api_configuration& conf);
+LIBREMIDI_EXPORT
+libremidi::API midi_api(const endpoint_api_configuration& conf);
 
 void set_client_name(auto&& conf, std::string name)
 {

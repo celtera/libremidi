@@ -18,6 +18,12 @@ struct backend
   using midi_in_configuration = libremidi::pipewire_ump::input_configuration;
   using midi_out_configuration = libremidi::pipewire_ump::output_configuration;
   using midi_observer_configuration = libremidi::pipewire_ump::observer_configuration;
+
+  using midi_endpoint = void;
+  using midi_endpoint_observer = void;
+  using midi_endpoint_configuration = void;
+  using midi_endpoint_observer_configuration = void;
+
   static const constexpr auto API = libremidi::API::PIPEWIRE_UMP;
   static const constexpr std::string_view name = "pipewire_ump";
   static const constexpr std::string_view display_name = "PipeWire (UMP)";

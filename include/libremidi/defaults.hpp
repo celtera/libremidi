@@ -26,6 +26,10 @@ output_api_configuration midi_out_configuration_for(libremidi::API);
 LIBREMIDI_EXPORT
 observer_api_configuration observer_configuration_for(libremidi::API);
 
+//! Get the default UMP endpoint configuration object for a given API
+LIBREMIDI_EXPORT
+endpoint_api_configuration midi_endpoint_configuration_for(libremidi::API);
+
 //! Get a matching midi in configuration object for a given observer instance.
 LIBREMIDI_EXPORT
 input_api_configuration midi_in_configuration_for(const libremidi::observer&);

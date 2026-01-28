@@ -15,6 +15,12 @@ struct backend
   using midi_in_configuration = jack_ump::input_configuration;
   using midi_out_configuration = jack_ump::output_configuration;
   using midi_observer_configuration = jack_ump::observer_configuration;
+
+  using midi_endpoint = void;
+  using midi_endpoint_observer = void;
+  using midi_endpoint_configuration = void;
+  using midi_endpoint_observer_configuration = void;
+
   static const constexpr auto API = libremidi::API::JACK_UMP;
   static const constexpr std::string_view name = "jack_ump";
   static const constexpr std::string_view display_name = "JACK (UMP)";

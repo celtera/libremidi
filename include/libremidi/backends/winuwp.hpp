@@ -15,6 +15,12 @@ struct winuwp_backend
   using midi_in_configuration = winuwp_input_configuration;
   using midi_out_configuration = winuwp_output_configuration;
   using midi_observer_configuration = winuwp_observer_configuration;
+
+  using midi_endpoint = void;
+  using midi_endpoint_observer = void;
+  using midi_endpoint_configuration = void;
+  using midi_endpoint_observer_configuration = void;
+
   static const constexpr auto API = libremidi::API::WINDOWS_UWP;
   static const constexpr std::string_view name = "winuwp";
   static const constexpr std::string_view display_name = "Windows UWP";

@@ -3,6 +3,9 @@
 #include <libremidi/backends/alsa_seq/midi_in.hpp>
 #include <libremidi/backends/alsa_seq/observer.hpp>
 #include <libremidi/backends/alsa_seq_ump/config.hpp>
+#include <libremidi/backends/alsa_seq_ump/endpoint.hpp>
+#include <libremidi/backends/alsa_seq_ump/endpoint_config.hpp>
+#include <libremidi/backends/alsa_seq_ump/endpoint_observer.hpp>
 #include <libremidi/backends/alsa_seq_ump/midi_out.hpp>
 
 #include <unistd.h>
@@ -40,12 +43,25 @@ inline std::unique_ptr<midi_in_api> make<
         std::move(conf), std::move(api));
 }
 
+#if 0
+template <>
+inline std::unique_ptr<ump_endpoint_api> make<alsa_seq_ump::endpoint_impl_threaded>(
+    libremidi::remote_ump_endpoint_configuration&& conf,
+    libremidi::alsa_seq_ump::endpoint_api_configuration&& api)
+{
+  if (api.manual_poll)
+    return std::make_unique<alsa_seq_ump::endpoint_impl_manual>(std::move(conf), std::move(api));
+  else
+    return std::make_unique<alsa_seq_ump::endpoint_impl_threaded>(std::move(conf), std::move(api));
+}
+#endif
 }
 
 NAMESPACE_LIBREMIDI::alsa_seq_ump
 {
 struct backend
 {
+  // Legacy API
   using midi_in = alsa_seq::midi_in_impl<
       libremidi::ump_input_configuration, alsa_seq_ump::input_configuration>;
   using midi_out = alsa_seq_ump::midi_out_impl;
@@ -53,6 +69,14 @@ struct backend
   using midi_in_configuration = alsa_seq_ump::input_configuration;
   using midi_out_configuration = alsa_seq_ump::output_configuration;
   using midi_observer_configuration = alsa_seq_ump::observer_configuration;
+
+  // Endpoint API
+  using midi_endpoint = void; //endpoint_impl_threaded;
+
+  using midi_endpoint_configuration = void;
+  // using midi_endpoint_configuration = alsa_seq_ump::endpoint_api_configuration;
+  // using midi_endpoint_observer_configuration = alsa_seq_ump::endpoint_observer_api_configuration;
+
   static const constexpr auto API = libremidi::API::ALSA_SEQ_UMP;
   static const constexpr std::string_view name = "alsa_seq_ump";
   static const constexpr std::string_view display_name = "ALSA (sequencer, UMP)";
