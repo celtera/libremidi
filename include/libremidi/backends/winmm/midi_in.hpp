@@ -128,44 +128,41 @@ public:
 
   stdx::error close_port() override
   {
-    if (connected_)
+    EnterCriticalSection(&(this->_mutex));
+    midiInReset(this->inHandle);
+    midiInStop(this->inHandle);
+
+    for (std::size_t i = 0; i < static_cast<std::size_t>(configuration.sysex_buffer_count); ++i)
     {
-      EnterCriticalSection(&(this->_mutex));
-      midiInReset(this->inHandle);
-      midiInStop(this->inHandle);
+      MMRESULT res{};
 
-      for (std::size_t i = 0; i < static_cast<std::size_t>(configuration.sysex_buffer_count); ++i)
+      int wait_count = 5;
+      while (
+          ((res = midiInUnprepareHeader(this->inHandle, this->sysexBuffer[i], sizeof(MIDIHDR)))
+           == MIDIERR_STILLPLAYING)
+          && wait_count-- >= 0)
       {
-        MMRESULT res{};
-
-        int wait_count = 5;
-        while (
-            ((res = midiInUnprepareHeader(this->inHandle, this->sysexBuffer[i], sizeof(MIDIHDR)))
-             == MIDIERR_STILLPLAYING)
-            && wait_count-- >= 0)
-        {
-          Sleep(1);
-        }
-
-        if (res != MMSYSERR_NOERROR)
-        {
-          libremidi_handle_warning(
-              configuration,
-              "error closing Windows MM MIDI input "
-              "port (midiInUnprepareHeader).");
-          continue;
-        }
-        else
-        {
-          delete[] this->sysexBuffer[i]->lpData;
-          delete[] this->sysexBuffer[i];
-        }
+        Sleep(1);
       }
 
-      midiInClose(this->inHandle);
-      this->inHandle = nullptr;
-      LeaveCriticalSection(&(this->_mutex));
+      if (res != MMSYSERR_NOERROR)
+      {
+        libremidi_handle_warning(
+            configuration,
+            "error closing Windows MM MIDI input "
+            "port (midiInUnprepareHeader).");
+        continue;
+      }
+      else
+      {
+        delete[] this->sysexBuffer[i]->lpData;
+        delete[] this->sysexBuffer[i];
+      }
     }
+
+    midiInClose(this->inHandle);
+    this->inHandle = nullptr;
+    LeaveCriticalSection(&(this->_mutex));
     return stdx::error{};
   }
 
