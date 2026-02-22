@@ -29,6 +29,7 @@ add_example(qmidiin)
 add_example(sysextest)
 add_example(minimal)
 add_example(midi2_echo)
+add_example(midi2_virtual)
 add_example(rawmidiin)
 add_example(rawio)
 
