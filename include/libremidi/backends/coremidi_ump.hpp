@@ -11,7 +11,7 @@ struct backend
 {
   using midi_in = midi_in_impl;
   using midi_out = midi_out_impl;
-  using midi_observer = observer_impl;
+  using midi_observer = coremidi_ump::observer_impl;
   using midi_in_configuration = coremidi_ump::input_configuration;
   using midi_out_configuration = coremidi_ump::output_configuration;
   using midi_observer_configuration = coremidi_ump::observer_configuration;
