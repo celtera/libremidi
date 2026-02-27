@@ -6,12 +6,15 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/alsa_raw/observer.hpp
     include/libremidi/backends/alsa_raw.hpp
 
+    include/libremidi/backends/alsa_raw_ump.hpp
     include/libremidi/backends/alsa_raw_ump/config.hpp
+    include/libremidi/backends/alsa_raw_ump/endpoint.hpp
+    include/libremidi/backends/alsa_raw_ump/endpoint_config.hpp
+    include/libremidi/backends/alsa_raw_ump/endpoint_observer.hpp
     include/libremidi/backends/alsa_raw_ump/helpers.hpp
     include/libremidi/backends/alsa_raw_ump/midi_in.hpp
     include/libremidi/backends/alsa_raw_ump/midi_out.hpp
     include/libremidi/backends/alsa_raw_ump/observer.hpp
-    include/libremidi/backends/alsa_raw_ump.hpp
 
     include/libremidi/backends/alsa_seq/config.hpp
     include/libremidi/backends/alsa_seq/helpers.hpp
@@ -24,6 +27,9 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/alsa_seq_ump/config.hpp
     include/libremidi/backends/alsa_seq_ump/helpers.hpp
     include/libremidi/backends/alsa_seq_ump/midi_out.hpp
+    include/libremidi/backends/alsa_seq_ump/endpoint.hpp
+    include/libremidi/backends/alsa_seq_ump/endpoint_config.hpp
+    include/libremidi/backends/alsa_seq_ump/endpoint_observer.hpp
     include/libremidi/backends/alsa_seq_ump.hpp
 
     include/libremidi/backends/coremidi/config.hpp
@@ -127,6 +133,7 @@ target_sources(libremidi PRIVATE
     include/libremidi/detail/observer.hpp
     include/libremidi/detail/semaphore.hpp
     include/libremidi/detail/ump_stream.hpp
+    include/libremidi/detail/ump_endpoint_api.hpp
 
     include/libremidi/api.hpp
     # include/libremidi/client.cpp
@@ -141,6 +148,10 @@ target_sources(libremidi PRIVATE
     include/libremidi/port_comparison.hpp
     include/libremidi/port_information.hpp
     include/libremidi/output_configuration.hpp
+    include/libremidi/ump_endpoint.cpp
+    include/libremidi/ump_endpoint.hpp
+    include/libremidi/ump_endpoint_configuration.hpp
+    include/libremidi/ump_endpoint_info.hpp
     include/libremidi/ump_events.hpp
 
     include/libremidi/reader.hpp

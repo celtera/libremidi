@@ -16,6 +16,12 @@ struct backend
   using midi_in_configuration = libremidi::net_ump::dgram_input_configuration;
   using midi_out_configuration = libremidi::net_ump::dgram_output_configuration;
   using midi_observer_configuration = libremidi::net_ump::net_observer_configuration;
+
+  using midi_endpoint = void;
+  using midi_endpoint_observer = void;
+  using midi_endpoint_configuration = void;
+  using midi_endpoint_observer_configuration = void;
+
   static const constexpr auto API = libremidi::API::NETWORK_UMP;
   static const constexpr std::string_view name = "network (UMP)";
   static const constexpr std::string_view display_name = "Network (UMP)";
