@@ -2768,7 +2768,7 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
       else
       {
         // generate MIDI2 UMPs
-        uint64_t m2;
+        uint64_t m2 = 0;
         const int8_t NO_ATTRIBUTE_TYPE = 0;
         const int16_t NO_ATTRIBUTE_DATA = 0;
         bool bankValid, bankMsbValid, bankLsbValid;
