@@ -1,8 +1,9 @@
-#if !defined(LIBREMIDI_HEADER_ONLY)
-  #include "client.hpp"
-#endif
-#include <libremidi/backends.hpp>
-#include <libremidi/shared_context.hpp>
+#if 0
+  #if !defined(LIBREMIDI_HEADER_ONLY)
+    #include "client.hpp"
+  #endif
+  #include <libremidi/backends.hpp>
+  #include <libremidi/shared_context.hpp>
 
 #ifdef LIBREMIDI_ALSA
   #include <libremidi/backends/alsa_seq/shared_handler.hpp>
@@ -18,17 +19,17 @@ create_shared_context(const libremidi::API api, [[maybe_unused]] std::string_vie
 {
   switch (api)
   {
-#if __has_include(<boost/lockfree/spsc_queue.hpp>)
-  #if defined(LIBREMIDI_ALSA)
+  #if __has_include(<boost/lockfree/spsc_queue.hpp>)
+    #if defined(LIBREMIDI_ALSA)
     case libremidi::API::ALSA_SEQ:
       return alsa_seq::shared_handler::make(client_name);
-  #endif
+    #endif
 
-  #if defined(LIBREMIDI_JACK)
+    #if defined(LIBREMIDI_JACK)
     case libremidi::API::JACK_MIDI:
       return jack::shared_handler::make(client_name);
+    #endif
   #endif
-#endif
     case libremidi::API::COREMIDI:
     case libremidi::API::COREMIDI_UMP:
       // TODO
@@ -45,3 +46,4 @@ create_shared_context(const libremidi::API api, [[maybe_unused]] std::string_vie
   }
 }
 }
+#endif

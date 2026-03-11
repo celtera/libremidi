@@ -1,8 +1,9 @@
-#include <libremidi/client.hpp>
+#if 0
+  #include <libremidi/client.hpp>
 
-#include <chrono>
-#include <iostream>
-#include <thread>
+  #include <chrono>
+  #include <iostream>
+  #include <thread>
 
 int main()
 {
@@ -54,3 +55,5 @@ int main()
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
 }
+#endif
+int main() { }

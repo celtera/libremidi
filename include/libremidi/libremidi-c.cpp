@@ -185,6 +185,7 @@ int libremidi_midi_observer_new(
 
   conf.track_hardware = c->track_hardware;
   conf.track_virtual = c->track_virtual;
+  conf.track_network = c->track_network;
   conf.track_any = c->track_any;
   conf.notify_in_constructor = c->notify_in_constructor;
 

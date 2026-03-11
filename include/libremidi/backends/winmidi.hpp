@@ -15,6 +15,12 @@ struct backend
   using midi_in_configuration = winmidi::input_configuration;
   using midi_out_configuration = winmidi::output_configuration;
   using midi_observer_configuration = winmidi::observer_configuration;
+
+  using midi_endpoint = void;
+  using midi_endpoint_observer = void;
+  using midi_endpoint_configuration = void;
+  using midi_endpoint_observer_configuration = void;
+
   static const constexpr auto API = libremidi::API::WINDOWS_MIDI_SERVICES;
   static const constexpr std::string_view name = "winmidi";
   static const constexpr std::string_view display_name = "Windows MIDI Services";
