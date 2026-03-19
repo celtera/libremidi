@@ -9,6 +9,7 @@
 
 #if defined(LIBREMIDI_JACK)
   #include <libremidi/backends/jack/config.hpp>
+  #include <libremidi/backends/jack/libjack.hpp>
 
   #include <jack/jack.h>
 #endif
@@ -117,13 +118,14 @@ TEST_CASE("poly aftertouch", "[midi_in]")
 
   jack_options_t opt = JackNullOption;
   jack_status_t status;
-  auto jack_client = jack_client_open("libremidi-tester", opt, &status);
-  int ret = jack_activate(jack_client);
+  const auto& jack = libremidi::libjack::instance();
+  auto jack_client = jack.client_open("libremidi-tester", opt, &status);
+  int ret = jack.activate(jack_client);
   if (ret != 0)
     return;
 
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  ret = jack_connect(jack_client, "libremidi-test-out:port", "libremidi-test:port");
+  ret = jack.connect(jack_client, "libremidi-test-out:port", "libremidi-test:port");
   REQUIRE(ret == 0);
 
   // Flush potentially initial messages

@@ -1,5 +1,6 @@
 #include "utils.hpp"
 
+#include <libremidi/backends/jack/libjack.hpp>
 #include <libremidi/configurations.hpp>
 #include <libremidi/detail/memory.hpp>
 #include <libremidi/libremidi.hpp>
@@ -11,7 +12,11 @@
 
 struct my_app
 {
-  libremidi::unique_handle<jack_client_t, jack_client_close> handle;
+  const libremidi::libjack& jack = libremidi::libjack::instance();
+  libremidi::unique_handle<
+      jack_client_t,
+      [](void* handle) { libremidi::libjack::instance().client_close((jack_client_t*)handle); }>
+      handle;
 
   std::optional<libremidi::observer> observer;
 
@@ -31,7 +36,7 @@ struct my_app
 
     // Create a JACK client which will be shared across objects
     jack_status_t status{};
-    handle.reset(jack_client_open("My MIDI app", JackNoStartServer, &status));
+    handle.reset(jack.client_open("My MIDI app", JackNoStartServer, &status));
 
     if (!handle)
       throw std::runtime_error("Could not start JACK client");
@@ -40,8 +45,8 @@ struct my_app
     observer = libremidi::observer{
         libremidi::observer_configuration{},
         libremidi::jack_observer_configuration{.context = handle.get()}};
-    jack_set_process_callback(handle.get(), jack_callback, this);
-    jack_activate(handle.get());
+    jack.set_process_callback(handle.get(), jack_callback, this);
+    jack.activate(handle.get());
 
     // Create our configuration
     auto api_input_config = libremidi::jack_input_configuration{
