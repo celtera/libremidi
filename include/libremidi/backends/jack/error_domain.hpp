@@ -1,15 +1,6 @@
 #pragma once
+#include <libremidi/backends/jack/libjack.hpp>
 #include <libremidi/error.hpp>
-
-#if __has_include(<weakjack/weak_libjack.h>)
-  #include <weakjack/weak_libjack.h>
-#elif __has_include(<weak_libjack.h>)
-  #include <weak_libjack.h>
-#elif __has_include(<jack/jack.h> )
-  #include <jack/jack.h>
-  #include <jack/midiport.h>
-  #include <jack/ringbuffer.h>
-#endif
 
 NAMESPACE_LIBREMIDI
 {

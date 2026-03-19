@@ -53,6 +53,67 @@ private:
 
 }
 
+#elif defined(_WIN32)
+  #if !defined(NOMINMAX)
+    #define NOMINMAX
+  #endif
+  #if !defined(WIN32_LEAN_AND_MEAN)
+    #define WIN32_LEAN_AND_MEAN
+  #endif
+  #include <windows.h>
+
+  #include <cassert>
+
+NAMESPACE_LIBREMIDI
+{
+class dylib_loader
+{
+public:
+  explicit dylib_loader(const char* const so)
+  {
+    impl = (void*)LoadLibraryA(so);
+  }
+
+  dylib_loader(const dylib_loader&) noexcept = delete;
+  dylib_loader& operator=(const dylib_loader&) noexcept = delete;
+  dylib_loader(dylib_loader&& other) noexcept
+  {
+    impl = other.impl;
+    other.impl = nullptr;
+  }
+
+  dylib_loader& operator=(dylib_loader&& other) noexcept
+  {
+    impl = other.impl;
+    other.impl = nullptr;
+    return *this;
+  }
+
+  ~dylib_loader()
+  {
+    if (impl)
+    {
+      FreeLibrary((HMODULE)impl);
+    }
+  }
+
+  template <typename T>
+  T symbol(const char* const sym) const noexcept
+  {
+    assert(impl);
+    return reinterpret_cast<T>(GetProcAddress((HMODULE)impl, sym));
+  }
+
+  operator bool() const noexcept { return bool(impl); }
+
+private:
+  void* impl{};
+};
+
+}
+#endif
+
+#if __has_include(<dlfcn.h>) || defined(_WIN32)
   #define LIBREMIDI_SYMBOL_NAME_S(prefix, name) #prefix "_" #name
   #define LIBREMIDI_SYMBOL_NAME(prefix, name) prefix##_##name
   #define LIBREMIDI_SYMBOL_DEF(prefix, name) \

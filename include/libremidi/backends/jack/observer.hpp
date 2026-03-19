@@ -33,7 +33,7 @@ public:
     {
       jack_status_t status{};
       this->client
-          = jack_client_open(configuration.client_name.c_str(), JackNoStartServer, &status);
+          = jack.client_open(configuration.client_name.c_str(), JackNoStartServer, &status);
       if (status != jack_status_t{})
         libremidi_handle_error(configuration, std::to_string((int)status));
 
@@ -41,7 +41,7 @@ public:
       {
         set_callbacks();
 
-        jack_activate(this->client);
+        jack.activate(this->client);
       }
     }
   }
@@ -49,15 +49,15 @@ public:
   void initial_callback()
   {
     {
-      const char** ports = jack_get_ports(client, nullptr, port_type, JackPortIsOutput);
+      const char** ports = jack.get_ports(client, nullptr, port_type, JackPortIsOutput);
 
       if (ports != nullptr)
       {
         int i = 0;
         while (ports[i] != nullptr)
         {
-          auto port = jack_port_by_name(client, ports[i]);
-          auto flags = jack_port_flags(port);
+          auto port = jack.port.by_name(client, ports[i]);
+          auto flags = jack.port.flags(port);
 
           bool physical = flags & JackPortIsPhysical;
           bool ok = configuration.track_any;
@@ -77,19 +77,19 @@ public:
         }
       }
 
-      jack_free(ports);
+      jack.free(ports);
     }
 
     {
-      const char** ports = jack_get_ports(client, nullptr, port_type, JackPortIsInput);
+      const char** ports = jack.get_ports(client, nullptr, port_type, JackPortIsInput);
 
       if (ports != nullptr)
       {
         int i = 0;
         while (ports[i] != nullptr)
         {
-          auto port = jack_port_by_name(client, ports[i]);
-          auto flags = jack_port_flags(port);
+          auto port = jack.port.by_name(client, ports[i]);
+          auto flags = jack.port.flags(port);
 
           bool physical = flags & JackPortIsPhysical;
           bool ok = configuration.track_any;
@@ -109,17 +109,17 @@ public:
         }
       }
 
-      jack_free(ports);
+      jack.free(ports);
     }
   }
 
   void on_port_callback(jack_port_t* port, bool reg)
   {
-    auto flags = jack_port_flags(port);
-    std::string name = jack_port_name(port);
+    auto flags = jack.port.flags(port);
+    std::string name = jack.port.name(port);
     if (reg)
     {
-      std::string_view type = jack_port_type(port);
+      std::string_view type = jack.port.type(port);
       if (type != port_type)
         return;
 
@@ -177,20 +177,20 @@ public:
     if (!configuration.has_callbacks())
       return;
 
-    jack_set_port_registration_callback(this->client, +[](jack_port_id_t p, int r, void* arg) {
+    jack.set_port_registration_callback(this->client, +[](jack_port_id_t p, int r, void* arg) {
       auto& self = *(observer_jack*)arg;
-      if (auto port = jack_port_by_id(self.client, p))
+      if (auto port = self.jack.port.by_id(self.client, p))
       {
         self.on_port_callback(port, r != 0);
       }
     }, this);
 
-    jack_set_port_rename_callback(
+    jack.set_port_rename_callback(
         this->client,
         +[](jack_port_id_t p, const char* /*old_name*/, const char* /*new_name*/, void* arg) {
       const auto& self = *static_cast<observer_jack*>(arg);
 
-      auto port = jack_port_by_id(self.client, p);
+      auto port = self.jack.port.by_id(self.client, p);
       if (!port)
         return;
     }, this);
@@ -215,8 +215,8 @@ public:
     if (client && !configuration.context)
     {
       // If we own the client, deactivate it
-      jack_deactivate(this->client);
-      jack_client_close(this->client);
+      jack.deactivate(this->client);
+      jack.client_close(this->client);
       this->client = nullptr;
     }
   }

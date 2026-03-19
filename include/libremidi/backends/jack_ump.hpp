@@ -21,13 +21,12 @@ struct backend
 
   static inline bool available() noexcept
   {
-#if LIBREMIDI_WEAKJACK
-    if (WeakJack::instance().available() != 0)
+    const auto& jack = libjack::instance();
+    if (!jack.available)
       return false;
-#endif
 
     int major, minor, micro, patch;
-    jack_get_version(&major, &minor, &micro, &patch);
+    jack.get_version(&major, &minor, &micro, &patch);
     return (major >= 3 && minor >= 1 && micro >= 4);
   }
 };

@@ -49,12 +49,14 @@ public:
         err != stdx::error{})
       return err;
 
-    if (int err = jack_connect(this->client, port.port_name.c_str(), jack_port_name(this->port));
+    if (int err
+        = jack.connect(this->client, port.port_name.c_str(), jack.port.name(this->port));
         err != 0 && err != EEXIST)
     {
       libremidi_handle_error(
           configuration,
-          "could not connect to port: " + port.port_name + " -> " + jack_port_name(this->port));
+          "could not connect to port: " + port.port_name + " -> "
+              + jack.port.name(this->port));
       return from_errc(err);
     }
     return stdx::error{};
@@ -69,13 +71,13 @@ public:
 
   stdx::error set_port_name(std::string_view portName) override
   {
-    int ret = jack_port_rename(this->client, this->port, portName.data());
+    int ret = jack.port.rename(this->client, this->port, portName.data());
     return from_errc(ret);
   }
 
   timestamp absolute_timestamp() const noexcept override
   {
-    return 1000 * jack_frames_to_time(client, jack_frame_time(client));
+    return 1000 * jack.frames_to_time(client, jack.frame_time(client));
   }
 
   int process(jack_nframes_t nframes)
@@ -85,24 +87,24 @@ public:
         .absolute_is_monotonic = true,
         .has_samples = true,
     };
-    void* buff = jack_port_get_buffer(this->port, nframes);
+    void* buff = jack.port.get_buffer(this->port, nframes);
 
     // Timing
     jack_nframes_t current_frames{};
     jack_time_t current_usecs{}; // roughly CLOCK_MONOTONIC
     jack_time_t next_usecs{};
     float period_usecs{};
-    jack_get_cycle_times(
+    jack.get_cycle_times(
         this->client, &current_frames, &current_usecs, &next_usecs, &period_usecs);
 
     // We have midi events in buffer
-    uint32_t ev_count = jack_midi_get_event_count(buff);
+    uint32_t ev_count = jack.midi.get_event_count(buff);
     for (uint32_t j = 0; j < ev_count; j++)
     {
       jack_midi_event_t event{};
-      jack_midi_event_get(&event, buff, j);
+      jack.midi.event_get(&event, buff, j);
       const auto to_ns
-          = [=, this] { return 1000 * jack_frames_to_time(client, current_frames + event.time); };
+          = [=, this] { return 1000 * jack.frames_to_time(client, current_frames + event.time); };
 
       m_processing.on_bytes(
           {event.buffer, event.buffer + event.size},

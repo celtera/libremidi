@@ -3,7 +3,7 @@
 
 #include <tuple>
 
-#if !__has_include(<weak_libjack.h>) && !__has_include(<jack/jack.h>)
+#if !__has_include(<jack/jack.h>)
   #if defined(LIBREMIDI_JACK)
     #undef LIBREMIDI_JACK
   #endif

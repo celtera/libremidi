@@ -36,7 +36,8 @@ public:
       return err;
 
     // Connecting to the output
-    if (int err = jack_connect(this->client, jack_port_name(this->port), port.port_name.c_str());
+    if (int err
+        = jack.connect(this->client, jack.port.name(this->port), port.port_name.c_str());
         err != 0 && err != EEXIST)
     {
       libremidi_handle_error(configuration, "could not connect to port" + port.port_name);
@@ -55,7 +56,7 @@ public:
 
   stdx::error set_port_name(std::string_view portName) override
   {
-    int ret = jack_port_rename(this->client, this->port, portName.data());
+    int ret = jack.port.rename(this->client, this->port, portName.data());
     return from_errc(ret);
   }
 };
@@ -93,8 +94,8 @@ public:
 
   int process(jack_nframes_t nframes)
   {
-    void* buff = jack_port_get_buffer(this->port, nframes);
-    jack_midi_clear_buffer(buff);
+    void* buff = jack.port.get_buffer(this->port, nframes);
+    jack.midi.clear_buffer(buff);
 
     this->m_queue.read(buff);
 
@@ -120,7 +121,7 @@ public:
       return;
     }
 
-    buffer_size = jack_get_buffer_size(this->client);
+    buffer_size = jack.get_buffer_size(this->client);
     client_open_ = stdx::error{};
   }
 
@@ -133,15 +134,15 @@ public:
 
   int process(jack_nframes_t nframes)
   {
-    void* buff = jack_port_get_buffer(this->port, nframes);
-    jack_midi_clear_buffer(buff);
+    void* buff = jack.port.get_buffer(this->port, nframes);
+    jack.midi.clear_buffer(buff);
     return 0;
   }
 
   stdx::error send_ump(const uint32_t* message, std::size_t size) override
   {
-    void* buff = jack_port_get_buffer(this->port, buffer_size);
-    int ret = jack_midi_event_write(buff, 0, (unsigned char*)message, size * sizeof(uint32_t));
+    void* buff = jack.port.get_buffer(this->port, buffer_size);
+    int ret = jack.midi.event_write(buff, 0, (unsigned char*)message, size * sizeof(uint32_t));
     return from_errc(ret);
   }
 
@@ -160,8 +161,8 @@ public:
 
   stdx::error schedule_ump(int64_t ts, const uint32_t* message, size_t size) override
   {
-    void* buff = jack_port_get_buffer(this->port, buffer_size);
-    int ret = jack_midi_event_write(
+    void* buff = jack.port.get_buffer(this->port, buffer_size);
+    int ret = jack.midi.event_write(
         buff, convert_timestamp(ts), (unsigned char*)message, size * sizeof(uint32_t));
     return from_errc(ret);
   }
