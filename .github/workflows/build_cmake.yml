@@ -101,6 +101,15 @@ jobs:
             examples: 1
           }
         - {
+            name: "macOS ni-midi2",
+            os: macos-latest,
+            generator: "",
+            cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DBOOST_ROOT=$PWD/boost_1_90_0 -DLIBREMIDI_USE_NI_MIDI2=ON",
+            test_target: "test",
+            tests: 1,
+            examples: 1
+          }
+        - {
             name: "iOS",
             os: macos-latest,
             generator: "-GXcode",
@@ -134,6 +143,8 @@ jobs:
 
           # Modules not supported at all by AppleClang as of Xcode 26
           - config: { name: "macOS" }
+            library_mode: MODULE
+          - config: { name: "macOS ni-midi2" }
             library_mode: MODULE
 
           - config: { name: "iOS" }
