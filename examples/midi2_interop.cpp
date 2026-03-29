@@ -12,7 +12,9 @@
 #include <midi/universal_packet.h>
 
 #include <bitset>
+#include <chrono>
 #include <cstdlib>
+#include <thread>
 #include <iostream>
 
 struct midi_ci_processor
@@ -167,7 +169,7 @@ struct midi_ci_processor
       case end_of_file:
         std::cerr << "[sysex] end_of_file" << std::endl;
         break;
-      case wait:
+      case midi::universal_sysex::type::wait:
         std::cerr << "[sysex] wait" << std::endl;
         break;
       case cancel:
@@ -356,7 +358,7 @@ try
     auto inquiry = midi::ci::make_discovery_inquiry(my_muid, id, 0x02, 512);
 
     processor.midiout.send_ump(inquiry);
-    sleep(2);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
   }
 
   char input;
