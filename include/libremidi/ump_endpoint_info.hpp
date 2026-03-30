@@ -180,7 +180,7 @@ struct LIBREMIDI_EXPORT ump_endpoint_info
   // WinMIDI: EndpointDeviceId (std::string), e.g. "\\?\swd#midisrv#midiu_ksa..."
   // ALSA: sysfs path (std::string), e.g. "/sys/devices/pci0000:00/0000:00:02.2/0000:02:00.0/sound/card0/controlC0"
   // CoreMIDI: USBVendorProduct (int32_t)
-  device_identifier device = std::monostate{};
+  device_identifier device = libremidi_variant_alias::monostate{};
 
   /// Platform-specific endpoint identifier (for opening)
   // ALSA Seq: client index
