@@ -8,6 +8,12 @@
 #include <CoreMIDI/CoreMIDI.h>
 #include <CoreServices/CoreServices.h>
 
+// Hack: MacTypes.h defines nil as nullptr even in C++ translation
+// units, which conflicts with libraries that use nil as an identifier (e.g. msgpack).
+#ifdef nil
+  #undef nil
+#endif
+
 #include <cmath>
 
 #include <bit>
