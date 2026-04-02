@@ -46,6 +46,12 @@ target_link_libraries(midifile_write_tracks_test PRIVATE libremidi Catch2::Catch
 add_executable(protocols_test tests/unit/protocols.cpp)
 target_link_libraries(protocols_test PRIVATE libremidi Catch2::Catch2WithMain)
 
+add_executable(midi_stream_decoder_test tests/unit/midi_stream_decoder.cpp)
+target_link_libraries(midi_stream_decoder_test PRIVATE libremidi Catch2::Catch2WithMain)
+
+add_executable(midi_timing_test tests/unit/midi_timing.cpp)
+target_link_libraries(midi_timing_test PRIVATE libremidi Catch2::Catch2WithMain)
+
 include(CTest)
 add_test(NAME conversion_test COMMAND conversion_test)
 add_test(NAME error_test COMMAND error_test)
@@ -55,3 +61,5 @@ add_test(NAME midifile_read_test COMMAND midifile_read_test)
 add_test(NAME midifile_write_test COMMAND midifile_write_test)
 add_test(NAME midifile_write_tracks_test COMMAND midifile_write_tracks_test)
 add_test(NAME protocols_test COMMAND protocols_test)
+add_test(NAME midi_stream_decoder_test COMMAND midi_stream_decoder_test)
+add_test(NAME midi_timing_test COMMAND midi_timing_test)
