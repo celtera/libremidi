@@ -43,6 +43,9 @@ target_compile_definitions(midifile_write_test PRIVATE "LIBREMIDI_TEST_CORPUS=\"
 add_executable(midifile_write_tracks_test tests/integration/midifile_write_tracks.cpp)
 target_link_libraries(midifile_write_tracks_test PRIVATE libremidi Catch2::Catch2WithMain)
 
+add_executable(protocols_test tests/unit/protocols.cpp)
+target_link_libraries(protocols_test PRIVATE libremidi Catch2::Catch2WithMain)
+
 include(CTest)
 add_test(NAME conversion_test COMMAND conversion_test)
 add_test(NAME error_test COMMAND error_test)
@@ -51,3 +54,4 @@ add_test(NAME midiout_test COMMAND midiout_test --allow-running-no-tests)
 add_test(NAME midifile_read_test COMMAND midifile_read_test)
 add_test(NAME midifile_write_test COMMAND midifile_write_test)
 add_test(NAME midifile_write_tracks_test COMMAND midifile_write_tracks_test)
+add_test(NAME protocols_test COMMAND protocols_test)
