@@ -29,7 +29,11 @@ public:
 
   stdx::error open_virtual_port(std::string_view) override { return stdx::error{}; }
 
-  stdx::error close_port() override { return stdx::error{}; }
+  stdx::error close_port() override
+  {
+    configuration.write_bytes = nullptr;
+    return stdx::error{};
+  }
 
   stdx::error set_port_name(std::string_view) override { return stdx::error{}; }
 

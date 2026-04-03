@@ -4,6 +4,7 @@ Tests for the raw I/O backend and all send_message / send_ump overloads.
 Run with: python test_rawio.py
 """
 import pylibremidi as lm
+import gc
 import sys
 
 failures = []
@@ -16,81 +17,88 @@ def check(name, condition):
         print(f"  ok: {name}")
 
 # ============================================================
-# Helper: create a MIDI 1 rawio loopback pair
+# Helper: MIDI 1 rawio loopback with automatic cleanup
 # ============================================================
-def make_midi1_loopback():
-    """Returns (midi_in, midi_out, received_messages) with direct loopback."""
-    stored_cb = [None]
-    received = []
+class Midi1Loopback:
+    def __init__(self):
+        self._stored_cb = [None]
+        self.received = []
 
-    in_config = lm.InputConfiguration()
-    in_config.on_message = lambda msg: received.append(msg)
-    in_config.direct = True
+        in_config = lm.InputConfiguration()
+        received = self.received  # avoid capturing self in lambda
+        in_config.on_message = lambda msg: received.append(msg)
+        in_config.direct = True
 
-    rawio_in = lm.RawioInputConfiguration()
-    rawio_in.set_receive_callback = lambda cb: stored_cb.__setitem__(0, cb)
-    rawio_in.stop_receive = lambda: stored_cb.__setitem__(0, None)
+        rawio_in = lm.RawioInputConfiguration()
+        rawio_in.set_receive_callback = lambda cb: self._stored_cb.__setitem__(0, cb)
+        rawio_in.stop_receive = lambda: self._stored_cb.__setitem__(0, None)
 
-    midi_in = lm.MidiIn(in_config, rawio_in)
-    midi_in.open_virtual_port("test_in")
+        self.midi_in = lm.MidiIn(in_config, rawio_in)
+        self.midi_in.open_virtual_port("test_in")
 
-    out_config = lm.OutputConfiguration()
-    rawio_out = lm.RawioOutputConfiguration()
-    def write(data):
-        if stored_cb[0]:
-            stored_cb[0](data, 0)
-        return lm.Error()
-    rawio_out.write_bytes = write
+        out_config = lm.OutputConfiguration()
+        rawio_out = lm.RawioOutputConfiguration()
+        stored = self._stored_cb
+        rawio_out.write_bytes = lambda data: (stored[0](data, 0) if stored[0] else None, lm.Error())[-1]
 
-    midi_out = lm.MidiOut(out_config, rawio_out)
-    midi_out.open_virtual_port("test_out")
+        self.midi_out = lm.MidiOut(out_config, rawio_out)
+        self.midi_out.open_virtual_port("test_out")
 
-    return midi_in, midi_out, received
+    def close(self):
+        self.midi_in.close_port()
+        self.midi_out.close_port()
+        self.received.clear()
+        del self.midi_in, self.midi_out
 
 # ============================================================
-# Helper: create a MIDI 2 (UMP) rawio loopback pair
+# Helper: MIDI 2 (UMP) rawio loopback with automatic cleanup
 # ============================================================
-def make_ump_loopback():
-    """Returns (midi_in, midi_out, received_umps) with direct loopback."""
-    stored_cb = [None]
-    received = []
+class UmpLoopback:
+    def __init__(self, ignore_sysex=True):
+        self._stored_cb = [None]
+        self.received = []
 
-    in_config = lm.UmpInputConfiguration()
-    in_config.on_message = lambda msg: received.append(msg)
-    in_config.direct = True
+        in_config = lm.UmpInputConfiguration()
+        received = self.received  # avoid capturing self in lambda
+        in_config.on_message = lambda msg: received.append(msg)
+        in_config.ignore_sysex = ignore_sysex
+        in_config.direct = True
 
-    rawio_in = lm.RawioUmpInputConfiguration()
-    rawio_in.set_receive_callback = lambda cb: stored_cb.__setitem__(0, cb)
-    rawio_in.stop_receive = lambda: stored_cb.__setitem__(0, None)
+        rawio_in = lm.RawioUmpInputConfiguration()
+        rawio_in.set_receive_callback = lambda cb: self._stored_cb.__setitem__(0, cb)
+        rawio_in.stop_receive = lambda: self._stored_cb.__setitem__(0, None)
 
-    midi_in = lm.MidiIn(in_config, rawio_in)
-    midi_in.open_virtual_port("test_ump_in")
+        self.midi_in = lm.MidiIn(in_config, rawio_in)
+        self.midi_in.open_virtual_port("test_ump_in")
 
-    out_config = lm.OutputConfiguration()
-    rawio_out = lm.RawioUmpOutputConfiguration()
-    def write(data):
-        if stored_cb[0]:
-            stored_cb[0](data, 0)
-        return lm.Error()
-    rawio_out.write_ump = write
+        out_config = lm.OutputConfiguration()
+        rawio_out = lm.RawioUmpOutputConfiguration()
+        stored = self._stored_cb
+        rawio_out.write_ump = lambda data: (stored[0](data, 0) if stored[0] else None, lm.Error())[-1]
 
-    midi_out = lm.MidiOut(out_config, rawio_out)
-    midi_out.open_virtual_port("test_ump_out")
+        self.midi_out = lm.MidiOut(out_config, rawio_out)
+        self.midi_out.open_virtual_port("test_ump_out")
 
-    return midi_in, midi_out, received
+    def close(self):
+        self.midi_in.close_port()
+        self.midi_out.close_port()
+        self.received.clear()
+        del self.midi_in, self.midi_out
 
 
 # ============================================================
 # Test: API detection
 # ============================================================
 print("--- API detection ---")
-midi_in, midi_out, _ = make_midi1_loopback()
-check("midi1 input api is RAW_IO", midi_in.get_current_api() == lm.API.RAW_IO)
-check("midi1 output api is RAW_IO", midi_out.get_current_api() == lm.API.RAW_IO)
+t = Midi1Loopback()
+check("midi1 input api is RAW_IO", t.midi_in.get_current_api() == lm.API.RAW_IO)
+check("midi1 output api is RAW_IO", t.midi_out.get_current_api() == lm.API.RAW_IO)
+t.close()
 
-midi_in, midi_out, _ = make_ump_loopback()
-check("ump input api is RAW_IO_UMP", midi_in.get_current_api() == lm.API.RAW_IO_UMP)
-check("ump output api is RAW_IO_UMP", midi_out.get_current_api() == lm.API.RAW_IO_UMP)
+t = UmpLoopback()
+check("ump input api is RAW_IO_UMP", t.midi_in.get_current_api() == lm.API.RAW_IO_UMP)
+check("ump output api is RAW_IO_UMP", t.midi_out.get_current_api() == lm.API.RAW_IO_UMP)
+t.close()
 
 
 # ============================================================
@@ -99,49 +107,56 @@ check("ump output api is RAW_IO_UMP", midi_out.get_current_api() == lm.API.RAW_I
 print("\n--- send_message overloads ---")
 
 # send_message(b0) - 1 byte
-midi_in, midi_out, received = make_midi1_loopback()
-midi_out.send_message(0xFA)  # Start (not filtered by default, unlike Active Sensing)
-check("send_message(b0): 1 message received", len(received) == 1)
-check("send_message(b0): correct byte", received[0].bytes[0] == 0xFA)
+t = Midi1Loopback()
+t.midi_out.send_message(0xFA)  # Start (not filtered by default, unlike Active Sensing)
+check("send_message(b0): 1 message received", len(t.received) == 1)
+check("send_message(b0): correct byte", t.received[0].bytes[0] == 0xFA)
+t.close()
 
 # send_message(b0, b1) - 2 bytes
-midi_in, midi_out, received = make_midi1_loopback()
-midi_out.send_message(0xC0, 42)  # Program Change
-check("send_message(b0,b1): 1 message received", len(received) == 1)
-check("send_message(b0,b1): correct status", received[0].bytes[0] == 0xC0)
-check("send_message(b0,b1): correct data", received[0].bytes[1] == 42)
+t = Midi1Loopback()
+t.midi_out.send_message(0xC0, 42)  # Program Change
+check("send_message(b0,b1): 1 message received", len(t.received) == 1)
+check("send_message(b0,b1): correct status", t.received[0].bytes[0] == 0xC0)
+check("send_message(b0,b1): correct data", t.received[0].bytes[1] == 42)
+t.close()
 
 # send_message(b0, b1, b2) - 3 bytes
-midi_in, midi_out, received = make_midi1_loopback()
-midi_out.send_message(0x90, 60, 100)  # Note On
-check("send_message(b0,b1,b2): 1 message received", len(received) == 1)
-check("send_message(b0,b1,b2): correct status", received[0].bytes[0] == 0x90)
-check("send_message(b0,b1,b2): correct note", received[0].bytes[1] == 60)
-check("send_message(b0,b1,b2): correct velocity", received[0].bytes[2] == 100)
+t = Midi1Loopback()
+t.midi_out.send_message(0x90, 60, 100)  # Note On
+check("send_message(b0,b1,b2): 1 message received", len(t.received) == 1)
+check("send_message(b0,b1,b2): correct status", t.received[0].bytes[0] == 0x90)
+check("send_message(b0,b1,b2): correct note", t.received[0].bytes[1] == 60)
+check("send_message(b0,b1,b2): correct velocity", t.received[0].bytes[2] == 100)
+t.close()
 
 # send_message(list) - vector overload
-midi_in, midi_out, received = make_midi1_loopback()
-midi_out.send_message([0xB0, 7, 80])  # CC
-check("send_message(list): 1 message received", len(received) == 1)
-check("send_message(list): correct status", received[0].bytes[0] == 0xB0)
-check("send_message(list): correct cc", received[0].bytes[1] == 7)
-check("send_message(list): correct value", received[0].bytes[2] == 80)
+t = Midi1Loopback()
+t.midi_out.send_message([0xB0, 7, 80])  # CC
+check("send_message(list): 1 message received", len(t.received) == 1)
+check("send_message(list): correct status", t.received[0].bytes[0] == 0xB0)
+check("send_message(list): correct cc", t.received[0].bytes[1] == 7)
+check("send_message(list): correct value", t.received[0].bytes[2] == 80)
+t.close()
 
 # send_message(Message) - message object overload
-midi_in, midi_out, received = make_midi1_loopback()
+t = Midi1Loopback()
 msg = lm.Message()
 msg.bytes = [0xE0, 0x00, 0x40]  # Pitch Bend center
-midi_out.send_message(msg)
-check("send_message(Message): 1 message received", len(received) == 1)
-check("send_message(Message): correct status", received[0].bytes[0] == 0xE0)
-check("send_message(Message): correct lsb", received[0].bytes[1] == 0x00)
-check("send_message(Message): correct msb", received[0].bytes[2] == 0x40)
+t.midi_out.send_message(msg)
+check("send_message(Message): 1 message received", len(t.received) == 1)
+check("send_message(Message): correct status", t.received[0].bytes[0] == 0xE0)
+check("send_message(Message): correct lsb", t.received[0].bytes[1] == 0x00)
+check("send_message(Message): correct msb", t.received[0].bytes[2] == 0x40)
+t.close()
+del msg
 
 # schedule_message(timestamp, list)
-midi_in, midi_out, received = make_midi1_loopback()
-midi_out.schedule_message(12345, [0x90, 48, 127])
-check("schedule_message(ts,list): 1 message received", len(received) == 1)
-check("schedule_message(ts,list): correct note", received[0].bytes[1] == 48)
+t = Midi1Loopback()
+t.midi_out.schedule_message(12345, [0x90, 48, 127])
+check("schedule_message(ts,list): 1 message received", len(t.received) == 1)
+check("schedule_message(ts,list): correct note", t.received[0].bytes[1] == 48)
+t.close()
 
 
 # ============================================================
@@ -150,74 +165,56 @@ check("schedule_message(ts,list): correct note", received[0].bytes[1] == 48)
 print("\n--- send_ump overloads ---")
 
 # send_ump(u0) - 1 word (System Real-Time Start, type 1 - not subject to MIDI1->2 upconversion)
-midi_in, midi_out, received = make_ump_loopback()
-midi_out.send_ump(0x10FA0000)  # System RT Start, group 0
-check("send_ump(u0): 1 message received", len(received) == 1)
-check("send_ump(u0): correct word0", received[0].data[0] == 0x10FA0000)
+t = UmpLoopback()
+t.midi_out.send_ump(0x10FA0000)  # System RT Start, group 0
+check("send_ump(u0): 1 message received", len(t.received) == 1)
+check("send_ump(u0): correct word0", t.received[0].data[0] == 0x10FA0000)
+t.close()
 
 # send_ump(u0, u1) - 2 words (MIDI 2 channel voice)
-midi_in, midi_out, received = make_ump_loopback()
-midi_out.send_ump(0x4090003C, 0xC0000000)  # Note On
-check("send_ump(u0,u1): 1 message received", len(received) == 1)
-check("send_ump(u0,u1): correct word0", received[0].data[0] == 0x4090003C)
-check("send_ump(u0,u1): correct word1", received[0].data[1] == 0xC0000000)
+t = UmpLoopback()
+t.midi_out.send_ump(0x4090003C, 0xC0000000)  # Note On
+check("send_ump(u0,u1): 1 message received", len(t.received) == 1)
+check("send_ump(u0,u1): correct word0", t.received[0].data[0] == 0x4090003C)
+check("send_ump(u0,u1): correct word1", t.received[0].data[1] == 0xC0000000)
+t.close()
 
 # send_ump(u0, u1, u2, u3) - 4 words (SysEx8, type 5 - need ignore_sysex=False)
-stored_cb = [None]
-received_4w = []
-
-in_config = lm.UmpInputConfiguration()
-in_config.on_message = lambda msg: received_4w.append(msg)
-in_config.ignore_sysex = False
-in_config.direct = True
-
-rawio_in = lm.RawioUmpInputConfiguration()
-rawio_in.set_receive_callback = lambda cb: stored_cb.__setitem__(0, cb)
-rawio_in.stop_receive = lambda: stored_cb.__setitem__(0, None)
-
-midi_in_4w = lm.MidiIn(in_config, rawio_in)
-midi_in_4w.open_virtual_port("test_ump_4w")
-
-out_config = lm.OutputConfiguration()
-rawio_out = lm.RawioUmpOutputConfiguration()
-def write_4w(data):
-    if stored_cb[0]:
-        stored_cb[0](data, 0)
-    return lm.Error()
-rawio_out.write_ump = write_4w
-
-midi_out_4w = lm.MidiOut(out_config, rawio_out)
-midi_out_4w.open_virtual_port("test_ump_4w")
-
-midi_out_4w.send_ump(0x50010000, 0x01020304, 0x05060708, 0x090A0B0C)
-check("send_ump(u0,u1,u2,u3): 1 message received", len(received_4w) == 1)
-if received_4w:
-    check("send_ump(u0,u1,u2,u3): correct word0", received_4w[0].data[0] == 0x50010000)
-    check("send_ump(u0,u1,u2,u3): correct word1", received_4w[0].data[1] == 0x01020304)
-    check("send_ump(u0,u1,u2,u3): correct word2", received_4w[0].data[2] == 0x05060708)
-    check("send_ump(u0,u1,u2,u3): correct word3", received_4w[0].data[3] == 0x090A0B0C)
+t = UmpLoopback(ignore_sysex=False)
+t.midi_out.send_ump(0x50010000, 0x01020304, 0x05060708, 0x090A0B0C)
+check("send_ump(u0,u1,u2,u3): 1 message received", len(t.received) == 1)
+if t.received:
+    check("send_ump(u0,u1,u2,u3): correct word0", t.received[0].data[0] == 0x50010000)
+    check("send_ump(u0,u1,u2,u3): correct word1", t.received[0].data[1] == 0x01020304)
+    check("send_ump(u0,u1,u2,u3): correct word2", t.received[0].data[2] == 0x05060708)
+    check("send_ump(u0,u1,u2,u3): correct word3", t.received[0].data[3] == 0x090A0B0C)
+t.close()
 
 # send_ump(list) - vector overload
-midi_in, midi_out, received = make_ump_loopback()
-midi_out.send_ump([0x4090003C, 0xC0000000])
-check("send_ump(list): 1 message received", len(received) == 1)
-check("send_ump(list): correct word0", received[0].data[0] == 0x4090003C)
-check("send_ump(list): correct word1", received[0].data[1] == 0xC0000000)
+t = UmpLoopback()
+t.midi_out.send_ump([0x4090003C, 0xC0000000])
+check("send_ump(list): 1 message received", len(t.received) == 1)
+check("send_ump(list): correct word0", t.received[0].data[0] == 0x4090003C)
+check("send_ump(list): correct word1", t.received[0].data[1] == 0xC0000000)
+t.close()
 
 # send_ump(Ump) - ump object overload
-midi_in, midi_out, received = make_ump_loopback()
+t = UmpLoopback()
 ump = lm.Ump()
 ump.data = (0x4090003C, 0xC0000000, 0, 0)
-midi_out.send_ump(ump)
-check("send_ump(Ump): 1 message received", len(received) == 1)
-check("send_ump(Ump): correct word0", received[0].data[0] == 0x4090003C)
-check("send_ump(Ump): correct word1", received[0].data[1] == 0xC0000000)
+t.midi_out.send_ump(ump)
+check("send_ump(Ump): 1 message received", len(t.received) == 1)
+check("send_ump(Ump): correct word0", t.received[0].data[0] == 0x4090003C)
+check("send_ump(Ump): correct word1", t.received[0].data[1] == 0xC0000000)
+t.close()
+del ump
 
 # schedule_ump(timestamp, list)
-midi_in, midi_out, received = make_ump_loopback()
-midi_out.schedule_ump(99999, [0x4090003C, 0xC0000000])
-check("schedule_ump(ts,list): 1 message received", len(received) == 1)
-check("schedule_ump(ts,list): correct word0", received[0].data[0] == 0x4090003C)
+t = UmpLoopback()
+t.midi_out.schedule_ump(99999, [0x4090003C, 0xC0000000])
+check("schedule_ump(ts,list): 1 message received", len(t.received) == 1)
+check("schedule_ump(ts,list): correct word0", t.received[0].data[0] == 0x4090003C)
+t.close()
 
 
 # ============================================================
@@ -225,22 +222,24 @@ check("schedule_ump(ts,list): correct word0", received[0].data[0] == 0x4090003C)
 # ============================================================
 print("\n--- multiple messages ---")
 
-midi_in, midi_out, received = make_midi1_loopback()
-midi_out.send_message(0x90, 60, 100)
-midi_out.send_message(0x80, 60, 0)
-midi_out.send_message(0xB0, 7, 80)
-midi_out.send_message([0xB0, 10, 64])
-check("multiple midi1: 4 messages", len(received) == 4)
-check("multiple midi1: msg0 note on", received[0].bytes[0] == 0x90)
-check("multiple midi1: msg1 note off", received[1].bytes[0] == 0x80)
-check("multiple midi1: msg2 cc7", received[2].bytes[1] == 7)
-check("multiple midi1: msg3 cc10", received[3].bytes[1] == 10)
+t = Midi1Loopback()
+t.midi_out.send_message(0x90, 60, 100)
+t.midi_out.send_message(0x80, 60, 0)
+t.midi_out.send_message(0xB0, 7, 80)
+t.midi_out.send_message([0xB0, 10, 64])
+check("multiple midi1: 4 messages", len(t.received) == 4)
+check("multiple midi1: msg0 note on", t.received[0].bytes[0] == 0x90)
+check("multiple midi1: msg1 note off", t.received[1].bytes[0] == 0x80)
+check("multiple midi1: msg2 cc7", t.received[2].bytes[1] == 7)
+check("multiple midi1: msg3 cc10", t.received[3].bytes[1] == 10)
+t.close()
 
-midi_in, midi_out, received = make_ump_loopback()
-midi_out.send_ump(0x4090003C, 0xC0000000)
-midi_out.send_ump(0x4080003C, 0x00000000)
-midi_out.send_ump([0x40B00007, 0x80000000])
-check("multiple ump: 3 messages", len(received) == 3)
+t = UmpLoopback()
+t.midi_out.send_ump(0x4090003C, 0xC0000000)
+t.midi_out.send_ump(0x4080003C, 0x00000000)
+t.midi_out.send_ump([0x40B00007, 0x80000000])
+check("multiple ump: 3 messages", len(t.received) == 3)
+t.close()
 
 
 # ============================================================
@@ -249,19 +248,20 @@ check("multiple ump: 3 messages", len(received) == 3)
 print("\n--- close_port ---")
 
 stopped = [False]
-in_config = lm.InputConfiguration()
-in_config.on_message = lambda msg: None
-in_config.direct = True
+_in_config = lm.InputConfiguration()
+_in_config.on_message = lambda msg: None
+_in_config.direct = True
 
-rawio_in = lm.RawioInputConfiguration()
-rawio_in.set_receive_callback = lambda cb: None
-rawio_in.stop_receive = lambda: stopped.__setitem__(0, True)
+_rawio_in = lm.RawioInputConfiguration()
+_rawio_in.set_receive_callback = lambda cb: None
+_rawio_in.stop_receive = lambda: stopped.__setitem__(0, True)
 
-midi_in = lm.MidiIn(in_config, rawio_in)
-midi_in.open_virtual_port("test")
+_midi_in = lm.MidiIn(_in_config, _rawio_in)
+_midi_in.open_virtual_port("test")
 check("stop_receive not called yet", not stopped[0])
-midi_in.close_port()
+_midi_in.close_port()
 check("stop_receive called on close", stopped[0])
+del _midi_in, _in_config, _rawio_in
 
 
 # ============================================================
@@ -270,6 +270,7 @@ check("stop_receive called on close", stopped[0])
 print("\n--- Error ---")
 err = lm.Error()
 check("default Error is falsy (no error)", not err)
+del err
 
 
 # ============================================================
@@ -278,19 +279,26 @@ check("default Error is falsy (no error)", not err)
 print("\n--- edge cases ---")
 
 # Maximum MIDI 1 byte values
-midi_in, midi_out, received = make_midi1_loopback()
-midi_out.send_message(0xFF)  # System Reset
-check("send_message(0xFF): received", len(received) == 1)
-check("send_message(0xFF): correct", received[0].bytes[0] == 0xFF)
+t = Midi1Loopback()
+t.midi_out.send_message(0xFF)  # System Reset
+check("send_message(0xFF): received", len(t.received) == 1)
+check("send_message(0xFF): correct", t.received[0].bytes[0] == 0xFF)
+t.close()
 
-# UMP with large uint32 values (ensure no sign/overflow issues)
 # UMP with max values in data portion (type 4, 2 words)
-midi_in, midi_out, received = make_ump_loopback()
-midi_out.send_ump(0x409F7F7F, 0xFFFFFFFF)
-check("send_ump(large values): received", len(received) == 1)
-check("send_ump(large values): word0", received[0].data[0] == 0x409F7F7F)
-check("send_ump(large values): word1", received[0].data[1] == 0xFFFFFFFF)
+t = UmpLoopback()
+t.midi_out.send_ump(0x409F7F7F, 0xFFFFFFFF)
+check("send_ump(large values): received", len(t.received) == 1)
+check("send_ump(large values): word0", t.received[0].data[0] == 0x409F7F7F)
+check("send_ump(large values): word1", t.received[0].data[1] == 0xFFFFFFFF)
+t.close()
 
+
+# ============================================================
+# Ensure cleanup before exit
+# ============================================================
+del t
+gc.collect()
 
 # ============================================================
 # Summary

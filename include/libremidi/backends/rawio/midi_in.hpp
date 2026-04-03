@@ -51,6 +51,9 @@ public:
   {
     if (configuration.stop_receive)
       configuration.stop_receive();
+    // Clear all callbacks to break reference cycles (prevents leaks in binding layers)
+    configuration.set_receive_callback = nullptr;
+    configuration.stop_receive = nullptr;
     return stdx::error{};
   }
 

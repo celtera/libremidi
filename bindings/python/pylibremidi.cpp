@@ -68,6 +68,10 @@ struct observer_poll_wrapper {
 
   explicit observer_poll_wrapper(observer_configuration conf, libremidi::observer_api_configuration api_conf) : conf{conf}, impl{process(std::move(conf)), std::move(api_conf)} {}
 
+  ~observer_poll_wrapper() {
+    conf = {};
+  }
+
   observer_configuration process(observer_configuration &&obs) {
     if (obs.on_error)
       obs.on_error = [this](std::string_view errorText, const source_location &) { queue.enqueue(poll_queue::error_message{std::string{errorText}}); };
@@ -127,6 +131,12 @@ struct midi_in_poll_wrapper {
   explicit midi_in_poll_wrapper(input_configuration_wrapper conf, input_api_configuration api_conf) : python_midi1_callbacks{conf}, impl{this->process(std::move(conf)), std::move(api_conf)} {}
   explicit midi_in_poll_wrapper(ump_input_configuration_wrapper conf) noexcept : python_ump_callbacks{conf}, impl{this->process(std::move(conf))} {}
   explicit midi_in_poll_wrapper(ump_input_configuration_wrapper conf, input_api_configuration api_conf) : python_ump_callbacks{conf}, impl{this->process(std::move(conf)), std::move(api_conf)} {}
+
+  ~midi_in_poll_wrapper() {
+    impl.close_port();
+    python_midi1_callbacks = {};
+    python_ump_callbacks = {};
+  }
 
   input_configuration process(input_configuration_wrapper obs) {
     python_midi1_callbacks = obs;
@@ -325,6 +335,11 @@ struct midi_out_poll_wrapper {
 
   explicit midi_out_poll_wrapper(const output_configuration_wrapper &conf) noexcept : python_midi1_callbacks{conf}, impl{this->process(std::move(conf))} {}
   explicit midi_out_poll_wrapper(output_configuration_wrapper conf, output_api_configuration api_conf) : python_midi1_callbacks{conf}, impl{this->process(std::move(conf)), std::move(api_conf)} {}
+
+  ~midi_out_poll_wrapper() {
+    impl.close_port();
+    python_midi1_callbacks = {};
+  }
 
   output_configuration process(output_configuration_wrapper obs) {
     python_midi1_callbacks = obs;
