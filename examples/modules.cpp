@@ -1,8 +1,5 @@
 import libremidi;
 
-#include <cstdlib>
-#include <iostream>
-
 inline std::ostream& operator<<(std::ostream& s, const libremidi::message& message)
 {
   auto nBytes = message.size();
