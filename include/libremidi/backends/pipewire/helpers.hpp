@@ -156,10 +156,17 @@ struct pipewire_helpers
   {
     // Note: called from a std::jthread.
     assert(this->global_context);
+    auto lp = this->global_context->lp;
+    if (!lp)
+      return;
+
     if (int fd = this->global_context->get_fd(); fd != -1)
     {
       fds[0] = {.fd = fd, .events = POLLIN, .revents = 0};
       current_state = poll_state::in_poll;
+
+      // pw_loop_iterate requires the loop to be entered first.
+      pw_loop_enter(lp);
 
       for (;;)
       {
@@ -174,13 +181,10 @@ struct pipewire_helpers
         // Check pipewire fd:
         if (fds[0].revents & POLLIN)
         {
-          if (auto lp = this->global_context->lp)
+          int result = pw_loop_iterate(lp, 0);
+          if (result < 0)
           {
-            int result = pw_loop_iterate(lp, 0);
-            if (result < 0)
-            {
-              LIBREMIDI_LOG(spa_strerror(result));
-            }
+            LIBREMIDI_LOG(spa_strerror(result));
           }
           fds[0].revents = 0;
         }
@@ -191,6 +195,8 @@ struct pipewire_helpers
           break;
         }
       }
+
+      pw_loop_leave(lp);
     }
     current_state = poll_state::not_in_poll;
   }
@@ -347,7 +353,11 @@ struct pipewire_helpers
   {
     // Wait for the pipewire server to send us back our node's info
     for (int i = 0; i < 1000; i++)
+    {
       this->filter->synchronize_node();
+      if (this->filter->filter_node_id() != 4294967295)
+        break;
+    }
 
     auto this_node = this->filter->filter_node_id();
     auto& midi = this->global_context->current_graph.software_midi;
@@ -380,7 +390,11 @@ struct pipewire_helpers
   {
     // Wait for the pipewire server to send us back our node's info
     for (int i = 0; i < 1000; i++)
+    {
       this->filter->synchronize_node();
+      if (this->filter->filter_node_id() != 4294967295)
+        break;
+    }
 
     auto this_node = this->filter->filter_node_id();
     auto& midi = this->global_context->current_graph.software_midi;
