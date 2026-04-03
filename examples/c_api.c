@@ -1,5 +1,6 @@
 #include <libremidi/libremidi-c.h>
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,7 +43,7 @@ void on_input_port_found(void* ctx, const libremidi_midi_in_port* port)
   if (ret != 0)
     return;
 
-  printf("input %llu: %s\n", handle, name);
+  printf("input %" PRIu64 ": %s\n", handle, name);
   fflush(stdout);
 
   enumerated_ports* e = (enumerated_ports*)ctx;
