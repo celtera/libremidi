@@ -244,6 +244,79 @@ struct midi_in_poll_wrapper {
   }
 };
 
+// Python-friendly wrappers for rawio configs.
+// std::span cannot cross the Python/C++ boundary, so we use std::vector
+// in the Python-facing callback signatures and convert internally.
+struct rawio_input_configuration_python {
+  using py_receive_callback = std::function<void(std::vector<uint8_t>, int64_t)>;
+  std::function<void(py_receive_callback)> set_receive_callback;
+  std::function<void()> stop_receive = [] {};
+
+  rawio_input_configuration to_cpp() const {
+    rawio_input_configuration conf;
+    if (set_receive_callback) {
+      conf.set_receive_callback = [py_cb = set_receive_callback](
+          rawio_input_configuration::receive_callback cpp_cb) {
+        py_cb([cpp_cb = std::move(cpp_cb)](std::vector<uint8_t> data, int64_t ts) {
+          cpp_cb(std::span<const uint8_t>(data), ts);
+        });
+      };
+    }
+    conf.stop_receive = stop_receive;
+    return conf;
+  }
+};
+
+struct rawio_output_configuration_python {
+  std::function<stdx::error(std::vector<uint8_t>)> write_bytes
+      = [](std::vector<uint8_t>) { return stdx::error{}; };
+
+  rawio_output_configuration to_cpp() const {
+    rawio_output_configuration conf;
+    if (write_bytes) {
+      conf.write_bytes = [py_cb = write_bytes](std::span<const uint8_t> bytes) -> stdx::error {
+        return py_cb({bytes.begin(), bytes.end()});
+      };
+    }
+    return conf;
+  }
+};
+
+struct rawio_ump_input_configuration_python {
+  using py_receive_callback = std::function<void(std::vector<uint32_t>, int64_t)>;
+  std::function<void(py_receive_callback)> set_receive_callback;
+  std::function<void()> stop_receive = [] {};
+
+  rawio_ump_input_configuration to_cpp() const {
+    rawio_ump_input_configuration conf;
+    if (set_receive_callback) {
+      conf.set_receive_callback = [py_cb = set_receive_callback](
+          rawio_ump_input_configuration::receive_callback cpp_cb) {
+        py_cb([cpp_cb = std::move(cpp_cb)](std::vector<uint32_t> data, int64_t ts) {
+          cpp_cb(std::span<const uint32_t>(data), ts);
+        });
+      };
+    }
+    conf.stop_receive = stop_receive;
+    return conf;
+  }
+};
+
+struct rawio_ump_output_configuration_python {
+  std::function<stdx::error(std::vector<uint32_t>)> write_ump
+      = [](std::vector<uint32_t>) { return stdx::error{}; };
+
+  rawio_ump_output_configuration to_cpp() const {
+    rawio_ump_output_configuration conf;
+    if (write_ump) {
+      conf.write_ump = [py_cb = write_ump](std::span<const uint32_t> words) -> stdx::error {
+        return py_cb({words.begin(), words.end()});
+      };
+    }
+    return conf;
+  }
+};
+
 struct midi_out_poll_wrapper {
   moodycamel::ReaderWriterQueue<poll_queue::midi_out_msg> queue{};
   output_configuration_wrapper python_midi1_callbacks;
@@ -294,6 +367,7 @@ NB_MODULE(pylibremidi, m) {
 
   namespace nb = nanobind;
   nb::class_<stdx::error>(m, "Error")
+      .def(nb::init<>())
       .def("__bool__", [](stdx::error e) { return e != stdx::error{}; })
       .def("__str__", [](stdx::error e) { return e.message().data(); })
       .def("__repr__", [](stdx::error e) { return e.message().data(); });
@@ -310,6 +384,7 @@ NB_MODULE(pylibremidi, m) {
       .value("PIPEWIRE", libremidi::API::PIPEWIRE)
       .value("KEYBOARD", libremidi::API::KEYBOARD)
       .value("NETWORK", libremidi::API::NETWORK)
+      .value("RAW_IO", libremidi::API::RAW_IO)
 
       .value("ALSA_RAW_UMP", libremidi::API::ALSA_RAW_UMP)
       .value("ALSA_SEQ_UMP", libremidi::API::ALSA_SEQ_UMP)
@@ -319,6 +394,7 @@ NB_MODULE(pylibremidi, m) {
       .value("NETWORK_UMP", libremidi::API::NETWORK_UMP)
       .value("JACK_UMP", libremidi::API::JACK_UMP)
       .value("PIPEWIRE_UMP", libremidi::API::PIPEWIRE_UMP)
+      .value("RAW_IO_UMP", libremidi::API::RAW_IO_UMP)
 
       .value("DUMMY", libremidi::API::DUMMY)
       .export_values();
@@ -469,6 +545,15 @@ NB_MODULE(pylibremidi, m) {
   nb::class_<libremidi::winmm_input_configuration>(m, "WinmmInputConfiguration").def(nb::init<>());
   nb::class_<libremidi::winuwp_input_configuration>(m, "WinuwpInputConfiguration").def(nb::init<>());
 
+  nb::class_<libremidi::rawio_input_configuration_python>(m, "RawioInputConfiguration")
+      .def(nb::init<>())
+      .def_rw("set_receive_callback", &libremidi::rawio_input_configuration_python::set_receive_callback)
+      .def_rw("stop_receive", &libremidi::rawio_input_configuration_python::stop_receive);
+  nb::class_<libremidi::rawio_ump_input_configuration_python>(m, "RawioUmpInputConfiguration")
+      .def(nb::init<>())
+      .def_rw("set_receive_callback", &libremidi::rawio_ump_input_configuration_python::set_receive_callback)
+      .def_rw("stop_receive", &libremidi::rawio_ump_input_configuration_python::stop_receive);
+
   nb::class_<libremidi::alsa_raw_output_configuration>(m, "AlsaRawOutputConfiguration").def(nb::init<>());
   nb::class_<libremidi::alsa_raw_ump::output_configuration>(m, "AlsaRawUmpOutputConfiguration").def(nb::init<>());
   nb::class_<libremidi::alsa_seq::output_configuration>(m, "AlsaSeqOutputConfiguration").def(nb::init<>()).def_rw("client_name", &libremidi::alsa_seq::output_configuration::client_name);
@@ -485,6 +570,13 @@ NB_MODULE(pylibremidi, m) {
   nb::class_<libremidi::winmidi::output_configuration>(m, "WinmidiOutputConfiguration").def(nb::init<>());
   nb::class_<libremidi::winmm_output_configuration>(m, "WinmmOutputConfiguration").def(nb::init<>());
   nb::class_<libremidi::winuwp_output_configuration>(m, "WinuwpOutputConfiguration").def(nb::init<>());
+
+  nb::class_<libremidi::rawio_output_configuration_python>(m, "RawioOutputConfiguration")
+      .def(nb::init<>())
+      .def_rw("write_bytes", &libremidi::rawio_output_configuration_python::write_bytes);
+  nb::class_<libremidi::rawio_ump_output_configuration_python>(m, "RawioUmpOutputConfiguration")
+      .def(nb::init<>())
+      .def_rw("write_ump", &libremidi::rawio_ump_output_configuration_python::write_ump);
 
   nb::class_<libremidi::alsa_raw_observer_configuration>(m, "AlsaRawObserverConfiguration").def(nb::init<>());
   nb::class_<libremidi::alsa_raw_ump::observer_configuration>(m, "AlsaRawUmpObserverConfiguration").def(nb::init<>());
@@ -511,6 +603,9 @@ NB_MODULE(pylibremidi, m) {
   nb::class_<libremidi::winmm_observer_configuration>(m, "WinmmObserverConfiguration").def(nb::init<>());
   nb::class_<libremidi::winuwp_observer_configuration>(m, "WinuwpObserverConfiguration").def(nb::init<>());
 
+  nb::class_<libremidi::rawio_observer_configuration>(m, "RawioObserverConfiguration").def(nb::init<>());
+  nb::class_<libremidi::rawio_ump_observer_configuration>(m, "RawioUmpObserverConfiguration").def(nb::init<>());
+
   nb::class_<libremidi::observer_poll_wrapper>(m, "Observer")
       .def(nb::init<>())
       .def(nb::init<libremidi::observer_configuration>())
@@ -525,6 +620,12 @@ NB_MODULE(pylibremidi, m) {
       .def(nb::init<libremidi::input_configuration_wrapper, libremidi::API>())
       .def(nb::init<libremidi::ump_input_configuration_wrapper>())
       .def(nb::init<libremidi::ump_input_configuration_wrapper, libremidi::API>())
+      .def("__init__", [](libremidi::midi_in_poll_wrapper *self, libremidi::input_configuration_wrapper conf, libremidi::rawio_input_configuration_python apiconf) {
+        new (self) libremidi::midi_in_poll_wrapper(std::move(conf), libremidi::input_api_configuration{apiconf.to_cpp()});
+      })
+      .def("__init__", [](libremidi::midi_in_poll_wrapper *self, libremidi::ump_input_configuration_wrapper conf, libremidi::rawio_ump_input_configuration_python apiconf) {
+        new (self) libremidi::midi_in_poll_wrapper(std::move(conf), libremidi::input_api_configuration{apiconf.to_cpp()});
+      })
       .def("get_current_api", [](libremidi::midi_in_poll_wrapper &self) { return self.impl.get_current_api(); })
       .def("open_port", [](libremidi::midi_in_poll_wrapper &self, const libremidi::input_port &p) { return self.impl.open_port(p); })
       .def("open_port", [](libremidi::midi_in_poll_wrapper &self, const libremidi::input_port &p, std::string_view name) { return self.impl.open_port(p, name); })
@@ -542,6 +643,12 @@ NB_MODULE(pylibremidi, m) {
       .def(nb::init<>())
       .def(nb::init<libremidi::output_configuration_wrapper>())
       .def(nb::init<libremidi::output_configuration_wrapper, libremidi::API>())
+      .def("__init__", [](libremidi::midi_out_poll_wrapper *self, libremidi::output_configuration_wrapper conf, libremidi::rawio_output_configuration_python apiconf) {
+        new (self) libremidi::midi_out_poll_wrapper(std::move(conf), libremidi::output_api_configuration{apiconf.to_cpp()});
+      })
+      .def("__init__", [](libremidi::midi_out_poll_wrapper *self, libremidi::output_configuration_wrapper conf, libremidi::rawio_ump_output_configuration_python apiconf) {
+        new (self) libremidi::midi_out_poll_wrapper(std::move(conf), libremidi::output_api_configuration{apiconf.to_cpp()});
+      })
       .def("get_current_api", [](libremidi::midi_out_poll_wrapper &self) { return self.impl.get_current_api(); })
       .def("open_port", [](libremidi::midi_out_poll_wrapper &self, const libremidi::output_port &p) { return self.impl.open_port(p); })
       .def("open_port", [](libremidi::midi_out_poll_wrapper &self, const libremidi::output_port &p, std::string_view name) { return self.impl.open_port(p, name); })
@@ -555,23 +662,21 @@ NB_MODULE(pylibremidi, m) {
 
       // clang-format off
       .def("send_message", [](libremidi::midi_out_poll_wrapper &self, const libremidi::message& m) { return self.impl.send_message(m); })
-      .def("send_message", [](libremidi::midi_out_poll_wrapper &self, const unsigned char* m, size_t size) { return self.impl.send_message(m, size); })
       .def("send_message", [](libremidi::midi_out_poll_wrapper &self, std::vector<unsigned char> m)  { return self.impl.send_message(m); })
       .def("send_message", [](libremidi::midi_out_poll_wrapper &self, unsigned char b0)  { return self.impl.send_message(b0); })
       .def("send_message", [](libremidi::midi_out_poll_wrapper &self, unsigned char b0, unsigned char  b1)  { return self.impl.send_message(b0, b1); })
       .def("send_message", [](libremidi::midi_out_poll_wrapper &self, unsigned char b0, unsigned char  b1, unsigned char b2)  { return self.impl.send_message(b0, b1, b2); })
 
-      .def("schedule_message", [](libremidi::midi_out_poll_wrapper &self, int64_t t, const unsigned char* m, size_t size) { return self.impl.schedule_message(t, m, size); })
+      .def("schedule_message", [](libremidi::midi_out_poll_wrapper &self, int64_t t, std::vector<unsigned char> m) { return self.impl.schedule_message(t, m.data(), m.size()); })
 
       .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, const libremidi::ump& m) { return self.impl.send_ump(m); })
-      .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, const uint32_t* ump, size_t size) { return self.impl.send_ump(ump, size); })
       .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, std::vector<uint32_t> m) { return self.impl.send_ump(m); })
       .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0) { return self.impl.send_ump(u0); })
       .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0, uint32_t u1) { return self.impl.send_ump(u0, u1); })
       .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0, uint32_t u1, uint32_t u2) { return self.impl.send_ump(u0, u1, u2); })
       .def("send_ump", [](libremidi::midi_out_poll_wrapper &self, uint32_t u0, uint32_t u1, uint32_t u2, uint32_t u3) { return self.impl.send_ump(u0, u1, u2, u3); })
 
-      .def("schedule_message", [](libremidi::midi_out_poll_wrapper &self, int64_t t, const uint32_t* m, size_t size) { return self.impl.schedule_ump(t, m, size); })
+      .def("schedule_ump", [](libremidi::midi_out_poll_wrapper &self, int64_t t, std::vector<uint32_t> m) { return self.impl.schedule_ump(t, m.data(), m.size()); })
       // clang-format on
 
       .def("poll", &libremidi::midi_out_poll_wrapper::poll);
