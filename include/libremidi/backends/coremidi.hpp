@@ -15,6 +15,12 @@ struct core_backend
   using midi_in_configuration = coremidi_input_configuration;
   using midi_out_configuration = coremidi_output_configuration;
   using midi_observer_configuration = coremidi_observer_configuration;
+
+  using midi_endpoint = void;
+  using midi_endpoint_observer = void;
+  using midi_endpoint_configuration = void;
+  using midi_endpoint_observer_configuration = void;
+
   static const constexpr auto API = libremidi::API::COREMIDI;
   static const constexpr std::string_view name = "core";
   static const constexpr std::string_view display_name = "CoreMIDI";

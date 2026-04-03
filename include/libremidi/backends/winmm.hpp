@@ -29,6 +29,12 @@ struct winmm_backend
   using midi_in_configuration = winmm_input_configuration;
   using midi_out_configuration = winmm_output_configuration;
   using midi_observer_configuration = winmm_observer_configuration;
+
+  using midi_endpoint = void;
+  using midi_endpoint_observer = void;
+  using midi_endpoint_configuration = void;
+  using midi_endpoint_observer_configuration = void;
+
   static const constexpr auto API = libremidi::API::WINDOWS_MM;
   static const constexpr std::string_view name = "winmm";
   static const constexpr std::string_view display_name = "Windows Multimedia";

@@ -93,6 +93,7 @@ typedef struct libremidi_observer_configuration
   } output_removed;
 
   bool track_hardware;
+  bool track_network;
   bool track_virtual;
   bool track_any;
   bool notify_in_constructor;

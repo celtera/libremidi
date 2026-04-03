@@ -9,8 +9,9 @@
 NAMESPACE_LIBREMIDI
 {
 /// MIDI protocol supported by an endpoint or function block
-enum class midi_protocol : uint8_t
+enum class midi_protocol
 {
+  none = 0,
   midi1 = (1 << 1),
   midi2 = (1 << 2),
   both = midi1 | midi2
