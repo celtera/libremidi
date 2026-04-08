@@ -44,6 +44,9 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/coremidi_ump/midi_in.hpp
     include/libremidi/backends/coremidi_ump/midi_out.hpp
     include/libremidi/backends/coremidi_ump/observer.hpp
+    include/libremidi/backends/coremidi_ump/endpoint_config.hpp
+    include/libremidi/backends/coremidi_ump/endpoint.hpp
+    include/libremidi/backends/coremidi_ump/endpoint_observer.hpp
     include/libremidi/backends/coremidi_ump.hpp
 
     include/libremidi/backends/dummy.hpp

@@ -2,6 +2,8 @@
 #include <libremidi/backends/coremidi_ump/midi_in.hpp>
 #include <libremidi/backends/coremidi_ump/midi_out.hpp>
 #include <libremidi/backends/coremidi_ump/observer.hpp>
+#include <libremidi/backends/coremidi_ump/endpoint.hpp>
+#include <libremidi/backends/coremidi_ump/endpoint_observer.hpp>
 
 #include <string_view>
 
@@ -16,15 +18,15 @@ struct backend
   using midi_out_configuration = coremidi_ump::output_configuration;
   using midi_observer_configuration = coremidi_ump::observer_configuration;
 
-  using midi_endpoint = void;
-  using midi_endpoint_observer = void;
-  using midi_endpoint_configuration = void;
-  using midi_endpoint_observer_configuration = void;
+  using midi_endpoint = coremidi_ump::endpoint_impl;
+  using midi_endpoint_observer = coremidi_ump::endpoint_observer_impl;
+  using midi_endpoint_configuration = coremidi_ump::endpoint_api_configuration;
+  using midi_endpoint_observer_configuration = coremidi_ump::endpoint_observer_api_configuration;
 
   static const constexpr auto API = libremidi::API::COREMIDI_UMP;
   static const constexpr std::string_view name = "core_ump";
   static const constexpr std::string_view display_name = "CoreMIDI UMP";
 
-  static constexpr inline bool available() noexcept { return true; /* todo? */ }
+  static constexpr inline bool available() noexcept { return true; }
 };
 }

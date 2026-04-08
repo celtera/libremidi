@@ -10,6 +10,7 @@
 #include <libremidi/backends/android/config.hpp>
 #include <libremidi/backends/coremidi/config.hpp>
 #include <libremidi/backends/coremidi_ump/config.hpp>
+#include <libremidi/backends/coremidi_ump/endpoint_config.hpp>
 #include <libremidi/backends/emscripten/config.hpp>
 #include <libremidi/backends/jack/config.hpp>
 #include <libremidi/backends/kdmapi/config.hpp>
@@ -69,7 +70,8 @@ using observer_api_configuration = libremidi_variant_alias::variant<
 // Configuration for the new bidirectional UMP endpoint API
 using endpoint_api_configuration = std::variant<
     unspecified_configuration, dummy_configuration, alsa_raw_ump::endpoint_api_configuration,
-    alsa_seq_ump::endpoint_api_configuration, libremidi::API>;
+    alsa_seq_ump::endpoint_api_configuration, coremidi_ump::endpoint_api_configuration,
+    libremidi::API>;
 
 LIBREMIDI_EXPORT
 libremidi::API midi_api(const input_api_configuration& conf);

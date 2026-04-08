@@ -1,5 +1,6 @@
 #pragma once
 #include <libremidi/port_information.hpp>
+#include <libremidi/ump_endpoint_info.hpp>
 
 NAMESPACE_LIBREMIDI
 {
