@@ -83,10 +83,6 @@ public:
       if (!m_endpoint)
         return std::errc::device_or_resource_busy;
 
-  #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
-      m_endpoint.as(libremidi::IID_IMidiEndpointConnectionRaw, m_raw_endpoint.put_void());
-  #endif
-
       m_endpoint.Open();
 
       return stdx::error{};
@@ -104,70 +100,96 @@ public:
       return std::errc::not_connected;
 
     m_session.DisconnectEndpointConnection(m_endpoint.ConnectionId());
+#if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
     if (m_virtual)
     {
       m_virtual.Cleanup();
       m_virtual = nullptr;
     }
+  #endif
     return stdx::error{};
+  }
+
+  std::errc write_raw(const uint32_t* ump, int64_t bytes)
+  {
+#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
+    HRESULT ret{};
+    switch (bytes / 4)
+    {
+      case 1:
+        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(1, (UINT32*)ump));
+        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 1, (UINT32*)ump);
+        break;
+      case 2:
+        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(2, (UINT32*)ump));
+        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 2, (UINT32*)ump);
+        break;
+      case 3:
+        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(3, (UINT32*)ump));
+        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 3, (UINT32*)ump);
+        break;
+      case 4:
+        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(4, (UINT32*)ump));
+        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 4, (UINT32*)ump);
+        break;
+      default:
+        return std::errc::bad_message;
+    }
+    if(ret < 0)
+      return std::errc::io_error;
+    return std::errc{};
+  #else
+    return write(ump, bytes);
+  #endif
+  }
+
+  std::errc write(const uint32_t* ump, int64_t bytes)
+  {
+    MidiSendMessageResults ret{};
+    switch (bytes / 4)
+    {
+      case 1:
+        ret = m_endpoint.SendSingleMessagePacket(MidiMessage32(0, ump[0]));
+        break;
+      case 2:
+        ret = m_endpoint.SendSingleMessagePacket(MidiMessage64(0, ump[0], ump[1]));
+        break;
+      case 3:
+        ret = m_endpoint.SendSingleMessagePacket(MidiMessage96(0, ump[0], ump[1], ump[2]));
+        break;
+      case 4:
+        ret = m_endpoint.SendSingleMessagePacket(
+            MidiMessage128(0, ump[0], ump[1], ump[2], ump[3]));
+        break;
+      default:
+        return std::errc::bad_message;
+    }
+    if (ret != MidiSendMessageResults::Succeeded)
+      return std::errc::io_error;
+    return std::errc{};
   }
 
   stdx::error send_ump(const uint32_t* message, size_t size) override
   {
-    auto write_func = [this](const uint32_t* ump, int64_t bytes) -> std::errc {
+#if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
+    if(m_virtual)
+    {
+      // Virtual port does not support raw API per
+      // https://github.com/celtera/libremidi/issues/194#issuecomment-4156127901
 
-#if !LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
-      MidiSendMessageResults ret{};
-      switch (bytes / 4)
-      {
-        case 1:
-          ret = m_endpoint.SendSingleMessagePacket(MidiMessage32(0, ump[0]));
-          break;
-        case 2:
-          ret = m_endpoint.SendSingleMessagePacket(MidiMessage64(0, ump[0], ump[1]));
-          break;
-        case 3:
-          ret = m_endpoint.SendSingleMessagePacket(MidiMessage96(0, ump[0], ump[1], ump[2]));
-          break;
-        case 4:
-          ret = m_endpoint.SendSingleMessagePacket(
-              MidiMessage128(0, ump[0], ump[1], ump[2], ump[3]));
-          break;
-        default:
-          return std::errc::bad_message;
-      }
-      if (ret != MidiSendMessageResults::Succeeded)
-        return std::errc::bad_message;
-  #else
-      HRESULT ret{};
-      switch (bytes / 4)
-      {
-        case 1:
-          assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(1, (UINT32*)ump));
-          ret = m_raw_endpoint->SendMidiMessagesRaw(0, 1, (UINT32*)ump);
-          break;
-        case 2:
-          assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(2, (UINT32*)ump));
-          ret = m_raw_endpoint->SendMidiMessagesRaw(0, 2, (UINT32*)ump);
-          break;
-        case 3:
-          assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(3, (UINT32*)ump));
-          ret = m_raw_endpoint->SendMidiMessagesRaw(0, 3, (UINT32*)ump);
-          break;
-        case 4:
-          assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(4, (UINT32*)ump));
-          ret = m_raw_endpoint->SendMidiMessagesRaw(0, 4, (UINT32*)ump);
-          break;
-        default:
-          return std::errc::bad_message;
-      }
-  #endif
-      if(ret < 0)
-        return std::errc::io_error;
-      return std::errc{0};
-    };
-
-    return segment_ump_stream(message, size, write_func, []() { });
+      return segment_ump_stream(message, size,
+                                [this](const uint32_t* ump, int64_t bytes) -> std::errc {
+        return write(ump, bytes);
+      }, []() { });
+    }
+    else
+#endif
+    {
+      return segment_ump_stream(message, size,
+                                [this](const uint32_t* ump, int64_t bytes) -> std::errc {
+        return write_raw(ump, bytes);
+      }, []() { });
+    }
   }
 
 private:

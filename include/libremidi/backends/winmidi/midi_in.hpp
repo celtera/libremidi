@@ -157,7 +157,6 @@ public:
       // Add the virtual device as a message processing plugin to receive messages
       m_endpoint.AddMessageProcessingPlugin(m_virtual);
 
-#if !LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
       // Register message received event handler
       m_revoke_token = m_endpoint.MessageReceived(
           [this](
@@ -165,14 +164,6 @@ public:
               const winrt::Microsoft::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& args) {
         process_message(args);
       });
-#else
-      // Use COM interface for raw callback
-      m_endpoint.as(libremidi::IID_IMidiEndpointConnectionRaw, m_raw_endpoint.put_void());
-      if (m_raw_endpoint)
-      {
-        m_raw_endpoint->SetMessagesReceivedCallback(&raw_callback);
-      }
-#endif
 
       m_endpoint.Open();
 
@@ -249,21 +240,26 @@ public:
     if(!m_endpoint)
       return std::errc::not_connected;
 
-#if !LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
-    m_endpoint.MessageReceived(m_revoke_token);
-#else
+#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
     if(m_raw_endpoint) {
       m_raw_endpoint->RemoveMessagesReceivedCallback();
       m_raw_endpoint = nullptr;
     }
+    // When no raw API: everything goes through revoke_token.
+    // Otherwise: only virtual ports.
+    else if(m_virtual)
 #endif
+      m_endpoint.MessageReceived(m_revoke_token);
+
     m_session.DisconnectEndpointConnection(m_endpoint.ConnectionId());
 
+#if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
     if (m_virtual)
     {
       m_virtual.Cleanup();
       m_virtual = nullptr;
     }
+  #endif
     return stdx::error{};
   }
 
