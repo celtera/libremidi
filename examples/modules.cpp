@@ -1,7 +1,8 @@
 import libremidi;
 
-#include <cstdlib>
 #include <iostream>
+#include <cstdio>
+#include <iomanip>
 
 inline std::ostream& operator<<(std::ostream& s, const libremidi::message& message)
 {
