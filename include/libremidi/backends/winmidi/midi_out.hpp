@@ -83,6 +83,8 @@ public:
       if (!m_endpoint)
         return std::errc::device_or_resource_busy;
 
+      m_endpoint.AddMessageProcessingPlugin(m_virtual);
+
       m_endpoint.Open();
 
       return stdx::error{};
