@@ -31,7 +31,7 @@ project(my_app)
 FetchContent_Declare(
     libremidi
     GIT_REPOSITORY https://github.com/celtera/libremidi
-    GIT_TAG        main
+    GIT_TAG        master
 )
 
 FetchContent_MakeAvailable(libremidi)
