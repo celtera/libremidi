@@ -77,8 +77,10 @@ endif()
 
 if(LIBREMIDI_HAS_PIPEWIRE)
     add_example(pipewire_share)
+    add_example(example_virtual_ports)
     add_backend_example(midi1_in_pipewire)
     add_backend_example(midi1_out_pipewire)
+    add_backend_example(shared_pipewire_context)
 
     if(LIBREMIDI_HAS_PIPEWIRE_UMP)
       add_backend_example(midi2_in_pipewire)
