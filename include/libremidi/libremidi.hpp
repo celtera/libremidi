@@ -273,6 +273,8 @@ private:
   #include <libremidi/midi_in.cpp>
   #include <libremidi/midi_out.cpp>
   #include <libremidi/observer.cpp>
+  // pipewire {instance,context}.cpp are pulled by their .hpp under
+  // HEADER_ONLY so any TU touching them gets the definitions.
 
   #if defined(__EMSCRIPTEN__)
     #include <libremidi/backends/emscripten/midi_access.cpp>
