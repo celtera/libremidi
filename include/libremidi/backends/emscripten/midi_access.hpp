@@ -32,7 +32,7 @@ public:
 
   bool available() const noexcept
   {
-    return EM_ASM_INT(return typeof globalThis.__libreMidi_access !== undefined;);
+    return EM_ASM_INT(return typeof globalThis.__libreMidi_access !== 'undefined';);
   }
 
   int input_count() const noexcept
