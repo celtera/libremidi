@@ -345,4 +345,49 @@ jobs:
       run: |
         cmake --build build --config Debug --target test
 
+  build_gcc_modules:
+    name: GCC C++20 modules
+    runs-on: ubuntu-latest
+    container:
+      image: debian:testing
+    steps:
+    - name: Install git
+      run: |
+        apt-get update -qq
+        apt-get install -qq --force-yes git ca-certificates
+
+    - uses: actions/checkout@v6
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        apt-get update -qq
+        apt-get install -qq --force-yes \
+          build-essential binutils g++-15 \
+          libasound-dev \
+          libjack-jackd2-dev \
+          libudev-dev \
+          libpipewire-0.3-dev \
+          cmake ninja-build
+
+    - name: Configure
+      shell: bash
+      # boost.container and boost.asio are not compilable into a C++20 module by
+      # GCC (their templates expose TU-local entities, which GCC rejects with no
+      # way to suppress), so the module build is exercised with NO_BOOST. The
+      # boost-on case is intentionally left failing rather than silently falling
+      # back to std::vector, so it starts passing again once Boost is fixed.
+      run: |
+        cmake -S . -B build -GNinja \
+          -DCMAKE_CXX_COMPILER=g++-15 \
+          -DLIBREMIDI_NO_BOOST=1 \
+          -DLIBREMIDI_LIBRARY_MODE=MODULE \
+          -DLIBREMIDI_EXAMPLES=1 \
+          -DLIBREMIDI_TESTS=1 \
+          -DLIBREMIDI_CI=1 \
+          -DCMAKE_INSTALL_PREFIX=install
+
+    - name: Build
+      run: |
+        cmake --build build
 
