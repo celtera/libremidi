@@ -11,6 +11,11 @@ if(NOT WIN32)
 endif()
 
 check_cxx_compiler_flag(-Werror=return-type LIBREMIDI_CXX_HAS_WERROR_RETURN_TYPE)
+# GCC's C++20 modules warn when a reachable template names a TU-local entity.
+# The pipewire context's invoke_async/invoke_sync templates call pw_loop_invoke,
+# a 'static inline' (TU-local) pipewire symbol that cannot be wrapped without
+# type-erasing the callback. Keep that a warning rather than an error.
+check_cxx_compiler_flag(-Wno-error=template-names-tu-local LIBREMIDI_CXX_HAS_WNO_ERROR_TU_LOCAL)
 check_cxx_compiler_flag(-Wno-gnu-statement-expression-from-macro-expansion LIBREMIDI_CXX_HAS_WNO_GNU_STATEMENT)
 check_cxx_compiler_flag(-Wno-c99-extensions LIBREMIDI_CXX_HAS_WNO_C99_EXTENSIONS)
 
