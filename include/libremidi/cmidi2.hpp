@@ -2689,7 +2689,7 @@ LIBREMIDI_STATIC uint32_t cmidi2_internal_swap_endian(uint32_t v)
 /** converts MIDI1 bytestream which can contain deltaTime in SMF, to MIDI2 UMP stream.
  * The resulting stream is native endianness.
  */
-static enum cmidi2_midi_conversion_result
+LIBREMIDI_STATIC enum cmidi2_midi_conversion_result
 cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
 {
   uint8_t* dst = (uint8_t*)context->ump;
@@ -2943,7 +2943,7 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
 
 // UMP to MIDI1 Translator
 
-static int32_t cmidi2_internal_convert_jr_timestamp_to_timecode(
+LIBREMIDI_STATIC int32_t cmidi2_internal_convert_jr_timestamp_to_timecode(
     int32_t deltaTime, cmidi2_midi_conversion_context* context)
 {
   (void)context;
@@ -2951,7 +2951,7 @@ static int32_t cmidi2_internal_convert_jr_timestamp_to_timecode(
   return deltaTime;
 }
 
-static size_t cmidi2_internal_add_midi1_delta_time(
+LIBREMIDI_STATIC size_t cmidi2_internal_add_midi1_delta_time(
     uint8_t* dst, cmidi2_midi_conversion_context* context, int32_t deltaTime)
 {
   if (!context || context->skip_delta_time)
@@ -3184,7 +3184,7 @@ cmidi2_convert_single_ump_to_midi1(uint8_t* dst, size_t maxBytes, cmidi2_ump* um
   (cmidi2_ump_get_message_type(ump) == CMIDI2_MESSAGE_TYPE_UTILITY \
    && cmidi2_ump_get_status_code(ump) == CMIDI2_UTILITY_STATUS_JR_TIMESTAMP)
 
-static enum cmidi2_midi_conversion_result
+LIBREMIDI_STATIC enum cmidi2_midi_conversion_result
 cmidi2_convert_ump_to_midi1(cmidi2_midi_conversion_context* context)
 {
   uint8_t* dst = (uint8_t*)context->midi1;
