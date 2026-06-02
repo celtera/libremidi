@@ -6,6 +6,7 @@
 #include <spa/utils/dict.h>
 
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -95,8 +96,16 @@ inline std::string_view dict_get(const spa_dict* dict, const char* key) noexcept
 {
   if (!dict || !key)
     return {};
-  const char* v = spa_dict_lookup(dict, key);
-  return v ? std::string_view{v} : std::string_view{};
+  // Iterate the dict directly rather than calling spa_dict_lookup(): that
+  // helper is a 'static inline' (TU-local) symbol, which a reachable inline
+  // function may not name in a C++20 module on GCC.
+  const spa_dict_item* item{};
+  spa_dict_for_each(item, dict)
+  {
+    if (item->key && std::strcmp(item->key, key) == 0)
+      return item->value ? std::string_view{item->value} : std::string_view{};
+  }
+  return {};
 }
 
 inline media_class classify_node_props(const spa_dict* props) noexcept

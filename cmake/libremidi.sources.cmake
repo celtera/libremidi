@@ -172,6 +172,7 @@ if(NOT LIBREMIDI_HEADER_ONLY AND NOT LIBREMIDI_MODULE_BUILD)
 
     include/libremidi/backends/linux/pipewire/instance.cpp
     include/libremidi/backends/linux/pipewire/context.cpp
+    include/libremidi/backends/linux/pipewire/filter.cpp
 
     include/libremidi/libremidi-c.cpp
   )

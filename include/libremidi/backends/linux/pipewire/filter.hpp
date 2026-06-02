@@ -288,53 +288,17 @@ private:
   pw_filter* m_filter{};
 };
 
-inline pw_proxy* link_ports(context& ctx, std::uint32_t out_port, std::uint32_t in_port) noexcept
-{
-  if (!ctx.ok())
-    return nullptr;
-  auto& pw = load();
-  pw_proxy* result = nullptr;
-  ctx.with_lock([&] {
-    auto* props = pw.properties_new(
-        PW_KEY_LINK_OUTPUT_PORT, std::to_string(out_port).c_str(), PW_KEY_LINK_INPUT_PORT,
-        std::to_string(in_port).c_str(), nullptr);
-    if (!props)
-      return;
-    result = reinterpret_cast<pw_proxy*>(pw_core_create_object(
-        ctx.pw_core_ptr(), "link-factory", PW_TYPE_INTERFACE_Link, PW_VERSION_LINK, &props->dict,
-        0));
-    pw.properties_free(props);
-  });
-  if (result)
-    (void)ctx.synchronize();
-  return result;
-}
+// Defined in filter.cpp: these call pw_core_create_object(), a 'static inline'
+// (TU-local) pipewire symbol that a reachable inline function may not name in a
+// C++20 module on GCC, so the definitions live in an out-of-line TU.
+LIBREMIDI_EXPORT pw_proxy*
+link_ports(context& ctx, std::uint32_t out_port, std::uint32_t in_port) noexcept;
 
 // Link by node ids; pipewire activates ports as needed. Required to
 // reach a suspended sink that hasn't exposed ports (matches the
 // `pw-link <node> <node>` path). Release via unlink_ports.
-inline pw_proxy* link_nodes(context& ctx, std::uint32_t out_node, std::uint32_t in_node) noexcept
-{
-  if (!ctx.ok())
-    return nullptr;
-  auto& pw = load();
-  pw_proxy* result = nullptr;
-  ctx.with_lock([&] {
-    auto* props = pw.properties_new(
-        PW_KEY_LINK_OUTPUT_NODE, std::to_string(out_node).c_str(), PW_KEY_LINK_INPUT_NODE,
-        std::to_string(in_node).c_str(),
-        nullptr);
-    if (!props)
-      return;
-    result = reinterpret_cast<pw_proxy*>(pw_core_create_object(
-        ctx.pw_core_ptr(), "link-factory", PW_TYPE_INTERFACE_Link, PW_VERSION_LINK, &props->dict,
-        0));
-    pw.properties_free(props);
-  });
-  if (result)
-    (void)ctx.synchronize();
-  return result;
-}
+LIBREMIDI_EXPORT pw_proxy*
+link_nodes(context& ctx, std::uint32_t out_node, std::uint32_t in_node) noexcept;
 
 inline void unlink_ports(context& ctx, pw_proxy* link) noexcept
 {
@@ -348,3 +312,7 @@ inline void unlink_ports(context& ctx, pw_proxy* link) noexcept
 }
 
 }
+
+#if defined(LIBREMIDI_HEADER_ONLY)
+  #include <libremidi/backends/linux/pipewire/filter.cpp>
+#endif

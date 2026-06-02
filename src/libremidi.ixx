@@ -251,4 +251,5 @@ module :private;
 #if defined(LIBREMIDI_PIPEWIRE)
 #include <libremidi/backends/linux/pipewire/instance.cpp>
 #include <libremidi/backends/linux/pipewire/context.cpp>
+#include <libremidi/backends/linux/pipewire/filter.cpp>
 #endif
