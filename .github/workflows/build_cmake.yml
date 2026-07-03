@@ -151,7 +151,7 @@ jobs:
             library_mode: MODULE
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Get latest release version number
       id: get_version
@@ -231,7 +231,7 @@ jobs:
         boost: [0, 1]
         library_mode: [LIBRARY, HEADER_ONLY, MODULE]
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - uses: vmactions/freebsd-vm@v1
       with:
@@ -295,7 +295,7 @@ jobs:
         apt-get update -qq
         apt-get install -qq --force-yes git ca-certificates
 
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install dependencies
       shell: bash
