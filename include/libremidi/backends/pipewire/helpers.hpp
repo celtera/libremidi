@@ -210,14 +210,22 @@ struct pipewire_helpers
     this->flt->update_params(this->port, params, 1);
   }
 
+  static bool port_matches(
+      const libremidi::pipewire::port_info& port, libremidi::pipewire::media_class kind) noexcept
+  {
+    if (kind == libremidi::pipewire::media_class::ump)
+      return port.kind == libremidi::pipewire::media_class::ump;
+    return libremidi::pipewire::is_midi_like(port.kind);
+  }
+
   template <libremidi::API Api>
-  void add_callbacks(std::string format, const observer_configuration& conf)
+  void add_callbacks(libremidi::pipewire::media_class kind, const observer_configuration& conf)
   {
     assert(this->ctx);
 
     sub_added = this->ctx->on_port_added(
-        [this, format, &conf](const libremidi::pipewire::port_info& port) {
-          if (port.format.find(format) == std::string::npos)
+        [this, kind, &conf](const libremidi::pipewire::port_info& port) {
+          if (!port_matches(port, kind))
             return;
           this->port_cache[port.id] = port;
 
@@ -239,14 +247,14 @@ struct pipewire_helpers
         });
 
     sub_removed = this->ctx->on_port_removed(
-        [this, format, &conf](std::uint32_t port_id) {
+        [this, kind, &conf](std::uint32_t port_id) {
           auto it = this->port_cache.find(port_id);
           if (it == this->port_cache.end())
             return;
           const auto port = it->second;
           this->port_cache.erase(it);
 
-          if (port.format.find(format) == std::string::npos)
+          if (!port_matches(port, kind))
             return;
           bool unfiltered = conf.track_any;
           unfiltered |= (port.physical && conf.track_hardware);
@@ -420,7 +428,8 @@ struct pipewire_helpers
   // user-facing input port carries Direction=OUTPUT.
   template <spa_direction Direction, libremidi::API Api>
   static auto get_ports(
-      std::string_view format, const observer_configuration& conf, const context_t& ctx) noexcept
+      libremidi::pipewire::media_class kind, const observer_configuration& conf,
+      const context_t& ctx) noexcept
       -> std::vector<
           std::conditional_t<Direction == SPA_DIRECTION_OUTPUT, input_port, output_port>>
   {
@@ -433,7 +442,7 @@ struct pipewire_helpers
       const auto& bucket = (Direction == SPA_DIRECTION_INPUT ? node.inputs : node.outputs);
       for (const auto& port : bucket)
       {
-        if (port.format.find(format) == std::string::npos)
+        if (!port_matches(port, kind))
           continue;
         bool unfiltered = conf.track_any;
         unfiltered |= (port.physical && conf.track_hardware);
