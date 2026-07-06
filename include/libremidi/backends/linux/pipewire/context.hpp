@@ -1130,10 +1130,9 @@ private:
   void fill_port_from_props(port_info& p, const spa_dict* props) noexcept
   {
     if (auto v = dict_get(props, "format.dsp"); !v.empty())
-    {
       p.format = std::string{v};
-      p.kind = classify_format_dsp(p.format);
-    }
+    if (auto k = classify_port_props(props); k != media_class::other)
+      p.kind = k;
     if (auto v = dict_get(props, PW_KEY_PORT_NAME); !v.empty())
       p.port_name = std::string{v};
     if (auto v = dict_get(props, PW_KEY_PORT_ALIAS); !v.empty())

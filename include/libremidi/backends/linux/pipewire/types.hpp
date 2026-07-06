@@ -104,6 +104,13 @@ inline media_class classify_node_props(const spa_dict* props) noexcept
   return classify_media_class(dict_get(props, PW_KEY_MEDIA_CLASS));
 }
 
+inline media_class classify_port_props(const spa_dict* props) noexcept
+{
+  if (dict_get(props, "control.ump") == "true")
+    return media_class::ump;
+  return classify_format_dsp(dict_get(props, "format.dsp"));
+}
+
 struct port_info
 {
   std::uint32_t id{};

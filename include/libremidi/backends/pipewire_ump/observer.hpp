@@ -27,7 +27,8 @@ public:
 
     // Atomic subscribe + initial walk (see pipewire/observer.hpp).
     this->ctx->with_lock([this] {
-      this->add_callbacks<libremidi::API::PIPEWIRE_UMP>("UMP", configuration);
+      this->add_callbacks<libremidi::API::PIPEWIRE_UMP>(
+          libremidi::pipewire::media_class::ump, configuration);
 
       if (configuration.notify_in_constructor)
       {
@@ -52,7 +53,7 @@ public:
     if (!this->ctx)
       return {};
     return get_ports<SPA_DIRECTION_OUTPUT, libremidi::API::PIPEWIRE_UMP>(
-        "UMP", this->configuration, *this->ctx);
+        libremidi::pipewire::media_class::ump, this->configuration, *this->ctx);
   }
 
   std::vector<libremidi::output_port> get_output_ports() const noexcept override
@@ -60,7 +61,7 @@ public:
     if (!this->ctx)
       return {};
     return get_ports<SPA_DIRECTION_INPUT, libremidi::API::PIPEWIRE_UMP>(
-        "UMP", this->configuration, *this->ctx);
+        libremidi::pipewire::media_class::ump, this->configuration, *this->ctx);
   }
 
   ~observer_pipewire() { destroy_context(); }

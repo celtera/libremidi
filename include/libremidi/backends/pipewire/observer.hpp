@@ -27,7 +27,8 @@ public:
     // Hold thread_loop_lock so a port arriving between subscription
     // install and the snapshot walk doesn't fire twice.
     this->ctx->with_lock([this] {
-      this->add_callbacks<libremidi::API::PIPEWIRE>("midi", configuration);
+      this->add_callbacks<libremidi::API::PIPEWIRE>(
+          libremidi::pipewire::media_class::midi, configuration);
 
       if (configuration.notify_in_constructor)
       {
@@ -49,7 +50,7 @@ public:
     if (!this->ctx)
       return {};
     return get_ports<SPA_DIRECTION_OUTPUT, libremidi::API::PIPEWIRE>(
-        "midi", this->configuration, *this->ctx);
+        libremidi::pipewire::media_class::midi, this->configuration, *this->ctx);
   }
 
   std::vector<libremidi::output_port> get_output_ports() const noexcept override
@@ -57,7 +58,7 @@ public:
     if (!this->ctx)
       return {};
     return get_ports<SPA_DIRECTION_INPUT, libremidi::API::PIPEWIRE>(
-        "midi", this->configuration, *this->ctx);
+        libremidi::pipewire::media_class::midi, this->configuration, *this->ctx);
   }
 
   ~observer_pipewire() { destroy_context(); }
