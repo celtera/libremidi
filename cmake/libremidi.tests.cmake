@@ -5,7 +5,7 @@ endif()
 FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2
-    GIT_TAG        v3.15.1
+    GIT_TAG        v3.15.2
     ${CMAKE_FETCHCONTENT_SYSTEM_KEYWORD}
 )
 
