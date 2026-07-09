@@ -216,12 +216,21 @@ public:
 
   bool reconnect()
   {
-    invoke_sync([this] {
-      tear_down(/*final=*/false);
-      m_state.store(connection_state::connecting, std::memory_order_release);
-      if (!build_connection())
-        m_state.store(connection_state::broken, std::memory_order_release);
-    });
+    // tear_down() stops and destroys the thread loop, so reconnect MUST run
+    // on a thread other than the worker — never via invoke_sync. Doing it on
+    // the loop thread self-destructs the loop: pthread_join(self) is a silent
+    // no-op and pw_thread_loop_destroy then corrupts the lock it runs under
+    // ('recurse > 0' failure) and the invoke never completes (hang).
+    if (is_in_loop_thread())
+      return false;
+
+    tear_down(/*final=*/false);
+    m_state.store(connection_state::connecting, std::memory_order_release);
+    if (!build_connection())
+    {
+      m_state.store(connection_state::broken, std::memory_order_release);
+      return false;
+    }
     if (!synchronize())
       return false;
     m_state.store(connection_state::connected, std::memory_order_release);
