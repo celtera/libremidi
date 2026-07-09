@@ -203,7 +203,7 @@ private:
     thread_available = thread_loop_new && thread_loop_destroy && thread_loop_start
                        && thread_loop_stop && thread_loop_get_loop && thread_loop_lock
                        && thread_loop_unlock && thread_loop_signal && thread_loop_wait
-                       && thread_loop_in_thread;
+                       && thread_loop_timed_wait && thread_loop_in_thread;
 
     stream_new = sym<decltype(stream_new)>(h, "pw_stream_new");
     stream_new_simple = sym<decltype(stream_new_simple)>(h, "pw_stream_new_simple");

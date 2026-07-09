@@ -206,11 +206,11 @@ public:
         pw_thread_loop* loop;
         ~unlock_guard() { pw.thread_loop_unlock(loop); }
       } guard{pw, m_thread_loop};
-      return do_sync_locked(t_end);
+      return do_sync_thread_locked(t_end);
     }
     else
     {
-      return do_sync_locked(t_end);
+      return do_sync_iterate(t_end);
     }
   }
 
@@ -788,7 +788,10 @@ private:
   {
     auto* self = static_cast<context*>(data);
     if (id == PW_ID_CORE && seq == self->m_sync_seq.load(std::memory_order_acquire))
+    {
       self->m_sync_done.store(1, std::memory_order_release);
+      self->wake_sync_waiter();
+    }
   }
 
   static void on_core_error(
@@ -800,6 +803,18 @@ private:
     {
       self->m_state.store(connection_state::broken, std::memory_order_release);
     }
+    self->wake_sync_waiter();
+  }
+
+  // Wakes a thread-loop synchronize() blocked in pw_thread_loop_timed_wait.
+  // Runs from the worker thread (holds the loop lock) during event dispatch.
+  void wake_sync_waiter() noexcept
+  {
+    if (m_cfg.kind != loop_kind::thread || !m_thread_loop)
+      return;
+    auto& pw = load();
+    if (pw.thread_loop_signal)
+      pw.thread_loop_signal(m_thread_loop, false);
   }
 
   void install_core_listener() noexcept
@@ -822,8 +837,49 @@ private:
     pw_core_add_listener(m_core, &m_core_listener, &events, this);
   }
 
-  // Lock must be held in thread-loop mode (drives pw_loop_iterate).
-  bool do_sync_locked(std::chrono::steady_clock::time_point deadline)
+  // Thread-loop mode: the worker thread owns iteration. We must NOT call
+  // pw_loop_iterate ourselves — two threads iterating one pw_loop corrupt
+  // its per-source dispatch bookkeeping (s->priv / s->rmask) and double-fire
+  // socket callbacks, crashing in on_remote_data on a freed connection.
+  // Issue the sync and block on the loop's condition variable instead; the
+  // worker drives the loop and wakes us via wake_sync_waiter().
+  bool do_sync_thread_locked(std::chrono::steady_clock::time_point deadline)
+  {
+    auto& pw = load();
+    m_sync_done.store(0, std::memory_order_release);
+    m_sync_error.store(0, std::memory_order_release);
+
+    int seq = pw_core_sync(m_core, PW_ID_CORE, 0);
+    m_sync_seq.store(seq, std::memory_order_release);
+
+    using clk = std::chrono::steady_clock;
+    while (m_sync_done.load(std::memory_order_acquire) == 0
+           && m_sync_error.load(std::memory_order_acquire) == 0)
+    {
+      const auto now = clk::now();
+      if (now >= deadline)
+      {
+        m_state.store(connection_state::broken, std::memory_order_release);
+        return false;
+      }
+      // pw_thread_loop_timed_wait has whole-second granularity; the deadline
+      // check above bounds the total wait. It releases the lock while waiting
+      // (so the worker can iterate) and re-takes it before returning.
+      const auto secs
+          = std::chrono::duration_cast<std::chrono::seconds>(deadline - now).count();
+      const int wait_sec = static_cast<int>(secs < 1 ? 1 : secs + 1);
+      const int r = pw.thread_loop_timed_wait(m_thread_loop, wait_sec);
+      if (r < 0 && r != -ETIMEDOUT)
+      {
+        m_state.store(connection_state::broken, std::memory_order_release);
+        return false;
+      }
+    }
+    return finalize_sync();
+  }
+
+  // Main-loop mode: no worker thread exists, so the caller owns iteration.
+  bool do_sync_iterate(std::chrono::steady_clock::time_point deadline)
   {
     m_sync_done.store(0, std::memory_order_release);
     m_sync_error.store(0, std::memory_order_release);
@@ -851,7 +907,11 @@ private:
         return false;
       }
     }
+    return finalize_sync();
+  }
 
+  bool finalize_sync() noexcept
+  {
     if (m_sync_error.load(std::memory_order_acquire) != 0)
     {
       m_state.store(connection_state::broken, std::memory_order_release);
