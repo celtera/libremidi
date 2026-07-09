@@ -197,19 +197,16 @@ public:
     using clk = std::chrono::steady_clock;
     const auto t_end = clk::now() + deadline;
 
-    if (m_cfg.kind == loop_kind::thread)
+    if (m_cfg.kind == loop_kind::thread && !is_in_loop_thread())
     {
-      pw.thread_loop_lock(m_thread_loop);
-      struct unlock_guard
-      {
-        const api& pw;
-        pw_thread_loop* loop;
-        ~unlock_guard() { pw.thread_loop_unlock(loop); }
-      } guard{pw, m_thread_loop};
-      return do_sync_thread_locked(t_end);
+      return do_sync_thread(t_end);
     }
     else
     {
+      // Main-loop mode, or already on the thread-loop worker: we own the loop
+      // here, so drive iteration directly. Blocking from the worker would
+      // starve the loop, and re-locking pipewire's recursive mutex across a
+      // condition wait corrupts its accounting ('recurse > 0' in do_unlock).
       return do_sync_iterate(t_end);
     }
   }
@@ -303,6 +300,19 @@ public:
     {
       return std::forward<F>(fn)();
     }
+    // pw_loop_invoke(block=true) releases and re-takes the thread-loop lock
+    // around its wait (via the loop control hooks), so it MUST run with the
+    // lock held exactly once. Calling it unlocked underflows the recurse
+    // counter ('recurse > 0' in do_unlock) and leaves the mutex owned by the
+    // wrong thread, deadlocking a later pw_thread_loop_stop.
+    auto& pw = load();
+    pw.thread_loop_lock(m_thread_loop);
+    struct unlock_guard
+    {
+      const api& pw;
+      pw_thread_loop* loop;
+      ~unlock_guard() { pw.thread_loop_unlock(loop); }
+    } guard{pw, m_thread_loop};
     if constexpr (std::is_void_v<R>)
     {
       FR f{std::forward<F>(fn)};
@@ -440,6 +450,11 @@ private:
   std::atomic<int> m_sync_seq{0};
   std::atomic<int> m_sync_done{0};
   std::atomic<int> m_sync_error{0};
+
+  // do_sync_thread() waits here; wake_sync_waiter() (worker thread) notifies.
+  // A private CV keeps application waiting off pipewire's recursive loop lock.
+  std::mutex m_sync_mtx;
+  std::condition_variable m_sync_cv;
 
   // FIXME lock-free?
   mutable std::mutex m_graph_mtx;
@@ -815,15 +830,16 @@ private:
     self->wake_sync_waiter();
   }
 
-  // Wakes a thread-loop synchronize() blocked in pw_thread_loop_timed_wait.
-  // Runs from the worker thread (holds the loop lock) during event dispatch.
+  // Wakes do_sync_thread(), which waits on m_sync_cv. Runs from the worker
+  // thread during dispatch; the brief m_sync_mtx lock orders the flag store
+  // with the waiter without nesting an application wait inside pipewire's
+  // recursive loop lock.
   void wake_sync_waiter() noexcept
   {
-    if (m_cfg.kind != loop_kind::thread || !m_thread_loop)
-      return;
-    auto& pw = load();
-    if (pw.thread_loop_signal)
-      pw.thread_loop_signal(m_thread_loop, false);
+    {
+      std::lock_guard<std::mutex> lk{m_sync_mtx};
+    }
+    m_sync_cv.notify_all();
   }
 
   void install_core_listener() noexcept
@@ -846,39 +862,33 @@ private:
     pw_core_add_listener(m_core, &m_core_listener, &events, this);
   }
 
-  // Thread-loop mode: the worker thread owns iteration. We must NOT call
-  // pw_loop_iterate ourselves — two threads iterating one pw_loop corrupt
-  // its per-source dispatch bookkeeping (s->priv / s->rmask) and double-fire
-  // socket callbacks, crashing in on_remote_data on a freed connection.
-  // Issue the sync and block on the loop's condition variable instead; the
-  // worker drives the loop and wakes us via wake_sync_waiter().
-  bool do_sync_thread_locked(std::chrono::steady_clock::time_point deadline)
+  // Thread-loop sync from a foreign thread: the worker owns iteration, so take
+  // the loop lock only briefly to issue the sync, then wait on a private
+  // condition variable. We must neither iterate the loop ourselves (two
+  // threads iterating one pw_loop corrupt its per-source dispatch state) nor
+  // hold pipewire's recursive loop lock across the wait (pthread_cond_wait
+  // cannot fully release a recursively-held mutex, so it starves the worker
+  // and corrupts the lock: 'recurse > 0' in do_unlock).
+  bool do_sync_thread(std::chrono::steady_clock::time_point deadline)
   {
     auto& pw = load();
     m_sync_done.store(0, std::memory_order_release);
     m_sync_error.store(0, std::memory_order_release);
 
-    int seq = pw_core_sync(m_core, PW_ID_CORE, 0);
-    m_sync_seq.store(seq, std::memory_order_release);
-
-    using clk = std::chrono::steady_clock;
-    while (m_sync_done.load(std::memory_order_acquire) == 0
-           && m_sync_error.load(std::memory_order_acquire) == 0)
     {
-      const auto now = clk::now();
-      if (now >= deadline)
-      {
-        m_state.store(connection_state::broken, std::memory_order_release);
-        return false;
-      }
-      // pw_thread_loop_timed_wait has whole-second granularity; the deadline
-      // check above bounds the total wait. It releases the lock while waiting
-      // (so the worker can iterate) and re-takes it before returning.
-      const auto secs
-          = std::chrono::duration_cast<std::chrono::seconds>(deadline - now).count();
-      const int wait_sec = static_cast<int>(secs < 1 ? 1 : secs + 1);
-      const int r = pw.thread_loop_timed_wait(m_thread_loop, wait_sec);
-      if (r < 0 && r != -ETIMEDOUT)
+      pw.thread_loop_lock(m_thread_loop);
+      int seq = pw_core_sync(m_core, PW_ID_CORE, 0);
+      m_sync_seq.store(seq, std::memory_order_release);
+      pw.thread_loop_unlock(m_thread_loop);
+    }
+
+    {
+      std::unique_lock<std::mutex> lk{m_sync_mtx};
+      const bool ready = m_sync_cv.wait_until(lk, deadline, [this] {
+        return m_sync_done.load(std::memory_order_acquire) != 0
+               || m_sync_error.load(std::memory_order_acquire) != 0;
+      });
+      if (!ready)
       {
         m_state.store(connection_state::broken, std::memory_order_release);
         return false;
