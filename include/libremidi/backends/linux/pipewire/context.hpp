@@ -308,7 +308,13 @@ public:
         }
         return 0;
       };
-      pw_loop_invoke(m_loop, trampoline, 0, nullptr, 0, /*block=*/true, &f);
+      // A blocking pw_loop_invoke from a foreign thread fires the loop
+      // control hooks (thread-loop unlock before the wait / lock after),
+      // which REQUIRE the caller to hold the thread-loop lock. Calling
+      // without it underflows the recurse counter (refused unlock) and
+      // then acquires the mutex on the way out, deadlocking the loop.
+      with_lock(
+          [&] { pw_loop_invoke(m_loop, trampoline, 0, nullptr, 0, /*block=*/true, &f); });
     }
     else
     {
@@ -330,7 +336,9 @@ public:
         }
         return 0;
       };
-      pw_loop_invoke(m_loop, trampoline, 0, nullptr, 0, /*block=*/true, &p);
+      // See the void branch: blocking invokes require the thread-loop lock.
+      with_lock(
+          [&] { pw_loop_invoke(m_loop, trampoline, 0, nullptr, 0, /*block=*/true, &p); });
       return std::move(*p.result);
     }
   }
