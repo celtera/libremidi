@@ -175,7 +175,7 @@ public:
 
     for (auto& obs : m_observers)
     {
-      obs->update(m_current_inputs, m_current_outputs);
+      obs->update(m_current_inputs, m_current_outputs, true);
     }
   }
 
