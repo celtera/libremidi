@@ -31,7 +31,7 @@ jobs:
         sudo apt update
         sudo apt install -y ninja-build
 
-    - uses: mymindstorm/setup-emsdk@v14
+    - uses: mymindstorm/setup-emsdk@v16
 
     # Build the library and the emscripten example so the WebMIDI backend
     # (backends/emscripten/*) is actually compiled -- it is only ever built for
