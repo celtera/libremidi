@@ -730,90 +730,124 @@ struct remote_control_protocol
           return 0x00;
       }
   }
-  static uint8_t charmap_lcd(char c)
+
+
+
+//  // lookup table according to https://github.com/NicoG60/TouchMCU/blob/main/doc/mackie_control_protocol.md#lcd-bitmap-font-character-table
+//  static constexpr uint8_t charmap_lcd_lut[256] = {
+//      0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, // special signs
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F, // like ASCII SPACE, ! ... /
+//      0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F, // like ASCII 0, 1 ... ?
+//      0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, // like ASCII @, A ... O
+//      0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F, //
+//      0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F, //
+//      0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F, //
+//
+//      // map anything above 0x7F to space
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//  };
+//
+  // NOTE
+  static inline uint8_t charmap_lcd(char c)
   {
-    // FIXME there are some more characters but what to map them to ? :)
-    if (c >= 'a' && c <= 'z')
-      return c - 'a' + 0x61;
-    else if (c >= 'A' && c <= 'Z')
-      return c - 'A' + 0x41;
-    else if (c >= '0' && c <= '9')
-      return c - '0' + 0x30;
-    else
-      switch (c)
-      {
-        case '!':
-          return 0x21;
-        case '"':
-          return 0x22;
-        case '#':
-          return 0x23;
-        case '$':
-          return 0x24;
-        case '%':
-          return 0x25;
-        case '&':
-          return 0x26;
-        case '\'':
-          return 0x27;
-        case '(':
-          return 0x28;
-        case ')':
-          return 0x29;
-        case '*':
-          return 0x2A;
-        case '+':
-          return 0x2B;
-        case ',':
-          return 0x2C;
-        case '-':
-          return 0x2D;
-        case '.':
-          return 0x2E;
-        case '/':
-          return 0x2F;
-
-        case ':':
-          return 0x3A;
-        case ';':
-          return 0x3B;
-        case '<':
-          return 0x3C;
-        case '=':
-          return 0x3D;
-        case '>':
-          return 0x3E;
-        case '?':
-          return 0x3F;
-
-        case '@':
-          return 0x40;
-        case '[':
-          return 0x5B;
-        case '~': // Yen symbol... builtin mojibake?
-          return 0x5C;
-        case ']':
-          return 0x5D;
-        case '^':
-          return 0x5E;
-        case '_':
-          return 0x5F;
-        case '`':
-          return 0x60;
-        case '{':
-          return 0x7B;
-        case '|':
-          return 0x7C;
-        case '}':
-          return 0x7D;
-        case '\u000E':
-          return 0x7E;
-        case '\u000F':
-          return 0x7F;
-        default:
-          return c; // gives access to the bubble first row 0x00 > 0x0F
-      }
+//    return charmap_lcd_lut[c];
+    return c & 0x7F;
   }
+
+//  static uint8_t charmap_lcd(char c)
+//  {
+//    return c & 0x7f;
+//
+//    // FIXME there are some more characters but what to map them to ? :)
+//    if (c >= 'a' && c <= 'z')
+//      return c - 'a' + 0x61;
+//    else if (c >= 'A' && c <= 'Z')
+//      return c - 'A' + 0x41;
+//    else if (c >= '0' && c <= '9')
+//      return c - '0' + 0x30;
+//    else
+//      switch (c)
+//      {
+//        case '!':
+//          return 0x21;
+//        case '"':
+//          return 0x22;
+//        case '#':
+//          return 0x23;
+//        case '$':
+//          return 0x24;
+//        case '%':
+//          return 0x25;
+//        case '&':
+//          return 0x26;
+//        case '\'':
+//          return 0x27;
+//        case '(':
+//          return 0x28;
+//        case ')':
+//          return 0x29;
+//        case '*':
+//          return 0x2A;
+//        case '+':
+//          return 0x2B;
+//        case ',':
+//          return 0x2C;
+//        case '-':
+//          return 0x2D;
+//        case '.':
+//          return 0x2E;
+//        case '/':
+//          return 0x2F;
+//
+//        case ':':
+//          return 0x3A;
+//        case ';':
+//          return 0x3B;
+//        case '<':
+//          return 0x3C;
+//        case '=':
+//          return 0x3D;
+//        case '>':
+//          return 0x3E;
+//        case '?':
+//          return 0x3F;
+//
+//        case '@':
+//          return 0x40;
+//        case '[':
+//          return 0x5B;
+//        case '~': // Yen symbol... builtin mojibake?
+//          return 0x5C;
+//        case ']':
+//          return 0x5D;
+//        case '^':
+//          return 0x5E;
+//        case '_':
+//          return 0x5F;
+//        case '`':
+//          return 0x60;
+//        case '{':
+//          return 0x7B;
+//        case '|':
+//          return 0x7C;
+//        case '}':
+//          return 0x7D;
+//        case '\u000E':
+//          return 0x7E;
+//        case '\u000F':
+//          return 0x7F;
+//        default:
+//          return c; // gives access to the bubble first row 0x00 > 0x0F
+//      }
+//  }
 };
 
 struct rcp_configuration
@@ -846,7 +880,6 @@ struct remote_control_processor : libremidi::error_handler
     assert(configuration.midi_out);
 
     // no sanity checking of device type
-    // maybe issue a warning?
     impl.type = conf.device_type;
 
     if (!configuration.on_error)
@@ -874,6 +907,8 @@ struct remote_control_processor : libremidi::error_handler
   void start()
   {
     current_state = waiting_for_query;
+
+    // NOTE on x-touch hardware device did not observe any response to these queries
     configuration.midi_out(impl.device_query());
     configuration.midi_out(impl.firmware_version_request());
   }
@@ -896,6 +931,7 @@ struct remote_control_processor : libremidi::error_handler
               bytes[1] == remote_control_protocol::mackie_manufacturer_id[1] &&
               bytes[2] == remote_control_protocol::mackie_manufacturer_id[2])
           {
+            //should this be updated automatically?
             impl.type = static_cast<rcp::device_type>(bytes[3]);
 
             std::cerr << "device type " << (int) impl.type << std::endl;
