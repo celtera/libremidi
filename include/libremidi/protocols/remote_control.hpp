@@ -16,8 +16,21 @@
 
 NAMESPACE_LIBREMIDI
 {
-// A clean-room reverse-engineered remote control protocol compatible with many hardware devices.
-// Thanks https://github.com/NicoG60/TouchMCU !
+/**
+ * A clean-room reverse-engineered remote control protocol compatible with many hardware devices.
+ * Thanks https://github.com/NicoG60/TouchMCU !
+ *
+ * X-Touch screen colors RE from extender unit:
+ * Command Format := <mackie control xt type> <set colors command> 8*<color>
+ *  <set colors command> := 0x72
+ *  <color> := [0 - 7] (on-off bitmap of RGB colors LSB = R)
+ * Example (setting each screen a different color): 15720001020304050607
+ *
+ * @TODO Check with actual hardware having all the control elements
+ *
+ * @TODO Desired device support:
+ * - MIDIPLUS (Waves) FIT Controller
+ */
 struct remote_control_protocol
 {
   static constexpr uint8_t mackie_manufacturer_id[3] = {0,0,0x66};
@@ -148,54 +161,6 @@ struct remote_control_protocol
 
   static constexpr int channel_count = 8;
 
-  enum class channel_index : uint8_t
-  {
-    channel_1 = 0x00,
-    channel_2 = 0x01,
-    channel_3 = 0x02,
-    channel_4 = 0x03,
-    channel_5 = 0x04,
-    channel_6 = 0x05,
-    channel_7 = 0x06,
-    channel_8 = 0x07,
-    channel_main = 0x08
-  };
-//
-//  enum class pot : uint8_t
-//  {
-//    pot_0 = 0x00,
-//    pot_1 = 0x01,
-//    pot_2 = 0x02,
-//    pot_3 = 0x03,
-//    pot_4 = 0x04,
-//    pot_5 = 0x05,
-//    pot_6 = 0x06,
-//    pot_7 = 0x07,
-//  };
-
-//  struct vpot
-//  {
-//    pot index;
-//    led_state state;
-//    led_ring_mode mode;
-//    uint8_t value;
-//  };
-
-
-//  enum class fader : uint8_t
-//  {
-//    fader_0 = 0x00,
-//    fader_1 = 0x01,
-//    fader_2 = 0x02,
-//    fader_3 = 0x03,
-//    fader_4 = 0x04,
-//    fader_5 = 0x05,
-//    fader_6 = 0x06,
-//    fader_7 = 0x07,
-//    fader_master = 0x08,
-//  };
-//  static constexpr uint8_t
-
   // control changes
   enum class mixer_control : uint8_t
   {
@@ -279,8 +244,6 @@ struct remote_control_protocol
   }
 
   // note events
-
-
   enum class mixer_command : uint8_t
   {
     // vpot_click
@@ -448,27 +411,6 @@ struct remote_control_protocol
     type_other = relay_click
   };
 
-
-//  enum class mixer_command_type : uint16_t
-//  {
-//    vpot_click = (uint16_t)mixer_command::vpot_click_0,
-//    rec = (uint16_t)mixer_command::rec_0,
-//    solo = (uint16_t)mixer_command::solo_0,
-//    mute = (uint16_t)mixer_command::mute_0,
-//    sel = (uint16_t)mixer_command::sel_0,
-//    assign = (uint16_t)mixer_command::assign_track,
-//    channels = (uint16_t)mixer_command::0x2E,
-//    f = 0x36,
-//    page = 0x3E,
-//    meta = 0x46,
-//    control = 0x50,
-//    transport = 0x54,
-//    user = 0x66,
-//    fader_touched = 0x68,
-//    leds = 0x71,
-//    other = 0xffff
-//  };
-
   static mixer_command which_mixer_command_type(mixer_command cmd)
   {
     if (mixer_command::vpot_click_0 <= cmd && cmd <= mixer_command::vpot_click_7) return mixer_command::type_vpot_click;
@@ -505,7 +447,7 @@ struct remote_control_protocol
   template <std::size_t N>
   using arr = std::array<uint8_t, N>;
 
-    device_type type = device_type::mackie_control;
+  device_type type;
 
   channel_color_xt channel_colors[8] = {channel_color_xt::black, channel_color_xt::black, channel_color_xt::black, channel_color_xt::black, channel_color_xt::black, channel_color_xt::black, channel_color_xt::black, channel_color_xt::black};
 
@@ -589,11 +531,13 @@ struct remote_control_protocol
   auto update_lcd(std::string_view txt, int pos)
   {
     // FIXME
+    // valid length?
     if (pos < 0 || lcd_total_len <= pos)
       return libremidi::message{};
 
     int len = int(std::ssize(txt));
 
+    // length sanity check
     if (len > (lcd_total_len - pos))
     {
       txt = txt.substr(0, lcd_total_len - pos);
@@ -601,13 +545,11 @@ struct remote_control_protocol
     }
 
     uint8_t buf[128];
-    const int N = std::min(len, lcd_total_len - pos);
-    for (int i = 0; i < N; i++)
+
+    for (int i = 0; i < len; i++)
     {
       buf[i + pos] = charmap_lcd(txt[i]);
     }
-//    buf[55] = '\n';
-//    buf[111] = '\n';
 
     uint8_t cmd_pos = pos;
 
@@ -617,12 +559,12 @@ struct remote_control_protocol
   auto update_lcd(std::string_view txt)
   {
     uint8_t buf[lcd_total_len] = {};
+
     for (int i = 0; i < std::min(int(std::ssize(txt)), lcd_total_len); i++)
     {
       buf[i] = charmap_lcd(txt[i]);
     }
-//    buf[55] = '\n';
-//    buf[111] = '\n';
+
     return make_command(command_to_device::update_lcd, arr<1>{0}, std::span(buf, lcd_total_len));
   }
 
@@ -883,15 +825,6 @@ struct rcp_configuration
   std::function<void(libremidi::remote_control_protocol::mixer_control, int)> on_control;
   std::function<void(uint8_t, uint16_t)> on_fader;
 
-//  std::function<void(uint8_t, int8_t)> on_vpot_change = nullptr;
-//  std::function<void(uint8_t, bool)> on_vpot_click = nullptr;
-//  std::function<void(uint8_t, bool)> on_rec_click = nullptr;
-//  std::function<void(uint8_t, bool)> on_solo_click = nullptr;
-//  std::function<void(uint8_t, bool)> on_mute_click = nullptr;
-//  std::function<void(uint8_t, bool)> on_sel_click = nullptr;
-////  std::function<void(uint8_t, bool)> on_assign_click = nullptr;
-//  std::function<void(uint8_t, bool)> on_function_click = nullptr;
-
   libremidi::midi_error_callback on_error{};
 };
 
@@ -906,6 +839,8 @@ struct remote_control_processor : libremidi::error_handler
   {
     assert(configuration.midi_out);
 
+    // no sanity checking of device type
+    // maybe issue a warning?
     impl.type = conf.device_type;
 
     if (!configuration.on_error)
@@ -972,20 +907,7 @@ struct remote_control_processor : libremidi::error_handler
         break;
       case libremidi::message_type::NOTE_ON:
         {
-//          auto t = rcp::which_mixer_command_type(message[1]);
-//          auto i = rcp::which_mixer_command_index(t, message[1]);
           auto pressed = message[2] > 0;
-//
-//          // first check if particular callbacks have been set for different commands
-//          if (t == rcp::mixer_command::type_vpot_click && configuration.on_vpot_click)
-//            configuration.on_vpot_click(i, pressed);
-//          if (t == rcp::mixer_command::type_ && configuration.on_sel_click)
-//            configuration.on_sel_click(i, pressed);
-//          if (t == rcp::mixer_command::type_sel && configuration.on_sel_click)
-//            configuration.on_sel_click(i, pressed);
-//
-//          // if no particular callbacks have been set, use the on_command callback as fallback
-//          else
             configuration.on_command(static_cast<rcp::mixer_command>(message[1]), pressed);
         }
         break;
@@ -1120,7 +1042,7 @@ struct remote_control_processor : libremidi::error_handler
     configuration.midi_out(ce::control_change(1, to_underlying(c), value));
   }
 
-  inline void vpot(remote_control_protocol::channel_index index, remote_control_protocol::led_state state, remote_control_protocol::led_ring_mode mode, uint8_t value)
+  inline void vpot(uint8_t index, remote_control_protocol::led_state state, remote_control_protocol::led_ring_mode mode, uint8_t value)
   {
     control(
       (remote_control_protocol::mixer_control)((int)remote_control_protocol::mixer_control::vpot_led_0 + (int)index),

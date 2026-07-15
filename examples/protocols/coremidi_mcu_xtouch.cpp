@@ -54,7 +54,7 @@ struct my_xtouch_app
 
   struct vpot_st
   {
-    mcu::channel_index index;
+    uint8_t index;
     mcu::led_state state = mcu::led_state::off;
     mcu::led_ring_mode mode = mcu::led_ring_mode::mode_0;
     uint8_t value = 0;
@@ -86,14 +86,14 @@ struct my_xtouch_app
   } buttons;
 
   struct vpot_st vpots[8] = {
-      {.index = mcu::channel_index::channel_1, .mode = mcu::led_ring_mode::mode_0, .state = mcu::led_state::off},
-      {.index = mcu::channel_index::channel_2, .mode = mcu::led_ring_mode::mode_1, .state = mcu::led_state::off},
-      {.index = mcu::channel_index::channel_3, .mode = mcu::led_ring_mode::mode_2, .state = mcu::led_state::on},
-      {.index = mcu::channel_index::channel_4, .mode = mcu::led_ring_mode::mode_3, .state = mcu::led_state::on},
-      {.index = mcu::channel_index::channel_5, .mode = mcu::led_ring_mode::mode_0, .value = 6},
-      {.index = mcu::channel_index::channel_6, .mode = mcu::led_ring_mode::mode_1, .value = 6},
-      {.index = mcu::channel_index::channel_7, .mode = mcu::led_ring_mode::mode_2, .value = 6},
-      {.index = mcu::channel_index::channel_8, .mode = mcu::led_ring_mode::mode_3, .value = 6}
+      {.index = 0, .mode = mcu::led_ring_mode::mode_0, .state = mcu::led_state::off},
+      {.index = 1, .mode = mcu::led_ring_mode::mode_1, .state = mcu::led_state::off},
+      {.index = 2, .mode = mcu::led_ring_mode::mode_2, .state = mcu::led_state::on},
+      {.index = 3, .mode = mcu::led_ring_mode::mode_3, .state = mcu::led_state::on},
+      {.index = 4, .mode = mcu::led_ring_mode::mode_0, .value = 6},
+      {.index = 5, .mode = mcu::led_ring_mode::mode_1, .value = 6},
+      {.index = 6, .mode = mcu::led_ring_mode::mode_2, .value = 6},
+      {.index = 7, .mode = mcu::led_ring_mode::mode_3, .value = 6}
   };
 
       my_xtouch_app()
@@ -154,12 +154,6 @@ struct my_xtouch_app
     std::cout << "Starting app.." << std::endl;
     state = State::Starting;
 
-//    auto callback = [&](int port, const libremidi::message& msg) {
-//      std::cout << msg << std::endl;
-//      midiout[port].send_message(msg);
-//    };
-
-
 
 #if defined(_WIN32) && __has_include(<winrt/base.h>)
     winrt::init_apartment();
@@ -203,7 +197,6 @@ struct my_xtouch_app
 
     // Set-up the remote control API.
     // Here we only do some logging, this is where commands sqall be handled.
-//    libremidi::remote_control_processor rcp{
     rcp = new libremidi::remote_control_processor{
         {
             .device_type = kDeviceType,
@@ -321,7 +314,6 @@ struct my_xtouch_app
             }
         }
     };
-//rcp.command()
 
     // Open the ports
     if (auto err = midi_in->open_port(ip); err != stdx::error{})
