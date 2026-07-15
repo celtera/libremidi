@@ -55,18 +55,17 @@ struct my_xtouch_app
   struct vpot_st
   {
     uint8_t index;
-    mcu::led_state state = mcu::led_state::off;
+    bool state = false;
     mcu::led_ring_mode mode = mcu::led_ring_mode::mode_0;
     uint8_t value = 0;
     void change_value(int change){
-      if (change > 0 && value < mcu::vpot_max_value-1) value++;
-      else if (change < 0 && value > 0) value--;
+      if (change > 0 && value < mcu::vpot_max_value[(uint8_t)mode])
+        value++;
+      else if (change < 0 && value > mcu::vpot_min_value[(uint8_t)mode])
+        value--;
     }
     void toggle_led_state(){
-      if (state == mcu::led_state::off)
-        state = mcu::led_state::on;
-      else
-        state = mcu::led_state::off;
+      state = !state;
     }
   };
 
@@ -86,10 +85,10 @@ struct my_xtouch_app
   } buttons;
 
   struct vpot_st vpots[8] = {
-      {.index = 0, .mode = mcu::led_ring_mode::mode_0, .state = mcu::led_state::off},
-      {.index = 1, .mode = mcu::led_ring_mode::mode_1, .state = mcu::led_state::off},
-      {.index = 2, .mode = mcu::led_ring_mode::mode_2, .state = mcu::led_state::on},
-      {.index = 3, .mode = mcu::led_ring_mode::mode_3, .state = mcu::led_state::on},
+      {.index = 0, .mode = mcu::led_ring_mode::mode_0, .value=1, .state = false},
+      {.index = 1, .mode = mcu::led_ring_mode::mode_1, .value=1, .state = false},
+      {.index = 2, .mode = mcu::led_ring_mode::mode_2, .value=1, .state = true},
+      {.index = 3, .mode = mcu::led_ring_mode::mode_3, .value=1, .state = true},
       {.index = 4, .mode = mcu::led_ring_mode::mode_0, .value = 6},
       {.index = 5, .mode = mcu::led_ring_mode::mode_1, .value = 6},
       {.index = 6, .mode = mcu::led_ring_mode::mode_2, .value = 6},
@@ -140,7 +139,7 @@ struct my_xtouch_app
   {
     assert(rcp);
 
-    if (i == -1){
+    if (i != -1){
       rcp->vpot(vpots[i].index, vpots[i].state, vpots[i].mode, vpots[i].value);
     } else {
       for (i = 0; i < 8; i++){
@@ -349,7 +348,6 @@ struct my_xtouch_app
 
       std::time_t result = std::time(nullptr);
       auto ctime = std::localtime(&result);
-
       rcp->update_timecode(ctime->tm_hour, ctime->tm_min, ctime->tm_sec, 0);
 
       rcp->update_lcd_ch_line(labels1[ (i/8 + i%8) % 8 ], i % 8, 0);
@@ -358,8 +356,9 @@ struct my_xtouch_app
       rcp->set_channel_color(i % 8, colors[(i/8 + i%8) % 8]);
       rcp->update_channel_colors();
 
-      rcp->fader(i % 8, (200 * i) % 16384);
+//      rcp->me
 
+      rcp->fader(i % 8, (200 * i) % 16384);
     }
 
     state = State::Off;

@@ -138,25 +138,29 @@ struct remote_control_protocol
   // 0b0LMMVVVV
   // L: toggle underneath LED
   // MM: mode as led_ring_mode
-  // VVVV: value in [0,11]
+  // VVVV: value range depends on mode (0 = off, 1 -> at least one led, max -> see below)
 
-  static constexpr int vpot_max_value = 11;
+  static constexpr uint8_t vpot_mask_state = 0b01000000;
+  static constexpr uint8_t vpot_mask_mode = 0b00110000;
+  static constexpr uint8_t vpot_mask_value = 0b00001111;
+
+  static constexpr uint8_t vpot_min_value[4] = {1,1,1,1};
+  static constexpr uint8_t vpot_max_value[4] = {11,11,11,6};
+  static constexpr uint8_t vpot_mode_bits[4] = {0b000000, 0b010000, 0b100000, 0b110000};
 
 
   enum class led_state : uint8_t
   {
     off = 0,
     on = 0b01000000,
-    mask = on
   };
 
   enum class led_ring_mode : uint8_t
   {
-    mode_0 = 0b000000, // one led only
-    mode_1 = 0b010000, // pan pot
-    mode_2 = 0b100000, // fill leds from left
-    mode_3 = 0b110000, // fill leds from middle
-    mask = mode_3,
+    mode_0 = 0, // one led only
+    mode_1 = 1, // pan pot
+    mode_2 = 2, // fill leds from left
+    mode_3 = 3, // fill leds from middle
   };
 
   static constexpr int channel_count = 8;
@@ -1042,11 +1046,11 @@ struct remote_control_processor : libremidi::error_handler
     configuration.midi_out(ce::control_change(1, to_underlying(c), value));
   }
 
-  inline void vpot(uint8_t index, remote_control_protocol::led_state state, remote_control_protocol::led_ring_mode mode, uint8_t value)
+  inline void vpot(uint8_t index, bool state, remote_control_protocol::led_ring_mode mode, uint8_t value)
   {
     control(
-      (remote_control_protocol::mixer_control)((int)remote_control_protocol::mixer_control::vpot_led_0 + (int)index),
-      (int)state | (int)mode | value
+      (remote_control_protocol::mixer_control)((uint8_t)remote_control_protocol::mixer_control::vpot_led_0 + index),
+      (state ? remote_control_protocol::vpot_mask_state : 0) | remote_control_protocol::vpot_mode_bits[(uint8_t)mode] | value
     );
   }
 
