@@ -81,6 +81,10 @@ struct remote_control_protocol
     version_reply = 0x14,
   };
 
+  static constexpr uint8_t channel_meter_mask_index = 0b01110000;
+  static constexpr uint8_t channel_meter_mask_value = 0b00001111;
+  static constexpr uint8_t channel_meter_max_value = 12;
+
   enum class lcd_meter_mode : uint8_t
   {
     horizontal = 0x00,
@@ -149,11 +153,6 @@ struct remote_control_protocol
   static constexpr uint8_t vpot_mode_bits[4] = {0b000000, 0b010000, 0b100000, 0b110000};
 
 
-  enum class led_state : uint8_t
-  {
-    off = 0,
-    on = 0b01000000,
-  };
 
   enum class led_ring_mode : uint8_t
   {
@@ -577,6 +576,8 @@ struct remote_control_protocol
     return make_command(command_to_device::update_channel_colors_xt, std::span((uint8_t*)channel_colors, 8));
   }
 
+
+
   auto firmware_version_request()
   {
     return make_command(command_to_device::firmware_version_request, arr<1>{0});
@@ -605,6 +606,7 @@ struct remote_control_protocol
   {
     return make_command(command_to_device::global_lcd_meter_mode, arr<1>{to_underlying(mode)});
   }
+
 
   auto faders_to_minimum() { return make_command(command_to_device::faders_to_minimum); }
 
@@ -1058,6 +1060,12 @@ struct remote_control_processor : libremidi::error_handler
   {
     using ce = libremidi::channel_events;
     configuration.midi_out(ce::pitch_bend(i + 1, value));
+  }
+
+  void channel_meter(uint8_t i, uint8_t value)
+  {
+    using ce = libremidi::channel_events;
+    configuration.midi_out(ce::aftertouch(1, ((i<<4) & rcp::channel_meter_mask_index) | (value & rcp::channel_meter_mask_value)));
   }
 
   // State machine

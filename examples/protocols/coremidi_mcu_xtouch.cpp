@@ -350,15 +350,15 @@ struct my_xtouch_app
       auto ctime = std::localtime(&result);
       rcp->update_timecode(ctime->tm_hour, ctime->tm_min, ctime->tm_sec, 0);
 
-      rcp->update_lcd_ch_line(labels1[ (i/8 + i%8) % 8 ], i % 8, 0);
-      rcp->update_lcd_ch_line(labels2[ (i/8 + i%8) % 8 ], i % 8, 1);
+      rcp->update_lcd_ch_line(labels1[ (i/8 + i%8) % 8 ], i % mcu::channel_count, 0);
+      rcp->update_lcd_ch_line(labels2[ (i/8 + i%8) % 8 ], i % mcu::channel_count, 1);
 
-      rcp->set_channel_color(i % 8, colors[(i/8 + i%8) % 8]);
+      rcp->set_channel_color(i % mcu::channel_count, colors[(i/8 + i%8) % 8]);
       rcp->update_channel_colors();
 
-//      rcp->me
+      rcp->channel_meter(i % mcu::channel_count, i % mcu::channel_meter_max_value);
 
-      rcp->fader(i % 8, (200 * i) % 16384);
+      rcp->fader(i % mcu::channel_count, (200 * i) % 16384);
     }
 
     state = State::Off;
