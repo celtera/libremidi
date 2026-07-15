@@ -27,6 +27,8 @@ std::string enum_name(auto cmd)
 #if defined(__APPLE__)
   #include <CoreMIDI/CoreMIDI.h>
   #include <CoreFoundation/CoreFoundation.h>
+#else
+#error This example was written for CoreMIDI, so you will have to adapt it for your own system
 #endif
 
 #include <chrono>
@@ -34,14 +36,16 @@ std::string enum_name(auto cmd)
 #include <ctime>
 #include <iostream>
 #include <thread>
+#include <signal.h>
 
 using mcu = libremidi::remote_control_protocol;
 using mcu_proc = libremidi::remote_control_processor;
 
 struct my_xtouch_app
 {
-  static constexpr auto api = libremidi::API::COREMIDI;
+  static constexpr auto api = libremidi::API::UNSPECIFIED;
   static constexpr char kDeviceName[] = "X-TOUCH_INT";
+  static constexpr mcu::device_type kDeviceType = mcu::device_type::mackie_control_xt;
 
   enum class State : uint8_t
   {
@@ -50,13 +54,19 @@ struct my_xtouch_app
 
   struct vpot_st
   {
-    mcu::pot index;
+    mcu::channel_index index;
     mcu::led_state state = mcu::led_state::off;
     mcu::led_ring_mode mode = mcu::led_ring_mode::mode_0;
     uint8_t value = 0;
     void change_value(int change){
-      if (change > 0 && value < mcu::vpot_max_value) value++;
+      if (change > 0 && value < mcu::vpot_max_value-1) value++;
       else if (change < 0 && value > 0) value--;
+    }
+    void toggle_led_state(){
+      if (state == mcu::led_state::off)
+        state = mcu::led_state::on;
+      else
+        state = mcu::led_state::off;
     }
   };
 
@@ -64,10 +74,6 @@ struct my_xtouch_app
   State state = State::Off;
 
   MIDIClientRef handle;
-
-
-//  std::vector<libremidi::midi_in> midiin;
-//  std::vector<libremidi::midi_out> midiout;
 
   libremidi::midi_out * midi_out;
   libremidi::midi_in * midi_in;
@@ -80,14 +86,14 @@ struct my_xtouch_app
   } buttons;
 
   struct vpot_st vpots[8] = {
-      {.index = mcu::pot::pot_0, .mode = mcu::led_ring_mode::mode_0, .state = mcu::led_state::off},
-      {.index = mcu::pot::pot_1, .mode = mcu::led_ring_mode::mode_1, .state = mcu::led_state::off},
-      {.index = mcu::pot::pot_2, .mode = mcu::led_ring_mode::mode_2, .state = mcu::led_state::on},
-      {.index = mcu::pot::pot_3, .mode = mcu::led_ring_mode::mode_3, .state = mcu::led_state::on},
-      {.index = mcu::pot::pot_4, .mode = mcu::led_ring_mode::mode_0, .value = 6},
-      {.index = mcu::pot::pot_5, .mode = mcu::led_ring_mode::mode_1, .value = 6},
-      {.index = mcu::pot::pot_6, .mode = mcu::led_ring_mode::mode_2, .value = 6},
-      {.index = mcu::pot::pot_7, .mode = mcu::led_ring_mode::mode_3, .value = 6}
+      {.index = mcu::channel_index::channel_1, .mode = mcu::led_ring_mode::mode_0, .state = mcu::led_state::off},
+      {.index = mcu::channel_index::channel_2, .mode = mcu::led_ring_mode::mode_1, .state = mcu::led_state::off},
+      {.index = mcu::channel_index::channel_3, .mode = mcu::led_ring_mode::mode_2, .state = mcu::led_state::on},
+      {.index = mcu::channel_index::channel_4, .mode = mcu::led_ring_mode::mode_3, .state = mcu::led_state::on},
+      {.index = mcu::channel_index::channel_5, .mode = mcu::led_ring_mode::mode_0, .value = 6},
+      {.index = mcu::channel_index::channel_6, .mode = mcu::led_ring_mode::mode_1, .value = 6},
+      {.index = mcu::channel_index::channel_7, .mode = mcu::led_ring_mode::mode_2, .value = 6},
+      {.index = mcu::channel_index::channel_8, .mode = mcu::led_ring_mode::mode_3, .value = 6}
   };
 
       my_xtouch_app()
@@ -114,26 +120,36 @@ struct my_xtouch_app
     MIDIClientDispose(handle);
   }
 
-  void _update_buttons()
+  void _update_buttons(int i = -1)
   {
     assert(rcp);
 
-    for (int i = 0; i < 8; i++){
+    if (i == -1){
       rcp->command((mcu::mixer_command)((int)(mcu::mixer_command::rec_0) + i), buttons.rec[i]);
       rcp->command((mcu::mixer_command)((int)(mcu::mixer_command::mute_0) + i), buttons.mute[i]);
     }
-  }
-
-  void _update_vpots()
-  {
-    assert(rcp);
-
-    for (int i = 0; i < 8; i++){
-      rcp->vpot(vpots[i].index, vpots[i].state, vpots[i].mode, vpots[i].value);
+    else {
+        for (int i = 0; i < 8; i++){
+          rcp->command((mcu::mixer_command)((int)(mcu::mixer_command::rec_0) + i), buttons.rec[i]);
+          rcp->command((mcu::mixer_command)((int)(mcu::mixer_command::mute_0) + i), buttons.mute[i]);
+        }
     }
   }
 
-  void start_impl()
+  void _update_vpots(int i = -1)
+  {
+    assert(rcp);
+
+    if (i == -1){
+      rcp->vpot(vpots[i].index, vpots[i].state, vpots[i].mode, vpots[i].value);
+    } else {
+      for (i = 0; i < 8; i++){
+        rcp->vpot(vpots[i].index, vpots[i].state, vpots[i].mode, vpots[i].value);
+      }
+    }
+  }
+
+  void _start_impl()
   {
     std::cout << "Starting app.." << std::endl;
     state = State::Starting;
@@ -190,31 +206,90 @@ struct my_xtouch_app
 //    libremidi::remote_control_processor rcp{
     rcp = new libremidi::remote_control_processor{
         {
+            .device_type = kDeviceType,
             .midi_out = [&](libremidi::message&& msg){
               midi_out->send_message(msg);
             },
             .on_command = [&](mcu::mixer_command cmd, bool pressed){
               std::cerr << "command: " << magic_enum::enum_name(cmd) << " -> " << (pressed ? "pressed" : "released") << "\n";
+
               auto type = mcu::which_mixer_command_type(cmd);
-              auto i = 0;
+              auto index = mcu::which_mixer_command_index(type, cmd);
               switch(type){
-                case mcu::mixer_command_type::rec:
+                case mcu::mixer_command::type_rec:
                   if (!pressed) return;
-                  i = (int)cmd - (int)mcu::mixer_command::rec_0;
-                  buttons.rec[i] = !buttons.rec[i];
-                  _update_buttons();
+                  // toggle button state
+                  buttons.rec[index] = !buttons.rec[index];
+                  _update_buttons(index);
                   break;
-                case mcu::mixer_command_type::mute:
+
+                case mcu::mixer_command::type_mute:
                   if (!pressed) return;
-                  i = (int)cmd - (int)mcu::mixer_command::mute_0;
-                  buttons.mute[i] = !buttons.mute[i];
-                  _update_buttons();
+                  // toggle button state
+                  buttons.mute[index] = !buttons.mute[index];
+                  _update_buttons(index);
                   break;
-                case mcu::mixer_command_type::solo:
-                case mcu::mixer_command_type::sel:
+
+                case mcu::mixer_command::type_solo:
+                case mcu::mixer_command::type_sel:
+                  // just light up button while being pressed
                   rcp->command(cmd, pressed);
                   break;
+
+                case mcu::mixer_command::type_vpot_click:
+                  std::cerr << "-> vpot click " << index << std::endl;
+                  vpots[index].toggle_led_state();
+                  _update_vpots(index);
                   break;
+
+                case mcu::mixer_command::type_fader_touched:
+                  std::cerr << "-> fader touched " << index << std::endl;
+                  break;
+
+                case mcu::mixer_command::type_f:
+                  std::cerr << "-> F" << index << std::endl;
+                  break;
+
+                case mcu::mixer_command::type_channel:
+                  switch(cmd) {
+                    case mcu::mixer_command::bank_left:
+                      std::cerr << "-> bank left" << std::endl;
+                      break;
+                    case mcu::mixer_command::bank_right:
+                      std::cerr << "-> bank right" << std::endl;
+                      break;
+                    case mcu::mixer_command::channel_left:
+                      std::cerr << "-> channel left" << std::endl;
+                      break;
+                    case mcu::mixer_command::channel_right:
+                      std::cerr << "-> channel right" << std::endl;
+                      break;
+                    default:
+                      break;
+                  }
+                  break;
+
+                case mcu::mixer_command::type_transport:
+                  switch(cmd){
+                    case mcu::mixer_command::stop:
+                      std::cerr << " -> stop" << std::endl;
+                      break;
+                    case mcu::mixer_command::play:
+                      std::cerr << " -> play" << std::endl;
+                      break;
+                    default:
+                      std::cerr << " -> some transport function" << std::endl;
+                      break;
+                  }
+                  break;
+
+                case mcu::mixer_command::type_leds:
+                case mcu::mixer_command::type_assign:
+                case mcu::mixer_command::type_meta:
+                case mcu::mixer_command::type_control:
+                case mcu::mixer_command::type_page:
+                case mcu::mixer_command::type_user:
+                case mcu::mixer_command::type_other:
                 default:
                   break;
               }
@@ -224,27 +299,25 @@ struct my_xtouch_app
               std::cerr << "control: " << magic_enum::enum_name(ctl) << " -> " << v << "\n";
 
               auto type = mcu::which_mixer_control_type(ctl);
-              auto i = 0;
+              auto index = mcu::which_mixer_control_index(type, ctl);
               auto val = 0;
               switch(type)
               {
-                case mcu::mixer_control_type::vpot_rotation:
-                  i = (int)ctl - (int)mcu::mixer_control::vpot_rotation_0;
-
+                case mcu::mixer_control::type_vpot_rotation:
                   val = mcu::relative_midi_to_value(v);
-                  std::cerr << "relative value= " << val << std::endl;
+                  std::cerr << "-> vpot "  << index << " relative value= " << val << std::endl;
 
-                  vpots[i].change_value(val);
+                  vpots[index].change_value(val);
 
-                  _update_vpots();
+                  _update_vpots(index);
                   break;
 
                 default:
                   break;
               }
             },
-            .on_fader = [](mcu::fader f, uint16_t v) {
-              std::cerr << "fader: " << magic_enum::enum_name(f) << " -> " << v << "\n";
+            .on_fader = [](uint8_t fader, uint16_t v) {
+              std::cerr << "fader: " << (int)fader << " -> " << v << "\n";
             }
         }
     };
@@ -293,7 +366,7 @@ struct my_xtouch_app
       rcp->set_channel_color(i % 8, colors[(i/8 + i%8) % 8]);
       rcp->update_channel_colors();
 
-      rcp->fader(static_cast<mcu::fader>(i % 8), (200 * i) % 16384);
+      rcp->fader(i % 8, (200 * i) % 16384);
 
     }
 
@@ -302,32 +375,59 @@ struct my_xtouch_app
 
   void start(){
     try {
-      start_impl();
+      _start_impl();
     } catch (std::exception e){
       state = State::Off;
       throw e;
     }
   }
 
+  void stop(){
+    state = State::Stopping;
+  }
+
 };
+
+my_xtouch_app * my_app_instance = nullptr;
+
+void SignalHandler(int signal)
+{
+  if (!my_app_instance)
+    exit(EXIT_FAILURE);
+
+  if (my_app_instance->state == my_xtouch_app::State::Running){
+    // Attempt to gracefully stop process.
+    my_app_instance->stop();
+    return;
+  }
+
+  // Force quit if necessary
+  exit(EXIT_FAILURE);
+}
+
+void setupSignalHandler(){
+  // sigintTicks = 0;
+  signal(SIGINT, SignalHandler);
+}
 
 int main()
 {
-  my_xtouch_app app{};
+  setupSignalHandler();
+
+  my_app_instance = new my_xtouch_app();
 
   try {
-    app.start();
+    my_app_instance->start();
   } catch (std::exception e){
     std::cerr << "Failed to start: " << e.what() << std::endl;
   }
 
-  while( app.state == my_xtouch_app::State::Starting);
-    // wait for app to not be starting..
+  while( my_app_instance->state == my_xtouch_app::State::Starting);
+    // wait for app to change state (Running, or stopped, likely)
 
   // if failed to start..
-  if (app.state == my_xtouch_app::State::Off){
-    return 1;
-  }
+  if (my_app_instance->state == my_xtouch_app::State::Off)
+    return EXIT_FAILURE;
 
 #if defined(__APPLE__)
   // On macOS, observation can *only* be done in the main thread
@@ -341,5 +441,5 @@ int main()
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
 #endif
 
-  return 0;
+  return EXIT_SUCCESS;
 }
