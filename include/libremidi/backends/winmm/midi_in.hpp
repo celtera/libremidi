@@ -132,7 +132,8 @@ public:
     midiInReset(this->inHandle);
     midiInStop(this->inHandle);
 
-    for (std::size_t i = 0; i < static_cast<std::size_t>(configuration.sysex_buffer_count); ++i)
+    const int N = std::min((int)std::ssize(this->sysexBuffer), this->configuration.sysex_buffer_count);
+    for (int i = 0; i < N; ++i)
     {
       MMRESULT res{};
 
@@ -156,12 +157,13 @@ public:
       else
       {
         delete[] this->sysexBuffer[i]->lpData;
-        delete[] this->sysexBuffer[i];
+        delete this->sysexBuffer[i];
       }
     }
 
     midiInClose(this->inHandle);
     this->inHandle = nullptr;
+    this->sysexBuffer.clear();
     LeaveCriticalSection(&(this->_mutex));
     return stdx::error{};
   }

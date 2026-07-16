@@ -5,7 +5,7 @@ endif()
 FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2
-    GIT_TAG        v3.15.1
+    GIT_TAG        v3.15.2
     ${CMAKE_FETCHCONTENT_SYSTEM_KEYWORD}
 )
 
@@ -67,3 +67,14 @@ add_test(NAME protocols_test COMMAND protocols_test)
 add_test(NAME midi_stream_decoder_test COMMAND midi_stream_decoder_test)
 add_test(NAME midi_timing_test COMMAND midi_timing_test)
 add_test(NAME rawio_test COMMAND rawio_test)
+
+# PipeWire shared-context regression tests. Standalone programs (no Catch2):
+# each skips with exit 0 when no daemon is reachable and arms a watchdog so a
+# lock-corruption regression fails instead of hanging.
+if(LIBREMIDI_HAS_PIPEWIRE)
+  foreach(_pwtest pipewire_context_sync pipewire_context_reconnect pipewire_context_subscriptions)
+    add_executable(${_pwtest}_test tests/integration/${_pwtest}.cpp)
+    target_link_libraries(${_pwtest}_test PRIVATE libremidi)
+    add_test(NAME ${_pwtest}_test COMMAND ${_pwtest}_test)
+  endforeach()
+endif()

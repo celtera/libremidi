@@ -320,10 +320,15 @@ inline const spa_pod* format_negotiation::build_buffers_param(
       data_type = (1u << SPA_DATA_MemPtr);
       break;
   }
+  // size/stride are RANGES with our tight computation as the minimum:
+  // producers commonly deliver row-padded buffers (GPU-allocated strides),
+  // and a fixed Int here fails the param intersection against any producer
+  // whose size differs — killing the link instead of accepting padding.
   return reinterpret_cast<const spa_pod*>(spa_pod_builder_add_object(
       &builder, SPA_TYPE_OBJECT_ParamBuffers, SPA_PARAM_Buffers, SPA_PARAM_BUFFERS_buffers,
       SPA_POD_CHOICE_RANGE_Int(8, 2, 16), SPA_PARAM_BUFFERS_blocks, SPA_POD_Int(blocks),
-      SPA_PARAM_BUFFERS_size, SPA_POD_Int(size), SPA_PARAM_BUFFERS_stride, SPA_POD_Int(stride),
+      SPA_PARAM_BUFFERS_size, SPA_POD_CHOICE_RANGE_Int(size, size, INT32_MAX),
+      SPA_PARAM_BUFFERS_stride, SPA_POD_CHOICE_RANGE_Int(stride, stride, INT32_MAX),
       SPA_PARAM_BUFFERS_dataType, SPA_POD_CHOICE_FLAGS_Int(data_type)));
 }
 

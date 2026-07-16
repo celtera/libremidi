@@ -33,6 +33,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <type_traits>
@@ -197,31 +198,37 @@ public:
     using clk = std::chrono::steady_clock;
     const auto t_end = clk::now() + deadline;
 
-    if (m_cfg.kind == loop_kind::thread)
+    if (m_cfg.kind == loop_kind::thread && !is_in_loop_thread())
     {
-      pw.thread_loop_lock(m_thread_loop);
-      struct unlock_guard
-      {
-        const api& pw;
-        pw_thread_loop* loop;
-        ~unlock_guard() { pw.thread_loop_unlock(loop); }
-      } guard{pw, m_thread_loop};
-      return do_sync_locked(t_end);
+      return do_sync_thread(t_end);
     }
     else
     {
-      return do_sync_locked(t_end);
+      // Main-loop mode, or already on the thread-loop worker: we own the loop
+      // here, so drive iteration directly. Blocking from the worker would
+      // starve the loop, and re-locking pipewire's recursive mutex across a
+      // condition wait corrupts its accounting ('recurse > 0' in do_unlock).
+      return do_sync_iterate(t_end);
     }
   }
 
   bool reconnect()
   {
-    invoke_sync([this] {
-      tear_down(/*final=*/false);
-      m_state.store(connection_state::connecting, std::memory_order_release);
-      if (!build_connection())
-        m_state.store(connection_state::broken, std::memory_order_release);
-    });
+    // tear_down() stops and destroys the thread loop, so reconnect MUST run
+    // on a thread other than the worker — never via invoke_sync. Doing it on
+    // the loop thread self-destructs the loop: pthread_join(self) is a silent
+    // no-op and pw_thread_loop_destroy then corrupts the lock it runs under
+    // ('recurse > 0' failure) and the invoke never completes (hang).
+    if (is_in_loop_thread())
+      return false;
+
+    tear_down(/*final=*/false);
+    m_state.store(connection_state::connecting, std::memory_order_release);
+    if (!build_connection())
+    {
+      m_state.store(connection_state::broken, std::memory_order_release);
+      return false;
+    }
     if (!synchronize())
       return false;
     m_state.store(connection_state::connected, std::memory_order_release);
@@ -285,54 +292,94 @@ public:
     pw_loop_invoke(m_loop, trampoline, 0, nullptr, 0, /*block=*/false, held);
   }
 
+  // Runs fn on the loop thread and waits for the result. We queue a
+  // NON-blocking pw_loop_invoke rather than block=true because the blocking
+  // path's locking contract is not stable across PipeWire versions: some
+  // releases fire the thread-loop control hooks around the wait (caller must
+  // hold the lock exactly once), the 1.3.0-1.3.80 and 1.5.0-1.5.80 dev series
+  // don't (holding the lock deadlocks). A non-blocking invoke fires no hooks
+  // and needs no lock on any version; we wait on our own condition variable,
+  // bounded by sync_deadline so a teardown race returns instead of hanging.
+  //
+  // The payload is shared_ptr-owned by both sides. On timeout the caller sets
+  // `abandoned` under the payload mutex; the trampoline checks it under the
+  // same mutex, so fn (which captures the caller's frame by reference) either
+  // completes before the timeout or is skipped — never run against a dead frame.
   template <typename F>
   auto invoke_sync(F&& fn) -> std::invoke_result_t<std::remove_cvref_t<F>&>
   {
     using FR = std::remove_cvref_t<F>;
     using R = std::invoke_result_t<FR&>;
-    if (!m_loop || is_in_loop_thread() || m_cfg.kind != loop_kind::thread)
+    if (!m_loop || !m_thread_loop || is_in_loop_thread()
+        || m_cfg.kind != loop_kind::thread)
     {
       return std::forward<F>(fn)();
     }
-    if constexpr (std::is_void_v<R>)
+
+    struct payload
     {
-      FR f{std::forward<F>(fn)};
-      constexpr auto trampoline = +[](spa_loop*, bool, std::uint32_t, const void*, size_t,
-                                      void* user_data) noexcept -> int {
-        try
-        {
-          (*static_cast<FR*>(user_data))();
-        }
-        catch (...)
-        {
-        }
-        return 0;
-      };
-      pw_loop_invoke(m_loop, trampoline, 0, nullptr, 0, /*block=*/true, &f);
-    }
-    else
-    {
-      struct payload
+      FR fn;
+      std::mutex m;
+      std::condition_variable cv;
+      bool done{false};
+      bool abandoned{false};
+      std::conditional_t<std::is_void_v<R>, char, std::optional<R>> result{};
+
+      explicit payload(FR&& f)
+          : fn{std::move(f)}
       {
-        FR fn;
-        std::optional<R> result;
-      };
-      payload p{std::forward<F>(fn), std::nullopt};
-      constexpr auto trampoline = +[](spa_loop*, bool, std::uint32_t, const void*, size_t,
-                                      void* user_data) noexcept -> int {
-        auto& pl = *static_cast<payload*>(user_data);
-        try
+      }
+    };
+
+    auto sp = std::make_shared<payload>(FR{std::forward<F>(fn)});
+    constexpr auto trampoline = +[](spa_loop*, bool, std::uint32_t, const void*,
+                                    size_t, void* user_data) noexcept -> int {
+      auto* spp = static_cast<std::shared_ptr<payload>*>(user_data);
+      auto& pl = **spp;
+      {
+        std::lock_guard lk{pl.m};
+        if (!pl.abandoned)
         {
-          pl.result.emplace(pl.fn());
+          try
+          {
+            if constexpr (std::is_void_v<R>)
+              pl.fn();
+            else
+              pl.result.emplace(pl.fn());
+          }
+          catch (...)
+          {
+          }
+          pl.done = true;
         }
-        catch (...)
-        {
-        }
-        return 0;
-      };
-      pw_loop_invoke(m_loop, trampoline, 0, nullptr, 0, /*block=*/true, &p);
-      return std::move(*p.result);
+      }
+      pl.cv.notify_all();
+      delete spp;
+      return 0;
+    };
+
+    auto* held = new std::shared_ptr<payload>(sp);
+    if (pw_loop_invoke(m_loop, trampoline, 0, nullptr, 0, /*block=*/false, held) < 0)
+    {
+      // Loop rejected the item (teardown/OOM) and will never run it: safe inline.
+      delete held;
+      return sp->fn();
     }
+
+    std::unique_lock lk{sp->m};
+    if (!sp->cv.wait_for(lk, m_cfg.sync_deadline, [&] { return sp->done; }))
+    {
+      // Timed out: abandon the item; the trampoline skips fn if it ever runs.
+      sp->abandoned = true;
+      if constexpr (std::is_void_v<R>)
+        return;
+      else if constexpr (std::is_default_constructible_v<R>)
+        return R{};
+      else
+        throw std::runtime_error("libremidi: pipewire invoke_sync timed out");
+    }
+    if constexpr (!std::is_void_v<R>)
+      return std::move(*sp->result);
   }
 
   graph_snapshot snapshot() const
@@ -431,6 +478,11 @@ private:
   std::atomic<int> m_sync_seq{0};
   std::atomic<int> m_sync_done{0};
   std::atomic<int> m_sync_error{0};
+
+  // do_sync_thread() waits here; wake_sync_waiter() (worker thread) notifies.
+  // A private CV keeps application waiting off pipewire's recursive loop lock.
+  std::mutex m_sync_mtx;
+  std::condition_variable m_sync_cv;
 
   // FIXME lock-free?
   mutable std::mutex m_graph_mtx;
@@ -788,7 +840,10 @@ private:
   {
     auto* self = static_cast<context*>(data);
     if (id == PW_ID_CORE && seq == self->m_sync_seq.load(std::memory_order_acquire))
+    {
       self->m_sync_done.store(1, std::memory_order_release);
+      self->wake_sync_waiter();
+    }
   }
 
   static void on_core_error(
@@ -800,6 +855,19 @@ private:
     {
       self->m_state.store(connection_state::broken, std::memory_order_release);
     }
+    self->wake_sync_waiter();
+  }
+
+  // Wakes do_sync_thread(), which waits on m_sync_cv. Runs from the worker
+  // thread during dispatch; the brief m_sync_mtx lock orders the flag store
+  // with the waiter without nesting an application wait inside pipewire's
+  // recursive loop lock.
+  void wake_sync_waiter() noexcept
+  {
+    {
+      std::lock_guard<std::mutex> lk{m_sync_mtx};
+    }
+    m_sync_cv.notify_all();
   }
 
   void install_core_listener() noexcept
@@ -822,8 +890,43 @@ private:
     pw_core_add_listener(m_core, &m_core_listener, &events, this);
   }
 
-  // Lock must be held in thread-loop mode (drives pw_loop_iterate).
-  bool do_sync_locked(std::chrono::steady_clock::time_point deadline)
+  // Thread-loop sync from a foreign thread: the worker owns iteration, so take
+  // the loop lock only briefly to issue the sync, then wait on a private
+  // condition variable. We must neither iterate the loop ourselves (two
+  // threads iterating one pw_loop corrupt its per-source dispatch state) nor
+  // hold pipewire's recursive loop lock across the wait (pthread_cond_wait
+  // cannot fully release a recursively-held mutex, so it starves the worker
+  // and corrupts the lock: 'recurse > 0' in do_unlock).
+  bool do_sync_thread(std::chrono::steady_clock::time_point deadline)
+  {
+    auto& pw = load();
+    m_sync_done.store(0, std::memory_order_release);
+    m_sync_error.store(0, std::memory_order_release);
+
+    {
+      pw.thread_loop_lock(m_thread_loop);
+      int seq = pw_core_sync(m_core, PW_ID_CORE, 0);
+      m_sync_seq.store(seq, std::memory_order_release);
+      pw.thread_loop_unlock(m_thread_loop);
+    }
+
+    {
+      std::unique_lock<std::mutex> lk{m_sync_mtx};
+      const bool ready = m_sync_cv.wait_until(lk, deadline, [this] {
+        return m_sync_done.load(std::memory_order_acquire) != 0
+               || m_sync_error.load(std::memory_order_acquire) != 0;
+      });
+      if (!ready)
+      {
+        m_state.store(connection_state::broken, std::memory_order_release);
+        return false;
+      }
+    }
+    return finalize_sync();
+  }
+
+  // Main-loop mode: no worker thread exists, so the caller owns iteration.
+  bool do_sync_iterate(std::chrono::steady_clock::time_point deadline)
   {
     m_sync_done.store(0, std::memory_order_release);
     m_sync_error.store(0, std::memory_order_release);
@@ -851,7 +954,11 @@ private:
         return false;
       }
     }
+    return finalize_sync();
+  }
 
+  bool finalize_sync() noexcept
+  {
     if (m_sync_error.load(std::memory_order_acquire) != 0)
     {
       m_state.store(connection_state::broken, std::memory_order_release);
