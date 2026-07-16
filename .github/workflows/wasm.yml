@@ -1,0 +1,47 @@
+name: Emscripten
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - v*
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wasm:
+    name: WebAssembly
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y ninja-build
+
+    - uses: mymindstorm/setup-emsdk@v16
+
+    # Build the library and the emscripten example so the WebMIDI backend
+    # (backends/emscripten/*) is actually compiled -- it is only ever built for
+    # wasm, so the native/mingw/android/etc. jobs never exercise it.
+    - name: Configure
+      run: |
+        emcmake cmake -S . -B build -GNinja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DLIBREMIDI_LIBRARY_MODE=LIBRARY \
+          -DLIBREMIDI_EXAMPLES=1
+
+    - name: Build
+      run: cmake --build build

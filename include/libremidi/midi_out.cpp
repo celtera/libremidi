@@ -176,7 +176,10 @@ stdx::error midi_out::close_port() const
   if (auto err = m_impl->is_client_open(); err != stdx::error{})
     return std::errc::not_connected;
 
-  auto ret = m_impl->close_port();
+  stdx::error ret = std::errc::operation_not_supported;
+  if (m_impl->is_port_open())
+    ret = m_impl->close_port();
+
   m_impl->connected_ = false;
   m_impl->port_open_ = false;
   return ret;
