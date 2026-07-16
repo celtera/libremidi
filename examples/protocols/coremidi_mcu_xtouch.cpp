@@ -334,11 +334,13 @@ struct my_xtouch_app
 
     // Blast messages :)
 
-    mcu::channel_color_xt colors[8] = {
+    mcu::channel_color_xt color_palette[8] = {
         mcu::channel_color_xt::black,   mcu::channel_color_xt::red,  mcu::channel_color_xt::yellow,
         mcu::channel_color_xt::green,   mcu::channel_color_xt::cyan, mcu::channel_color_xt::blue,
         mcu::channel_color_xt::magenta, mcu::channel_color_xt::white
     };
+    mcu::channel_color_list channel_colors = {mcu::channel_color_xt::black, mcu::channel_color_xt::black, mcu::channel_color_xt::black, mcu::channel_color_xt::black, mcu::channel_color_xt::black, mcu::channel_color_xt::black, mcu::channel_color_xt::black, mcu::channel_color_xt::black};
+
     std::string labels1[8] = {"1", "21", "321", "4321", "54321", "654321", "7654321", "87654321"};
     std::string labels2[8] = {"ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8"};
 
@@ -353,8 +355,8 @@ struct my_xtouch_app
       rcp->update_lcd_ch_line(labels1[ (i/8 + i%8) % 8 ], i % mcu::channel_count, 0);
       rcp->update_lcd_ch_line(labels2[ (i/8 + i%8) % 8 ], i % mcu::channel_count, 1);
 
-      rcp->set_channel_color(i % mcu::channel_count, colors[(i/8 + i%8) % 8]);
-      rcp->update_channel_colors();
+      channel_colors[i % mcu::channel_count] =  color_palette[(i/8 + i%8) % 8];
+      rcp->update_channel_colors(channel_colors);
 
       rcp->channel_meter(i % mcu::channel_count, i % mcu::channel_meter_max_value);
 

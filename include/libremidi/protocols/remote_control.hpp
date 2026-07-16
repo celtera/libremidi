@@ -122,6 +122,8 @@ struct remote_control_protocol
     white = 0b111
   };
 
+  typedef channel_color_xt channel_color_list[8];
+
   static inline bool channel_color_is_valid(channel_color_xt color)
   {
     return channel_color_xt::black <= color && color <= channel_color_xt::white;
@@ -452,8 +454,6 @@ struct remote_control_protocol
 
   device_type type;
 
-  channel_color_xt channel_colors[8] = {channel_color_xt::black, channel_color_xt::black, channel_color_xt::black, channel_color_xt::black, channel_color_xt::black, channel_color_xt::black, channel_color_xt::black, channel_color_xt::black};
-
   static libremidi::message make_command_impl(auto&&... data)
   {
     using namespace std;
@@ -571,7 +571,7 @@ struct remote_control_protocol
     return make_command(command_to_device::update_lcd, arr<1>{0}, std::span(buf, lcd_total_len));
   }
 
-  auto update_channel_colors()
+  auto update_channel_colors(channel_color_list &channel_colors)
   {
     return make_command(command_to_device::update_channel_colors_xt, std::span((uint8_t*)channel_colors, 8));
   }
@@ -874,6 +874,9 @@ struct remote_control_processor : libremidi::error_handler
   rcp_configuration configuration;
   rcp impl;
 
+
+
+
   explicit remote_control_processor(rcp_configuration conf)
       : configuration{std::move(conf)}
   {
@@ -1056,17 +1059,9 @@ struct remote_control_processor : libremidi::error_handler
       configuration.midi_out(std::move(res));
   }
 
-  void set_channel_color(uint8_t ch, remote_control_protocol::channel_color_xt color)
+  void update_channel_colors(rcp::channel_color_list &channel_colors)
   {
-    if (7 < ch || ! remote_control_protocol::channel_color_is_valid(color))
-      return;
-
-    impl.channel_colors[ch] = color;
-  }
-
-  void update_channel_colors()
-  {
-    auto res = impl.update_channel_colors();
+    auto res = impl.update_channel_colors(channel_colors);
     if (!res.empty())
       configuration.midi_out(std::move(res));
   }
