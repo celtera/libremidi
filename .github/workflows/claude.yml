@@ -26,7 +26,7 @@ jobs:
       actions: read # Required for Claude to read CI results on PRs
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
@@ -36,13 +36,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-          # Optional: Customize the trigger phrase (default: @claude)
-          # trigger_phrase: "/claude"
-
-          # Optional: Trigger when specific user is assigned to an issue
-          # assignee_trigger: "claude-bot"
-
-          # Optional: Configure Claude's behavior with CLI arguments
-          # claude_args: |
-          #   --model claude-opus-4-1-20250805
-          #   --max-turns 10
+          claude_args: |
+            --model opus
+            --max-turns 15
+            --allowedTools "WebFetch,WebSearch,Bash(cmake:*),Bash(ninja:*),Bash(ctest:*),Bash(clang-format:*),Bash(pkg-config:*)"
