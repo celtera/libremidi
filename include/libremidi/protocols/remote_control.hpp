@@ -10,20 +10,38 @@
 #include <cinttypes>
 #include <cstdint>
 #include <cstdio>
+#include <iostream>
 #include <functional>
 #include <span>
 
 NAMESPACE_LIBREMIDI
 {
-// A clean-room reverse-engineered remote control protocol compatible with many hardware devices.
-// Thanks https://github.com/NicoG60/TouchMCU !
+/**
+ * A clean-room reverse-engineered remote control protocol compatible with many hardware devices.
+ * Thanks https://github.com/NicoG60/TouchMCU !
+ *
+ * X-Touch screen colors RE from extender unit:
+ * Command Format := <mackie control xt type> <set colors command> 8*<color>
+ *  <set colors command> := 0x72
+ *  <color> := [0 - 7] (on-off bitmap of RGB colors LSB = R)
+ * Example (setting each screen a different color): 15720001020304050607
+ *
+ * @TODO Check with actual hardware having all the control elements
+ *
+ * @TODO Desired device support:
+ * - MIDIPLUS (Waves) FIT Controller
+ */
 struct remote_control_protocol
 {
+  static constexpr uint8_t mackie_manufacturer_id[3] = {0,0,0x66};
+
   enum class device_type : uint8_t
   {
+    mackie_hui = 0x05,
     logic_control = 0x10,
     logic_control_xt = 0x11,
-    mackie_control = 0x14
+    mackie_control = 0x14,
+    mackie_control_xt = 0x15
   };
 
   enum class command_to_device : uint8_t
@@ -51,6 +69,8 @@ struct remote_control_protocol
     faders_to_minimum = 0x61,
     all_leds_off = 0x62,
     reset = 0x63,
+
+    update_channel_colors_xt = 0x72  // xtouch specific (?)
   };
 
   enum class command_from_device : uint8_t
@@ -61,10 +81,52 @@ struct remote_control_protocol
     version_reply = 0x14,
   };
 
+  static constexpr uint8_t channel_meter_mask_index = 0b01110000;
+  static constexpr uint8_t channel_meter_mask_value = 0b00001111;
+  static constexpr uint8_t channel_meter_max_value = 12;
+
   enum class lcd_meter_mode : uint8_t
   {
     horizontal = 0x00,
     vertical = 0x01,
+  };
+
+  static constexpr uint8_t lcd_channel_line_n = 2;
+  static constexpr uint8_t lcd_channel_line_len = 7;
+  static constexpr int lcd_total_len = 112;
+
+  static constexpr uint8_t lcd_channel_offset[8][2] = {
+      {0x00, 0x38},
+      {0x00 + 7, 0x38 + 7},
+      {0x00 + 14, 0x38 + 14},
+      {0x00 + 21, 0x38 + 21},
+      {0x00 + 28, 0x38 + 28},
+      {0x00 + 35, 0x38 + 35},
+      {0x00 + 42, 0x38 + 42},
+      {0x00 + 49, 0x38 + 49},
+  };
+
+  /**
+   * X-Touch specific
+   * 3-bit RGB encoding
+   */
+  enum class channel_color_xt : uint8_t
+  {
+    black = 0b000,
+    red = 0b001,
+    green = 0b010,
+    yellow = 0b011,
+    blue = 0b100,
+    magenta = 0b101,
+    cyan = 0b110,
+    white = 0b111
+  };
+
+  typedef channel_color_xt channel_color_list[8];
+
+  static inline bool channel_color_is_valid(channel_color_xt color)
+  {
+    return channel_color_xt::black <= color && color <= channel_color_xt::white;
   };
 
   enum class fader_sensitivity : uint8_t
@@ -82,39 +144,27 @@ struct remote_control_protocol
   // 0b0LMMVVVV
   // L: toggle underneath LED
   // MM: mode as led_ring_mode
-  // VVVV: value
+  // VVVV: value range depends on mode (0 = off, 1 -> at least one led, max -> see below)
+
+  static constexpr uint8_t vpot_mask_state = 0b01000000;
+  static constexpr uint8_t vpot_mask_mode = 0b00110000;
+  static constexpr uint8_t vpot_mask_value = 0b00001111;
+
+  static constexpr uint8_t vpot_min_value[4] = {1,1,1,1};
+  static constexpr uint8_t vpot_max_value[4] = {11,11,11,6};
+  static constexpr uint8_t vpot_mode_bits[4] = {0b000000, 0b010000, 0b100000, 0b110000};
+
+
+
   enum class led_ring_mode : uint8_t
   {
-    mode_0 = 0b00, // one led only
-    mode_1 = 0b01, // pan pot
-    mode_2 = 0b10, // fill leds from left
-    mode_3 = 0b11, // fill leds from middle
+    mode_0 = 0, // one led only
+    mode_1 = 1, // pan pot
+    mode_2 = 2, // fill leds from left
+    mode_3 = 3, // fill leds from middle
   };
 
-  enum class pot : uint8_t
-  {
-    pot_0 = 0x00,
-    pot_1 = 0x01,
-    pot_2 = 0x02,
-    pot_3 = 0x03,
-    pot_4 = 0x04,
-    pot_5 = 0x05,
-    pot_6 = 0x06,
-    pot_7 = 0x07,
-  };
-
-  enum class fader : uint8_t
-  {
-    fader_0 = 0x00,
-    fader_1 = 0x01,
-    fader_2 = 0x02,
-    fader_3 = 0x03,
-    fader_4 = 0x04,
-    fader_5 = 0x05,
-    fader_6 = 0x06,
-    fader_7 = 0x07,
-    fader_master = 0x08,
-  };
+  static constexpr int channel_count = 8;
 
   // control changes
   enum class mixer_control : uint8_t
@@ -130,6 +180,7 @@ struct remote_control_protocol
     vpot_rotation_5 = 0x10 + 0x05,
     vpot_rotation_6 = 0x10 + 0x06,
     vpot_rotation_7 = 0x10 + 0x07,
+    type_vpot_rotation = vpot_rotation_0,
 
     external_control = 0x2E,
 
@@ -142,6 +193,7 @@ struct remote_control_protocol
     vpot_led_5 = 0x30 + 0x05,
     vpot_led_6 = 0x30 + 0x06,
     vpot_led_7 = 0x30 + 0x07,
+    type_vpot_led = vpot_led_0,
 
     jog_wheel = 0x3C,
 
@@ -155,14 +207,51 @@ struct remote_control_protocol
     timecode_digit_7 = 0x40 + 0x07,
     timecode_digit_8 = 0x40 + 0x08,
     timecode_digit_9 = 0x40 + 0x09,
+    type_timecode_digit = timecode_digit_0,
 
     assignment_digit_0 = 0x4A,
     assignment_digit_1 = 0x4B,
+    type_assignment_digit = assignment_digit_0,
+
+    type_other = external_control,
   };
+
+  static mixer_control which_mixer_control_type(mixer_control ctl)
+  {
+    if (mixer_control::vpot_rotation_0 <= ctl && ctl <= mixer_control::vpot_rotation_7) return mixer_control::type_vpot_rotation;
+    if (mixer_control::vpot_led_0 <= ctl && ctl <= mixer_control::vpot_led_7) return mixer_control::type_vpot_led;
+    if (mixer_control::timecode_digit_0 <= ctl && ctl <= mixer_control::timecode_digit_9) return mixer_control::type_timecode_digit;
+    if (mixer_control::assignment_digit_0 <= ctl && ctl <= mixer_control::assignment_digit_1) return mixer_control::type_assignment_digit;
+
+    return mixer_control::type_other;
+  }
+
+  static inline int which_mixer_control_index(mixer_control type, mixer_control ctl)
+  {
+    return (uint8_t)ctl - (uint8_t)type;
+  }
+
+  static inline int which_mixer_control_index(mixer_control type, uint8_t ctl_byte)
+  {
+    return which_mixer_control_index(type, static_cast<mixer_control>(ctl_byte));
+  }
+
+  static inline int relative_value_to_midi(int value){
+    if (value < 0)
+      return 0b01000000 - value;
+    return value;
+  }
+  static inline int relative_midi_to_value(int midi){
+    if (midi < 0b010000)
+      return midi;
+
+    return (0b01000000 - midi);
+  }
 
   // note events
   enum class mixer_command : uint8_t
   {
+    // vpot_click
     vpot_click_0 = 0x20 + 0x00,
     vpot_click_1 = 0x20 + 0x01,
     vpot_click_2 = 0x20 + 0x02,
@@ -171,7 +260,9 @@ struct remote_control_protocol
     vpot_click_5 = 0x20 + 0x05,
     vpot_click_6 = 0x20 + 0x06,
     vpot_click_7 = 0x20 + 0x07,
+    type_vpot_click = vpot_click_0,
 
+    // record arm
     rec_0 = 0x00 + 0x00,
     rec_1 = 0x00 + 0x01,
     rec_2 = 0x00 + 0x02,
@@ -180,7 +271,9 @@ struct remote_control_protocol
     rec_5 = 0x00 + 0x05,
     rec_6 = 0x00 + 0x06,
     rec_7 = 0x00 + 0x07,
+    type_rec = rec_0,
 
+    // solo
     solo_0 = 0x08 + 0x00,
     solo_1 = 0x08 + 0x01,
     solo_2 = 0x08 + 0x02,
@@ -189,7 +282,9 @@ struct remote_control_protocol
     solo_5 = 0x08 + 0x05,
     solo_6 = 0x08 + 0x06,
     solo_7 = 0x08 + 0x07,
+    type_solo = solo_0,
 
+    // mute
     mute_0 = 0x10 + 0x00,
     mute_1 = 0x10 + 0x01,
     mute_2 = 0x10 + 0x02,
@@ -198,7 +293,9 @@ struct remote_control_protocol
     mute_5 = 0x10 + 0x05,
     mute_6 = 0x10 + 0x06,
     mute_7 = 0x10 + 0x07,
+    type_mute = mute_0,
 
+    // sel(ection)
     sel_0 = 0x18 + 0x00,
     sel_1 = 0x18 + 0x01,
     sel_2 = 0x18 + 0x02,
@@ -207,25 +304,31 @@ struct remote_control_protocol
     sel_5 = 0x18 + 0x05,
     sel_6 = 0x18 + 0x06,
     sel_7 = 0x18 + 0x07,
+    type_sel = sel_0,
 
     // TODO metering
+    // assign
     assign_track = 0x28,
     assign_send = 0x29,
     assign_pan = 0x2A,
     assign_plugin = 0x2B,
     assign_eq = 0x2C,
     assign_instrument = 0x2D,
+    type_assign = assign_track,
 
+    // channels
     bank_left = 0x2E,
     bank_right = 0x2F,
     channel_left = 0x30,
     channel_right = 0x31,
     flip = 0x32,
     global = 0x33,
+    type_channel = bank_left,
 
     name_value_button = 0x34,
     smpte_beats_button = 0x35,
 
+    // f(unction)
     f1 = 0x36 + 0x00,
     f2 = 0x36 + 0x01,
     f3 = 0x36 + 0x02,
@@ -234,7 +337,9 @@ struct remote_control_protocol
     f6 = 0x36 + 0x05,
     f7 = 0x36 + 0x06,
     f8 = 0x36 + 0x07,
+    type_f = f1,
 
+    // page
     midi_tracks = 0x3E,
     inputs = 0x3F,
     audio_tracks = 0x40,
@@ -243,17 +348,23 @@ struct remote_control_protocol
     busses = 0x43,
     outputs = 0x44,
     user = 0x45,
+    type_page = midi_tracks,
 
+    // meta
     shift = 0x46,
     option = 0x47,
     control = 0x48,
     alt = 0x49,
+    type_meta = shift,
 
+    // control
     save = 0x50,
     undo = 0x51,
     cancel = 0x52,
     enter = 0x53,
+    type_control = save,
 
+    // transport
     markers = 0x54,
     nudge = 0x55,
     cycle = 0x56,
@@ -275,9 +386,14 @@ struct remote_control_protocol
     zoom = 0x64,
     scrub = 0x65,
 
+    type_transport = markers,
+
+    // user
     user_switch_1 = 0x66,
     user_switch_2 = 0x67,
+    type_user = user_switch_1,
 
+    // fader touched
     fader_touched_0 = 0x68,
     fader_touched_1 = 0x69,
     fader_touched_2 = 0x6a,
@@ -287,18 +403,56 @@ struct remote_control_protocol
     fader_touched_6 = 0x6e,
     fader_touched_7 = 0x6f,
     fader_touched_master = 0x70,
+    type_fader_touched = fader_touched_0,
 
+    // leds
     smpte_led = 0x71,
     beats_led = 0x72,
     rude_solo_led = 0x73,
+    type_leds = smpte_led,
 
+    // other
     relay_click = 0x76,
+    type_other = relay_click
   };
+
+  static mixer_command which_mixer_command_type(mixer_command cmd)
+  {
+    if (mixer_command::vpot_click_0 <= cmd && cmd <= mixer_command::vpot_click_7) return mixer_command::type_vpot_click;
+    if (mixer_command::rec_0 <= cmd && cmd <= mixer_command::rec_7) return mixer_command::type_rec;
+    if (mixer_command::solo_0 <= cmd && cmd <= mixer_command::solo_7) return mixer_command::type_solo;
+    if (mixer_command::mute_0 <= cmd && cmd <= mixer_command::mute_7) return mixer_command::type_mute;
+    if (mixer_command::sel_0 <= cmd && cmd <= mixer_command::sel_7) return mixer_command::type_sel;
+    if (mixer_command::assign_track <= cmd && cmd <= mixer_command::assign_instrument) return mixer_command::type_assign;
+    if (mixer_command::bank_left <= cmd && cmd <= mixer_command::global) return mixer_command::type_channel;
+    if (mixer_command::f1 <= cmd && cmd <= mixer_command::f8) return mixer_command::type_f;
+    if (mixer_command::midi_tracks <= cmd && cmd <= mixer_command::user) return mixer_command::type_page;
+    if (mixer_command::shift <= cmd && cmd <= mixer_command::alt) return mixer_command::type_meta;
+    if (mixer_command::save <= cmd && cmd <= mixer_command::enter) return mixer_command::type_control;
+    if (mixer_command::markers <= cmd && cmd <= mixer_command::scrub) return mixer_command::type_transport;
+    if (mixer_command::user_switch_1 <= cmd && cmd <= mixer_command::user_switch_2) return mixer_command::type_user;
+    if (mixer_command::fader_touched_0 <= cmd && cmd <= mixer_command::fader_touched_master) return mixer_command::type_fader_touched;
+    if (mixer_command::smpte_led <= cmd && cmd <= mixer_command::rude_solo_led) return mixer_command::type_leds;
+
+    return mixer_command::type_other;
+  }
+
+  inline static mixer_command which_mixer_command_type(uint8_t cmd_byte){
+    return which_mixer_command_type(static_cast<mixer_command>(cmd_byte));
+  }
+
+  inline static int which_mixer_command_index(mixer_command type, mixer_command cmd){
+    return (uint8_t)cmd - (uint8_t)type;
+  }
+  inline static int which_mixer_command_index(mixer_command type, uint8_t cmd_byte){
+    return which_mixer_command_index(type, static_cast<mixer_command>(cmd_byte));
+  }
+
 
   template <std::size_t N>
   using arr = std::array<uint8_t, N>;
 
-  device_type type = device_type::mackie_control;
+  device_type type;
 
   static libremidi::message make_command_impl(auto&&... data)
   {
@@ -380,25 +534,25 @@ struct remote_control_protocol
   auto update_lcd(std::string_view txt, int pos)
   {
     // FIXME
-    if (pos < 0 || pos >= 112)
+    // valid length?
+    if (pos < 0 || lcd_total_len <= pos)
       return libremidi::message{};
 
     int len = int(std::ssize(txt));
 
-    if (len > (112 - pos))
+    // length sanity check
+    if (len > (lcd_total_len - pos))
     {
-      txt = txt.substr(0, 112 - pos);
-      len = 112 - pos;
+      txt = txt.substr(0, lcd_total_len - pos);
+      len = lcd_total_len - pos;
     }
 
     uint8_t buf[128];
-    const int N = std::min(len, 112 - pos);
-    for (int i = 0; i < N; i++)
+
+    for (int i = 0; i < len; i++)
     {
       buf[i + pos] = charmap_lcd(txt[i]);
     }
-    buf[55] = '\n';
-    buf[111] = '\n';
 
     uint8_t cmd_pos = pos;
 
@@ -407,15 +561,22 @@ struct remote_control_protocol
 
   auto update_lcd(std::string_view txt)
   {
-    uint8_t buf[112] = {};
-    for (int i = 0; i < std::min(int(std::ssize(txt)), 112); i++)
+    uint8_t buf[lcd_total_len] = {};
+
+    for (int i = 0; i < std::min(int(std::ssize(txt)), lcd_total_len); i++)
     {
       buf[i] = charmap_lcd(txt[i]);
     }
-    buf[55] = '\n';
-    buf[111] = '\n';
-    return make_command(command_to_device::update_lcd, arr<1>{0}, std::span(buf, 112));
+
+    return make_command(command_to_device::update_lcd, arr<1>{0}, std::span(buf, lcd_total_len));
   }
+
+  auto update_channel_colors(channel_color_list &channel_colors)
+  {
+    return make_command(command_to_device::update_channel_colors_xt, std::span((uint8_t*)channel_colors, 8));
+  }
+
+
 
   auto firmware_version_request()
   {
@@ -445,6 +606,7 @@ struct remote_control_protocol
   {
     return make_command(command_to_device::global_lcd_meter_mode, arr<1>{to_underlying(mode)});
   }
+
 
   auto faders_to_minimum() { return make_command(command_to_device::faders_to_minimum); }
 
@@ -568,94 +730,130 @@ struct remote_control_protocol
           return 0x00;
       }
   }
-  static uint8_t charmap_lcd(char c)
+
+
+
+//  // lookup table according to https://github.com/NicoG60/TouchMCU/blob/main/doc/mackie_control_protocol.md#lcd-bitmap-font-character-table
+//  static constexpr uint8_t charmap_lcd_lut[256] = {
+//      0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, // special signs
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F, // like ASCII SPACE, ! ... /
+//      0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F, // like ASCII 0, 1 ... ?
+//      0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, // like ASCII @, A ... O
+//      0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F, //
+//      0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F, //
+//      0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F, //
+//
+//      // map anything above 0x7F to space
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // spaces only
+//  };
+//
+  // NOTE
+  static inline uint8_t charmap_lcd(char c)
   {
-    // FIXME there are some more characters but what to map them to ? :)
-    if (c >= 'a' && c <= 'z')
-      return c - 'a' + 0x61;
-    else if (c >= 'A' && c <= 'Z')
-      return c - 'A' + 0x41;
-    else if (c >= '0' && c <= '9')
-      return c - '0' + 0x30;
-    else
-      switch (c)
-      {
-        case '!':
-          return 0x21;
-        case '"':
-          return 0x22;
-        case '#':
-          return 0x23;
-        case '$':
-          return 0x24;
-        case '%':
-          return 0x25;
-        case '&':
-          return 0x26;
-        case '\'':
-          return 0x27;
-        case '(':
-          return 0x28;
-        case ')':
-          return 0x29;
-        case '*':
-          return 0x2A;
-        case '+':
-          return 0x2B;
-        case ',':
-          return 0x2C;
-        case '-':
-          return 0x2D;
-        case '.':
-          return 0x2E;
-        case '/':
-          return 0x2F;
-
-        case ':':
-          return 0x3A;
-        case ';':
-          return 0x3B;
-        case '<':
-          return 0x3C;
-        case '=':
-          return 0x3D;
-        case '>':
-          return 0x3E;
-        case '?':
-          return 0x3F;
-
-        case '@':
-          return 0x40;
-        case '[':
-          return 0x5B;
-        case '~': // Yen symbol... builtin mojibake?
-          return 0x5C;
-        case ']':
-          return 0x5D;
-        case '^':
-          return 0x5E;
-        case '_':
-          return 0x5F;
-        case '`':
-          return 0x60;
-        case '{':
-          return 0x7B;
-        case '|':
-          return 0x7C;
-        case '}':
-          return 0x7D;
-        case '\u000E':
-          return 0x7E;
-        case '\u000F':
-          return 0x7F;
-        default:
-          return c; // gives access to the bubble first row 0x00 > 0x0F
-      }
+//    return charmap_lcd_lut[c];
+    return c & 0x7F;
   }
+
+//  static uint8_t charmap_lcd(char c)
+//  {
+//    return c & 0x7f;
+//
+//    // FIXME there are some more characters but what to map them to ? :)
+//    if (c >= 'a' && c <= 'z')
+//      return c - 'a' + 0x61;
+//    else if (c >= 'A' && c <= 'Z')
+//      return c - 'A' + 0x41;
+//    else if (c >= '0' && c <= '9')
+//      return c - '0' + 0x30;
+//    else
+//      switch (c)
+//      {
+//        case '!':
+//          return 0x21;
+//        case '"':
+//          return 0x22;
+//        case '#':
+//          return 0x23;
+//        case '$':
+//          return 0x24;
+//        case '%':
+//          return 0x25;
+//        case '&':
+//          return 0x26;
+//        case '\'':
+//          return 0x27;
+//        case '(':
+//          return 0x28;
+//        case ')':
+//          return 0x29;
+//        case '*':
+//          return 0x2A;
+//        case '+':
+//          return 0x2B;
+//        case ',':
+//          return 0x2C;
+//        case '-':
+//          return 0x2D;
+//        case '.':
+//          return 0x2E;
+//        case '/':
+//          return 0x2F;
+//
+//        case ':':
+//          return 0x3A;
+//        case ';':
+//          return 0x3B;
+//        case '<':
+//          return 0x3C;
+//        case '=':
+//          return 0x3D;
+//        case '>':
+//          return 0x3E;
+//        case '?':
+//          return 0x3F;
+//
+//        case '@':
+//          return 0x40;
+//        case '[':
+//          return 0x5B;
+//        case '~': // Yen symbol... builtin mojibake?
+//          return 0x5C;
+//        case ']':
+//          return 0x5D;
+//        case '^':
+//          return 0x5E;
+//        case '_':
+//          return 0x5F;
+//        case '`':
+//          return 0x60;
+//        case '{':
+//          return 0x7B;
+//        case '|':
+//          return 0x7C;
+//        case '}':
+//          return 0x7D;
+//        case '\u000E':
+//          return 0x7E;
+//        case '\u000F':
+//          return 0x7F;
+//        default:
+//          return c; // gives access to the bubble first row 0x00 > 0x0F
+//      }
+//  }
 };
 
 struct rcp_configuration
 {
+  remote_control_protocol::device_type device_type = remote_control_protocol::device_type::mackie_control;
+
   //! How to send MIDI messages to the device.
   //! Note: this function *will* be called from different thread,
   //! thus it has to be thread-safe, for instance
@@ -665,7 +863,7 @@ struct rcp_configuration
   std::function<void(libremidi::remote_control_protocol::device_type)> on_connected;
   std::function<void(libremidi::remote_control_protocol::mixer_command, bool)> on_command;
   std::function<void(libremidi::remote_control_protocol::mixer_control, int)> on_control;
-  std::function<void(libremidi::remote_control_protocol::fader, uint16_t)> on_fader;
+  std::function<void(uint8_t, uint16_t)> on_fader;
 
   libremidi::midi_error_callback on_error{};
 };
@@ -676,10 +874,16 @@ struct remote_control_processor : libremidi::error_handler
   rcp_configuration configuration;
   rcp impl;
 
+
+
+
   explicit remote_control_processor(rcp_configuration conf)
       : configuration{std::move(conf)}
   {
     assert(configuration.midi_out);
+
+    // no sanity checking of device type
+    impl.type = conf.device_type;
 
     if (!configuration.on_error)
       configuration.on_error = [](std::string_view s, auto&&...) {
@@ -706,7 +910,10 @@ struct remote_control_processor : libremidi::error_handler
   void start()
   {
     current_state = waiting_for_query;
+
+    // NOTE on x-touch hardware device did not observe any response to these queries
     configuration.midi_out(impl.device_query());
+    configuration.midi_out(impl.firmware_version_request());
   }
 
   void on_midi(const libremidi::message& message)
@@ -723,9 +930,14 @@ struct remote_control_processor : libremidi::error_handler
           N -= 2;
 
           // Mackie manufacturer ID check
-          if (bytes[0] == 0x00 && bytes[1] == 0x00 && bytes[2] == 0x66)
+          if (bytes[0] == remote_control_protocol::mackie_manufacturer_id[0] &&
+              bytes[1] == remote_control_protocol::mackie_manufacturer_id[1] &&
+              bytes[2] == remote_control_protocol::mackie_manufacturer_id[2])
           {
+            //should this be updated automatically?
             impl.type = static_cast<rcp::device_type>(bytes[3]);
+
+            std::cerr << "device type " << (int) impl.type << std::endl;
 
             // strip header
             bytes += 4;
@@ -739,7 +951,10 @@ struct remote_control_processor : libremidi::error_handler
         }
         break;
       case libremidi::message_type::NOTE_ON:
-        configuration.on_command(static_cast<rcp::mixer_command>(message[1]), message[2] > 0);
+        {
+          auto pressed = message[2] > 0;
+            configuration.on_command(static_cast<rcp::mixer_command>(message[1]), pressed);
+        }
         break;
       case libremidi::message_type::NOTE_OFF:
         break;
@@ -748,7 +963,7 @@ struct remote_control_processor : libremidi::error_handler
         break;
       case libremidi::message_type::PITCH_BEND: {
         uint16_t value = message.bytes[2] * 128 + message.bytes[1];
-        configuration.on_fader(static_cast<rcp::fader>(uint8_t(message.get_channel() - 1)), value);
+        configuration.on_fader(message.get_channel() - 1, value);
         break;
       }
       default:
@@ -797,6 +1012,7 @@ struct remote_control_processor : libremidi::error_handler
         break;
       }
       default:
+        std::cerr << "Unhandled MIDI message" << std::endl;
         break;
     }
   }
@@ -821,6 +1037,35 @@ struct remote_control_processor : libremidi::error_handler
       configuration.midi_out(std::move(res));
   }
 
+  void update_lcd_ch_line(std::string_view v, uint ch, uint line)
+  {
+    // 8 channels, 2 lines
+    // Show error msg?
+    if (7 < ch || remote_control_protocol::lcd_channel_line_n < line)
+      return;
+
+    // Prefill segment with spaces
+    char buf[8] = {0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0};
+
+    int len = int(std::ssize(v));
+    if (len > remote_control_protocol::lcd_channel_line_len)
+      len = remote_control_protocol::lcd_channel_line_len;
+
+    std::memcpy(buf, v.data(), len);
+
+    auto res = impl.update_lcd(buf, remote_control_protocol::lcd_channel_offset[ch][line]);
+
+    if (!res.empty())
+      configuration.midi_out(std::move(res));
+  }
+
+  void update_channel_colors(rcp::channel_color_list &channel_colors)
+  {
+    auto res = impl.update_channel_colors(channel_colors);
+    if (!res.empty())
+      configuration.midi_out(std::move(res));
+  }
+
   void command(remote_control_protocol::mixer_command c, bool press)
   {
     using ce = libremidi::channel_events;
@@ -834,12 +1079,24 @@ struct remote_control_processor : libremidi::error_handler
     configuration.midi_out(ce::control_change(1, to_underlying(c), value));
   }
 
-  void fader(remote_control_protocol::fader c, uint16_t value)
+  inline void vpot(uint8_t index, bool state, remote_control_protocol::led_ring_mode mode, uint8_t value)
   {
-    int idx = to_underlying(c);
+    control(
+      (remote_control_protocol::mixer_control)((uint8_t)remote_control_protocol::mixer_control::vpot_led_0 + index),
+      (state ? remote_control_protocol::vpot_mask_state : 0) | remote_control_protocol::vpot_mode_bits[(uint8_t)mode] | value
+    );
+  }
 
+  void fader(uint8_t i, uint16_t value)
+  {
     using ce = libremidi::channel_events;
-    configuration.midi_out(ce::pitch_bend(idx + 1, value));
+    configuration.midi_out(ce::pitch_bend(i + 1, value));
+  }
+
+  void channel_meter(uint8_t i, uint8_t value)
+  {
+    using ce = libremidi::channel_events;
+    configuration.midi_out(ce::aftertouch(1, ((i<<4) & rcp::channel_meter_mask_index) | (value & rcp::channel_meter_mask_value)));
   }
 
   // State machine

@@ -34,7 +34,7 @@ int main()
   winrt::init_apartment();
 #endif
 
-  auto api = libremidi::API::ALSA_SEQ;
+  auto api = libremidi::API::UNSPECIFIED;
   libremidi::observer observer{{.track_any = true}, api};
   if (observer.get_input_ports().empty())
     return 1;
@@ -46,10 +46,10 @@ int main()
 
   // Tested with https://github.com/NicoG60/TouchMCU
   for (auto& p : observer.get_input_ports())
-    if (p.port_name == "TouchOSC")
+    if (p.port_name == "TouchOSC" || p.port_name == "TouchOSC Bridge")
       ip = p;
   for (auto& p : observer.get_output_ports())
-    if (p.port_name == "TouchOSC")
+    if (p.port_name == "TouchOSC" || p.port_name == "TouchOSC Bridge")
       op = p;
 
   if (ip.port_name.empty() || op.port_name.empty())
@@ -63,20 +63,31 @@ int main()
 
   // Set-up the remote control API.
   // Here we only do some logging, this is where commands sqall be handled.
-  libremidi::remote_control_processor rcp{{.midi_out = [&](libremidi::message&& msg) {
-    midi_out.send_message(msg);
-  }, .on_command = [](libremidi::remote_control_protocol::mixer_command cmd, bool pressed) {
-    std::cerr << "command: " << magic_enum::enum_name(cmd) << " -> "
-              << (pressed ? "pressed" : "released") << "\n";
-  }, .on_control = [](libremidi::remote_control_protocol::mixer_control ctl, int v) {
-    std::cerr << "control: " << magic_enum::enum_name(ctl) << " -> " << v << "\n";
-  }, .on_fader = [](libremidi::remote_control_protocol::fader f, uint16_t v) {
-    std::cerr << "fader: " << magic_enum::enum_name(f) << " -> " << v << "\n";
-  }}};
+  libremidi::remote_control_processor rcp{{
+      .device_type = libremidi::remote_control_protocol::device_type::mackie_control,
+      .midi_out = [&](libremidi::message&& msg) {
+        midi_out.send_message(msg);
+      },
+      .on_command = [](libremidi::remote_control_protocol::mixer_command cmd, bool pressed) {
+        std::cerr << "command: " << magic_enum::enum_name(cmd) << " -> " << (pressed ? "pressed" : "released") << "\n";
+      },
+      .on_control = [](libremidi::remote_control_protocol::mixer_control ctl, int v) {
+        std::cerr << "control: " << magic_enum::enum_name(ctl) << " -> " << v << "\n";
+      },
+      .on_fader = [](uint8_t fader, uint16_t v) {
+        std::cerr << "fader: " << (int)fader << " -> " << v << "\n";
+      }
+  }};
 
   // Initialize the midi in port
   libremidi::midi_in midi_in{
-      {.on_message = [&](const libremidi::message& message) { rcp.on_midi(message); }}, api};
+      {
+          .on_message = [&](const libremidi::message& message) {
+            rcp.on_midi(message);
+          }
+    },
+api
+  };
 
   // Open the ports
   if (auto err = midi_in.open_port(ip); err != stdx::error{})
@@ -99,7 +110,7 @@ int main()
     auto ctime = std::localtime(&result);
     rcp.update_timecode(ctime->tm_hour, ctime->tm_min, ctime->tm_sec, 0);
     rcp.update_lcd(std::string(1, '\0' + i % 127), i % 112);
-    rcp.fader(static_cast<proto::fader>(i % 8), (200 * i) % 16384);
+    rcp.fader(i % 8, (200 * i) % 16384);
     i++;
   }
 
