@@ -38,12 +38,17 @@ std::string enum_name(auto cmd)
 #include <thread>
 #include <signal.h>
 
+// for debugging/testing purposes
+const bool observe_incoming_messages = false;
+const bool observe_outgoing_messages = false;
+
+
 using mcu = libremidi::remote_control_protocol;
 using mcu_proc = libremidi::remote_control_processor;
 
 struct my_xtouch_app
 {
-  static constexpr auto api = libremidi::API::UNSPECIFIED;
+  static constexpr auto api = libremidi::API::COREMIDI;
   static constexpr char kDeviceName[] = "X-TOUCH_INT";
   static constexpr mcu::device_type kDeviceType = mcu::device_type::mackie_control_xt;
 
@@ -187,7 +192,17 @@ struct my_xtouch_app
     midi_out = new libremidi::midi_out {{}, api};
     midi_in = new libremidi::midi_in {
         {
+
+            .ignore_sysex = false,
             .on_message = [&](const libremidi::message& message) {
+
+              if (observe_incoming_messages){
+                fprintf(stderr, "MIDI IN (%zu) ", message.size());
+                for(int i = 0; i < message.size(); i++)
+                  fprintf(stderr, "%02x ", message.bytes[i]);
+                fprintf(stderr, "\n");
+              }
+
               rcp->on_midi(message);
             }
         },
@@ -199,8 +214,25 @@ struct my_xtouch_app
     rcp = new libremidi::remote_control_processor{
         {
             .device_type = kDeviceType,
-            .midi_out = [&](libremidi::message&& msg){
-              midi_out->send_message(msg);
+//            .device_type = mcu::device_type::logic_control,
+            .midi_out = [&](libremidi::message&& message){
+
+              if (observe_outgoing_messages){
+                fprintf(stderr, "MIDI OUT (%zu) ", message.size());
+                for(int i = 0; i < message.size(); i++)
+                  fprintf(stderr, "%02x ", message.bytes[i]);
+                fprintf(stderr, "\n");
+              }
+
+              midi_out->send_message(message);
+            },
+
+            .on_version = [&](libremidi::remote_control_protocol::device_type device_type, std::span<const uint8_t,5> version){
+              std::cerr << "version reply: ";
+              for (int i = 1; i < version.size(); i++){
+                fprintf(stderr, "%02X", version[i]);
+              }
+              std::cerr << std::endl;
             },
             .on_command = [&](mcu::mixer_command cmd, bool pressed){
               std::cerr << "command: " << magic_enum::enum_name(cmd) << " -> " << (pressed ? "pressed" : "released") << "\n";
@@ -308,8 +340,10 @@ struct my_xtouch_app
                   break;
               }
             },
-            .on_fader = [](uint8_t fader, uint16_t v) {
+            .on_fader = [&](uint8_t fader, uint16_t v) {
               std::cerr << "fader: " << (int)fader << " -> " << v << "\n";
+              // echo back
+              rcp->fader(fader, v);
             }
         }
     };
@@ -326,7 +360,6 @@ struct my_xtouch_app
 
     // Start communication
     rcp->start();
-
 
     // reset interface
     _update_buttons();
