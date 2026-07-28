@@ -16,15 +16,11 @@
 
 NAMESPACE_LIBREMIDI
 {
+
+
 /**
  * A clean-room reverse-engineered remote control protocol compatible with many hardware devices.
  * Thanks https://github.com/NicoG60/TouchMCU !
- *
- * X-Touch screen colors RE from extender unit:
- * Command Format := <mackie control xt type> <set colors command> 8*<color>
- *  <set colors command> := 0x72
- *  <color> := [0 - 7] (on-off bitmap of RGB colors LSB = R)
- * Example (setting each screen a different color): 15720001020304050607
  *
  * @TODO Check with actual hardware having all the control elements
  *
@@ -37,6 +33,7 @@ struct remote_control_protocol
 
   enum class device_type : uint8_t
   {
+    no_type = 0,
     mackie_hui = 0x05,
     logic_control = 0x10,
     logic_control_xt = 0x11,
@@ -76,9 +73,7 @@ struct remote_control_protocol
 
     faders_to_minimum = 0x61,
     all_leds_off = 0x62,
-    reset = 0x63,
-
-    update_channel_colors_xt = 0x72  // xtouch specific (?)
+    reset = 0x63
   };
 
   enum class command_from_device : uint8_t
@@ -112,29 +107,6 @@ struct remote_control_protocol
       {0x00 + 35, 0x38 + 35},
       {0x00 + 42, 0x38 + 42},
       {0x00 + 49, 0x38 + 49},
-  };
-
-  /**
-   * X-Touch specific
-   * 3-bit RGB encoding
-   */
-  enum class channel_color_xt : uint8_t
-  {
-    black = 0b000,
-    red = 0b001,
-    green = 0b010,
-    yellow = 0b011,
-    blue = 0b100,
-    magenta = 0b101,
-    cyan = 0b110,
-    white = 0b111
-  };
-
-  typedef channel_color_xt channel_color_list[8];
-
-  static inline bool channel_color_is_valid(channel_color_xt color)
-  {
-    return channel_color_xt::black <= color && color <= channel_color_xt::white;
   };
 
   enum class fader_sensitivity : uint8_t
@@ -578,12 +550,6 @@ struct remote_control_protocol
     return make_command(command_to_device::update_lcd, arr<1>{0}, std::span(buf, lcd_total_len));
   }
 
-  auto update_channel_colors(channel_color_list &channel_colors)
-  {
-    return make_command(command_to_device::update_channel_colors_xt, std::span((uint8_t*)channel_colors, 8));
-  }
-
-
 
   auto firmware_version_request()
   {
@@ -738,7 +704,21 @@ struct remote_control_protocol
       }
   }
 
+//  abstract class Channel_Color {
+//    enum class Color : uint8_t {
+//      Black,
+//      Red,
+//      Green,
+//      Yellow,
+//      Blue,
+//      Magenta,
+//      Cyan,
+//      White
+//    };
+//  };
 };
+
+
 
 struct rcp_configuration
 {
@@ -763,6 +743,7 @@ struct rcp_configuration
 struct remote_control_processor : libremidi::error_handler
 {
   using rcp = libremidi::remote_control_protocol;
+
   rcp_configuration configuration;
   rcp impl;
 
@@ -798,6 +779,11 @@ struct remote_control_processor : libremidi::error_handler
           = [this](auto&&...) { libremidi_handle_error(configuration, "Unhandled on_fader"); };
   }
 
+
+  virtual void start() = 0;
+
+  virtual void on_rcp_command(remote_control_protocol::device_type device_type, std::span<const uint8_t> cmd)  = 0;
+
   /**
    *
    * @return if version never received version it will be all zeros (also if received all zeros as version..)
@@ -807,19 +793,6 @@ struct remote_control_processor : libremidi::error_handler
   std::span<const uint8_t, 5> & get_version()
   {
     return version;
-  }
-
-  void firmware_version_request()
-  {
-    configuration.midi_out(impl.firmware_version_request());
-  }
-
-  void start()
-  {
-    current_state = waiting_for_query;
-
-    configuration.midi_out(impl.device_query());
-    configuration.midi_out(impl.firmware_version_request());
   }
 
   void on_midi(const libremidi::message& message)
@@ -874,6 +847,62 @@ struct remote_control_processor : libremidi::error_handler
       default:
         break;
     }
+  }
+
+  void command(remote_control_protocol::mixer_command c, bool press)
+  {
+    using ce = libremidi::channel_events;
+    configuration.midi_out(ce::note_on(1, to_underlying(c), press ? 127 : 0));
+    configuration.midi_out(ce::note_off(1, to_underlying(c), press ? 127 : 0));
+  }
+
+  void control(remote_control_protocol::mixer_control c, int value)
+  {
+    using ce = libremidi::channel_events;
+    configuration.midi_out(ce::control_change(1, to_underlying(c), value));
+  }
+
+  inline void vpot(uint8_t index, bool state, remote_control_protocol::led_ring_mode mode, uint8_t value)
+  {
+    control(
+      (remote_control_protocol::mixer_control)(libremidi::to_underlying(remote_control_protocol::mixer_control::vpot_led_0) + index),
+      (state ? remote_control_protocol::vpot_mask_state : 0) | remote_control_protocol::vpot_mode_bits[(uint8_t)mode] | value
+    );
+  }
+
+  /**
+   * Move fader to position/level.
+   *
+   * @param i       index of fader (0-8 for channel 1-9)
+   * @param value   position/level of fader
+   */
+  void fader(uint8_t i, uint16_t value)
+  {
+    using ce = libremidi::channel_events;
+    configuration.midi_out(ce::pitch_bend(i + 1, value));
+  }
+};
+
+struct remote_control_client_processor : remote_control_processor
+{
+  // State machine
+  enum
+  {
+    waiting_for_query,
+    got_query,
+    connected,
+    errored
+  } current_state {waiting_for_query};
+
+  explicit remote_control_client_processor(rcp_configuration conf)
+      : remote_control_processor(conf) {}
+
+  void start()
+  {
+    current_state = waiting_for_query;
+
+    configuration.midi_out(impl.device_query());
+    configuration.midi_out(impl.firmware_version_request());
   }
 
   void on_rcp_command(remote_control_protocol::device_type device_type, std::span<const uint8_t> cmd)
@@ -931,103 +960,16 @@ struct remote_control_processor : libremidi::error_handler
     }
   }
 
-  void update_timecode(int h, int m, int s, int f)
-  {
-    for (auto&& m : rcp::timecode(h, m, s, f))
-      configuration.midi_out(std::move(m));
-  }
 
-  void update_lcd(std::string_view v)
-  {
-    auto res = impl.update_lcd(v);
-    if (!res.empty())
-      configuration.midi_out(std::move(res));
-  }
-
-  void update_lcd(std::string_view v, int pos)
-  {
-    auto res = impl.update_lcd(v, pos);
-    if (!res.empty())
-      configuration.midi_out(std::move(res));
-  }
-
-  void update_lcd_ch_line(std::string_view v, uint ch, uint line)
-  {
-    // 8 channels, 2 lines
-    // Show error msg?
-    if (7 < ch || remote_control_protocol::lcd_channel_line_n < line)
-      return;
-
-    // Prefill segment with spaces
-    char buf[8] = {0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0};
-
-    int len = int(std::ssize(v));
-    if (len > remote_control_protocol::lcd_channel_line_len)
-      len = remote_control_protocol::lcd_channel_line_len;
-
-    std::memcpy(buf, v.data(), len);
-
-    auto res = impl.update_lcd(buf, remote_control_protocol::lcd_channel_offset[ch][line]);
-
-    if (!res.empty())
-      configuration.midi_out(std::move(res));
-  }
-
-  void update_channel_colors(rcp::channel_color_list &channel_colors)
-  {
-    auto res = impl.update_channel_colors(channel_colors);
-    if (!res.empty())
-      configuration.midi_out(std::move(res));
-  }
-
-  void command(remote_control_protocol::mixer_command c, bool press)
-  {
-    using ce = libremidi::channel_events;
-    configuration.midi_out(ce::note_on(1, to_underlying(c), press ? 127 : 0));
-    configuration.midi_out(ce::note_off(1, to_underlying(c), press ? 127 : 0));
-  }
-
-  void control(remote_control_protocol::mixer_control c, int value)
-  {
-    using ce = libremidi::channel_events;
-    configuration.midi_out(ce::control_change(1, to_underlying(c), value));
-  }
-
-  inline void vpot(uint8_t index, bool state, remote_control_protocol::led_ring_mode mode, uint8_t value)
-  {
-    control(
-      (remote_control_protocol::mixer_control)(libremidi::to_underlying(remote_control_protocol::mixer_control::vpot_led_0) + index),
-      (state ? remote_control_protocol::vpot_mask_state : 0) | remote_control_protocol::vpot_mode_bits[(uint8_t)mode] | value
-    );
-  }
-
-  /**
-   * Move fader to position/level.
-   *
-   * @param i       index of fader (0-8 for channel 1-9)
-   * @param value   position/level of fader
-   */
-  void fader(uint8_t i, uint16_t value)
-  {
-    using ce = libremidi::channel_events;
-    configuration.midi_out(ce::pitch_bend(i + 1, value));
-  }
-
-  void channel_meter(uint8_t i, uint8_t value)
-  {
-    using ce = libremidi::channel_events;
-    configuration.midi_out(ce::aftertouch(1, ((i<<4) & rcp::channel_meter_mask_index) | (value & rcp::channel_meter_mask_value)));
-  }
-
-  /**
-   * Send a device query
-   */
   void device_query()
   {
     configuration.midi_out(impl.device_query());
   }
 
-
+  void firmware_version_request()
+  {
+    configuration.midi_out(impl.firmware_version_request());
+  }
 
   void reset()
   {
@@ -1079,14 +1021,55 @@ struct remote_control_processor : libremidi::error_handler
     configuration.midi_out(impl.faders_touch_sensitivity(fader_id, sens));
   }
 
-
-  // State machine
-  enum
+  void channel_meter(uint8_t i, uint8_t value)
   {
-    waiting_for_query,
-    got_query,
-    connected,
-    errored
-  } current_state{waiting_for_query};
+    using ce = libremidi::channel_events;
+    configuration.midi_out(ce::aftertouch(1, ((i<<4) & rcp::channel_meter_mask_index) | (value & rcp::channel_meter_mask_value)));
+  }
+
+  void update_timecode(int h, int m, int s, int f)
+  {
+    for (auto&& m : rcp::timecode(h, m, s, f))
+      configuration.midi_out(std::move(m));
+  }
+
+  void update_lcd(std::string_view v)
+  {
+    auto res = impl.update_lcd(v);
+    if (!res.empty())
+      configuration.midi_out(std::move(res));
+  }
+
+  void update_lcd(std::string_view v, int pos)
+  {
+    auto res = impl.update_lcd(v, pos);
+    if (!res.empty())
+      configuration.midi_out(std::move(res));
+  }
+
+  void update_lcd_ch_line(std::string_view v, uint ch, uint line)
+  {
+    // 8 channels, 2 lines
+    // Show error msg?
+    if (7 < ch || remote_control_protocol::lcd_channel_line_n < line)
+      return;
+
+    // Prefill segment with spaces
+    char buf[8] = {0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0};
+
+    int len = int(std::ssize(v));
+    if (len > remote_control_protocol::lcd_channel_line_len)
+      len = remote_control_protocol::lcd_channel_line_len;
+
+    std::memcpy(buf, v.data(), len);
+
+    auto res = impl.update_lcd(buf, remote_control_protocol::lcd_channel_offset[ch][line]);
+
+    if (!res.empty())
+      configuration.midi_out(std::move(res));
+  }
+
 };
+
+
 }

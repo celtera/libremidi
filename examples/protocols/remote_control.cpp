@@ -103,7 +103,7 @@ int main(int argc, char * argv[])
 
   // Set-up the remote control API.
   // Here we only do some logging, this is where commands sqall be handled.
-  libremidi::remote_control_processor rcp{{
+  libremidi::remote_control_client_processor rcp{{
       .device_type = device_type,
       .midi_out = [&](libremidi::message&& message) {
 
@@ -204,3 +204,4 @@ api
 
   return EXIT_SUCCESS;
 }
+
