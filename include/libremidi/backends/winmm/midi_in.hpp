@@ -329,18 +329,33 @@ private:
       return 2;
     else if (status < 0xF0)
       return 3;
-    else if (status == 0xF1)
-      return 2;
-    else if (status == 0xF2)
-      return 3;
-    else if (status == 0xF3)
-      return 2;
-    else if (status == 0xF8)
-      return 1;
-    else if (status == 0xFE)
-      return 1;
-    else
-      return 0;
+
+    switch (status)
+    {
+      // System common
+      case 0xF1: // MIDI time code quarter frame
+        return 2;
+      case 0xF2: // Song position pointer
+        return 3;
+      case 0xF3: // Song select
+        return 2;
+      case 0xF6: // Tune request
+        return 1;
+
+      // System real-time
+      case 0xF8: // Timing clock
+      case 0xFA: // Start
+      case 0xFB: // Continue
+      case 0xFC: // Stop
+      case 0xFE: // Active sensing
+      case 0xFF: // Reset
+        return 1;
+
+      // 0xF0 and 0xF7 are sysex, which does not come through MIM_DATA; 0xF4,
+      // 0xF5, 0xF9 and 0xFD are undefined.
+      default:
+        return 0;
+    }
   }
 
   static void CALLBACK midiInputCallback(
