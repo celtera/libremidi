@@ -10,7 +10,8 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, sat-builder]
+    container: ubuntu:noble
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
     steps:

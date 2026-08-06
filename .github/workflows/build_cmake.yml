@@ -22,6 +22,7 @@ jobs:
   build:
     name: ${{ matrix.config.name }} ${{ matrix.library_mode }} ${{ matrix.boost && 'Boost' }}
     runs-on: ${{ matrix.config.os }}
+    container: ${{ matrix.config.container }}
     strategy:
       fail-fast: false
       matrix:
@@ -31,6 +32,7 @@ jobs:
         - {
             name: "MSVC x86_64",
             os: windows-latest,
+            container: "",
             generator: "",
             cmakeflags: "-DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "RUN_TESTS",
@@ -48,7 +50,8 @@ jobs:
           }
         - {
             name: "Ubuntu gcc-13",
-            os: ubuntu-latest,
+            os: [self-hosted, linux, x64, sat-builder],
+            container: "ubuntu:noble",
             generator: "",
             cmakeflags: "-DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_PEDANTIC=1 -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SANITIZE_VECTOR=1'",
             test_target: "test",
@@ -57,7 +60,8 @@ jobs:
           }
         - {
             name: "Ubuntu gcc-14",
-            os: ubuntu-latest,
+            os: [self-hosted, linux, x64, sat-builder],
+            container: "ubuntu:noble",
             generator: "",
             cmakeflags: "-DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_PEDANTIC=1 -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SANITIZE_VECTOR=1' -DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "test",
@@ -66,7 +70,8 @@ jobs:
           }
         - {
             name: "Ubuntu clang-22 libstdc++",
-            os: ubuntu-latest,
+            os: [self-hosted, linux, x64, sat-builder],
+            container: "ubuntu:noble",
             generator: "",
             cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-22 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined' -DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "test",
@@ -75,7 +80,8 @@ jobs:
           }
         - {
             name: "Ubuntu clang libc++",
-            os: ubuntu-latest,
+            os: [self-hosted, linux, x64, sat-builder],
+            container: "ubuntu:noble",
             generator: "",
             cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-stdlib=libc++ -Werror=return-type' -DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "test",
@@ -84,7 +90,8 @@ jobs:
           }
         - {
             name: 'Tarball',
-            os: ubuntu-latest,
+            os: [self-hosted, linux, x64, sat-builder],
+            container: "ubuntu:noble",
             generator: "",
             cmakeflags: "",
             test_target: "test",
@@ -94,6 +101,7 @@ jobs:
         - {
             name: "macOS",
             os: macos-latest,
+            container: "",
             generator: "",
             cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DBOOST_ROOT=$PWD/boost_1_90_0",
             test_target: "test",
@@ -103,6 +111,7 @@ jobs:
         - {
             name: "macOS ni-midi2",
             os: macos-latest,
+            container: "",
             generator: "",
             cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DBOOST_ROOT=$PWD/boost_1_90_0 -DLIBREMIDI_USE_NI_MIDI2=ON",
             test_target: "test",
@@ -112,6 +121,7 @@ jobs:
         - {
             name: "iOS",
             os: macos-latest,
+            container: "",
             generator: "-GXcode",
             cmakeflags: "-DCMAKE_CXX_FLAGS=-Werror=return-type -DBOOST_ROOT=$PWD/boost_1_90_0 -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_XCODE_EFFECTIVE_PLATFORMS=-iphoneos",
             test_target: "test",
@@ -169,7 +179,7 @@ jobs:
         if [ "$RUNNER_OS" == "Linux" ]; then
           sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
           sudo apt update
-          sudo apt install cmake ninja-build curl libboost-dev libasound-dev libjack-jackd2-dev clang libc++-dev gcc gcc-14
+          sudo apt install -y cmake ninja-build curl libboost-dev libasound-dev libjack-jackd2-dev clang libc++-dev gcc gcc-14
         elif [ "$RUNNER_OS" == "macOS" ]; then
           brew install ninja
         fi
@@ -224,7 +234,8 @@ jobs:
 
   build_bsd:
     name: FreeBSD
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, sat-builder]
+    container: ubuntu:noble
     strategy:
       fail-fast: false
       matrix:
@@ -269,7 +280,8 @@ jobs:
 
   build_debian:
     name: Debian ${{ matrix.distro }} ${{ matrix.library_mode }} ${{ matrix.cxx }} ${{ matrix.boost && 'Boost' }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, sat-builder]
+    container: ubuntu:noble
     container:
       image: debian:${{ matrix.distro }}
     strategy:
