@@ -59,8 +59,8 @@ jobs:
             -DCMAKE_CTEST_ARGUMENTS="--rerun-failed;--output-on-failure" \
             -DCMAKE_INSTALL_PREFIX=install
 
-          cmake --build build-debug
-          cmake --build build-debug --target install
+          cmake --build build-debug --parallel
+          cmake --build build-debug --parallel --target install
 
       - name: Test debug
         shell: msys2 {0}
@@ -79,8 +79,8 @@ jobs:
             -DCMAKE_CTEST_ARGUMENTS="--rerun-failed;--output-on-failure" \
             -DCMAKE_INSTALL_PREFIX=install
 
-          cmake --build build-release
-          cmake --build build-release --target install
+          cmake --build build-release --parallel
+          cmake --build build-release --parallel --target install
 
       - name: Test release
         shell: msys2 {0}

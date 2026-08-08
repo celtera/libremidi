@@ -217,8 +217,8 @@ jobs:
     - name: Build
       if: matrix.config.name != 'Tarball'
       run: |
-        cmake --build build --config Debug
-        cmake --build build --config Debug --target install
+        cmake --build build --parallel --config Debug
+        cmake --build build --parallel --config Debug --target install
 
     - name: Test
       if: matrix.config.name != 'Tarball' && matrix.config.name != 'iOS' && matrix.library_mode != 'MODULE'
@@ -228,7 +228,7 @@ jobs:
         #   sudo modprobe snd-virmidi midi_devs=1
         # fi
 
-        cmake --build build --config Debug --target ${{ matrix.config.test_target }}
+        cmake --build build --parallel --config Debug --target ${{ matrix.config.test_target }}
 
       shell: bash
 
@@ -271,9 +271,9 @@ jobs:
             -DCMAKE_CTEST_ARGUMENTS="--rerun-failed;--output-on-failure" \
             -DCMAKE_INSTALL_PREFIX=install
 
-          cmake --build build
+          cmake --build build --parallel
           if [ "${{ matrix.library_mode }}" != "MODULE" ]; then
-            cmake --build build --target install
+            cmake --build build --parallel --target install
             cmake --build build --target test
           fi
 
@@ -347,8 +347,8 @@ jobs:
 
     - name: Build
       run: |
-        cmake --build build --config Debug
-        cmake --build build --config Debug --target install
+        cmake --build build --parallel --config Debug
+        cmake --build build --parallel --config Debug --target install
 
     - name: Test
       if: matrix.library_mode != 'MODULE'
