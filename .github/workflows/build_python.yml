@@ -103,7 +103,7 @@ jobs:
       shell: bash
       run: |
         export ASAN_OPTIONS=detect_leaks=0
-        ${{matrix.config.environment}} cmake --build build --config Debug
+        ${{matrix.config.environment}} cmake --build build --parallel --config Debug
 
     - name: Test
       if: runner.os == 'Windows'
