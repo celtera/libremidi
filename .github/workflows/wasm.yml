@@ -44,4 +44,4 @@ jobs:
           -DLIBREMIDI_EXAMPLES=1
 
     - name: Build
-      run: cmake --build build --parallel
+      run: cmake --build build --parallel "$(nproc)"
