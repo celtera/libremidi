@@ -50,7 +50,7 @@ jobs:
           }
         - {
             name: "Ubuntu gcc-13",
-            os: [self-hosted, linux, x64, sat-builder],
+            os: sat-builder,
             container: "ubuntu:noble",
             generator: "",
             cmakeflags: "-DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_PEDANTIC=1 -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SANITIZE_VECTOR=1'",
@@ -60,7 +60,7 @@ jobs:
           }
         - {
             name: "Ubuntu gcc-14",
-            os: [self-hosted, linux, x64, sat-builder],
+            os: sat-builder,
             container: "ubuntu:noble",
             generator: "",
             cmakeflags: "-DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_PEDANTIC=1 -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SANITIZE_VECTOR=1' -DBOOST_ROOT=$PWD/boost_1_90_0",
@@ -70,7 +70,7 @@ jobs:
           }
         - {
             name: "Ubuntu clang-22 libstdc++",
-            os: [self-hosted, linux, x64, sat-builder],
+            os: sat-builder,
             container: "ubuntu:noble",
             generator: "",
             cmakeflags: "-DCMAKE_CXX_COMPILER=clang++-22 -DCMAKE_CXX_FLAGS='-Werror=return-type -fsanitize=address -fsanitize=undefined' -DBOOST_ROOT=$PWD/boost_1_90_0",
@@ -80,7 +80,7 @@ jobs:
           }
         - {
             name: "Ubuntu clang libc++",
-            os: [self-hosted, linux, x64, sat-builder],
+            os: sat-builder,
             container: "ubuntu:noble",
             generator: "",
             cmakeflags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='-stdlib=libc++ -Werror=return-type' -DBOOST_ROOT=$PWD/boost_1_90_0",
@@ -90,7 +90,7 @@ jobs:
           }
         - {
             name: 'Tarball',
-            os: [self-hosted, linux, x64, sat-builder],
+            os: sat-builder,
             container: "ubuntu:noble",
             generator: "",
             cmakeflags: "",
@@ -234,8 +234,7 @@ jobs:
 
   build_bsd:
     name: FreeBSD
-    runs-on: [self-hosted, linux, x64, sat-builder]
-    container: ubuntu:noble
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -280,8 +279,7 @@ jobs:
 
   build_debian:
     name: Debian ${{ matrix.distro }} ${{ matrix.library_mode }} ${{ matrix.cxx }} ${{ matrix.boost && 'Boost' }}
-    runs-on: [self-hosted, linux, x64, sat-builder]
-    container: ubuntu:noble
+    runs-on: sat-builder
     container:
       image: debian:${{ matrix.distro }}
     strategy:
