@@ -287,7 +287,7 @@ jobs:
       matrix:
         boost: [0, 1]
         library_mode: [LIBRARY, HEADER_ONLY, MODULE]
-        distro: [bookworm, trixie]
+        distro: [bookworm, trixie, forky]
         cxx: [c++, clang++]
 
         exclude:
@@ -295,6 +295,9 @@ jobs:
             library_mode: MODULE
           - distro: trixie
             library_mode: MODULE
+          - distro: forky
+            library_mode: MODULE
+            cxx: c++
 
     steps:
     - name: Install git
