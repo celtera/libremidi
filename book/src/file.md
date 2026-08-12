@@ -20,7 +20,7 @@ libremidi::reader::parse_result result = r.parse(bytes);
 // If parsing succeeded, use the parsed data
 if(result != libremidi::reader::invalid) {
   for(auto& track : r.tracks) {
-    for(auto& event : t.events) {
+    for(auto& event : track) {
       std::cout << (int) event.m.bytes[0] << '\n';
     }
   }
