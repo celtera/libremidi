@@ -72,7 +72,8 @@ add_test(NAME rawio_test COMMAND rawio_test)
 # each skips with exit 0 when no daemon is reachable and arms a watchdog so a
 # lock-corruption regression fails instead of hanging.
 if(LIBREMIDI_HAS_PIPEWIRE)
-  foreach(_pwtest pipewire_context_sync pipewire_context_reconnect pipewire_context_subscriptions)
+  foreach(_pwtest pipewire_context_sync pipewire_context_reconnect pipewire_context_subscriptions
+                  pipewire_context_error_scope)
     add_executable(${_pwtest}_test tests/integration/${_pwtest}.cpp)
     target_link_libraries(${_pwtest}_test PRIVATE libremidi)
     add_test(NAME ${_pwtest}_test COMMAND ${_pwtest}_test)
