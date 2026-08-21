@@ -846,12 +846,20 @@ private:
     }
   }
 
+  // pw_core_events::error reports the proxy the error belongs to in `id`;
+  // PW_ID_CORE is the connection itself, anything else is a per-object error
+  // that says nothing about the socket.
   static void on_core_error(
-      void* data, std::uint32_t /*id*/, int /*seq*/, int res, const char* /*message*/) noexcept
+      void* data, std::uint32_t id, int /*seq*/, int res, const char* /*message*/) noexcept
   {
     auto* self = static_cast<context*>(data);
+    if (id != PW_ID_CORE)
+      return;
+
     self->m_sync_error.store(res, std::memory_order_release);
-    if (res == -EPIPE || res == -ECONNRESET || res == -ENOENT || res == -ENOTCONN)
+    // -ENOENT is "no such object/factory", which is recoverable; connection
+    // loss surfaces as a socket error.
+    if (res == -EPIPE || res == -ECONNRESET || res == -ENOTCONN)
     {
       self->m_state.store(connection_state::broken, std::memory_order_release);
     }
@@ -959,11 +967,10 @@ private:
 
   bool finalize_sync() noexcept
   {
+    // Only on_core_error() decides whether an error is fatal to the
+    // connection; a failed round-trip on its own is not.
     if (m_sync_error.load(std::memory_order_acquire) != 0)
-    {
-      m_state.store(connection_state::broken, std::memory_order_release);
       return false;
-    }
 
     if (m_state.load(std::memory_order_acquire) == connection_state::connecting)
     {
