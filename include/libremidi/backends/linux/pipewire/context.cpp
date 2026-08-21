@@ -17,7 +17,7 @@ std::shared_ptr<context> shared_context(context::config cfg) noexcept
 
   std::lock_guard lock{mtx};
   if (auto p = weak.lock())
-    return p;
+    return context::make_shared_holder(std::move(p));
 
   auto inst = shared_instance();
   if (!inst)
@@ -27,7 +27,7 @@ std::shared_ptr<context> shared_context(context::config cfg) noexcept
   if (!ctx)
     return {};
   weak = ctx;
-  return ctx;
+  return context::make_shared_holder(std::move(ctx));
 }
 
 }

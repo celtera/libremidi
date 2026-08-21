@@ -212,6 +212,27 @@ public:
     }
   }
 
+  // Number of independent shared_context() holders currently alive. Copies of
+  // one holder's pointer count once; contexts built directly with make() or
+  // borrow() report 0.
+  std::size_t shared_holders() const noexcept
+  {
+    std::lock_guard lk{m_holders_mtx};
+    return m_shared_holders;
+  }
+
+  // Wraps `self` in a pointer that also counts as one shared holder. Used by
+  // shared_context(); copies of the result share the same holder slot.
+  static std::shared_ptr<context> make_shared_holder(std::shared_ptr<context> self)
+  {
+    if (!self)
+      return {};
+    auto* raw = self.get();
+    auto* tok = new holder_token{std::move(self)};
+    std::shared_ptr<holder_token> owner{tok, [](holder_token* t) { delete t; }};
+    return std::shared_ptr<context>{std::move(owner), raw};
+  }
+
   bool reconnect()
   {
     // tear_down() stops and destroys the thread loop, so reconnect MUST run
@@ -221,6 +242,19 @@ public:
     // ('recurse > 0' failure) and the invoke never completes (hang).
     if (is_in_loop_thread())
       return false;
+
+    // Held across the rebuild so a holder arriving mid-reconnect waits and
+    // then observes the new handles rather than the ones being freed.
+    std::lock_guard holders_lk{m_holders_mtx};
+
+    // tear_down() frees the loop, core and context this connection is built
+    // on. Other shared_context() holders may own pw_streams and proxies bound
+    // to them, and the rebuild cannot migrate those, so a context that is
+    // shared is never torn down on one holder's behalf.
+    if (m_shared_holders > 1)
+      return false;
+
+    dispatch_invalidated();
 
     tear_down(/*final=*/false);
     m_state.store(connection_state::connecting, std::memory_order_release);
@@ -397,6 +431,15 @@ public:
     return add_subscriber(m_subs_state, std::move(fn));
   }
 
+  // Fires from reconnect(), on the calling thread, immediately before the
+  // loop, context and core are destroyed — they are still valid inside the
+  // callback, which is where a holder must destroy the pw_streams and proxies
+  // it built on them. The loop lock is not held; take it as usual.
+  [[nodiscard]] subscription on_invalidated(std::function<void()> fn)
+  {
+    return add_subscriber(m_subs_invalidated, std::move(fn));
+  }
+
   // Live events only; observer's notify_in_constructor handles the
   // initial walk (matches alsa_seq / jack convention).
   [[nodiscard]] subscription on_node_added(std::function<void(const node_info&)> fn)
@@ -425,6 +468,7 @@ public:
     // destroy state captured by the subscriber lambda.
     invoke_sync([this, id] {
       remove_subscriber(m_subs_state, id);
+      remove_subscriber(m_subs_invalidated, id);
       remove_subscriber(m_subs_node_added, id);
       remove_subscriber(m_subs_node_removed, id);
       remove_subscriber(m_subs_port_added, id);
@@ -513,6 +557,29 @@ private:
   bool m_owns_loop{true};
   bool m_owns_core{true};
 
+  // Recursive: an on_invalidated subscriber may release or acquire a holder
+  // from inside reconnect(), which runs under this lock.
+  mutable std::recursive_mutex m_holders_mtx;
+  std::size_t m_shared_holders{0};
+
+  struct holder_token
+  {
+    std::shared_ptr<context> ctx;
+    explicit holder_token(std::shared_ptr<context> c)
+        : ctx{std::move(c)}
+    {
+      std::lock_guard lk{ctx->m_holders_mtx};
+      ++ctx->m_shared_holders;
+    }
+    ~holder_token()
+    {
+      std::lock_guard lk{ctx->m_holders_mtx};
+      --ctx->m_shared_holders;
+    }
+    holder_token(const holder_token&) = delete;
+    holder_token& operator=(const holder_token&) = delete;
+  };
+
   std::atomic<connection_state> m_state{connection_state::connecting};
   std::atomic<std::uint32_t> m_generation{0};
 
@@ -534,6 +601,7 @@ private:
   };
 
   subscriber_list<std::function<void(connection_state)>> m_subs_state;
+  subscriber_list<std::function<void()>> m_subs_invalidated;
   subscriber_list<std::function<void(const node_info&)>> m_subs_node_added;
   subscriber_list<std::function<void(std::uint32_t)>> m_subs_node_removed;
   subscriber_list<std::function<void(const port_info&)>> m_subs_port_added;
@@ -557,6 +625,21 @@ private:
         list.list.begin(), list.list.end(), [id](const auto& s) { return s.id == id; });
     if (it != list.list.end())
       list.list.erase(it);
+  }
+
+  void dispatch_invalidated()
+  {
+    for (const auto& sub : m_subs_invalidated.list)
+      if (sub.fn)
+      {
+        try
+        {
+          sub.fn();
+        }
+        catch (...)
+        {
+        }
+      }
   }
 
   void dispatch_state(connection_state s)
