@@ -100,6 +100,12 @@ public:
 
     assert(this->flt);
     assert(this->port.valid());
+    // The filter can run before the local port exists (open sequence) or
+    // after it was removed (close sequence). With no valid port token there
+    // is no buffer to process; skip instead of dereferencing a null token
+    // (a release build with asserts compiled out would segfault).
+    if (!this->flt || !this->port.valid())
+      return;
     const auto b = pw.filter_dequeue_buffer(this->port.opaque);
     if (!b)
       return;

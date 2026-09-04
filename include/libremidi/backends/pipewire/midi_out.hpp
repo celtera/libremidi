@@ -89,6 +89,12 @@ public:
   int process(spa_io_position* pos)
   {
     m_process_clock.store(pos->clock.nsec, std::memory_order_relaxed);
+    // The filter can run before the local port exists (open sequence) or
+    // after it was removed (close sequence). With no valid port token there
+    // is no buffer to process; report idle instead of a null dereference
+    // (a release build with asserts compiled out would segfault).
+    if (!this->flt || !this->port.valid())
+      return 1;
     const auto b = pw.filter_dequeue_buffer(this->port.opaque);
     if (!b)
       return 1;
