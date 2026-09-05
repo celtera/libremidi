@@ -139,35 +139,67 @@ struct pipewire_helpers
       return std::errc::connection_refused;
     }
 
+    // Not connected yet: see start_filter().
+    return stdx::error{};
+  }
+
+  // Connects the filter. Must run after the port (and its params) exist:
+  // the node carries node.always-process, so the daemon schedules it as
+  // soon as it is exported, ports or not, and process() would run against
+  // a missing port token.
+  template <typename Self>
+  stdx::error start_filter(Self& self)
+  {
+    if (!this->flt || !this->port.valid())
+      return std::errc::not_connected;
+
     if (int rc = this->flt->start(); rc < 0)
     {
-      this->flt.reset();
+      self.libremidi_handle_error(self.configuration, "could not connect filter");
+      release_filter();
       return std::errc::connection_refused;
     }
 
+    // Wait for the daemon to assign our node an id.
+    this->flt->synchronize_node();
     return stdx::error{};
+  }
+
+  // Tears the filter down in an order that keeps the RT callback safe:
+  // stop() disconnects first, which unprepares the node on the data loop
+  // synchronously, so process() cannot be running or start once it returns;
+  // only then is the port token cleared and the object freed
+  // (pw_filter_destroy frees the port itself). Never pw_filter_remove_port
+  // while connected: it frees the port on the caller's thread without any
+  // data-loop synchronization, racing impl_node_process and our process().
+  void release_filter()
+  {
+    if (!this->flt)
+      return;
+    this->flt->stop();
+    this->port = {};
+    this->flt.reset();
   }
 
   template <typename Self>
   void destroy_filter(Self&)
   {
-    if (!this->flt)
-      return;
-    if (this->port.valid())
-    {
-      this->flt->remove_port(this->port);
-      this->port = {};
-    }
-    this->flt.reset();
+    release_filter();
   }
 
+  // Adds the local port. The filter is (re)created here if a previous
+  // close_port() released it, and stays unconnected until start_filter().
   template <typename Self>
   stdx::error create_local_port(
       Self& self, std::string_view portName, spa_direction direction, const char* format)
   {
-    assert(this->flt);
     if (this->port.valid())
       return stdx::error{};
+    if (!this->flt)
+    {
+      if (auto err = create_filter(self); err != stdx::error{})
+        return err;
+    }
 
     if (portName.empty())
       portName = direction == SPA_DIRECTION_INPUT ? "i" : "o";
@@ -178,9 +210,6 @@ struct pipewire_helpers
       self.libremidi_handle_error(self.configuration, "error creating port");
       return std::errc::invalid_argument;
     }
-
-    // Wait for the daemon to assign our node an id.
-    this->flt->synchronize_node();
     return stdx::error{};
   }
 
@@ -283,8 +312,9 @@ struct pipewire_helpers
     if (!this->flt || !this->port.valid())
       return stdx::error{};
     unlink_ports();
-    this->flt->remove_port(this->port);
-    this->port = {};
+    // Disconnect and destroy rather than remove the port from a live
+    // filter; the next open_port() creates a fresh filter.
+    release_filter();
     return stdx::error{};
   }
 

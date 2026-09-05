@@ -60,6 +60,9 @@ public:
         err != stdx::error{})
       return err;
 
+    if (auto err = start_filter(*this); err != stdx::error{})
+      return err;
+
     if (auto err = link_ports(*this, in_port); err != stdx::error{})
       return err;
 
@@ -71,6 +74,9 @@ public:
   {
     if (auto err = create_local_port(*this, name, SPA_DIRECTION_INPUT, "32 bit raw UMP");
         err != stdx::error{})
+      return err;
+
+    if (auto err = start_filter(*this); err != stdx::error{})
       return err;
 
     start_thread();
@@ -98,12 +104,11 @@ public:
         .has_samples = true,
     };
 
-    assert(this->flt);
-    assert(this->port.valid());
-    // The filter can run before the local port exists (open sequence) or
-    // after it was removed (close sequence). With no valid port token there
-    // is no buffer to process; skip instead of dereferencing a null token
-    // (a release build with asserts compiled out would segfault).
+    // Defence in depth: the filter is only connected once the port exists
+    // and is disconnected before the token is cleared (see start_filter /
+    // release_filter), so this should not trigger. Without a port token
+    // there is nothing to process; pw_filter_dequeue_buffer(nullptr) would
+    // dereference an invalid pointer.
     if (!this->flt || !this->port.valid())
       return;
     const auto b = pw.filter_dequeue_buffer(this->port.opaque);
