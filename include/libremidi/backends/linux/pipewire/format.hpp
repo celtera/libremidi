@@ -179,21 +179,19 @@ inline bool extract_modifier_choice(
 
   if (spa_pod_is_choice(val))
   {
-    const auto* choice = reinterpret_cast<const spa_pod_choice*>(val);
-    const spa_pod* child = SPA_POD_CHOICE_CHILD(reinterpret_cast<const spa_pod_choice*>(val));
-    const std::uint32_t child_size = SPA_POD_BODY_SIZE(child);
-    const std::uint32_t n_values
-        = (SPA_POD_BODY_SIZE(val) - sizeof(spa_pod_choice_body)) / child_size;
-    const std::uint8_t* p = static_cast<const std::uint8_t*>(SPA_POD_CONTENTS(spa_pod_choice, val))
-                            + sizeof(spa_pod_choice_body);
-    for (std::uint32_t i = 0; i < n_values; ++i)
+    // SPA_POD_CHOICE_VALUES already skips the pod header and the choice body.
+    const std::uint32_t value_size = SPA_POD_CHOICE_VALUE_SIZE(val);
+    const std::uint32_t n_values = SPA_POD_CHOICE_N_VALUES(val);
+    const auto* p = static_cast<const std::uint8_t*>(SPA_POD_CHOICE_VALUES(val));
+    if (value_size == sizeof(std::int64_t))
     {
-      std::int64_t v;
-      std::memcpy(&v, p, sizeof(v));
-      out_choices.push_back(static_cast<std::uint64_t>(v));
-      p += child_size;
+      for (std::uint32_t i = 0; i < n_values; ++i, p += value_size)
+      {
+        std::int64_t v;
+        std::memcpy(&v, p, sizeof(v));
+        out_choices.push_back(static_cast<std::uint64_t>(v));
+      }
     }
-    (void)choice;
     return true;
   }
 
