@@ -69,19 +69,16 @@ public:
   {
     MIDIEntityRef e{};
     MIDIEndpointGetEntity(obj, &e);
-    bool physical = bool(e);
 
-    bool ok = this->configuration.track_any;
-    if (physical && this->configuration.track_hardware)
-      ok |= true;
-    else if ((!physical) && this->configuration.track_virtual)
-      ok |= true;
-
-    if (!ok)
-      return {};
-
-    // Get the MIDI device from the entity
-    libremidi::transport_type type{};
+    /*
+     * No entity means a virtual endpoint, one an application published. An
+     * entity means a device port, and `hardware` is the answer unless the
+     * driver below says something more specific: CoreMIDI only names the
+     * transport for drivers this backend recognises, and a DIN interface behind
+     * a third-party driver is still hardware.
+     */
+    libremidi::transport_type type
+        = e ? libremidi::transport_type::hardware : libremidi::transport_type::software;
     libremidi::container_identifier usb_location_id{};
     libremidi::device_identifier usb_vendor_product{};
     {
@@ -118,6 +115,12 @@ public:
         }
       }
     }
+
+    // Filtered after the transport is known, not on the presence of an entity:
+    // the IAC bus and a network session are both device-backed, and it is the
+    // driver above that makes one software and the other network.
+    if (!this->configuration.accepts(type))
+      return {};
 
     return std::conditional_t<Input, input_port, output_port>{
         {.api = get_current_api(),

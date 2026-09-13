@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include <libremidi/backends/alsa_raw/config.hpp>
 #include <libremidi/backends/alsa_raw/helpers.hpp>
 #include <libremidi/backends/dummy.hpp>
@@ -70,7 +71,8 @@ public:
     new_devs.enumerate_cards();
     for (auto& d : new_devs.inputs)
     {
-      ret.push_back(to_port_info<true>(d));
+      if (auto p = wanted_port<true>(d))
+        ret.push_back(std::move(*p));
     }
     return ret;
   }
@@ -83,7 +85,8 @@ public:
     new_devs.enumerate_cards();
     for (auto& d : new_devs.outputs)
     {
-      ret.push_back(to_port_info<false>(d));
+      if (auto p = wanted_port<false>(d))
+        ret.push_back(std::move(*p));
     }
     return ret;
   }
@@ -154,7 +157,10 @@ public:
 #else
     container_identifier container{};
     device_identifier device{};
-    libremidi::transport_type type{};
+    // Nothing can say which kind of hardware this is without udev, but this
+    // backend enumerates ALSA sound cards, so hardware it is: `unknown` would
+    // belong to no transport group and be filtered out.
+    libremidi::transport_type type = libremidi::transport_type::hardware;
     std::string manufacturer;
     std::string product;
     std::string serial;
@@ -184,6 +190,25 @@ public:
          .type = type}};
   }
 
+  //! The transport comes out of udev, so it is only known once the port has
+  //! been built: the filter has to come after the conversion.
+  template <bool Input>
+  auto wanted_port(const alsa_raw::alsa_raw_port_info& p) const noexcept
+      -> std::optional<std::conditional_t<Input, input_port, output_port>>
+  {
+    auto info = to_port_info<Input>(p);
+
+    // udev can also fail at run time, for a card with no controlC node. Same
+    // answer: it is a sound card.
+    auto transport = info.type;
+    if (transport == libremidi::transport_type::unknown)
+      transport = libremidi::transport_type::hardware;
+
+    if (!this->configuration.accepts(transport))
+      return std::nullopt;
+    return info;
+  }
+
   void check_devices(bool notify)
   {
     Enumerator new_devs{*this};
@@ -197,7 +222,8 @@ public:
       {
         if (auto& cb = this->configuration.input_removed)
         {
-          cb(to_port_info<true>(in_prev));
+          if (auto p = wanted_port<true>(in_prev))
+            cb(std::move(*p));
         }
       }
     }
@@ -209,7 +235,8 @@ public:
       {
         if (auto& cb = this->configuration.output_removed)
         {
-          cb(to_port_info<false>(out_prev));
+          if (auto p = wanted_port<false>(out_prev))
+            cb(std::move(*p));
         }
       }
     }
@@ -223,7 +250,8 @@ public:
           if (auto it = std::find(m_current_inputs.begin(), m_current_inputs.end(), in_next);
               it == m_current_inputs.end())
           {
-            cb(to_port_info<true>(in_next));
+            if (auto p = wanted_port<true>(in_next))
+            cb(std::move(*p));
           }
         }
       }
@@ -235,7 +263,8 @@ public:
           if (auto it = std::find(m_current_outputs.begin(), m_current_outputs.end(), out_next);
               it == m_current_outputs.end())
           {
-            cb(to_port_info<false>(out_next));
+            if (auto p = wanted_port<false>(out_next))
+            cb(std::move(*p));
           }
         }
       }

@@ -20,6 +20,13 @@ public:
   {
   } configuration;
 
+  //! JACK answers this itself, through JackPortIsPhysical.
+  static libremidi::transport_type jack_transport(int flags)
+  {
+    return (flags & JackPortIsPhysical) ? libremidi::transport_type::hardware
+                                        : libremidi::transport_type::software;
+  }
+
   explicit observer_jack(observer_configuration&& conf, jack_observer_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
   {
@@ -59,12 +66,7 @@ public:
           auto port = jack.port.by_name(client, ports[i]);
           auto flags = jack.port.flags(port);
 
-          bool physical = flags & JackPortIsPhysical;
-          bool ok = configuration.track_any;
-          if (configuration.track_hardware)
-            ok |= physical;
-          if (configuration.track_virtual)
-            ok |= !physical;
+          const bool ok = configuration.accepts(jack_transport(flags));
 
           if (ok)
           {
@@ -91,12 +93,7 @@ public:
           auto port = jack.port.by_name(client, ports[i]);
           auto flags = jack.port.flags(port);
 
-          bool physical = flags & JackPortIsPhysical;
-          bool ok = configuration.track_any;
-          if (configuration.track_hardware)
-            ok |= physical;
-          if (configuration.track_virtual)
-            ok |= !physical;
+          const bool ok = configuration.accepts(jack_transport(flags));
 
           if (ok)
           {
@@ -123,12 +120,7 @@ public:
       if (type != port_type)
         return;
 
-      bool physical = flags & JackPortIsPhysical;
-      bool ok = configuration.track_any;
-      if (configuration.track_hardware)
-        ok |= physical;
-      if (configuration.track_virtual)
-        ok |= !physical;
+      const bool ok = configuration.accepts(jack_transport(flags));
       if (!ok)
         return;
 
