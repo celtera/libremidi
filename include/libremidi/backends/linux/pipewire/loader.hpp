@@ -256,7 +256,8 @@ private:
     filter_trigger_process = sym<decltype(filter_trigger_process)>(h, "pw_filter_trigger_process");
 #endif
 
-    filter_available = filter_new_simple && filter_destroy && filter_connect && filter_disconnect
+    filter_available = (filter_new || filter_new_simple) && filter_add_listener
+                       && filter_destroy && filter_connect && filter_disconnect
                        && filter_add_port && filter_get_node_id && filter_get_dsp_buffer;
   }
 
