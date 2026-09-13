@@ -7,6 +7,7 @@
 
 #include <libremidi/backends/linux/pipewire/drm_modifiers.hpp>
 #include <libremidi/backends/linux/pipewire/loader.hpp>
+#include <libremidi/backends/linux/pipewire/types.hpp>
 #include <libremidi/config.hpp>
 
 #include <spa/param/video/raw.h>
@@ -204,6 +205,113 @@ inline bool extract_modifier_choice(
   }
 
   return false;
+}
+
+//! Read one SPA_PARAM_EnumFormat object into a capability record.
+//!
+//! Every property may be a plain value or a choice, and the two are not
+//! interchangeable: a choice's values start past its body, not at the start of
+//! the pod. Returns false for anything that is not a video format object.
+inline bool parse_video_enum_format(const spa_pod* fmt_obj, video_format_caps& out)
+{
+  out = {};
+  out.min_fps_denom = out.max_fps_denom = 1;
+  if (!fmt_obj || !spa_pod_is_object(fmt_obj))
+    return false;
+
+  const auto* obj = reinterpret_cast<const spa_pod_object*>(fmt_obj);
+  if (SPA_POD_OBJECT_TYPE(obj) != SPA_TYPE_OBJECT_Format)
+    return false;
+
+  if (const auto* p = spa_pod_object_find_prop(obj, nullptr, SPA_FORMAT_VIDEO_format))
+  {
+    const spa_pod* v = &p->value;
+    if (spa_pod_is_choice(v))
+    {
+      // The first value of an Enum choice is its default: that is the one a
+      // panel should show, and the rest are equally acceptable.
+      if (SPA_POD_CHOICE_N_VALUES(v) > 0
+          && SPA_POD_CHOICE_VALUE_SIZE(v) == sizeof(std::uint32_t))
+        std::memcpy(&out.format, SPA_POD_CHOICE_VALUES(v), sizeof(out.format));
+    }
+    else if (spa_pod_is_id(v))
+    {
+      spa_pod_get_id(v, &out.format);
+    }
+  }
+
+  if (const auto* p = spa_pod_object_find_prop(obj, nullptr, SPA_FORMAT_VIDEO_size))
+  {
+    const spa_pod* v = &p->value;
+    if (spa_pod_is_choice(v) && SPA_POD_CHOICE_VALUE_SIZE(v) == sizeof(spa_rectangle))
+    {
+      const auto n = SPA_POD_CHOICE_N_VALUES(v);
+      const auto* r = static_cast<const spa_rectangle*>(SPA_POD_CHOICE_VALUES(v));
+      // Range carries default, min, max; Enum carries a list. Take the extent
+      // of whatever is there, which is the same answer for both.
+      for (std::uint32_t i = 0; i < n; ++i)
+      {
+        if (i == 0 || r[i].width < out.min_width)
+          out.min_width = r[i].width;
+        if (i == 0 || r[i].width > out.max_width)
+          out.max_width = r[i].width;
+        if (i == 0 || r[i].height < out.min_height)
+          out.min_height = r[i].height;
+        if (i == 0 || r[i].height > out.max_height)
+          out.max_height = r[i].height;
+      }
+    }
+    else if (spa_pod_is_rectangle(v))
+    {
+      spa_rectangle r{};
+      spa_pod_get_rectangle(v, &r);
+      out.min_width = out.max_width = r.width;
+      out.min_height = out.max_height = r.height;
+    }
+  }
+
+  if (const auto* p = spa_pod_object_find_prop(obj, nullptr, SPA_FORMAT_VIDEO_framerate))
+  {
+    const spa_pod* v = &p->value;
+    auto as_double = [](spa_fraction f) {
+      return f.denom ? double(f.num) / double(f.denom) : 0.;
+    };
+    if (spa_pod_is_choice(v) && SPA_POD_CHOICE_VALUE_SIZE(v) == sizeof(spa_fraction))
+    {
+      const auto n = SPA_POD_CHOICE_N_VALUES(v);
+      const auto* f = static_cast<const spa_fraction*>(SPA_POD_CHOICE_VALUES(v));
+      for (std::uint32_t i = 0; i < n; ++i)
+      {
+        if (i == 0 || as_double(f[i]) < as_double({out.min_fps_num, out.min_fps_denom}))
+        {
+          out.min_fps_num = f[i].num;
+          out.min_fps_denom = f[i].denom ? f[i].denom : 1;
+        }
+        if (i == 0 || as_double(f[i]) > as_double({out.max_fps_num, out.max_fps_denom}))
+        {
+          out.max_fps_num = f[i].num;
+          out.max_fps_denom = f[i].denom ? f[i].denom : 1;
+        }
+      }
+    }
+    else if (spa_pod_is_fraction(v))
+    {
+      spa_fraction f{};
+      spa_pod_get_fraction(v, &f);
+      out.min_fps_num = out.max_fps_num = f.num;
+      out.min_fps_denom = out.max_fps_denom = f.denom ? f.denom : 1;
+    }
+  }
+
+  std::uint64_t single{};
+  bool dont_fixate{};
+  if (detail::extract_modifier_choice(fmt_obj, single, out.modifiers, dont_fixate))
+  {
+    if (out.modifiers.empty() && single != 0)
+      out.modifiers.push_back(single);
+  }
+
+  return true;
 }
 
 } // namespace detail
