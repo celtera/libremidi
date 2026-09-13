@@ -181,6 +181,7 @@ struct libasound
       LIBREMIDI_SYMBOL_INIT(snd_rawmidi, info_set_subdevice)
       LIBREMIDI_SYMBOL_INIT(snd_rawmidi, info_sizeof)
       LIBREMIDI_SYMBOL_INIT(snd_rawmidi, open)
+      LIBREMIDI_SYMBOL_INIT(snd_rawmidi, nonblock)
       LIBREMIDI_SYMBOL_INIT(snd_rawmidi, params)
       LIBREMIDI_SYMBOL_INIT(snd_rawmidi, params_current)
       LIBREMIDI_SYMBOL_INIT(snd_rawmidi, params_get_buffer_size)
@@ -209,6 +210,7 @@ struct libasound
     LIBREMIDI_SYMBOL_DEF(snd_rawmidi, info_set_subdevice)
     LIBREMIDI_SYMBOL_DEF(snd_rawmidi, info_sizeof)
     LIBREMIDI_SYMBOL_DEF(snd_rawmidi, open)
+    LIBREMIDI_SYMBOL_DEF(snd_rawmidi, nonblock)
     LIBREMIDI_SYMBOL_DEF(snd_rawmidi, params)
     LIBREMIDI_SYMBOL_DEF(snd_rawmidi, params_current)
     LIBREMIDI_SYMBOL_DEF(snd_rawmidi, params_get_buffer_size)
@@ -408,6 +410,7 @@ struct libasound
 
       // Core UMP functions
       LIBREMIDI_SYMBOL_INIT(snd_ump, open)
+      LIBREMIDI_SYMBOL_INIT(snd_ump, nonblock)
       LIBREMIDI_SYMBOL_INIT(snd_ump, close)
       LIBREMIDI_SYMBOL_INIT(snd_ump, rawmidi)
       LIBREMIDI_SYMBOL_INIT(snd_ump, rawmidi_params)
@@ -456,6 +459,7 @@ struct libasound
 
     // Core UMP functions
     LIBREMIDI_SYMBOL_DEF(snd_ump, open)
+    LIBREMIDI_SYMBOL_DEF(snd_ump, nonblock)
     LIBREMIDI_SYMBOL_DEF(snd_ump, close)
     LIBREMIDI_SYMBOL_DEF(snd_ump, rawmidi)
     LIBREMIDI_SYMBOL_DEF(snd_ump, rawmidi_params)

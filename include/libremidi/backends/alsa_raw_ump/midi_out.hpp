@@ -48,12 +48,24 @@ public:
 
   stdx::error connect_port(const char* portname)
   {
-    constexpr int mode = SND_RAWMIDI_SYNC;
+    // A raw device is exclusive, and a blocking open of one already held waits
+    // in the kernel rather than returning EBUSY. The non-blocking mode is
+    // wanted for the open alone: writes must block until the device takes the
+    // bytes, so it is cleared below.
+    constexpr int mode = SND_RAWMIDI_SYNC | SND_RAWMIDI_NONBLOCK;
     int ret = snd.ump.open(NULL, &midiport_, portname, mode);
     if (ret < 0)
     {
       libremidi_handle_error(this->configuration, "cannot open device.");
       return from_errc(ret);
+    }
+
+    if (int rc = snd.ump.nonblock(midiport_, 0); rc < 0)
+    {
+      snd.ump.close(midiport_);
+      midiport_ = nullptr;
+      libremidi_handle_error(this->configuration, "cannot set device blocking.");
+      return from_errc(rc);
     }
     return stdx::error{};
   }
