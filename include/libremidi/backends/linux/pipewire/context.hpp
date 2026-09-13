@@ -7,6 +7,7 @@
   #pragma clang diagnostic ignored "-Wsign-compare"
 #endif
 
+#include <libremidi/backends/linux/pipewire/format.hpp>
 #include <libremidi/backends/linux/pipewire/instance.hpp>
 #include <libremidi/backends/linux/pipewire/loader.hpp>
 #include <libremidi/backends/linux/pipewire/subscription.hpp>
@@ -547,10 +548,23 @@ private:
   // FIXME lock-free?
   mutable std::mutex m_graph_mtx;
 
+  //! What a node's listener is given. The node id is not on the `param` event,
+  //! and `m_bound_nodes` is a vector whose elements move, so this is held by
+  //! unique_ptr and its address stays put.
+  struct node_cb_data
+  {
+    context* self{};
+    std::uint32_t id{};
+  };
+
   struct bound_node
   {
     pw_proxy* proxy{};
     std::unique_ptr<spa_hook> hook;
+    std::unique_ptr<node_cb_data> cb;
+    //! The enumeration round whose answers count. A node that re-advertises
+    //! starts a new one, and the old round's replies are still in flight.
+    int format_seq{};
     bool info_seen{};
     bool emitted_added{};
     node_info info;
@@ -1140,10 +1154,16 @@ private:
     static constexpr pw_node_events events = {
         .version = PW_VERSION_NODE_EVENTS,
         .info = &on_node_info,
-        .param = nullptr,
+        .param = &on_node_param,
     };
+    slot.cb = std::make_unique<node_cb_data>(node_cb_data{this, id});
     auto* node_proxy = reinterpret_cast<pw_node*>(slot.proxy);
-    pw_node_add_listener(node_proxy, slot.hook.get(), &events, this);
+    pw_node_add_listener(node_proxy, slot.hook.get(), &events, slot.cb.get());
+
+    // Only video nodes are asked: every other kind would answer with formats
+    // nobody reads, one round trip each.
+    if (slot.info.kind == media_class::video)
+      enum_video_formats(node_proxy, slot);
 
     if (!slot.info.name.empty() || !slot.info.media_class_str.empty())
     {
@@ -1157,11 +1177,51 @@ private:
     }
   }
 
+  //! SPA_PARAM_EnumFormat arrives asynchronously, one `param` callback per
+  //! candidate. Drop what a previous round left so a node that changed its
+  //! mind does not read as the union of both.
+  void enum_video_formats(pw_node* node_proxy, bound_node& slot) noexcept
+  {
+    slot.info.video_formats.clear();
+    // The daemon assigns the sequence, not the caller: the request returns it
+    // and every reply carries it back, which is how a superseded round is told
+    // apart from the current one.
+    slot.format_seq
+        = pw_node_enum_params(node_proxy, 0, SPA_PARAM_EnumFormat, 0, UINT32_MAX, nullptr);
+  }
+
+  static void on_node_param(
+      void* data, int seq, std::uint32_t id, std::uint32_t /*index*/,
+      std::uint32_t /*next*/, const spa_pod* param) noexcept
+  {
+    auto* cb = static_cast<node_cb_data*>(data);
+    if (!cb || !cb->self || id != SPA_PARAM_EnumFormat || !param)
+      return;
+
+    video_format_caps caps;
+    if (!detail::parse_video_enum_format(param, caps))
+      return;
+
+    for (auto& [k, slot] : cb->self->m_bound_nodes)
+    {
+      if (k != cb->id)
+        continue;
+      // A reply from a round that has been superseded would otherwise land on
+      // top of the new one and read as the union of both.
+      if (seq != slot.format_seq)
+        break;
+      slot.info.video_formats.push_back(std::move(caps));
+      cb->self->mirror_node_to_snapshot(slot.info);
+      break;
+    }
+  }
+
   static void on_node_info(void* data, const pw_node_info* info) noexcept
   {
-    auto* self = static_cast<context*>(data);
-    if (!info)
+    auto* cb = static_cast<node_cb_data*>(data);
+    if (!cb || !cb->self || !info)
       return;
+    auto* self = cb->self;
     // info->props is only valid when PW_NODE_CHANGE_MASK_PROPS is set;
     // otherwise re-reading clobbers cached values with empty placeholders.
     const bool props_valid
@@ -1179,6 +1239,11 @@ private:
         slot.info.kind = classify_media_class(slot.info.media_class_str);
       }
       slot.info_seen = true;
+      // A camera advertises differently once something opens it, so take the
+      // node at its word and ask again.
+      if ((info->change_mask & PW_NODE_CHANGE_MASK_PARAMS)
+          && slot.info.kind == media_class::video && slot.proxy)
+        self->enum_video_formats(reinterpret_cast<pw_node*>(slot.proxy), slot);
       self->mirror_node_to_snapshot(slot.info);
       if (!slot.emitted_added)
       {

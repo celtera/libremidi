@@ -133,6 +133,26 @@ struct port_info
   int direction{}; /// < `SPA_DIRECTION_INPUT=0, _OUTPUT=1`
 };
 
+//! One candidate out of a node's SPA_PARAM_EnumFormat: what it can actually
+//! produce or accept. Each property of a candidate may be fixed or a choice,
+//! so a range is stored and a fixed value is a range of one.
+struct video_format_caps
+{
+  //! SPA_VIDEO_FORMAT_*; 0 when the candidate leaves it open.
+  std::uint32_t format{};
+
+  std::uint32_t min_width{}, max_width{};
+  std::uint32_t min_height{}, max_height{};
+
+  //! Frames per second as the fraction SPA carries, num/denom.
+  std::uint32_t min_fps_num{}, min_fps_denom{1};
+  std::uint32_t max_fps_num{}, max_fps_denom{1};
+
+  //! DRM format modifiers the candidate offers, empty when it is shared-memory
+  //! only.
+  std::vector<std::uint64_t> modifiers;
+};
+
 struct node_info
 {
   std::uint32_t id{};
@@ -149,6 +169,11 @@ struct node_info
 
   std::vector<port_info> inputs;
   std::vector<port_info> outputs;
+
+  //! Parsed from SPA_PARAM_EnumFormat, and empty until the daemon answers --
+  //! or for a node that publishes none. Empty means "unknown", never "nothing
+  //! is supported": a reader must fall back rather than refuse.
+  std::vector<video_format_caps> video_formats;
 };
 
 struct graph_snapshot
