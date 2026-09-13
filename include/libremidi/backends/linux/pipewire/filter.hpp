@@ -69,9 +69,22 @@ public:
       auto* props = build_filter_props(pw);
       if (!props)
         return;
-      // props ownership taken by pw_filter_new_simple.
-      m_filter = pw.filter_new_simple(
-          m_ctx->bare_loop(), m_cfg.name.c_str(), props, &events, user_data);
+
+      // On our own core: filter_new_simple() would open a second connection,
+      // putting the node on one socket and the links we create on another, and
+      // the daemon serves two connections in no particular order.
+      // props ownership is taken either way.
+      if (pw.filter_new)
+      {
+        m_filter = pw.filter_new(m_ctx->pw_core_ptr(), m_cfg.name.c_str(), props);
+        if (m_filter)
+          pw.filter_add_listener(m_filter, &m_listener, &events, user_data);
+      }
+      else
+      {
+        m_filter = pw.filter_new_simple(
+            m_ctx->bare_loop(), m_cfg.name.c_str(), props, &events, user_data);
+      }
     });
   }
 
@@ -286,6 +299,10 @@ private:
   std::shared_ptr<context> m_ctx;
   config m_cfg;
   pw_filter* m_filter{};
+
+  //! Only used when the filter is created on our own core: pw_filter_new does
+  //! not take the events, and the hook has to outlive the filter.
+  spa_hook m_listener{};
 };
 
 inline pw_proxy* link_ports(context& ctx, std::uint32_t out_port, std::uint32_t in_port) noexcept

@@ -177,6 +177,22 @@ public:
 
   bool ok() const noexcept { return state() == connection_state::connected; }
 
+  /**
+   * @brief Does a core error mean the connection itself is gone?
+   *
+   * Per-object failures are reported through the same event and are raised on
+   * the core resource, so `id` is PW_ID_CORE for those too -- binding a global
+   * that has just been removed, or destroying a resource the daemon has
+   * already dropped, both answer -ENOENT. Only the socket ends the connection,
+   * and it reports a socket errno, so `res` is the whole discriminator.
+   */
+  static bool connection_lost(std::uint32_t id, int res) noexcept
+  {
+    if (id != PW_ID_CORE)
+      return false;
+    return res == -EPIPE || res == -ECONNRESET || res == -ENOTCONN || res == -EPROTO;
+  }
+
   connection_state state() const noexcept { return m_state.load(std::memory_order_acquire); }
 
   std::uint32_t generation() const noexcept
@@ -936,16 +952,14 @@ private:
       void* data, std::uint32_t id, int /*seq*/, int res, const char* /*message*/) noexcept
   {
     auto* self = static_cast<context*>(data);
-    if (id != PW_ID_CORE)
+
+    // Not recorded as a sync error either: finalize_sync() turns any recorded
+    // error into `broken`, and the daemon still answers the sync in flight.
+    if (!connection_lost(id, res))
       return;
 
     self->m_sync_error.store(res, std::memory_order_release);
-    // -ENOENT is "no such object/factory", which is recoverable; connection
-    // loss surfaces as a socket error.
-    if (res == -EPIPE || res == -ECONNRESET || res == -ENOTCONN)
-    {
-      self->m_state.store(connection_state::broken, std::memory_order_release);
-    }
+    self->m_state.store(connection_state::broken, std::memory_order_release);
     self->wake_sync_waiter();
   }
 
