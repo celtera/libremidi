@@ -22,7 +22,7 @@ struct observer_configuration
   uint32_t track_virtual : 1 = false;
 
   // Observe network ports if the API provides it
-  uint32_t track_network : 1 = false;
+  uint32_t track_network : 1 = true;
 
   // Observe any port - some systems have other weird port types than hw / sw, this covers them
   uint32_t track_any : 1 = false;
