@@ -258,9 +258,7 @@ struct pipewire_helpers
             return;
           this->port_cache[port.id] = port;
 
-          bool unfiltered = conf.track_any;
-          unfiltered |= (port.physical && conf.track_hardware);
-          unfiltered |= (!port.physical && conf.track_virtual);
+          const bool unfiltered = conf.accepts(transport_of(port));
           if (!unfiltered)
             return;
           if (port.direction == SPA_DIRECTION_INPUT)
@@ -285,9 +283,7 @@ struct pipewire_helpers
 
           if (!port_matches(port, kind))
             return;
-          bool unfiltered = conf.track_any;
-          unfiltered |= (port.physical && conf.track_hardware);
-          unfiltered |= (!port.physical && conf.track_virtual);
+          const bool unfiltered = conf.accepts(transport_of(port));
           if (!unfiltered)
             return;
           if (port.direction == SPA_DIRECTION_INPUT)
@@ -427,6 +423,13 @@ struct pipewire_helpers
     return stdx::error{};
   }
 
+  //! PipeWire answers this itself, through the port's `physical` property.
+  static libremidi::transport_type transport_of(const libremidi::pipewire::port_info& port)
+  {
+    return port.physical ? libremidi::transport_type::hardware
+                         : libremidi::transport_type::software;
+  }
+
   template <spa_direction Direction, libremidi::API Api>
   static auto to_port_info(const libremidi::pipewire::port_info& port)
       -> std::conditional_t<Direction == SPA_DIRECTION_OUTPUT, input_port, output_port>
@@ -451,6 +454,7 @@ struct pipewire_helpers
         .device_name = device_name,
         .port_name = port.port_name,
         .display_name = port_name,
+        .type = transport_of(port),
     }};
   }
 
@@ -474,9 +478,7 @@ struct pipewire_helpers
       {
         if (!port_matches(port, kind))
           continue;
-        bool unfiltered = conf.track_any;
-        unfiltered |= (port.physical && conf.track_hardware);
-        unfiltered |= (!port.physical && conf.track_virtual);
+        const bool unfiltered = conf.accepts(transport_of(port));
         if (unfiltered)
           ret.push_back(to_port_info<Direction, Api>(port));
       }

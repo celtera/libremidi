@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include <libremidi/backends/winmidi/config.hpp>
 #include <libremidi/backends/winmidi/helpers.hpp>
 #include <libremidi/detail/observer.hpp>
@@ -117,6 +118,25 @@ public:
          .type = code_to_type(to_string(p.GetTransportSuppliedInfo().TransportCode))}};
   }
 
+  //! The transport comes from the endpoint's transport code, so it is only
+  //! known once the port has been built.
+  template <bool Input>
+  auto wanted_port(const MidiEndpointDeviceInformation& p, const auto& gp) const noexcept
+      -> std::optional<std::conditional_t<Input, input_port, output_port>>
+  {
+    auto info = to_port_info<Input>(p, gp);
+
+    // An unrecognised transport code still names a real endpoint, so it is
+    // filtered as hardware: `unknown` is only selected by track_any.
+    auto transport = info.type;
+    if (transport == transport_type::unknown)
+      transport = transport_type::hardware;
+
+    if (!this->configuration.accepts(transport))
+      return std::nullopt;
+    return info;
+  }
+
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
     std::vector<libremidi::input_port> ret;
@@ -131,13 +151,15 @@ public:
       for (const auto& gp : ep.GetDeclaredFunctionBlocks())
       {
         if (gp.Direction() != MidiFunctionBlockDirection::BlockOutput)
-          ret.emplace_back(to_port_info<true>(ep, gp));
+          if (auto p = wanted_port<true>(ep, gp))
+            ret.emplace_back(std::move(*p));
       }
 
       for (const auto& gp : ep.GetGroupTerminalBlocks())
       {
         if (gp.Direction() != MidiGroupTerminalBlockDirection::BlockOutput)
-          ret.emplace_back(to_port_info<true>(ep, gp));
+          if (auto p = wanted_port<true>(ep, gp))
+            ret.emplace_back(std::move(*p));
       }
     }
 
@@ -158,13 +180,15 @@ public:
       for (const auto& gp : ep.GetDeclaredFunctionBlocks())
       {
         if (gp.Direction() != MidiFunctionBlockDirection::BlockInput)
-          ret.emplace_back(to_port_info<false>(ep, gp));
+          if (auto p = wanted_port<false>(ep, gp))
+            ret.emplace_back(std::move(*p));
       }
 
       for (const auto& gp : ep.GetGroupTerminalBlocks())
       {
         if (gp.Direction() != MidiGroupTerminalBlockDirection::BlockInput)
-          ret.emplace_back(to_port_info<false>(ep, gp));
+          if (auto p = wanted_port<false>(ep, gp))
+            ret.emplace_back(std::move(*p));
       }
     }
 

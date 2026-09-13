@@ -127,22 +127,18 @@ public:
     p.client = client;
     p.port = port;
 
-    bool ok = this->configuration.track_any;
-
     static constexpr auto virtual_port = SND_SEQ_PORT_TYPE_SOFTWARE | SND_SEQ_PORT_TYPE_SYNTHESIZER
                                          | SND_SEQ_PORT_TYPE_APPLICATION;
 
-    if ((tp & SND_SEQ_PORT_TYPE_HARDWARE) && this->configuration.track_hardware)
-    {
+    // Classified first, filtered second, so that the transport is reported
+    // whichever flag admitted the port. A client with none of these type bits
+    // stays `unknown`, which is what admits it only under track_any.
+    if (tp & SND_SEQ_PORT_TYPE_HARDWARE)
       p.type = libremidi::transport_type::hardware;
-      ok = true;
-    }
-    else if ((tp & virtual_port) && this->configuration.track_virtual)
-    {
+    else if (tp & virtual_port)
       p.type = libremidi::transport_type::software;
-      ok = true;
-    }
-    if (!ok)
+
+    if (!this->configuration.accepts(p.type))
       return {};
 
     if (auto name = snd.seq.client_info_get_name(&cinfo))

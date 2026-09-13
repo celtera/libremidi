@@ -14,6 +14,13 @@ class observer_jack final
     , private error_handler
 {
 public:
+  //! JACK answers this itself, through JackPortIsPhysical.
+  static libremidi::transport_type jack_transport(int flags)
+  {
+    return (flags & JackPortIsPhysical) ? libremidi::transport_type::hardware
+                                        : libremidi::transport_type::software;
+  }
+
   struct
       : libremidi::observer_configuration
       , jack_ump::observer_configuration
@@ -66,12 +73,7 @@ public:
             continue;
           }
 
-          bool physical = flags & JackPortIsPhysical;
-          bool ok = configuration.track_any;
-          if (configuration.track_hardware)
-            ok |= physical;
-          if (configuration.track_virtual)
-            ok |= !physical;
+          const bool ok = configuration.accepts(jack_transport(flags));
 
           if (ok)
           {
@@ -104,12 +106,7 @@ public:
             continue;
           }
 
-          bool physical = flags & JackPortIsPhysical;
-          bool ok = configuration.track_any;
-          if (configuration.track_hardware)
-            ok |= physical;
-          if (configuration.track_virtual)
-            ok |= !physical;
+          const bool ok = configuration.accepts(jack_transport(flags));
 
           if (ok)
           {
@@ -139,12 +136,7 @@ public:
       if (!(flags & 0x20)) // midi 2 check
         return;
 
-      bool physical = flags & JackPortIsPhysical;
-      bool ok = configuration.track_any;
-      if (configuration.track_hardware)
-        ok |= physical;
-      if (configuration.track_virtual)
-        ok |= !physical;
+      const bool ok = configuration.accepts(jack_transport(flags));
       if (!ok)
         return;
 
