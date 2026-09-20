@@ -92,14 +92,14 @@ LIBREMIDI_INLINE void observer_emscripten::update(
   for (std::size_t i = m_known_inputs.size(); i < current_inputs.size(); i++)
   {
     m_known_inputs.push_back(current_inputs[i]);
-    if (notify)
+    if (notify && configuration.input_added)
       configuration.input_added(to_port_info<true>(i, m_known_inputs[i]));
   }
 
   for (std::size_t i = m_known_outputs.size(); i < current_outputs.size(); i++)
   {
     m_known_outputs.push_back(current_outputs[i]);
-    if (notify)
+    if (notify && configuration.output_added)
       configuration.output_added(to_port_info<false>(i, m_known_outputs[i]));
   }
 }
