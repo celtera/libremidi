@@ -303,10 +303,10 @@ private:
       return;
 
     const auto& id = m_current_inputs[port_index].id;
-    EM_ASM(const id = UTF8ToString($1);
+    EM_ASM(const id = UTF8ToString($0);
 
            let input = globalThis.__libreMidi_access.inputs.get(id);
-           input.onmidimessage = undefined;, id.c_str());
+           if (input) input.onmidimessage = null;, id.c_str());
   }
 
   std::vector<observer_emscripten*> m_observers;
