@@ -62,8 +62,8 @@ inline constexpr libremidi::API default_api() noexcept
   return API::WINDOWS_MM;
 #elif defined(LIBREMIDI_ALSA)
   return API::ALSA_SEQ;
-#elif defined(__emscripten__)
-  return API::EMSCRIPTEN_WEBMIDI;
+#elif defined(__EMSCRIPTEN__)
+  return API::WEBMIDI;
 #elif defined(LIBREMIDI_ANDROID)
   return API::ANDROID_AMIDI;
 #else
@@ -83,7 +83,7 @@ inline constexpr libremidi::API default_api() noexcept
   return API::WINDOWS_MIDI_SERVICES;
 #elif defined(LIBREMIDI_ALSA)
   return API::ALSA_SEQ_UMP;
-#elif defined(__emscripten__)
+#elif defined(__EMSCRIPTEN__)
   return API::DUMMY;
 #else
   return API::DUMMY;
