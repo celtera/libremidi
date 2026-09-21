@@ -289,7 +289,10 @@ private:
       input.onmidimessage = (message) => {
                           let bytes = message.data;
                           var heapBytes = _arrayToHeap(bytes);
-                          Module._libremidi_devices_input(port_index, message.timeStamp, bytes.length, heapBytes.byteOffset);
+                          // message.timeStamp counts from the page's time origin, while
+                          // absolute_timestamp() reads the monotonic clock, which emscripten
+                          // reports as timeOrigin + performance.now(): put both on that scale.
+                          Module._libremidi_devices_input(port_index, performance.timeOrigin + message.timeStamp, bytes.length, heapBytes.byteOffset);
                           _freeArray(heapBytes);
       };
     , port_index
