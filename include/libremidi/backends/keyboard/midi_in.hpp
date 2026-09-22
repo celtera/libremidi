@@ -2,6 +2,7 @@
 #include <libremidi/backends/keyboard/config.hpp>
 #include <libremidi/detail/midi_in.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <unordered_map>
 
@@ -54,7 +55,10 @@ public:
 
     if (it->second >= kevent::NOTE_0 && it->second < (kevent::NOTE_0 + 128))
     {
-      int note = it->second - kevent::NOTE_0 + 12 * m_current_octave;
+      const int note = it->second - kevent::NOTE_0 + 12 * m_current_octave;
+      if (note > 127)
+        return;
+
       this->configuration.on_message(
           libremidi::channel_events::note_on(0, note, m_current_velocity));
       m_current_notes_scancodes[scancode] = note;
@@ -65,7 +69,7 @@ public:
     }
     else if (it->second >= kevent::OCT_0 && it->second < (kevent::OCT_0 + 128))
     {
-      m_current_octave = it->second - kevent::OCT_0;
+      m_current_octave = std::min(it->second - kevent::OCT_0, max_octave);
     }
     else
     {
@@ -78,10 +82,10 @@ public:
           m_current_velocity = std::clamp(m_current_velocity + 10, 0, 127);
           break;
         case kevent::OCTAVE_MINUS:
-          m_current_octave = std::clamp(m_current_octave - 1, 0, 127);
+          m_current_octave = std::clamp(m_current_octave - 1, 0, max_octave);
           break;
         case kevent::OCTAVE_PLUS:
-          m_current_octave = std::clamp(m_current_octave + 1, 0, 127);
+          m_current_octave = std::clamp(m_current_octave + 1, 0, max_octave);
           break;
       }
     }
@@ -106,6 +110,7 @@ public:
     }
   }
 
+  static constexpr int max_octave = 9;
   int m_current_octave{3};
   int m_current_velocity{80};
   std::unordered_map<int, int> m_current_notes_scancodes;
