@@ -42,6 +42,9 @@ public:
 
   ~midi_out_impl() override
   {
+    if (!this->seq)
+      return;
+
     // Close a connection if it exists.
     midi_out_impl::close_port();
 
