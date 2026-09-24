@@ -370,6 +370,11 @@ public:
   observer_threaded(libremidi::observer_configuration&& conf, ConfigurationImpl&& apiconf)
       : observer_impl<ConfigurationImpl>{std::move(conf), std::move(apiconf)}
   {
+    // init_client failed (no /dev/snd/seq, e.g. snd-seq not loaded): nothing
+    // to poll, and snd_seq_poll_descriptors(NULL, ...) segfaults.
+    if (!this->seq)
+      return;
+
     // Create relevant descriptors
     auto& snd = alsa_data::snd;
 
@@ -474,6 +479,8 @@ public:
   observer_manual(libremidi::observer_configuration&& conf, ConfigurationImpl&& apiconf)
       : observer_impl<ConfigurationImpl>{std::move(conf), std::move(apiconf)}
   {
+    if (!this->seq)
+      return;
     this->configuration.manual_poll(
         poll_parameters{.addr = this->vaddr, .callback = [this](const auto& v) {
       this->handle_event_direct(v);
@@ -481,7 +488,11 @@ public:
     }});
   }
 
-  ~observer_manual() { this->configuration.stop_poll(this->vaddr); }
+  ~observer_manual()
+  {
+    if (this->seq)
+      this->configuration.stop_poll(this->vaddr);
+  }
 };
 }
 

@@ -76,6 +76,8 @@ inline void for_all_ports(
     const libasound& snd, snd_seq_t* seq,
     const std::function<void(snd_seq_client_info_t&, snd_seq_port_info_t&)>& func)
 {
+  if (!seq)
+    return;
   snd_seq_client_info_t* cinfo{};
   snd_seq_client_info_alloca(&cinfo);
   snd_seq_port_info_t* pinfo{};
@@ -102,6 +104,8 @@ inline void for_all_ports(
     const libasound& snd, snd_seq_t* seq, int client,
     const std::function<void(snd_seq_port_info_t&)>& func)
 {
+  if (!seq)
+    return;
   snd_seq_port_info_t* pinfo{};
   snd_seq_port_info_alloca(&pinfo);
 
@@ -119,6 +123,8 @@ inline unsigned int iterate_port_info(
     const libasound& snd, snd_seq_t* seq, snd_seq_port_info_t* pinfo, unsigned int type,
     int portNumber)
 {
+  if (!seq)
+    return 0;
   snd_seq_client_info_t* cinfo{};
   int count = 0;
   snd_seq_client_info_alloca(&cinfo);
@@ -182,7 +188,11 @@ struct alsa_data
       // Set up the ALSA sequencer client.
       int ret = snd.seq.open(&seq, "default", SND_SEQ_OPEN_DUPLEX, SND_SEQ_NONBLOCK);
       if (ret < 0)
+      {
+        // Every user of seq checks it against nullptr to know the client failed
+        seq = nullptr;
         return ret;
+      }
 
       // Set client name.
       if (!configuration.client_name.empty())

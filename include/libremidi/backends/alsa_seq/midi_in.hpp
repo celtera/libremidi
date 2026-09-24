@@ -90,6 +90,9 @@ public:
 
   ~midi_in_impl() override
   {
+    if (!this->seq)
+      return;
+
     // Cleanup.
     if (this->vport >= 0)
       snd.seq.delete_port(this->seq, this->vport);
@@ -190,6 +193,8 @@ public:
 
   stdx::error close_port() override
   {
+    if (!this->seq)
+      return stdx::error{};
     unsubscribe();
     stop_queue();
     return stdx::error{};
@@ -348,6 +353,11 @@ public:
   midi_in_alsa_threaded(ConfigurationBase&& conf, ConfigurationImpl&& apiconf)
       : midi_in_impl<ConfigurationBase, ConfigurationImpl>{std::move(conf), std::move(apiconf)}
   {
+    // The base already reported the failed client. Do not claim to be open, or
+    // midi_in::open_*_port goes on to snd_seq_create_port(NULL, ...).
+    if (!this->seq)
+      return;
+
     if (this->m_termination_event < 0)
     {
       this->libremidi_handle_error(this->configuration, "error creating eventfd.");
