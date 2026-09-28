@@ -77,6 +77,10 @@ public:
                                   : MidiSession::Create(to_hstring(configuration.client_name))}
   {
     this->client_open_ = stdx::error{};
+
+    m_tick_frequency_hz = MidiClock::TimestampFrequency();
+    if (m_tick_frequency_hz == 0)
+      m_tick_frequency_hz = 10'000'000; // 100 ns ticks
   }
 
   ~midi_in_impl() override
@@ -181,6 +185,15 @@ public:
   }
 #endif
 
+  // split in two so ticks * 1e9 can't overflow
+  std::uint64_t ticks_to_ns(std::uint64_t ticks) const noexcept
+  {
+    constexpr std::uint64_t ns_per_s = 1'000'000'000ull;
+    const std::uint64_t whole_seconds = ticks / m_tick_frequency_hz;
+    const std::uint64_t remainder_ticks = ticks % m_tick_frequency_hz;
+    return whole_seconds * ns_per_s + (remainder_ticks * ns_per_s) / m_tick_frequency_hz;
+  }
+
   void process_message(
       const winrt::Microsoft::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& msg)
   {
@@ -205,7 +218,7 @@ public:
     array_view<uint32_t> ref{ump_space};
     b.GetMany(0, ref);
 
-    auto to_ns = [t = ump.Timestamp()] { return t; };
+    auto to_ns = [this, t = ump.Timestamp()] { return ticks_to_ns(t); };
     m_processing.on_bytes(
         {ump_space, ump_space + b.Size()}, m_processing.timestamp<timestamp_info>(to_ns, 0));
   }
@@ -234,7 +247,7 @@ public:
         return;
     }
 
-    auto to_ns = [t = timestamp] { return t; };
+    auto to_ns = [this, t = timestamp] { return ticks_to_ns(t); };
     m_processing.on_bytes(
         {ump, ump + wordCount}, m_processing.timestamp<timestamp_info>(to_ns, 0));
   }
@@ -282,5 +295,6 @@ private:
 #endif
   midi2::input_state_machine m_processing{this->configuration};
   int m_group_filter = -1;
+  std::uint64_t m_tick_frequency_hz{};
 };
 }
