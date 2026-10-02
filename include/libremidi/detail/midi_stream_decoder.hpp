@@ -403,6 +403,11 @@ private:
         break;
 
       const auto ump_uints = cmidi2_ump_get_num_bytes(ump_stream[0]) / 4;
+
+      // A packet cut short by the end of the buffer is dropped.
+      if (ump_uints > count)
+        break;
+
       on_bytes_segmented(cb, {ump_stream, ump_stream + ump_uints}, timestamp);
 
       ump_stream += ump_uints;
@@ -466,7 +471,7 @@ private:
     }
 
     libremidi::ump msg;
-    std::copy(bytes.begin(), bytes.end(), msg.data);
+    std::copy_n(bytes.begin(), std::min(bytes.size(), std::size(msg.data)), msg.data);
     msg.timestamp = timestamp;
     cb(std::move(msg));
   }

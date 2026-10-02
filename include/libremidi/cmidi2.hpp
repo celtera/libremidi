@@ -351,19 +351,30 @@ LIBREMIDI_STATIC uint8_t cmidi2_ump_get_num_bytes(uint32_t data)
 {
   switch (((data & 0xF0000000) >> 28) & 0xF)
   {
+    // The reserved types have sizes too (UMP 1.1, 2.1.4), so a receiver
+    // can skip what it does not understand.
     case CMIDI2_MESSAGE_TYPE_UTILITY:
     case CMIDI2_MESSAGE_TYPE_SYSTEM:
     case CMIDI2_MESSAGE_TYPE_MIDI_1_CHANNEL:
+    case 0x6:
+    case 0x7:
       return 4;
     case CMIDI2_MESSAGE_TYPE_MIDI_2_CHANNEL:
     case CMIDI2_MESSAGE_TYPE_SYSEX7:
+    case 0x8:
+    case 0x9:
+    case 0xA:
       return 8;
+    case 0xB:
+    case 0xC:
+      return 12;
     case CMIDI2_MESSAGE_TYPE_SYSEX8_MDS:
     case CMIDI2_MESSAGE_TYPE_FLEX_DATA:
+    case 0xE:
     case CMIDI2_MESSAGE_TYPE_UMP_STREAM:
       return 16;
   }
-  return 0xFF; /* wrong */
+  return 0xFF; /* unreachable: every type is listed */
 }
 
 typedef struct cmidi2_ump128

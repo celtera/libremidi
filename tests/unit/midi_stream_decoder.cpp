@@ -482,6 +482,65 @@ TEST_CASE("midi2: multiple UMP messages via on_bytes_multi", "[midi2][state_mach
   }
 }
 
+TEST_CASE("midi2: reserved message types are sized and skipped", "[midi2][state_machine]")
+{
+  // UMP 1.1, 2.1.4: every message type has a size, the reserved ones
+  // included, so a receiver can skip what it does not understand.
+  midi2_collector c;
+  auto sm = c.make_state_machine();
+
+  SECTION("128 bits, type 0xE")
+  {
+    uint32_t words[] = {0xE0000000, 0x12345678, 0x9ABCDEF0, 0x40903C00, make_ump_system(0xFA)};
+    sm.on_bytes_multi(std::span<const uint32_t>(words), 0);
+
+    REQUIRE(c.messages.size() == 2);
+    REQUIRE(c.messages[0].data[0] == 0xE0000000);
+    REQUIRE(c.messages[0].data[3] == 0x40903C00);
+    REQUIRE(c.messages[1].data[0] == make_ump_system(0xFA));
+  }
+
+  SECTION("96 bits, type 0xB")
+  {
+    uint32_t words[] = {0xB0000000, 1, 2, make_ump_system(0xFA)};
+    sm.on_bytes_multi(std::span<const uint32_t>(words), 0);
+
+    REQUIRE(c.messages.size() == 2);
+    REQUIRE(c.messages[1].data[0] == make_ump_system(0xFA));
+  }
+
+  SECTION("64 bits, type 0x8")
+  {
+    uint32_t words[] = {0x80000000, 1, make_ump_system(0xFA)};
+    sm.on_bytes_multi(std::span<const uint32_t>(words), 0);
+
+    REQUIRE(c.messages.size() == 2);
+    REQUIRE(c.messages[1].data[0] == make_ump_system(0xFA));
+  }
+
+  SECTION("32 bits, type 0x6")
+  {
+    uint32_t words[] = {0x60000000, make_ump_system(0xFA)};
+    sm.on_bytes_multi(std::span<const uint32_t>(words), 0);
+
+    REQUIRE(c.messages.size() == 2);
+    REQUIRE(c.messages[1].data[0] == make_ump_system(0xFA));
+  }
+}
+
+TEST_CASE("midi2: a packet cut short by the buffer is dropped", "[midi2][state_machine]")
+{
+  midi2_collector c;
+  auto sm = c.make_state_machine();
+
+  // A system message, then the first word of a 64 bit voice message.
+  uint32_t words[] = {make_ump_system(0xFA), make_ump_midi2_note_on(60, 0xFFFF)};
+  sm.on_bytes_multi(std::span<const uint32_t>(words), 0);
+
+  REQUIRE(c.messages.size() == 1);
+  REQUIRE(c.messages[0].data[0] == make_ump_system(0xFA));
+}
+
 TEST_CASE("midi2: MIDI 1 channel voice upscaling", "[midi2][state_machine]")
 {
   SECTION("upscale enabled: MIDI 1 channel voice becomes MIDI 2")

@@ -34,6 +34,10 @@ segment_ump_stream(const uint32_t* ump_stream, int64_t count, auto write_func, a
 
     const auto ump_bytes = cmidi2_ump_get_num_bytes(ump_stream[0]);
 
+    // A packet cut short by the end of the buffer is not sent.
+    if (ump_bytes / 4 > count)
+      break;
+
     // FIXME std::expected, propagate the error back to caller?
     switch (int err = static_cast<int>(write_func(ump_stream, ump_bytes)))
     {
