@@ -402,7 +402,7 @@ private:
       if (count == 0)
         break;
 
-      const auto ump_uints = cmidi2_ump_get_num_bytes(ump_stream[0]) / 4;
+      const std::size_t ump_uints = cmidi2_ump_get_num_bytes(ump_stream[0]) / 4;
 
       // A packet cut short by the end of the buffer is dropped.
       if (ump_uints > count)
