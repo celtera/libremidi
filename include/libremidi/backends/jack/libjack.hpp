@@ -36,8 +36,10 @@ struct libjack
       return;
     }
 
-    // Version
+    // Version: JACK1 has no jack_get_version
+#if defined(LIBREMIDI_HAS_JACK_GET_VERSION)
     LIBREMIDI_SYMBOL_INIT(jack, get_version)
+#endif
 
     // Client
     LIBREMIDI_SYMBOL_INIT(jack, client_open)
@@ -80,8 +82,10 @@ struct libjack
   dylib_loader library;
   bool available{true};
 
-  // Version
+  // Version: JACK1 has no jack_get_version
+#if defined(LIBREMIDI_HAS_JACK_GET_VERSION)
   LIBREMIDI_SYMBOL_DEF(jack, get_version)
+#endif
 
   // Client
   LIBREMIDI_SYMBOL_DEF(jack, client_open)
