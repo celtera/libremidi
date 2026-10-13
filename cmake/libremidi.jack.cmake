@@ -25,8 +25,6 @@ endif()
 if(LIBREMIDI_HAS_JACK)
   target_compile_definitions(libremidi ${_public} LIBREMIDI_JACK)
   # Check if jack_get_version is available (JACK2+, needed for UMP support detection)
-  # block() needs CMake 3.25; the check state push and pop scope the same
-  # variable on the minimum this project declares.
   cmake_push_check_state()
     set(CMAKE_REQUIRED_INCLUDES $<BUILD_INTERFACE:${JACK_PATH}>)
     check_cxx_source_compiles("#include <jack/jack.h>\nint main() { (void)&jack_get_version; return 0; }" LIBREMIDI_HAS_JACK_GET_VERSION)
