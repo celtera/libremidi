@@ -8,7 +8,9 @@
 #include <libremidi/message.hpp>
 #include <libremidi/ump.hpp>
 
+#include <algorithm>
 #include <cmath>
+#include <limits>
 
 NAMESPACE_LIBREMIDI
 {
@@ -105,21 +107,7 @@ LIBREMIDI_STATIC auto u16_to_u32(uint16_t in) -> uint32_t
 //! so that a centered MIDI 1 pitch bend (8192) stays centered (0x80000000).
 LIBREMIDI_STATIC auto u14_to_u32(uint16_t in) -> uint32_t
 {
-  constexpr int src_bits = 14;
-  constexpr int scale_bits = 32 - src_bits;
-  const uint32_t v = std::min<uint32_t>(in, (1u << src_bits) - 1);
-  uint32_t shifted = v << scale_bits;
-  if (v <= (1u << (src_bits - 1)))
-    return shifted;
-  constexpr int repeat_bits = src_bits - 1;
-  uint32_t repeat = v & ((1u << repeat_bits) - 1);
-  repeat <<= scale_bits - repeat_bits;
-  while (repeat != 0)
-  {
-    shifted |= repeat;
-    repeat >>= repeat_bits;
-  }
-  return shifted;
+  return cmidi2_upscale_14_to_32(in);
 }
 
 LIBREMIDI_STATIC bool
