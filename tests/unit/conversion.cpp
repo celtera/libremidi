@@ -318,3 +318,29 @@ TEST_CASE("MIDI 1 MTC Quarter Frame Sequence -> MIDI 2 UMP", "[midi_conversion][
     }
   }
 }
+
+TEST_CASE("MIDI 1 pitch bend through MIDI 2 keeps its value", "[midi_conversion][pitch_bend]")
+{
+  for (int pb : {0, 1, 2048, 8191, 8192, 8193, 12000, 16383})
+  {
+    INFO("pitch bend " << pb);
+    const uint8_t bytes[3]{0xE3, uint8_t(pb & 0x7F), uint8_t(pb >> 7)};
+    cmidi2_ump ump[2]{};
+    REQUIRE(cmidi2_midi1_channel_voice_to_midi2(bytes, 3, ump));
+    const uint32_t v32 = ump[1];
+    if (pb == 0)
+      CHECK(v32 == 0u);
+    if (pb == 8192)
+      CHECK(v32 == 0x80000000u);
+    if (pb == 16383)
+      CHECK(v32 == 0xFFFFFFFFu);
+
+    libremidi::ump u;
+    u.data[0] = ump[0];
+    u.data[1] = ump[1];
+    const auto back = libremidi::midi1_from_ump(u);
+    REQUIRE(back.bytes.size() == 3);
+    CHECK(back.bytes[0] == 0xE3);
+    CHECK(int(back.bytes[1]) + 128 * int(back.bytes[2]) == pb);
+  }
+}
