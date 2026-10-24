@@ -2697,6 +2697,31 @@ LIBREMIDI_STATIC uint32_t cmidi2_internal_swap_endian(uint32_t v)
          + ((v >> 24) & 0xFF);
 }
 
+/** MIDI 2 min-center-max upscaling of a 14-bit value to 32 bits (UMP
+ * specification, Appendix D.3.2): 0, the center and the maximum land on 0, the
+ * center and the maximum of 32 bits, so that a centered MIDI 1 pitch bend
+ * (8192) stays centered (0x80000000).
+ */
+LIBREMIDI_STATIC uint32_t cmidi2_upscale_14_to_32(uint32_t value)
+{
+  const int src_bits = 14;
+  const int scale_bits = 32 - src_bits;
+  const int repeat_bits = src_bits - 1;
+  const uint32_t max = (1u << src_bits) - 1;
+  const uint32_t v = value < max ? value : max;
+  uint32_t shifted = v << scale_bits;
+  if (v <= (1u << repeat_bits))
+    return shifted;
+  uint32_t repeat = v & ((1u << repeat_bits) - 1);
+  repeat <<= scale_bits - repeat_bits;
+  while (repeat != 0)
+  {
+    shifted |= repeat;
+    repeat >>= repeat_bits;
+  }
+  return shifted;
+}
+
 /** converts MIDI1 bytestream which can contain deltaTime in SMF, to MIDI2 UMP stream.
  * The resulting stream is native endianness.
  */
@@ -2879,7 +2904,7 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
           case CMIDI2_STATUS_PITCH_BEND:
             // Note: Pitch Bend values in the MIDI 1.0 Protocol are presented as Little Endian.
             m2 = cmidi2_ump_midi2_pitch_bend_direct(
-                context->group, channel, ((byte3 << 7) + byte2) << 18);
+                context->group, channel, cmidi2_upscale_14_to_32((byte3 << 7) + byte2));
             outputUmpLen = 2;
             break;
           default:

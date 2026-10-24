@@ -344,3 +344,40 @@ TEST_CASE("MIDI 1 pitch bend through MIDI 2 keeps its value", "[midi_conversion]
     CHECK(int(back.bytes[1]) + 128 * int(back.bytes[2]) == pb);
   }
 }
+
+TEST_CASE("MIDI 1 pitch bend through the stream converter", "[midi_conversion][pitch_bend]")
+{
+  // midi1_to_midi2::convert goes through cmidi2_convert_midi1_to_ump, not
+  // cmidi2_midi1_channel_voice_to_midi2: both have to upscale the same way.
+  libremidi::midi1_to_midi2 m1;
+  for (int pb : {0, 1, 2048, 8191, 8192, 8193, 12000, 16383})
+  {
+    INFO("pitch bend " << pb);
+    const unsigned char bytes[3]{0xE3, uint8_t(pb & 0x7F), uint8_t(pb >> 7)};
+
+    std::vector<uint32_t> stream;
+    auto err = m1.convert(bytes, 3, 0, [&](uint32_t* ump, std::size_t sz, int64_t) {
+      stream.assign(ump, ump + sz);
+      return stdx::error{};
+    });
+    REQUIRE(err == stdx::error{});
+    REQUIRE(stream.size() == 2);
+
+    cmidi2_ump direct[2]{};
+    REQUIRE(cmidi2_midi1_channel_voice_to_midi2(bytes, 3, direct));
+    CHECK(stream[0] == direct[0]);
+    CHECK(stream[1] == direct[1]);
+    CHECK(stream[1] == cmidi2_upscale_14_to_32(uint32_t(pb)));
+    if (pb == 8192)
+      CHECK(stream[1] == 0x80000000u);
+    if (pb == 16383)
+      CHECK(stream[1] == 0xFFFFFFFFu);
+
+    libremidi::ump u;
+    u.data[0] = stream[0];
+    u.data[1] = stream[1];
+    const auto back = libremidi::midi1_from_ump(u);
+    REQUIRE(back.bytes.size() == 3);
+    CHECK(int(back.bytes[1]) + 128 * int(back.bytes[2]) == pb);
+  }
+}
