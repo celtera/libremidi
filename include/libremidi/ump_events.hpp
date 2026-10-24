@@ -113,10 +113,11 @@ inline libremidi::ump aftertouch(uint8_t channel, uint8_t value)
   return u;
 }
 
+//! value: a MIDI 1 pitch bend, 0 to 16383, centered on 8192
 inline libremidi::ump pitch_bend(uint8_t channel, uint16_t value)
 {
   libremidi::ump u;
-  const int64_t msg = cmidi2_ump_midi2_pitch_bend_direct(0, channel, u16_to_u32(value));
+  const int64_t msg = cmidi2_ump_midi2_pitch_bend_direct(0, channel, u14_to_u32(value));
   cmidi2_reverse(msg, u.data);
   return u;
 }

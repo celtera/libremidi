@@ -100,6 +100,28 @@ LIBREMIDI_STATIC auto u16_to_u32(uint16_t in) -> uint32_t
   return std::clamp(std::round(in * ratio), 0., double(std::numeric_limits<uint32_t>::max()));
 };
 
+//! MIDI 2 min-center-max upscaling (UMP specification, Appendix D.3.2): 0,
+//! the center and the maximum land on 0, the center and the maximum of 32 bits,
+//! so that a centered MIDI 1 pitch bend (8192) stays centered (0x80000000).
+LIBREMIDI_STATIC auto u14_to_u32(uint16_t in) -> uint32_t
+{
+  constexpr int src_bits = 14;
+  constexpr int scale_bits = 32 - src_bits;
+  const uint32_t v = std::min<uint32_t>(in, (1u << src_bits) - 1);
+  uint32_t shifted = v << scale_bits;
+  if (v <= (1u << (src_bits - 1)))
+    return shifted;
+  constexpr int repeat_bits = src_bits - 1;
+  uint32_t repeat = v & ((1u << repeat_bits) - 1);
+  repeat <<= scale_bits - repeat_bits;
+  while (repeat != 0)
+  {
+    shifted |= repeat;
+    repeat >>= repeat_bits;
+  }
+  return shifted;
+}
+
 LIBREMIDI_STATIC bool
 cmidi2_midi1_channel_voice_to_midi2(const uint8_t* bytes, std::size_t sz, cmidi2_ump* output)
 {
@@ -146,7 +168,7 @@ cmidi2_midi1_channel_voice_to_midi2(const uint8_t* bytes, std::size_t sz, cmidi2
     }
     case libremidi::message_type::PITCH_BEND: {
       const auto pb = bytes[1] + bytes[2] * 0x80;
-      const int64_t msg = cmidi2_ump_midi2_pitch_bend_direct(group, channel, u16_to_u32(pb));
+      const int64_t msg = cmidi2_ump_midi2_pitch_bend_direct(group, channel, u14_to_u32(pb));
       cmidi2_reverse(msg, output);
       break;
     }
@@ -214,7 +236,7 @@ cmidi2_ump_upgrade_midi1_channel_voice_to_midi2(const cmidi2_ump* input, cmidi2_
     }
     case CMIDI2_STATUS_PITCH_BEND: {
       const auto pb = b1 + b2 * 0x80;
-      const int64_t msg = cmidi2_ump_midi2_pitch_bend_direct(group, channel, u16_to_u32(pb));
+      const int64_t msg = cmidi2_ump_midi2_pitch_bend_direct(group, channel, u14_to_u32(pb));
       cmidi2_reverse(msg, output);
       break;
     }
