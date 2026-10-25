@@ -2731,8 +2731,8 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
   uint8_t* dst = (uint8_t*)context->ump;
   size_t sLen = context->midi1_num_bytes;
   size_t dLen = context->ump_num_bytes;
-  uint8_t* sIdx = (uint8_t*)&context->midi1_proceeded_bytes;
-  uint8_t* dIdx = (uint8_t*)&context->ump_proceeded_bytes;
+  size_t* sIdx = &context->midi1_proceeded_bytes;
+  size_t* dIdx = &context->ump_proceeded_bytes;
 
   while (*sIdx < sLen)
   {
@@ -2751,11 +2751,13 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
       size_t sysexSize = f7 - context->midi1 - *sIdx - 1; // excluding 0xF7
       size_t numPackets = context->use_sysex8 ? cmidi2_ump_sysex8_get_num_packets(sysexSize)
                                               : cmidi2_ump_sysex7_get_num_packets(sysexSize);
-      if (dLen - *dIdx < numPackets)
+      // *dIdx counts bytes, dst_offset counts the 32-bit words of context->ump.
+      const size_t packetBytes = context->use_sysex8 ? 16 : 8;
+      if (dLen - *dIdx < numPackets * packetBytes)
         return CMIDI2_CONVERSION_RESULT_OUT_OF_SPACE;
       cmidi2_convert_sysex_context sysExCtx;
       sysExCtx.conversion_context = context;
-      sysExCtx.dst_offset = *dIdx;
+      sysExCtx.dst_offset = *dIdx / sizeof(cmidi2_ump);
       if (context->use_sysex8)
       {
         // ignoring the return code as it never returns non-NULL... (size is already verified)
@@ -2766,8 +2768,8 @@ cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)
       else
       {
         // ignoring the return code as it never returns non-NULL... (size is already verified)
-        cmidi2_ump_sysex7_process(
-            context->group, context->midi1 + *sIdx,
+        cmidi2_ump_sysex7_process_n(
+            context->group, context->midi1 + *sIdx + 1, sysexSize,
             cmidi2_internal_convert_add_midi1_sysex7_ump_to_list, &sysExCtx);
       }
       *sIdx += sysexSize + 2; // +1 for 0xF0 and 0xF7
@@ -3190,15 +3192,23 @@ LIBREMIDI_STATIC size_t cmidi2_convert_single_ump_to_timed_midi1(
       }
       else
       {
-        // minimal implementation for single-byte sysex7
-        CMIDI2_INTERNAL_ADD_DELTA_TIME
-        midiEventSize = 1 + cmidi2_ump_get_sysex7_num_bytes(ump);
+        // Without a buffer only a message held in one packet can be written:
+        // a start, continue or end packet is a piece of one and gives nothing.
+        if (statusCode != CMIDI2_SYSEX_IN_ONE_UMP)
+          return 0;
+        sysex7NumBytesInUmp = cmidi2_ump_get_sysex7_num_bytes(ump);
+        if (sysex7NumBytesInUmp > 6)
+          return 0;
+        midiEventSize = 2 + sysex7NumBytesInUmp;
         if (maxBytes < midiEventSize)
           return 0;
+        dst += cmidi2_internal_add_midi1_delta_time(dst, context, deltaTime);
 
         sysex7U64 = cmidi2_ump_read_uint64_bytes(ump);
-        for (size_t i = 0; i < midiEventSize - 1; i++)
-          dst[i] = cmidi2_ump_get_byte_from_uint64(sysex7U64, 2 + i);
+        dst[0] = 0xF0;
+        for (size_t i = 0; i < sysex7NumBytesInUmp; i++)
+          dst[1 + i] = cmidi2_ump_get_byte_from_uint64(sysex7U64, 2 + i);
+        dst[1 + sysex7NumBytesInUmp] = 0xF7;
       }
       break;
     case CMIDI2_MESSAGE_TYPE_SYSEX8_MDS:
@@ -3254,17 +3264,24 @@ cmidi2_convert_ump_to_midi1(cmidi2_midi_conversion_context* context)
     int32_t deltaTime
         = cmidi2_internal_convert_jr_timestamp_to_timecode(deltaTimeInJRTimestamp, context);
 
+    const bool isSysex7 = cmidi2_ump_get_message_type(ump) == CMIDI2_MESSAGE_TYPE_SYSEX7;
+    if (isSysex7 && sysex7_buffer_index + 6 > sizeof(sysex7_buffer))
+      return CMIDI2_CONVERSION_RESULT_OUT_OF_SPACE;
+
     int32_t len = cmidi2_convert_single_ump_to_timed_midi1(
         dst + *dIdx, dLen - *dIdx, ump, deltaTime, context, sysex7_buffer, &sysex7_buffer_index);
     *dIdx += len;
     *sIdx += cmidi2_ump_get_num_bytes(*ump);
 
-    if (cmidi2_ump_get_message_type(ump) == CMIDI2_MESSAGE_TYPE_SYSEX7)
+    if (isSysex7)
     {
       switch (cmidi2_ump_get_status_code(ump))
       {
         case CMIDI2_SYSEX_END:
         case CMIDI2_SYSEX_IN_ONE_UMP:
+          // F0, the bytes, F7, and the longest delta time (4 bytes) if one is written.
+          if (dLen - *dIdx < sysex7_buffer_index + 2 + (context->skip_delta_time ? 0 : 4))
+            return CMIDI2_CONVERSION_RESULT_OUT_OF_SPACE;
           if (!context->skip_delta_time)
             cmidi2_internal_add_midi1_delta_time(dst + *dIdx, context, deltaTime);
           dst[*dIdx] = 0xF0;

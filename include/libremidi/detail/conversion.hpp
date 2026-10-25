@@ -10,7 +10,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <limits>
+#include <span>
+#include <utility>
 
 NAMESPACE_LIBREMIDI
 {
@@ -262,8 +265,54 @@ LIBREMIDI_STATIC libremidi::ump ump_from_midi1(libremidi::message u)
   return ret;
 }
 
+//! The number of 32-bit words of the UMP packet that starts with @p first_word,
+//! from its message type (UMP specification, section 2.1.4).
+LIBREMIDI_STATIC constexpr int ump_packet_words(uint32_t first_word) noexcept
+{
+  constexpr int words[16]{1, 1, 1, 2, 2, 4, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4};
+  return words[first_word >> 28];
+}
+
+/**
+ * Calls @p on_packet with each packet of the UMP stream @p words, in order, as
+ * one libremidi::ump stamped with @p timestamp.
+ *
+ * A message longer than one packet, system-exclusive, is a sequence of
+ * packets: each is a libremidi::ump of its own. A last packet cut short by
+ * the end of the stream is not given.
+ */
+LIBREMIDI_STATIC void for_each_ump_packet(
+    const uint32_t* words, std::size_t count, int64_t timestamp, auto&& on_packet)
+{
+  std::size_t at = 0;
+  while (at < count)
+  {
+    const auto n = std::size_t(ump_packet_words(words[at]));
+    if (at + n > count)
+      break;
+    libremidi::ump packet;
+    std::copy_n(words + at, n, packet.data);
+    packet.timestamp = timestamp;
+    on_packet(std::as_const(packet));
+    at += n;
+  }
+}
+
 struct midi1_to_midi2
 {
+  /**
+   * Like convert(), but calls @p on_packet once per UMP packet: a
+   * system-exclusive message gives every SysEx7 packet it is made of.
+   */
+  stdx::error convert_packets(
+      const unsigned char* message, std::size_t size, int64_t timestamp, auto on_packet)
+  {
+    return convert(message, size, timestamp, [&](const uint32_t* words, std::size_t count, int64_t ts) {
+      for_each_ump_packet(words, count, ts, on_packet);
+      return stdx::error{};
+    });
+  }
+
   stdx::error
   convert(const unsigned char* message, std::size_t size, int64_t timestamp, auto on_ump)
   {
@@ -278,7 +327,6 @@ struct midi1_to_midi2
     switch (auto err = cmidi2_convert_midi1_to_ump(&context))
     {
       case CMIDI2_CONVERSION_RESULT_OK: {
-        // FIXME handle sysex here
         if (auto n = context.ump_proceeded_bytes; n > 0)
           return on_ump(context.ump, context.ump_proceeded_bytes / 4, timestamp);
         else
@@ -346,4 +394,160 @@ struct midi2_to_midi1
   uint8_t midi[65536];
 };
 
+
+/**
+ * Turns a stream of UMP packets into MIDI 1 messages, one packet at a time,
+ * joining the SysEx7 packets of a system-exclusive message into one
+ * F0 ... F7 message.
+ *
+ * Packets come from a real-time thread: nothing here allocates. A
+ * system-exclusive message longer than @p Capacity bytes, F0 and F7 included,
+ * is dropped whole, as is one whose packets do not follow start, continue...,
+ * end; dropped() counts them.
+ *
+ * One message is assembled at a time: SysEx7 packets of another group
+ * interleaved with it break both. Packets of other types can come in between
+ * and are converted as they come.
+ */
+template <std::size_t Capacity = 4096>
+class ump_to_midi1_stream
+{
+  static_assert(Capacity >= 8, "a SysEx7 packet holds up to 6 bytes, plus F0 and F7");
+
+public:
+  /**
+   * The MIDI 1 message @p packet completes: a channel or system message, a
+   * system-exclusive one held in this packet, or the end of one started
+   * earlier. Empty when it completes none.
+   *
+   * Valid until the next call.
+   */
+  std::span<const uint8_t> feed(const libremidi::ump& packet) noexcept
+  {
+    if (packet.get_type() != midi2::message_type::SYSEX7)
+    {
+      const auto n = cmidi2_convert_single_ump_to_midi1(
+          m_short, sizeof(m_short), const_cast<uint32_t*>(packet.data));
+      return {m_short, n};
+    }
+
+    const uint8_t status = (packet.data[0] >> 20) & 0xF;
+    const uint8_t count = (packet.data[0] >> 16) & 0xF;
+    if (count > 6)
+    {
+      abandon();
+      ++m_dropped;
+      return {};
+    }
+
+    switch (status)
+    {
+      case 0: // Complete in one packet
+        abandon();
+        m_size = 0;
+        m_buffer[m_size++] = 0xF0;
+        append(packet, count);
+        m_buffer[m_size++] = 0xF7;
+        return complete();
+
+      case 1: // Start
+        abandon();
+        m_state = state::assembling;
+        m_size = 0;
+        m_buffer[m_size++] = 0xF0;
+        append(packet, count);
+        return {};
+
+      case 2: // Continue
+        if (m_state == state::idle)
+        {
+          ++m_dropped;
+          return {};
+        }
+        append(packet, count);
+        return {};
+
+      case 3: // End
+        if (m_state == state::idle)
+        {
+          ++m_dropped;
+          return {};
+        }
+        append(packet, count);
+        if (m_state == state::overflow)
+        {
+          m_state = state::idle;
+          ++m_dropped;
+          return {};
+        }
+        m_buffer[m_size++] = 0xF7;
+        return complete();
+
+      default:
+        abandon();
+        ++m_dropped;
+        return {};
+    }
+  }
+
+  //! Forgets a system-exclusive message in progress, without counting it.
+  void reset() noexcept
+  {
+    m_state = state::idle;
+    m_size = 0;
+  }
+
+  //! Whether a system-exclusive message has started and not ended.
+  bool assembling() const noexcept { return m_state != state::idle; }
+
+  //! System-exclusive messages dropped so far, too long or malformed.
+  std::size_t dropped() const noexcept { return m_dropped; }
+
+  static constexpr std::size_t capacity() noexcept { return Capacity; }
+
+private:
+  enum class state : uint8_t
+  {
+    idle,
+    assembling,
+    overflow
+  };
+
+  void abandon() noexcept
+  {
+    if (m_state != state::idle)
+      ++m_dropped;
+    m_state = state::idle;
+  }
+
+  std::span<const uint8_t> complete() noexcept
+  {
+    m_state = state::idle;
+    return {m_buffer, m_size};
+  }
+
+  void append(const libremidi::ump& packet, uint8_t count) noexcept
+  {
+    if (m_state == state::overflow)
+      return;
+    // F7 still has to fit after the bytes of the message.
+    if (m_size + count + 1 > Capacity)
+    {
+      m_state = state::overflow;
+      return;
+    }
+    for (uint8_t i = 0; i < count; i++)
+    {
+      const int byte = 2 + i;
+      const uint32_t word = packet.data[byte / 4];
+      m_buffer[m_size++] = (word >> (8 * (3 - byte % 4))) & 0x7F;
+    }
+  }
+
+  uint8_t m_buffer[Capacity];
+  uint8_t m_short[4];
+  std::size_t m_size{};
+  std::size_t m_dropped{};
+  state m_state{state::idle};
+};
 }

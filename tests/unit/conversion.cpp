@@ -381,3 +381,232 @@ TEST_CASE("MIDI 1 pitch bend through the stream converter", "[midi_conversion][p
     CHECK(int(back.bytes[1]) + 128 * int(back.bytes[2]) == pb);
   }
 }
+
+namespace
+{
+std::vector<libremidi::ump>
+sysex_packets(libremidi::midi1_to_midi2& m1, const std::vector<uint8_t>& bytes)
+{
+  std::vector<libremidi::ump> packets;
+  auto err = m1.convert(bytes.data(), bytes.size(), 0, [&](uint32_t* ump, std::size_t sz, int64_t) {
+    libremidi::for_each_ump_packet(ump, sz, 0, [&](const libremidi::ump& p) { packets.push_back(p); });
+    return stdx::error{};
+  });
+  REQUIRE(err == stdx::error{});
+  return packets;
+}
+
+std::vector<uint8_t> sysex_of(std::size_t data_bytes)
+{
+  std::vector<uint8_t> bytes{0xF0};
+  for (std::size_t i = 0; i < data_bytes; i++)
+    bytes.push_back(uint8_t(i % 0x80));
+  bytes.push_back(0xF7);
+  return bytes;
+}
+
+template <std::size_t N>
+std::vector<std::vector<uint8_t>>
+reassemble(libremidi::ump_to_midi1_stream<N>& s, const std::vector<libremidi::ump>& packets)
+{
+  std::vector<std::vector<uint8_t>> out;
+  for (const auto& p : packets)
+    if (auto m = s.feed(p); !m.empty())
+      out.emplace_back(m.begin(), m.end());
+  return out;
+}
+}
+
+TEST_CASE("MIDI 1 sysex becomes a sequence of SysEx7 packets", "[midi_conversion][sysex]")
+{
+  libremidi::midi1_to_midi2 m1;
+
+  SECTION("an MTC full frame: a start packet of 6 bytes and an end packet of 2")
+  {
+    const auto packets
+        = sysex_packets(m1, {0xF0, 0x7F, 0x7F, 0x01, 0x01, 0x21, 0x02, 0x03, 0x04, 0xF7});
+    REQUIRE(packets.size() == 2);
+    CHECK(packets[0].data[0] == 0x30167F7F);
+    CHECK(packets[0].data[1] == 0x01012102);
+    CHECK(packets[1].data[0] == 0x30320304);
+    CHECK(packets[1].data[1] == 0);
+  }
+
+  SECTION("any length: start, continue..., end, at most 6 bytes each")
+  {
+    for (std::size_t n : {0, 1, 6, 7, 12, 13, 255, 256, 300, 1000, 4000})
+    {
+      INFO(n << " data bytes");
+      const auto packets = sysex_packets(m1, sysex_of(n));
+      REQUIRE(packets.size() == std::max<std::size_t>(1, (n + 5) / 6));
+      std::size_t total = 0;
+      for (std::size_t i = 0; i < packets.size(); i++)
+      {
+        const auto status = (packets[i].data[0] >> 20) & 0xF;
+        const auto count = (packets[i].data[0] >> 16) & 0xF;
+        CHECK(packets[i].get_type() == libremidi::midi2::message_type::SYSEX7);
+        CHECK(count <= 6);
+        if (packets.size() == 1)
+          CHECK(status == 0);
+        else if (i == 0)
+          CHECK(status == 1);
+        else if (i + 1 == packets.size())
+          CHECK(status == 3);
+        else
+          CHECK(status == 2);
+        total += count;
+      }
+      CHECK(total == n);
+    }
+  }
+
+  SECTION("after another message of the same buffer")
+  {
+    const std::vector<uint8_t> bytes{0x90, 60, 100, 0xF0, 1, 2, 3, 4, 5, 6, 7, 8, 0xF7};
+    const auto packets = sysex_packets(m1, bytes);
+    REQUIRE(packets.size() == 3);
+    CHECK(packets[0].get_type() == libremidi::midi2::message_type::MIDI_2_CHANNEL);
+    CHECK(packets[1].data[0] == 0x30160102);
+    CHECK(packets[1].data[1] == 0x03040506);
+    CHECK(packets[2].data[0] == 0x30320708);
+  }
+
+  SECTION("convert_packets gives one packet per call")
+  {
+    std::vector<libremidi::ump> packets;
+    const auto bytes = sysex_of(20);
+    auto err = m1.convert_packets(
+        bytes.data(), bytes.size(), 42, [&](const libremidi::ump& p) { packets.push_back(p); });
+    REQUIRE(err == stdx::error{});
+    REQUIRE(packets.size() == 4);
+    for (auto& p : packets)
+      CHECK(p.timestamp == 42);
+  }
+}
+
+TEST_CASE("A single packet converts to MIDI 1 only when it holds a whole message", "[midi_conversion][sysex]")
+{
+  // F0 7E 01 02 F7: three data bytes in one packet
+  const libremidi::ump complete{0x30037E01, 0x02000000};
+  CHECK(libremidi::midi1_from_ump(complete).bytes.empty()); // five bytes do not fit in four
+
+  uint8_t out[8]{};
+  REQUIRE(cmidi2_convert_single_ump_to_midi1(out, 8, const_cast<uint32_t*>(complete.data)) == 5);
+  CHECK(std::vector<uint8_t>(out, out + 5) == std::vector<uint8_t>{0xF0, 0x7E, 0x01, 0x02, 0xF7});
+
+  const libremidi::ump start{0x30167F7F, 0x01012102};
+  CHECK(cmidi2_convert_single_ump_to_midi1(out, 8, const_cast<uint32_t*>(start.data)) == 0);
+}
+
+TEST_CASE("SysEx7 packets reassemble into one MIDI 1 message", "[midi_conversion][sysex]")
+{
+  libremidi::midi1_to_midi2 m1;
+  libremidi::ump_to_midi1_stream<> s;
+
+  SECTION("round trip, any length")
+  {
+    for (std::size_t n : {0, 1, 5, 6, 7, 8, 12, 13, 255, 256, 300, 1000, 4000})
+    {
+      INFO(n << " data bytes");
+      const auto bytes = sysex_of(n);
+      const auto out = reassemble(s, sysex_packets(m1, bytes));
+      REQUIRE(out.size() == 1);
+      CHECK(out[0] == bytes);
+      CHECK(!s.assembling());
+    }
+    CHECK(s.dropped() == 0);
+  }
+
+  SECTION("packets fed one call at a time, other messages in between")
+  {
+    const std::vector<uint8_t> frame{0xF0, 0x7F, 0x7F, 0x01, 0x01, 0x21, 0x02, 0x03, 0x04, 0xF7};
+    const auto packets = sysex_packets(m1, frame);
+    REQUIRE(packets.size() == 2);
+
+    CHECK(s.feed(packets[0]).empty());
+    CHECK(s.assembling());
+    const libremidi::ump clock{0x10F80000};
+    const auto c = s.feed(clock);
+    REQUIRE(c.size() == 1);
+    CHECK(c[0] == 0xF8);
+    const auto m = s.feed(packets[1]);
+    CHECK(std::vector<uint8_t>(m.begin(), m.end()) == frame);
+  }
+
+  SECTION("channel and system messages pass as they come")
+  {
+    libremidi::ump note = libremidi::ump_from_midi1(libremidi::message{{0x93, 60, 100}, 0});
+    const auto m = s.feed(note);
+    CHECK(std::vector<uint8_t>(m.begin(), m.end()) == std::vector<uint8_t>{0x93, 60, 100});
+  }
+
+  SECTION("longer than the capacity: dropped whole, the next one is whole")
+  {
+    libremidi::ump_to_midi1_stream<64> small;
+    CHECK(reassemble(small, sysex_packets(m1, sysex_of(62))).size() == 1); // 64 bytes
+    CHECK(small.dropped() == 0);
+    CHECK(reassemble(small, sysex_packets(m1, sysex_of(63))).empty());
+    CHECK(small.dropped() == 1);
+    CHECK(!small.assembling());
+    const auto bytes = sysex_of(20);
+    const auto out = reassemble(small, sysex_packets(m1, bytes));
+    REQUIRE(out.size() == 1);
+    CHECK(out[0] == bytes);
+  }
+
+  SECTION("a start cut short by another start drops the first message")
+  {
+    auto first = sysex_packets(m1, sysex_of(20));
+    auto second = sysex_packets(m1, sysex_of(10));
+    first.pop_back();
+    first.insert(first.end(), second.begin(), second.end());
+    const auto out = reassemble(s, first);
+    REQUIRE(out.size() == 1);
+    CHECK(out[0] == sysex_of(10));
+    CHECK(s.dropped() == 1);
+  }
+
+  SECTION("continue and end packets without a start give nothing")
+  {
+    auto packets = sysex_packets(m1, sysex_of(20));
+    packets.erase(packets.begin());
+    CHECK(reassemble(s, packets).empty());
+    CHECK(s.dropped() == 3);
+  }
+}
+
+TEST_CASE("A MIDI 1 reader of a UMP backend gets system-exclusive whole", "[midi_conversion][sysex]")
+{
+  std::vector<std::vector<uint8_t>> received;
+  libremidi::input_configuration midi1;
+  midi1.on_message = [&](libremidi::message&& m) { received.emplace_back(m.bytes.begin(), m.bytes.end()); };
+  auto ump = libremidi::convert_midi1_to_midi2_input_configuration(midi1);
+
+  libremidi::midi1_to_midi2 m1;
+  const std::vector<uint8_t> frame{0xF0, 0x7F, 0x7F, 0x01, 0x01, 0x21, 0x02, 0x03, 0x04, 0xF7};
+  for (auto p : sysex_packets(m1, frame))
+    ump.on_message(std::move(p));
+  for (auto p : sysex_packets(m1, sysex_of(300)))
+    ump.on_message(std::move(p));
+  ump.on_message(libremidi::ump_from_midi1(libremidi::message{{0x90, 60, 100}, 0}));
+
+  REQUIRE(received.size() == 3);
+  CHECK(received[0] == frame);
+  CHECK(received[1] == sysex_of(300));
+  CHECK(received[2] == std::vector<uint8_t>{0x90, 60, 100});
+}
+
+TEST_CASE("A UMP reader of a MIDI 1 backend gets every SysEx7 packet", "[midi_conversion][sysex]")
+{
+  std::vector<libremidi::ump> received;
+  libremidi::ump_input_configuration ump;
+  ump.on_message = [&](libremidi::ump&& u) { received.push_back(u); };
+  auto midi1 = libremidi::convert_midi2_to_midi1_input_configuration(ump);
+
+  midi1.on_message(libremidi::message{{0xF0, 0x7F, 0x7F, 0x01, 0x01, 0x21, 0x02, 0x03, 0x04, 0xF7}, 0});
+  REQUIRE(received.size() == 2);
+  CHECK(received[0].data[0] == 0x30167F7F);
+  CHECK(received[0].data[1] == 0x01012102);
+  CHECK(received[1].data[0] == 0x30320304);
+  CHECK(received[1].data[2] == 0);
+}
