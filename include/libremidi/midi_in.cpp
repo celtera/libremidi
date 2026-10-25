@@ -14,10 +14,19 @@ LIBREMIDI_STATIC_IMPLEMENTATION libremidi::ump_input_configuration
 convert_midi1_to_midi2_input_configuration(const input_configuration& base_conf) noexcept
 {
   libremidi::ump_input_configuration c2;
-  c2.on_message = [cb = base_conf.on_message,
-                   converter = midi2_to_midi1{}](libremidi::ump&& msg) mutable -> void {
+  // A system-exclusive message is a sequence of SysEx7 packets, given one per
+  // call: sysex joins them into the one MIDI 1 message they make.
+  c2.on_message = [cb = base_conf.on_message, converter = midi2_to_midi1{},
+                   sysex = ump_to_midi1_stream<>{}](libremidi::ump&& msg) mutable -> void {
+    if (msg.get_type() == midi2::message_type::SYSEX7)
+    {
+      if (auto midi = sysex.feed(msg); !midi.empty())
+        cb(libremidi::message{{midi.begin(), midi.end()}, msg.timestamp});
+      return;
+    }
     converter.convert(
-        msg.data, 1, msg.timestamp, [cb](const unsigned char* midi, std::size_t n, int64_t ts) {
+        msg.data, msg.size(), msg.timestamp,
+        [cb](const unsigned char* midi, std::size_t n, int64_t ts) {
       cb(libremidi::message{{midi, midi + n}, ts});
       return stdx::error{};
     });
@@ -38,16 +47,10 @@ convert_midi2_to_midi1_input_configuration(const ump_input_configuration& base_c
   libremidi::input_configuration c2;
   c2.on_message = [cb = base_conf.on_message,
                    converter = midi1_to_midi2{}](libremidi::message&& msg) mutable -> void {
-    converter.convert(
+    // System-exclusive gives every SysEx7 packet it is made of.
+    converter.convert_packets(
         msg.bytes.data(), msg.bytes.size(), msg.timestamp,
-        [cb](const uint32_t* ump, std::size_t n, int64_t ts) {
-      libremidi::ump u{ump[0]};
-      for (std::size_t i = 1; i < n && i < 4; i++)
-        u.data[i] = ump[i];
-      u.timestamp = ts;
-      cb(std::move(u));
-      return stdx::error{};
-    });
+        [cb](const libremidi::ump& u) { cb(libremidi::ump{u}); });
   };
   c2.get_timestamp = base_conf.get_timestamp;
   c2.on_error = base_conf.on_error;
