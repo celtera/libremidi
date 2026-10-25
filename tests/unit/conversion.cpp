@@ -575,6 +575,9 @@ TEST_CASE("SysEx7 packets reassemble into one MIDI 1 message", "[midi_conversion
   }
 }
 
+// The input configuration converters are internal to midi_in.cpp: only a
+// header-only build of the library sees them.
+#if defined(LIBREMIDI_HEADER_ONLY)
 TEST_CASE("A MIDI 1 reader of a UMP backend gets system-exclusive whole", "[midi_conversion][sysex]")
 {
   std::vector<std::vector<uint8_t>> received;
@@ -610,3 +613,4 @@ TEST_CASE("A UMP reader of a MIDI 1 backend gets every SysEx7 packet", "[midi_co
   CHECK(received[1].data[0] == 0x30320304);
   CHECK(received[1].data[2] == 0);
 }
+#endif
