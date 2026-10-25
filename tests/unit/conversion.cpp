@@ -542,14 +542,14 @@ TEST_CASE("SysEx7 packets reassemble into one MIDI 1 message", "[midi_conversion
 
   SECTION("longer than the capacity: dropped whole, the next one is whole")
   {
-    libremidi::ump_to_midi1_stream<64> small;
-    CHECK(reassemble(small, sysex_packets(m1, sysex_of(62))).size() == 1); // 64 bytes
-    CHECK(small.dropped() == 0);
-    CHECK(reassemble(small, sysex_packets(m1, sysex_of(63))).empty());
-    CHECK(small.dropped() == 1);
-    CHECK(!small.assembling());
+    libremidi::ump_to_midi1_stream<64> limited;
+    CHECK(reassemble(limited, sysex_packets(m1, sysex_of(62))).size() == 1); // 64 bytes
+    CHECK(limited.dropped() == 0);
+    CHECK(reassemble(limited, sysex_packets(m1, sysex_of(63))).empty());
+    CHECK(limited.dropped() == 1);
+    CHECK(!limited.assembling());
     const auto bytes = sysex_of(20);
-    const auto out = reassemble(small, sysex_packets(m1, bytes));
+    const auto out = reassemble(limited, sysex_packets(m1, bytes));
     REQUIRE(out.size() == 1);
     CHECK(out[0] == bytes);
   }
