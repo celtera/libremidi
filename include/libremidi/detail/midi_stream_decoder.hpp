@@ -141,6 +141,9 @@ private:
   void on_bytes_multi_segmented(
       const message_callback& cb, std::span<const uint8_t> bytes, int64_t timestamp)
   {
+    if (bytes.empty())
+      return;
+
     int64_t n_bytes = bytes.size();
     int64_t i_byte = 0;
 
@@ -183,7 +186,7 @@ private:
             {
               // We know per CoreMIDI API there can't be anything else in this packet
               m_state = in_sysex;
-              message.assign(bytes.begin(), bytes.begin() + size);
+              message.assign(bytes.begin() + i_byte, bytes.begin() + i_byte + size);
               message.timestamp = timestamp;
               return;
             }
