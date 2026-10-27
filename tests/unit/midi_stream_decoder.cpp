@@ -240,6 +240,32 @@ TEST_CASE("midi1: SysEx filtering", "[midi1][state_machine]")
   }
 }
 
+TEST_CASE("midi1: SysEx after other messages in one buffer", "[midi1][state_machine]")
+{
+  midi1_collector c;
+  auto sm = c.make_state_machine();
+
+  SECTION("an unterminated SysEx keeps only its own bytes")
+  {
+    const uint8_t part1[] = {0x90, 0x3C, 0x7F, 0xF0, 0x7E, 0x01};
+    const uint8_t part2[] = {0x09, 0x01, 0xF7};
+    sm.on_bytes_multi(part1, 0);
+    sm.on_bytes_multi(part2, 0);
+
+    REQUIRE(c.messages.size() == 2);
+    REQUIRE(c.messages[0].get_message_type() == libremidi::message_type::NOTE_ON);
+    const std::vector<uint8_t> sysex(c.messages[1].begin(), c.messages[1].end());
+    REQUIRE(sysex == std::vector<uint8_t>{0xF0, 0x7E, 0x01, 0x09, 0x01, 0xF7});
+  }
+
+  SECTION("an empty buffer is ignored")
+  {
+    sm.on_bytes_multi(std::span<const uint8_t>{}, 0);
+    sm.on_bytes(std::span<const uint8_t>{}, 0);
+    REQUIRE(c.messages.empty());
+  }
+}
+
 TEST_CASE("midi1: timing and sensing filtering", "[midi1][state_machine]")
 {
   SECTION("timing messages ignored by default")
