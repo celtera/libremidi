@@ -240,6 +240,134 @@ TEST_CASE("midi1: SysEx filtering", "[midi1][state_machine]")
   }
 }
 
+// Decodes the buffers, one call each, and returns the bytes of every message.
+static std::vector<std::vector<uint8_t>> decode_midi1(
+    bool ignore_sysex, bool ignore_timing, bool multi,
+    std::initializer_list<std::vector<uint8_t>> buffers)
+{
+  midi1_collector c;
+  c.configuration.ignore_sysex = ignore_sysex;
+  c.configuration.ignore_timing = ignore_timing;
+  auto sm = c.make_state_machine();
+  for (const auto& buffer : buffers)
+  {
+    if (multi)
+      sm.on_bytes_multi(buffer, 0);
+    else
+      sm.on_bytes(buffer, 0);
+  }
+
+  std::vector<std::vector<uint8_t>> res;
+  for (const auto& m : c.messages)
+    res.emplace_back(m.begin(), m.end());
+  return res;
+}
+
+TEST_CASE("midi1: status and real-time bytes in SysEx", "[midi1][state_machine]")
+{
+  using messages = std::vector<std::vector<uint8_t>>;
+
+  // Bit 0: ignore_sysex, bit 1: on_bytes_multi instead of on_bytes
+  const int mode = GENERATE(0, 1, 2, 3);
+  const bool ignore_sysex = mode & 1;
+  const bool multi = mode & 2;
+
+  // The listed messages, without the SysEx ones when SysEx is ignored
+  auto expected = [&](messages all) {
+    if (ignore_sysex)
+      std::erase_if(all, [](const auto& m) { return m.front() == 0xF0; });
+    return all;
+  };
+  auto decode = [&](std::initializer_list<std::vector<uint8_t>> buffers, bool ignore_timing = false) {
+    return decode_midi1(ignore_sysex, ignore_timing, multi, buffers);
+  };
+
+  SECTION("a channel message ends an unterminated SysEx")
+  {
+    REQUIRE(
+        decode({{0xF0, 0x7E, 0x01}, {0x90, 0x3C, 0x7F}, {0x80, 0x3C, 0x40}})
+        == expected({{0x90, 0x3C, 0x7F}, {0x80, 0x3C, 0x40}}));
+  }
+
+  SECTION("F0 inside a SysEx starts a new one")
+  {
+    REQUIRE(
+        decode({{0xF0, 0x7E, 0x01}, {0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7}, {0x90, 0x3C, 0x7F}})
+        == expected({{0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7}, {0x90, 0x3C, 0x7F}}));
+  }
+
+  SECTION("F7 ends a SysEx")
+  {
+    REQUIRE(
+        decode({{0xF0, 0x7E, 0x01}, {0xF7}, {0x90, 0x3C, 0x7F}})
+        == expected({{0xF0, 0x7E, 0x01, 0xF7}, {0x90, 0x3C, 0x7F}}));
+  }
+
+  SECTION("data bytes continue a SysEx")
+  {
+    REQUIRE(
+        decode({{0xF0, 0x7E, 0x01}, {0x09, 0x01}, {0x02, 0xF7}})
+        == expected({{0xF0, 0x7E, 0x01, 0x09, 0x01, 0x02, 0xF7}}));
+  }
+
+  SECTION("a real-time message inside a SysEx is delivered on its own")
+  {
+    REQUIRE(
+        decode({{0xF0, 0x7E, 0x01}, {0xF8}, {0x09, 0x01, 0xF7}, {0x90, 0x3C, 0x7F}})
+        == expected({{0xF8}, {0xF0, 0x7E, 0x01, 0x09, 0x01, 0xF7}, {0x90, 0x3C, 0x7F}}));
+    REQUIRE(
+        decode({{0xF0, 0x7E, 0x01}, {0xF8}, {0x09, 0x01, 0xF7}, {0x90, 0x3C, 0x7F}}, true)
+        == expected({{0xF0, 0x7E, 0x01, 0x09, 0x01, 0xF7}, {0x90, 0x3C, 0x7F}}));
+  }
+
+  SECTION("real-time bytes within SysEx data are delivered on their own")
+  {
+    REQUIRE(
+        decode({{0xF0, 0x7E, 0x01}, {0x09, 0xF8, 0x01, 0xFE, 0xF7}})
+        == expected({{0xF8}, {0xFE}, {0xF0, 0x7E, 0x01, 0x09, 0x01, 0xF7}}));
+    REQUIRE(
+        decode({{0xF0, 0x7E, 0xF8, 0x01, 0xF7}}) == expected({{0xF8}, {0xF0, 0x7E, 0x01, 0xF7}}));
+    REQUIRE(decode({{0xF0, 0x7E, 0xF8, 0x01, 0xF7}}, true) == expected({{0xF0, 0x7E, 0x01, 0xF7}}));
+  }
+
+  SECTION("bytes after F7 are decoded")
+  {
+    REQUIRE(
+        decode({{0xF0, 0x7E, 0x01}, {0x01, 0xF7, 0xF8}})
+        == expected({{0xF0, 0x7E, 0x01, 0x01, 0xF7}, {0xF8}}));
+    REQUIRE(
+        decode({{0xF0, 0x7E, 0x01}, {0x09, 0xF7, 0x90, 0x3C, 0x7F}})
+        == expected({{0xF0, 0x7E, 0x01, 0x09, 0xF7}, {0x90, 0x3C, 0x7F}}));
+    REQUIRE(
+        decode({{0xF0, 0x7E, 0x01, 0xF7, 0x90, 0x3C, 0x7F}})
+        == expected({{0xF0, 0x7E, 0x01, 0xF7}, {0x90, 0x3C, 0x7F}}));
+  }
+
+  SECTION("a data byte after F7 is not a message")
+  {
+    REQUIRE(decode({{0xF0, 0x01, 0xF7, 0x05}}) == expected({{0xF0, 0x01, 0xF7}}));
+    REQUIRE(decode({{0xF0, 0x7E}, {0x01, 0xF7, 0x05}}) == expected({{0xF0, 0x7E, 0x01, 0xF7}}));
+  }
+
+  SECTION("many SysEx starts in one buffer")
+  {
+    std::vector<uint8_t> starts(10000, 0xF0);
+    starts.insert(starts.end(), {0x90, 0x3C, 0x7F});
+    REQUIRE(decode({starts}) == expected({{0x90, 0x3C, 0x7F}}));
+
+    std::vector<uint8_t> sysexes;
+    messages all;
+    for (int i = 0; i < 10000; i++)
+    {
+      sysexes.insert(sysexes.end(), {0xF0, 0xF7});
+      all.push_back({0xF0, 0xF7});
+    }
+    sysexes.insert(sysexes.end(), {0x90, 0x3C, 0x7F});
+    all.push_back({0x90, 0x3C, 0x7F});
+    REQUIRE(decode({sysexes}) == expected(all));
+  }
+}
+
 TEST_CASE("midi1: timing and sensing filtering", "[midi1][state_machine]")
 {
   SECTION("timing messages ignored by default")
