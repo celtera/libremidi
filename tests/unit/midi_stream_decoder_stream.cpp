@@ -109,7 +109,7 @@ struct harness
 // SysEx framing
 // ---------------------------------------------------------------------------
 
-TEST_CASE("R01 complete sysex in one buffer", "[decoder][sysex]")
+TEST_CASE("complete sysex in one buffer", "[decoder][sysex]")
 {
   PATHS();
   harness h;
@@ -117,7 +117,7 @@ TEST_CASE("R01 complete sysex in one buffer", "[decoder][sysex]")
   CHECK_OUT(h, {{{0xF0, 0x7D, 0x01, 0xF7}, 3}});
 }
 
-TEST_CASE("R02 empty sysex F0 F7", "[decoder][sysex]")
+TEST_CASE("empty sysex F0 F7", "[decoder][sysex]")
 {
   PATHS();
   harness h;
@@ -127,7 +127,7 @@ TEST_CASE("R02 empty sysex F0 F7", "[decoder][sysex]")
 }
 
 TEST_CASE(
-    "R03 sysex split in two at every position, timestamp of the buffer holding F7",
+    "sysex split in two at every position, timestamp of the buffer holding F7",
     "[decoder][sysex][split]")
 {
   PATHS();
@@ -143,7 +143,7 @@ TEST_CASE(
   }
 }
 
-TEST_CASE("R04 sysex fed one byte per buffer", "[decoder][sysex][split]")
+TEST_CASE("sysex fed one byte per buffer", "[decoder][sysex][split]")
 {
   PATHS();
   const bytes_t sx{0xF0, 0x7D, 0x01, 0x02, 0x03, 0xF7};
@@ -154,7 +154,7 @@ TEST_CASE("R04 sysex fed one byte per buffer", "[decoder][sysex][split]")
   CHECK_OUT(h, {{sx, 105}});
 }
 
-TEST_CASE("R05 F0 F0 restarts the sysex", "[decoder][sysex]")
+TEST_CASE("F0 F0 restarts the sysex", "[decoder][sysex]")
 {
   PATHS();
   harness h;
@@ -162,7 +162,7 @@ TEST_CASE("R05 F0 F0 restarts the sysex", "[decoder][sysex]")
   CHECK_OUT(h, {{{0xF0, 0x02, 0xF7}, 1}});
 }
 
-TEST_CASE("R06 two sysex back to back in one buffer", "[decoder][sysex]")
+TEST_CASE("two sysex back to back in one buffer", "[decoder][sysex]")
 {
   PATHS();
   harness h;
@@ -171,7 +171,7 @@ TEST_CASE("R06 two sysex back to back in one buffer", "[decoder][sysex]")
 }
 
 TEST_CASE(
-    "R07 sysex ends in one buffer, next starts in the same buffer", "[decoder][sysex][split]")
+    "sysex ends in one buffer, next starts in the same buffer", "[decoder][sysex][split]")
 {
   PATHS();
   harness h;
@@ -186,7 +186,7 @@ TEST_CASE(
 // ---------------------------------------------------------------------------
 
 TEST_CASE(
-    "R10 every real-time status at every position inside a sysex", "[decoder][sysex][realtime]")
+    "every real-time status at every position inside a sysex", "[decoder][sysex][realtime]")
 {
   PATHS();
   const bytes_t sx{0xF0, 0x7D, 0x01, 0x02, 0xF7};
@@ -203,7 +203,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "R11 real-time in its own buffer between sysex chunks (ALSA seq / WinMM MIM_DATA)",
+    "real-time in its own buffer between sysex chunks (ALSA seq / WinMM MIM_DATA)",
     "[decoder][sysex][realtime]")
 {
   PATHS();
@@ -215,7 +215,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "R12 ignored real-time inside sysex is dropped and not appended",
+    "ignored real-time inside sysex is dropped and not appended",
     "[decoder][sysex][realtime][ignore]")
 {
   PATHS();
@@ -240,7 +240,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "R13 ignore_sysex still delivers real-time inside it and what follows",
+    "ignore_sysex still delivers real-time inside it and what follows",
     "[decoder][sysex][ignore]")
 {
   PATHS();
@@ -252,7 +252,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "R14 ignore_sysex with a sysex followed by a note in the same buffer",
+    "ignore_sysex with a sysex followed by a note in the same buffer",
     "[decoder][sysex][ignore]")
 {
   harness h{{.ignore_sysex = true}};
@@ -264,7 +264,7 @@ TEST_CASE(
 // Other status bytes end a SysEx
 // ---------------------------------------------------------------------------
 
-TEST_CASE("R20 a channel status aborts the sysex and is decoded", "[decoder][sysex][abort]")
+TEST_CASE("a channel status aborts the sysex and is decoded", "[decoder][sysex][abort]")
 {
   PATHS();
   harness h;
@@ -273,7 +273,7 @@ TEST_CASE("R20 a channel status aborts the sysex and is decoded", "[decoder][sys
   CHECK_OUT(h, {{{0x90, 0x40, 0x7F}, 2}});
 }
 
-TEST_CASE("R21 each system common status aborts the sysex (multi)", "[decoder][sysex][abort]")
+TEST_CASE("each system common status aborts the sysex (multi)", "[decoder][sysex][abort]")
 {
   struct c
   {
@@ -294,7 +294,7 @@ TEST_CASE("R21 each system common status aborts the sysex (multi)", "[decoder][s
 }
 
 TEST_CASE(
-    "R22 MTC quarter frame aborts the sysex, ignore_timing drops it (multi)",
+    "MTC quarter frame aborts the sysex, ignore_timing drops it (multi)",
     "[decoder][sysex][abort][ignore]")
 {
   harness h{{.ignore_timing = true}};
@@ -303,7 +303,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "R23 an F7 left over from an aborted sysex is not a message", "[decoder][sysex][abort][stray]")
+    "an F7 left over from an aborted sysex is not a message", "[decoder][sysex][abort][stray]")
 {
   PATHS();
   harness h;
@@ -313,7 +313,7 @@ TEST_CASE(
   CHECK_OUT(h, {{{0xF6}, 2}});
 }
 
-TEST_CASE("R24 stray F7 without F0 is not a message", "[decoder][stray]")
+TEST_CASE("stray F7 without F0 is not a message", "[decoder][stray]")
 {
   PATHS();
   harness h;
@@ -323,7 +323,7 @@ TEST_CASE("R24 stray F7 without F0 is not a message", "[decoder][stray]")
 }
 
 TEST_CASE(
-    "R25 continuation chunk of an aborted sysex is not delivered as a message",
+    "continuation chunk of an aborted sysex is not delivered as a message",
     "[decoder][sysex][abort][stray]")
 {
   // ALSA seq / PipeWire input ports merge several sources: a note from B can
@@ -341,7 +341,7 @@ TEST_CASE(
     CHECK_OUT(h, {{{0x90, 0x40, 0x7F}, 2}});
 }
 
-TEST_CASE("R26 data byte after F7 then a message in the same buffer", "[decoder][sysex][stray]")
+TEST_CASE("data byte after F7 then a message in the same buffer", "[decoder][sysex][stray]")
 {
   harness h;
   h.feed(true, {0xF0, 0x01, 0xF7, 0x05, 0x90, 0x40, 0x7F}, 1);
@@ -349,7 +349,7 @@ TEST_CASE("R26 data byte after F7 then a message in the same buffer", "[decoder]
 }
 
 TEST_CASE(
-    "R27 sysex end then messages in the next buffer (CoreMIDI)", "[decoder][sysex][coremidi]")
+    "sysex end then messages in the next buffer (CoreMIDI)", "[decoder][sysex][coremidi]")
 {
   harness h;
   h.feed(true, {0xF0, 0x01, 0x02}, 1);
@@ -357,7 +357,7 @@ TEST_CASE(
   CHECK_OUT(h, {{{0xF0, 0x01, 0x02, 0x03, 0xF7}, 2}, {{0x90, 0x40, 0x7F}, 2}, {{0xF8}, 2}});
 }
 
-TEST_CASE("R28 messages then a sysex in one buffer (multi)", "[decoder][sysex]")
+TEST_CASE("messages then a sysex in one buffer (multi)", "[decoder][sysex]")
 {
   harness h;
   h.feed(true, {0x90, 0x40, 0x7F, 0xF0, 0x01, 0xF7, 0x80, 0x40, 0x00}, 1);
@@ -368,7 +368,7 @@ TEST_CASE("R28 messages then a sysex in one buffer (multi)", "[decoder][sysex]")
 // Messages cut across buffers, several messages per buffer, running status
 // ---------------------------------------------------------------------------
 
-TEST_CASE("R30 channel message split across multi buffers", "[decoder][split]")
+TEST_CASE("channel message split across multi buffers", "[decoder][split]")
 {
   harness h;
   h.feed(true, {0x90, 0x40}, 1);
@@ -376,7 +376,7 @@ TEST_CASE("R30 channel message split across multi buffers", "[decoder][split]")
   CHECK_OUT(h, {{{0x90, 0x40, 0x7F}, 2}});
 }
 
-TEST_CASE("R31 song position split across multi buffers", "[decoder][split]")
+TEST_CASE("song position split across multi buffers", "[decoder][split]")
 {
   harness h;
   h.feed(true, {0xF2, 0x01}, 1);
@@ -384,9 +384,9 @@ TEST_CASE("R31 song position split across multi buffers", "[decoder][split]")
   CHECK_OUT(h, {{{0xF2, 0x01, 0x02}, 2}});
 }
 
-TEST_CASE("R32 a message cut by the end of an on_bytes call is dropped", "[decoder][split]")
+TEST_CASE("a message cut by the end of an on_bytes call is dropped", "[decoder][split]")
 {
-  // Event APIs never cut a short message: byte streams go through on_bytes_multi (R30).
+  // Event APIs never cut a short message: byte streams go through on_bytes_multi.
   harness h;
   h.feed(false, {0x90, 0x40}, 1);
   h.feed(false, {0x7F}, 2);
@@ -394,28 +394,28 @@ TEST_CASE("R32 a message cut by the end of an on_bytes call is dropped", "[decod
   CHECK_OUT(h, {{{0x80, 0x40, 0x00}, 3}});
 }
 
-TEST_CASE("R33 several messages in one on_bytes call", "[decoder]")
+TEST_CASE("several messages in one on_bytes call", "[decoder]")
 {
   harness h;
   h.feed(false, {0x90, 0x40, 0x7F, 0x80, 0x40, 0x00}, 1);
   CHECK_OUT(h, {{{0x90, 0x40, 0x7F}, 1}, {{0x80, 0x40, 0x00}, 1}});
 }
 
-TEST_CASE("R34 sysex then a message in one on_bytes call", "[decoder][sysex]")
+TEST_CASE("sysex then a message in one on_bytes call", "[decoder][sysex]")
 {
   harness h;
   h.feed(false, {0xF0, 0x01, 0xF7, 0x90, 0x40, 0x7F}, 1);
   CHECK_OUT(h, {{{0xF0, 0x01, 0xF7}, 1}, {{0x90, 0x40, 0x7F}, 1}});
 }
 
-TEST_CASE("R35 sysex then two messages in one on_bytes call", "[decoder][sysex]")
+TEST_CASE("sysex then two messages in one on_bytes call", "[decoder][sysex]")
 {
   harness h;
   h.feed(false, {0xF0, 0x01, 0xF7, 0x90, 0x40, 0x7F, 0x80, 0x40, 0x00}, 1);
   CHECK_OUT(h, {{{0xF0, 0x01, 0xF7}, 1}, {{0x90, 0x40, 0x7F}, 1}, {{0x80, 0x40, 0x00}, 1}});
 }
 
-TEST_CASE("R36 running status", "[decoder][running_status]")
+TEST_CASE("running status", "[decoder][running_status]")
 {
   SECTION("in one buffer")
   {
@@ -464,7 +464,7 @@ TEST_CASE("R36 running status", "[decoder][running_status]")
   }
 }
 
-TEST_CASE("R37 real-time inside a channel message", "[decoder][realtime]")
+TEST_CASE("real-time inside a channel message", "[decoder][realtime]")
 {
   PATHS();
   harness h{{.ignore_sensing = true}};
@@ -474,7 +474,7 @@ TEST_CASE("R37 real-time inside a channel message", "[decoder][realtime]")
 }
 
 TEST_CASE(
-    "R37b real-time inside a channel message cut across buffers (multi)",
+    "real-time inside a channel message cut across buffers (multi)",
     "[decoder][realtime][split]")
 {
   harness h{{.ignore_timing = false}};
@@ -484,7 +484,7 @@ TEST_CASE(
   CHECK_OUT(h, {{{0xF8}, 2}, {{0x90, 0x40, 0x7F}, 3}});
 }
 
-TEST_CASE("R38 MTC at the end of a buffer with ignore_timing (multi)", "[decoder][ignore]")
+TEST_CASE("MTC at the end of a buffer with ignore_timing (multi)", "[decoder][ignore]")
 {
   harness h{{.ignore_timing = true}};
   h.feed(true, {0x90, 0x40, 0x7F, 0xF1, 0x23}, 1);
@@ -492,7 +492,7 @@ TEST_CASE("R38 MTC at the end of a buffer with ignore_timing (multi)", "[decoder
   CHECK_OUT(h, {{{0x90, 0x40, 0x7F}, 1}, {{0x80, 0x40, 0x00}, 2}});
 }
 
-TEST_CASE("R39 a lone data byte is not a message", "[decoder][stray]")
+TEST_CASE("a lone data byte is not a message", "[decoder][stray]")
 {
   PATHS();
   harness h;
@@ -504,7 +504,7 @@ TEST_CASE("R39 a lone data byte is not a message", "[decoder][stray]")
 // State handling
 // ---------------------------------------------------------------------------
 
-TEST_CASE("R40 reset() in the middle of a sysex", "[decoder][state]")
+TEST_CASE("reset() in the middle of a sysex", "[decoder][state]")
 {
   PATHS();
   harness h;
@@ -515,7 +515,7 @@ TEST_CASE("R40 reset() in the middle of a sysex", "[decoder][state]")
   CHECK_OUT(h, {{{0x90, 0x40, 0x7F}, 2}, {{0xF0, 0x03, 0xF7}, 3}});
 }
 
-TEST_CASE("R41 empty buffers in both states", "[decoder][state]")
+TEST_CASE("empty buffers in both states", "[decoder][state]")
 {
   PATHS();
   harness h;
@@ -527,7 +527,7 @@ TEST_CASE("R41 empty buffers in both states", "[decoder][state]")
 }
 
 TEST_CASE(
-    "R42 a callback that copies instead of moving does not pollute the next message",
+    "a callback that copies instead of moving does not pollute the next message",
     "[decoder][state]")
 {
   PATHS();
@@ -551,7 +551,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "R43 the decoder's public message buffer is empty after a sysex is delivered",
+    "the decoder's public message buffer is empty after a sysex is delivered",
     "[decoder][state]")
 {
   PATHS();
@@ -560,7 +560,7 @@ TEST_CASE(
   CHECK(h.sm->message.bytes.empty());
 }
 
-TEST_CASE("R44 timestamps of delivered messages never go backwards", "[decoder][timestamps]")
+TEST_CASE("timestamps of delivered messages never go backwards", "[decoder][timestamps]")
 {
   // A real-time byte inside a multi-buffer sysex is delivered with its own
   // buffer's time, then the sysex with the time of the buffer holding its F7.
@@ -573,7 +573,7 @@ TEST_CASE("R44 timestamps of delivered messages never go backwards", "[decoder][
 }
 
 TEST_CASE(
-    "R45 ignore_sysex keeps the decoder's buffer small during a long sysex",
+    "ignore_sysex keeps the decoder's buffer small during a long sysex",
     "[decoder][sysex][ignore][memory]")
 {
   PATHS();
@@ -585,7 +585,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "R46 sysex longer than a slim message's capacity does not throw", "[decoder][sysex][slim]")
+    "sysex longer than a slim message's capacity does not throw", "[decoder][sysex][slim]")
 {
   PATHS();
   harness h;
@@ -599,7 +599,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "R47 a callback that feeds the decoder again (re-entrancy) while a sysex is open",
+    "a callback that feeds the decoder again (re-entrancy) while a sysex is open",
     "[decoder][state][reentrancy]")
 {
   PATHS();
@@ -624,7 +624,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "R48 a sysex longer than sysex_max_size is dropped and reported", "[decoder][sysex][limit]")
+    "a sysex longer than sysex_max_size is dropped and reported", "[decoder][sysex][limit]")
 {
   PATHS();
   libremidi::input_configuration conf;
@@ -656,7 +656,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "R49 a never-terminated sysex does not grow past sysex_max_size",
+    "a never-terminated sysex does not grow past sysex_max_size",
     "[decoder][sysex][limit][memory]")
 {
   PATHS();
@@ -673,7 +673,7 @@ TEST_CASE(
   CHECK_OUT(h, {{{0x90, 0x40, 0x7F}, 3}});
 }
 
-TEST_CASE("R50 sysex_max_size 0 sets no limit", "[decoder][sysex][limit]")
+TEST_CASE("sysex_max_size 0 sets no limit", "[decoder][sysex][limit]")
 {
   PATHS();
   harness h;
@@ -689,7 +689,7 @@ TEST_CASE("R50 sysex_max_size 0 sets no limit", "[decoder][sysex][limit]")
 }
 
 TEST_CASE(
-    "R51 a callback that throws leaves the decoder in a usable state",
+    "a callback that throws leaves the decoder in a usable state",
     "[decoder][state][exceptions]")
 {
   PATHS();
@@ -1062,20 +1062,20 @@ void run_property(
 }
 }
 
-TEST_CASE("P01 multi, CoreMIDI-like packets, no real-time in sysex", "[decoder][property]")
+TEST_CASE("multi, CoreMIDI-like packets, no real-time in sysex", "[decoder][property]")
 {
   run_property(
       true, split_mode::boundaries_and_sysex,
       {.rt_inside = false, .aborts = false, .undefined_rt = false}, false, 3000, 1);
 }
-TEST_CASE("P02 multi, CoreMIDI-like packets, real-time inside sysex", "[decoder][property]")
+TEST_CASE("multi, CoreMIDI-like packets, real-time inside sysex", "[decoder][property]")
 {
   run_property(
       true, split_mode::boundaries_and_sysex,
       {.rt_inside = true, .aborts = false, .undefined_rt = false}, false, 3000, 2);
 }
 TEST_CASE(
-    "P03 multi, CoreMIDI-like packets, real-time inside + aborted sysex + undefined RT",
+    "multi, CoreMIDI-like packets, real-time inside + aborted sysex + undefined RT",
     "[decoder][property]")
 {
   run_property(
@@ -1083,7 +1083,7 @@ TEST_CASE(
       {.rt_inside = true, .aborts = true, .undefined_rt = true}, false, 3000, 3);
 }
 TEST_CASE(
-    "P04 multi, CoreMIDI-like packets, everything + random ignore flags",
+    "multi, CoreMIDI-like packets, everything + random ignore flags",
     "[decoder][property][ignore]")
 {
   run_property(
@@ -1091,7 +1091,7 @@ TEST_CASE(
       {.rt_inside = true, .aborts = true, .undefined_rt = true}, true, 5000, 4);
 }
 TEST_CASE(
-    "P05 on_bytes, one message per call, sysex chunked, no real-time in sysex",
+    "on_bytes, one message per call, sysex chunked, no real-time in sysex",
     "[decoder][property]")
 {
   run_property(
@@ -1099,33 +1099,33 @@ TEST_CASE(
       {.rt_inside = false, .aborts = false, .undefined_rt = false}, false, 3000, 5);
 }
 TEST_CASE(
-    "P06 on_bytes, one message per call, real-time inside sysex chunks", "[decoder][property]")
+    "on_bytes, one message per call, real-time inside sysex chunks", "[decoder][property]")
 {
   run_property(
       false, split_mode::one_message_per_call,
       {.rt_inside = true, .aborts = false, .undefined_rt = false}, false, 3000, 6);
 }
-TEST_CASE("P07 on_bytes, one message per call, real-time in their own call", "[decoder][property]")
+TEST_CASE("on_bytes, one message per call, real-time in their own call", "[decoder][property]")
 {
   run_property(
       false, split_mode::one_message_per_call_rt_isolated,
       {.rt_inside = true, .aborts = false, .undefined_rt = false}, false, 3000, 7);
 }
-TEST_CASE("P08 on_bytes, everything + aborts + random ignore flags", "[decoder][property][ignore]")
+TEST_CASE("on_bytes, everything + aborts + random ignore flags", "[decoder][property][ignore]")
 {
   run_property(
       false, split_mode::one_message_per_call,
       {.rt_inside = true, .aborts = true, .undefined_rt = true}, true, 5000, 8);
 }
 TEST_CASE(
-    "P09 on_bytes, RT isolated, everything + random ignore flags", "[decoder][property][ignore]")
+    "on_bytes, RT isolated, everything + random ignore flags", "[decoder][property][ignore]")
 {
   run_property(
       false, split_mode::one_message_per_call_rt_isolated,
       {.rt_inside = true, .aborts = true, .undefined_rt = true}, true, 5000, 9);
 }
 TEST_CASE(
-    "P10 multi, arbitrary byte chunks (rawio, Android, ALSA rawmidi)",
+    "multi, arbitrary byte chunks (rawio, Android, ALSA rawmidi)",
     "[decoder][property][anywhere]")
 {
   run_property(
@@ -1133,7 +1133,7 @@ TEST_CASE(
       false, 2000, 10);
 }
 TEST_CASE(
-    "P11 multi, arbitrary byte chunks, running status and real-time anywhere",
+    "multi, arbitrary byte chunks, running status and real-time anywhere",
     "[decoder][property][anywhere][running_status]")
 {
   run_property(
@@ -1211,19 +1211,19 @@ void fuzz(bool multi, uint32_t seed, int iterations, bool check_invariants)
 }
 }
 
-TEST_CASE("F01 fuzz on_bytes, no crash", "[decoder][fuzz]")
+TEST_CASE("fuzz on_bytes, no crash", "[decoder][fuzz]")
 {
   fuzz(false, 101, 200000, false);
 }
-TEST_CASE("F02 fuzz on_bytes_multi, no crash", "[decoder][fuzz]")
+TEST_CASE("fuzz on_bytes_multi, no crash", "[decoder][fuzz]")
 {
   fuzz(true, 102, 200000, false);
 }
-TEST_CASE("F03 fuzz on_bytes, well-formed output", "[decoder][fuzz][invariants]")
+TEST_CASE("fuzz on_bytes, well-formed output", "[decoder][fuzz][invariants]")
 {
   fuzz(false, 103, 20000, true);
 }
-TEST_CASE("F04 fuzz on_bytes_multi, well-formed output", "[decoder][fuzz][invariants]")
+TEST_CASE("fuzz on_bytes_multi, well-formed output", "[decoder][fuzz][invariants]")
 {
   fuzz(true, 104, 20000, true);
 }
@@ -1232,7 +1232,7 @@ TEST_CASE("F04 fuzz on_bytes_multi, well-formed output", "[decoder][fuzz][invari
 // Throughput
 // ---------------------------------------------------------------------------
 
-TEST_CASE("B01 throughput of a 16 MiB sysex in 256-byte chunks", "[decoder][bench]")
+TEST_CASE("throughput of a 16 MiB sysex in 256-byte chunks", "[decoder][bench]")
 {
   for (bool multi : {false, true})
   {
@@ -1255,7 +1255,7 @@ TEST_CASE("B01 throughput of a 16 MiB sysex in 256-byte chunks", "[decoder][benc
     multi ? sm.on_bytes_multi(last, 0) : sm.on_bytes(last, 0);
     auto t1 = std::chrono::steady_clock::now();
     std::printf(
-        "B01 %s: %.1f ms for %zu bytes (delivered %zu)\n", multi ? "multi" : "on_bytes",
+        "%s: %.1f ms for %zu bytes (delivered %zu)\n", multi ? "multi" : "on_bytes",
         std::chrono::duration<double, std::milli>(t1 - t0).count(), total, got);
     CHECK(got > 0);
   }
