@@ -48,6 +48,12 @@ class out_api : public midi_out_api
 public:
   using midi_out_api::midi_out_api;
 
+  /**
+   * A system-exclusive message goes out as one F0 ... F7 message once the end
+   * packet of it is sent, whether its SysEx7 packets come in one call or one
+   * per call. Up to 4096 bytes, F0 and F7 included: a longer one is dropped,
+   * and the call with its end packet returns std::errc::message_size.
+   */
   stdx::error send_ump(const uint32_t* message, std::size_t size)
   {
     return converter.convert(
@@ -56,7 +62,7 @@ public:
     });
   }
 
-  midi2_to_midi1 converter;
+  midi2_to_midi1_assembler<4096> converter;
 };
 }
 
