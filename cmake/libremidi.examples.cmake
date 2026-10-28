@@ -91,6 +91,7 @@ endif()
 
 if(LIBREMIDI_HAS_COREMIDI)
     add_example(coremidi_share)
+    add_example(protocols/coremidi_mcu_xtouch)
 endif()
 
 if(LIBREMIDI_HAS_EMSCRIPTEN)
