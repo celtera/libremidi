@@ -144,7 +144,7 @@ public:
     while ((err = snd.rawmidi.read(this->midiport_, bytes, nbytes)) > 0)
     {
       const auto to_ns = [this] { return absolute_timestamp(); };
-      m_processing.on_bytes(
+      m_processing.on_bytes_multi(
           {bytes, bytes + err}, m_processing.timestamp<timestamp_info>(to_ns, 0));
     }
     return err;
@@ -170,7 +170,7 @@ public:
       const auto to_ns = [ts] {
         return static_cast<int64_t>(ts.tv_sec) * 1'000'000'000 + static_cast<int64_t>(ts.tv_nsec);
       };
-      m_processing.on_bytes(
+      m_processing.on_bytes_multi(
           {bytes, bytes + err}, m_processing.timestamp<timestamp_info>(to_ns, 0));
     }
     return err;
@@ -191,6 +191,8 @@ public:
 
   snd_rawmidi_t* midiport_{};
   std::vector<pollfd> fds_;
+  // A read returns what the port buffered: several messages, the end of one cut by the
+  // previous read, running status. It is decoded as a byte stream.
   midi1::input_state_machine m_processing{this->configuration};
 };
 

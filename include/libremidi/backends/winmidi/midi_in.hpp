@@ -216,11 +216,11 @@ public:
 
     uint32_t ump_space[64];
     array_view<uint32_t> ref{ump_space};
-    b.GetMany(0, ref);
+    const auto count = b.GetMany(0, ref);
 
     auto to_ns = [this, t = ump.Timestamp()] { return ticks_to_ns(t); };
     m_processing.on_bytes(
-        {ump_space, ump_space + b.Size()}, m_processing.timestamp<timestamp_info>(to_ns, 0));
+        {ump_space, ump_space + count}, m_processing.timestamp<timestamp_info>(to_ns, 0));
   }
 
 #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS

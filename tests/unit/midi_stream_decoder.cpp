@@ -2,6 +2,8 @@
 
 #include <libremidi/detail/midi_stream_decoder.hpp>
 
+#include <cstring>
+#include <memory>
 #include <vector>
 
 // Helper to collect decoded MIDI 1 messages
@@ -792,6 +794,150 @@ TEST_CASE("midi2: byte-level input via on_bytes_multi(unsigned char)", "[midi2][
 
   sm.on_bytes_multi({byte_ptr, 4}, 0);
   REQUIRE(c.messages.size() == 1);
+}
+
+TEST_CASE("midi2: byte input at any alignment", "[midi2][state_machine]")
+{
+  midi2_collector c;
+  auto sm = c.make_state_machine();
+
+  const uint32_t words[]
+      = {make_ump_system(0xFA), make_ump_midi2_note_on(60, 0xFFFF), 0xFFFF0000,
+         make_ump_system(0xFC)};
+  // One byte off the alignment of a word
+  std::vector<unsigned char> storage(sizeof(words) + 1);
+  std::memcpy(storage.data() + 1, words, sizeof(words));
+
+  sm.on_bytes_multi(std::span<const unsigned char>{storage.data() + 1, sizeof(words)}, 0);
+
+  REQUIRE(c.messages.size() == 3);
+  REQUIRE(c.messages[0].data[0] == words[0]);
+  REQUIRE(c.messages[1].data[0] == words[1]);
+  REQUIRE(c.messages[1].data[1] == words[2]);
+  REQUIRE(c.messages[2].data[0] == words[3]);
+}
+
+TEST_CASE("midi2: byte input cut anywhere is reassembled", "[midi2][state_machine]")
+{
+  const uint32_t words[]
+      = {make_ump_system(0xFA), make_ump_midi2_note_on(60, 0xFFFF), 0xFFFF0000,
+         make_ump_system(0xFC)};
+  const auto* bytes = reinterpret_cast<const unsigned char*>(words);
+
+  for (std::size_t a = 0; a <= sizeof(words); a++)
+  {
+    for (std::size_t b = a; b <= sizeof(words); b++)
+    {
+      CAPTURE(a, b);
+      midi2_collector c;
+      auto sm = c.make_state_machine();
+      sm.on_bytes_multi(std::span<const unsigned char>{bytes, a}, 0);
+      sm.on_bytes_multi(std::span<const unsigned char>{bytes + a, b - a}, 0);
+      sm.on_bytes_multi(std::span<const unsigned char>{bytes + b, sizeof(words) - b}, 0);
+
+      REQUIRE(c.messages.size() == 3);
+      REQUIRE(c.messages[0].data[0] == words[0]);
+      REQUIRE(c.messages[1].data[0] == words[1]);
+      REQUIRE(c.messages[1].data[1] == words[2]);
+      REQUIRE(c.messages[2].data[0] == words[3]);
+    }
+  }
+}
+
+TEST_CASE("midi2: long byte input with packets across internal chunks", "[midi2][state_machine]")
+{
+  midi2_collector c;
+  auto sm = c.make_state_machine();
+
+  // A one-word message first so that the two-word packets straddle every 64-word boundary
+  std::vector<uint32_t> words{make_ump_system(0xFA)};
+  for (int i = 0; i < 200; i++)
+  {
+    words.push_back(make_ump_midi2_note_on(i % 128, 0x1000 + i));
+    words.push_back(0xFFFF0000 | i);
+  }
+  std::vector<unsigned char> storage(words.size() * 4 + 3);
+  std::memcpy(storage.data() + 3, words.data(), words.size() * 4);
+
+  sm.on_bytes_multi(std::span<const unsigned char>{storage.data() + 3, words.size() * 4}, 0);
+
+  REQUIRE(c.messages.size() == 201);
+  for (int i = 0; i < 200; i++)
+  {
+    REQUIRE(c.messages[1 + i].data[0] == words[1 + 2 * i]);
+    REQUIRE(c.messages[1 + i].data[1] == words[2 + 2 * i]);
+  }
+}
+
+TEST_CASE("midi2: reset drops an incomplete packet of byte input", "[midi2][state_machine]")
+{
+  midi2_collector c;
+  auto sm = c.make_state_machine();
+
+  const uint32_t note[] = {make_ump_midi2_note_on(60, 0xFFFF), 0xFFFF0000};
+  const uint32_t start = make_ump_system(0xFA);
+  sm.on_bytes_multi(
+      std::span<const unsigned char>{reinterpret_cast<const unsigned char*>(note), 6}, 0);
+  sm.reset();
+  sm.on_bytes_multi(
+      std::span<const unsigned char>{reinterpret_cast<const unsigned char*>(&start), 4}, 0);
+
+  REQUIRE(c.messages.size() == 1);
+  REQUIRE(c.messages[0].data[0] == start);
+}
+
+TEST_CASE("midi2: on_bytes with no words", "[midi2][state_machine]")
+{
+  midi2_collector c;
+  auto sm = c.make_state_machine();
+
+  sm.on_bytes(std::span<const uint32_t>{}, 0);
+  std::unique_ptr<uint32_t[]> empty{new uint32_t[0]};
+  sm.on_bytes(std::span<const uint32_t>{empty.get(), 0}, 0);
+  sm.on_bytes_multi(std::span<const uint32_t>{empty.get(), 0}, 0);
+  sm.on_bytes_multi(std::span<const unsigned char>{}, 0);
+
+  REQUIRE(c.messages.empty());
+}
+
+TEST_CASE("midi2: on_bytes delivers every packet it is given", "[midi2][state_machine]")
+{
+  midi2_collector c;
+  auto sm = c.make_state_machine();
+
+  SECTION("several packets")
+  {
+    const uint32_t words[]
+        = {make_ump_system(0xFA), make_ump_midi2_note_on(60, 0xFFFF), 0xFFFF0000,
+           make_ump_midi1_note_on(1, 61, 100), make_ump_system(0xFC)};
+    sm.on_bytes(words, 0);
+
+    REQUIRE(c.messages.size() == 4);
+    REQUIRE(c.messages[0].data[0] == words[0]);
+    REQUIRE(c.messages[1].data[0] == words[1]);
+    REQUIRE(c.messages[1].data[1] == words[2]);
+    REQUIRE(c.messages[2].data[0] == words[3]);
+    REQUIRE(c.messages[3].data[0] == words[4]);
+  }
+
+  SECTION("a 128-bit packet")
+  {
+    const uint32_t words[] = {0x50000000, 1, 2, 3};
+    sm.on_bytes(words, 0);
+
+    REQUIRE(c.messages.size() == 1);
+    REQUIRE(c.messages[0].data[0] == words[0]);
+    REQUIRE(c.messages[0].data[3] == words[3]);
+  }
+
+  SECTION("a packet cut short is dropped")
+  {
+    const uint32_t words[] = {make_ump_system(0xFA), make_ump_midi2_note_on(60, 0xFFFF)};
+    sm.on_bytes(words, 0);
+
+    REQUIRE(c.messages.size() == 1);
+    REQUIRE(c.messages[0].data[0] == words[0]);
+  }
 }
 
 TEST_CASE("midi2: raw_data callback", "[midi2][state_machine]")

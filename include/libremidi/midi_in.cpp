@@ -16,12 +16,25 @@ convert_midi1_to_midi2_input_configuration(const input_configuration& base_conf)
   libremidi::ump_input_configuration c2;
   // A system-exclusive message is a sequence of SysEx7 packets, given one per
   // call: sysex joins them into the one MIDI 1 message they make.
-  c2.on_message = [cb = base_conf.on_message, converter = midi2_to_midi1{},
+  // Longer than this, it is dropped: see input_configuration::sysex_max_size.
+  std::size_t sysex_limit = libremidi::message{}.bytes.max_size();
+  if (base_conf.sysex_max_size > 0)
+    sysex_limit = std::min<std::size_t>(sysex_limit, base_conf.sysex_max_size);
+  c2.on_message = [cb = base_conf.on_message, on_warning = base_conf.on_warning, sysex_limit,
+                   converter = midi2_to_midi1{},
                    sysex = ump_to_midi1_stream<>{}](libremidi::ump&& msg) mutable -> void {
     if (msg.get_type() == midi2::message_type::SYSEX7)
     {
       if (auto midi = sysex.feed(msg); !midi.empty())
-        cb(libremidi::message{{midi.begin(), midi.end()}, msg.timestamp});
+      {
+        if (midi.size() <= sysex_limit)
+          cb(libremidi::message{{midi.begin(), midi.end()}, msg.timestamp});
+        else if (on_warning)
+          on_warning(
+              "midi_in: an incoming system-exclusive message is longer than the maximum size "
+              "and is dropped",
+              source_location::current());
+      }
       return;
     }
     converter.convert(

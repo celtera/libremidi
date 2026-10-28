@@ -593,10 +593,43 @@ TEST_CASE("A MIDI 1 reader of a UMP backend gets system-exclusive whole", "[midi
     ump.on_message(std::move(p));
   ump.on_message(libremidi::ump_from_midi1(libremidi::message{{0x90, 60, 100}, 0}));
 
+  // A message too long for a slim message is dropped
+  if (libremidi::message{}.bytes.max_size() < sysex_of(300).size())
+  {
+    REQUIRE(received.size() == 2);
+    CHECK(received[0] == frame);
+    CHECK(received[1] == std::vector<uint8_t>{0x90, 60, 100});
+    return;
+  }
+
   REQUIRE(received.size() == 3);
   CHECK(received[0] == frame);
   CHECK(received[1] == sysex_of(300));
   CHECK(received[2] == std::vector<uint8_t>{0x90, 60, 100});
+}
+
+TEST_CASE(
+    "A MIDI 1 reader of a UMP backend drops a system-exclusive message over its maximum size",
+    "[midi_conversion][sysex]")
+{
+  std::vector<std::vector<uint8_t>> received;
+  int warnings = 0;
+  libremidi::input_configuration midi1;
+  midi1.on_message
+      = [&](libremidi::message&& m) { received.emplace_back(m.bytes.begin(), m.bytes.end()); };
+  midi1.on_warning = [&](std::string_view, const libremidi::source_location&) { warnings++; };
+  midi1.sysex_max_size = 20;
+  auto ump = libremidi::convert_midi1_to_midi2_input_configuration(midi1);
+
+  libremidi::midi1_to_midi2 m1;
+  for (auto p : sysex_packets(m1, sysex_of(18)))
+    ump.on_message(std::move(p));
+  for (auto p : sysex_packets(m1, sysex_of(19)))
+    ump.on_message(std::move(p));
+
+  REQUIRE(received.size() == 1);
+  CHECK(received[0] == sysex_of(18));
+  CHECK(warnings == 1);
 }
 
 TEST_CASE("A UMP reader of a MIDI 1 backend gets every SysEx7 packet", "[midi_conversion][sysex]")
