@@ -1,6 +1,7 @@
 #include "../include_catch.hpp"
 
 #include <libremidi/configurations.hpp>
+#include <libremidi/detail/midi_out.hpp>
 #include <libremidi/libremidi.hpp>
 
 #include <set>

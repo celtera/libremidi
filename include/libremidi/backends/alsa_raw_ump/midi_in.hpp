@@ -144,8 +144,10 @@ public:
     while ((err = snd.ump.read(this->midiport_, words, nwords * 4)) > 0)
     {
       const auto to_ns = [this] { return absolute_timestamp(); };
-      m_processing.on_bytes(
-          {words, words + err / 4}, m_processing.timestamp<timestamp_info>(to_ns, 0));
+      m_processing.on_bytes_multi(
+          std::span<const unsigned char>{
+              reinterpret_cast<unsigned char*>(words), std::size_t(err)},
+          m_processing.timestamp<timestamp_info>(to_ns, 0));
     }
     return err;
   }
@@ -168,8 +170,10 @@ public:
       const auto to_ns = [ts] {
         return static_cast<int64_t>(ts.tv_sec) * 1'000'000'000 + static_cast<int64_t>(ts.tv_nsec);
       };
-      m_processing.on_bytes(
-          {words, words + err / 4}, m_processing.timestamp<timestamp_info>(to_ns, 0));
+      m_processing.on_bytes_multi(
+          std::span<const unsigned char>{
+              reinterpret_cast<unsigned char*>(words), std::size_t(err)},
+          m_processing.timestamp<timestamp_info>(to_ns, 0));
     }
     return err;
   }
@@ -187,6 +191,7 @@ public:
 
   snd_ump_t* midiport_{};
   std::vector<pollfd> fds_;
+  // A read may end within a packet: the decoder completes it with the next read.
   midi2::input_state_machine m_processing{this->configuration};
 };
 

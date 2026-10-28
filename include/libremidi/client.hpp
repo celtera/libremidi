@@ -51,6 +51,9 @@ struct client_configuration
   uint32_t ignore_sensing : 1 = true;
   uint32_t timestamps : 3 = timestamp_mode::Absolute;
 
+  //! See input_configuration::sysex_max_size
+  uint32_t sysex_max_size = 1024 * 1024;
+
   //! Observe hardware ports
   uint32_t track_hardware : 1 = true;
 
@@ -128,7 +131,8 @@ public:
             .ignore_timing = m_configuration.ignore_timing,
             .ignore_sensing = m_configuration.ignore_sensing,
 
-            .timestamps = m_configuration.timestamps},
+            .timestamps = m_configuration.timestamps,
+            .sysex_max_size = m_configuration.sysex_max_size},
         m_context.in);
 
     res.first->second.open_port(port, name);

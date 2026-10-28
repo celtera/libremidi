@@ -497,6 +497,7 @@ NB_MODULE(pylibremidi, m) {
       .def_rw("on_error", &libremidi::input_configuration_wrapper::on_error)
       .def_rw("on_warning", &libremidi::input_configuration_wrapper::on_warning)
       .def_rw("direct", &libremidi::input_configuration_wrapper::direct)
+      .def_rw("sysex_max_size", &libremidi::input_configuration_wrapper::sysex_max_size)
       .def_prop_rw(
           "ignore_sysex", [](const libremidi::input_configuration_wrapper &obj) { return obj.ignore_sysex; }, [](libremidi::input_configuration_wrapper &obj, bool v) { obj.ignore_sysex = v; })
       .def_prop_rw(

@@ -49,6 +49,9 @@ target_link_libraries(protocols_test PRIVATE libremidi Catch2::Catch2WithMain)
 add_executable(midi_stream_decoder_test tests/unit/midi_stream_decoder.cpp)
 target_link_libraries(midi_stream_decoder_test PRIVATE libremidi Catch2::Catch2WithMain)
 
+add_executable(midi_stream_decoder_stream_test tests/unit/midi_stream_decoder_stream.cpp)
+target_link_libraries(midi_stream_decoder_stream_test PRIVATE libremidi Catch2::Catch2WithMain)
+
 add_executable(midi_timing_test tests/unit/midi_timing.cpp)
 target_link_libraries(midi_timing_test PRIVATE libremidi Catch2::Catch2WithMain)
 
@@ -68,6 +71,7 @@ add_test(NAME midifile_write_test COMMAND midifile_write_test)
 add_test(NAME midifile_write_tracks_test COMMAND midifile_write_tracks_test)
 add_test(NAME protocols_test COMMAND protocols_test)
 add_test(NAME midi_stream_decoder_test COMMAND midi_stream_decoder_test)
+add_test(NAME midi_stream_decoder_stream_test COMMAND midi_stream_decoder_stream_test "~[bench]")
 add_test(NAME midi_timing_test COMMAND midi_timing_test)
 add_test(NAME rawio_test COMMAND rawio_test)
 add_test(NAME observer_filters_test COMMAND observer_filters_test)

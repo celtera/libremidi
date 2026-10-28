@@ -81,6 +81,11 @@ struct input_configuration
 
   //! Timestamp mode. See @libremidi::timestamp_mode
   uint32_t timestamps : 3 = timestamp_mode::Absolute;
+
+  //! Maximum size in bytes of an incoming system-exclusive message, F0 and F7 included.
+  //! A longer message is dropped and reported through on_warning. 0 means no limit other
+  //! than the capacity of a message, which LIBREMIDI_SLIM_MESSAGE sets.
+  uint32_t sysex_max_size = 1024 * 1024;
 };
 
 using ump_callback = std::function<void(ump&&)>;
