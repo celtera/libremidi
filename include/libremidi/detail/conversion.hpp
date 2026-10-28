@@ -550,4 +550,74 @@ private:
   std::size_t m_dropped{};
   state m_state{state::idle};
 };
+
+/**
+ * Converts UMP to MIDI 1 as midi2_to_midi1 does, for a stream given a few
+ * packets at a time: the SysEx7 packets of a system-exclusive message give
+ * one F0 ... F7 message once its end packet is in, whether they came in one
+ * call or one per call.
+ *
+ * convert() calls @p on_midi once per system-exclusive message, and once for
+ * each run of other packets, converted together as midi2_to_midi1 converts
+ * them.
+ *
+ * Nothing allocates. A system-exclusive message longer than @p SysexCapacity
+ * bytes, F0 and F7 included, or whose packets do not follow start,
+ * continue..., end, is dropped whole: convert() returns
+ * std::errc::message_size for the call that would have completed it, and
+ * dropped() counts it.
+ */
+template <std::size_t SysexCapacity = 4096>
+struct midi2_to_midi1_assembler
+{
+  stdx::error convert(const uint32_t* words, std::size_t count, int64_t timestamp, auto on_midi)
+  {
+    stdx::error ret{};
+    const auto keep_first = [&ret](stdx::error e) {
+      if (e != stdx::error{} && ret == stdx::error{})
+        ret = e;
+    };
+    const auto convert_run = [&](std::size_t from, std::size_t to) {
+      if (from < to)
+        keep_first(converter.convert(words + from, to - from, timestamp, on_midi));
+    };
+
+    std::size_t run = 0;
+    std::size_t at = 0;
+    while (at < count)
+    {
+      const auto n = std::size_t(ump_packet_words(words[at]));
+      if (at + n > count)
+        break;
+
+      if (midi2::message_type(words[at] >> 28) == midi2::message_type::SYSEX7)
+      {
+        convert_run(run, at);
+        run = at + n;
+
+        libremidi::ump packet;
+        std::copy_n(words + at, n, packet.data);
+        const auto dropped = sysex.dropped();
+        if (auto midi = sysex.feed(packet); !midi.empty())
+          keep_first(on_midi(midi.data(), midi.size(), timestamp));
+        else if (sysex.dropped() != dropped)
+          keep_first(std::errc::message_size);
+      }
+      at += n;
+    }
+    convert_run(run, count);
+    return ret;
+  }
+
+  //! Forgets a system-exclusive message in progress.
+  void reset() noexcept { sysex.reset(); }
+
+  //! System-exclusive messages dropped so far, too long or malformed.
+  std::size_t dropped() const noexcept { return sysex.dropped(); }
+
+  static constexpr std::size_t sysex_capacity() noexcept { return SysexCapacity; }
+
+  midi2_to_midi1 converter;
+  ump_to_midi1_stream<SysexCapacity> sysex;
+};
 }
