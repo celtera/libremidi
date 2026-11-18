@@ -14,6 +14,12 @@
   #include <jack/jack.h>
 #endif
 
+#if defined(LIBREMIDI_NO_BOOST) || defined(LIBREMIDI_NO_BOOST_VARIANT2)
+static_assert(requires(libremidi::input_api_configuration& config) {
+  std::visit([](auto&) {}, config);
+});
+#endif
+
 TEST_CASE("creation", "[midi_in]")
 {
 #if defined(LIBREMIDI_CI)
