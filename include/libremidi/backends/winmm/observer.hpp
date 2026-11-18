@@ -1,6 +1,7 @@
 #pragma once
 #include <libremidi/backends/winmm/config.hpp>
 #include <libremidi/backends/winmm/helpers.hpp>
+#include <libremidi/backends/winmm/observer_worker.hpp>
 #include <libremidi/detail/observer.hpp>
 
 #include <algorithm>
@@ -90,6 +91,9 @@ protected:
     outputPortList = std::move(currOutputPortList);
   }
 
+  // A callback may destroy its automatic observer in the middle of a diff.
+  virtual bool callbacks_enabled() const noexcept { return true; }
+
   void compare_port_lists_and_notify_clients(
       const auto& prevList, const auto& currList, const auto& portAddedFunc,
       const auto& portRemovedFunc)
@@ -100,7 +104,7 @@ protected:
       {
         auto iter
             = std::ranges::find(prevList, port.display_name, &port_information::display_name);
-        if (iter == prevList.end())
+        if (iter == prevList.end() && callbacks_enabled())
           portAddedFunc(port);
       }
     }
@@ -111,7 +115,7 @@ protected:
       {
         auto iter
             = std::ranges::find(currList, port.display_name, &port_information::display_name);
-        if (iter == currList.end())
+        if (iter == currList.end() && callbacks_enabled())
           portRemovedFunc(port);
       }
     }
@@ -122,65 +126,60 @@ protected:
 };
 }
 
-#if __has_include(<stop_token>) && __cpp_lib_jthread >= 201911L
-  #include <stop_token>
 NAMESPACE_LIBREMIDI::winmm
 {
-class observer_threaded final : public observer_winmm
+class observer_threaded final : public observer_api
 {
-public:
-  explicit observer_threaded(observer_configuration&& conf, winmm_observer_configuration&& apiconf)
-      : observer_winmm{std::move(conf), std::move(apiconf)}
+  // Registration must precede even the synchronous initial snapshot. CM
+  // callbacks only signal events and cannot observe a partially built state.
+  struct state : observer_worker, observer_winmm
   {
-    thread = std::jthread([this](std::stop_token tk) {
-      while (!tk.stop_requested())
-      {
-        check_new_ports<true>();
-        std::this_thread::sleep_for(this->configuration.poll_period);
-      }
-    });
-  }
+    state(observer_configuration&& conf, winmm_observer_configuration&& api)
+        : observer_worker{conf.input_added || conf.input_removed,
+                          conf.output_added || conf.output_removed}
+        , observer_winmm{std::move(conf), std::move(api)}
+    {
+    }
 
-private:
-  std::jthread thread;
-};
-}
-#else
-  #include <atomic>
-  #include <semaphore>
-NAMESPACE_LIBREMIDI::winmm
-{
-class observer_threaded final : public observer_winmm
-{
+    bool callbacks_enabled() const noexcept override { return !stopped(); }
+
+    void watch()
+    {
+      run(configuration.poll_period, [this](bool input) {
+        if (input)
+          check_input_ports<true>();
+        else
+          check_output_ports<true>();
+      });
+    }
+  };
+
+  std::shared_ptr<state> data;
+  std::thread worker;
+
 public:
-  explicit observer_threaded(observer_configuration&& conf, winmm_observer_configuration&& apiconf)
-      : observer_winmm{std::move(conf), std::move(apiconf)}
-      , sema{0}
+  observer_threaded(observer_configuration&& conf, winmm_observer_configuration&& api)
+      : data{std::make_shared<state>(std::move(conf), std::move(api))}
+      , worker{[s = data] { s->watch(); }}
   {
-    thread = std::thread([this] {
-      while (!stop_flag.test(std::memory_order_acquire))
-      {
-        check_new_ports<true>();
-        std::this_thread::sleep_for(this->configuration.poll_period);
-      }
-      sema.release();
-    });
   }
 
   ~observer_threaded()
   {
-    stop_flag.test_and_set();
-    sema.acquire();
-    thread.join();
+    data->stop();
+    // If destroyed by its own callback, the worker holds the state until
+    // that callback returns. Otherwise join before returning to the owner.
+    if (worker.get_id() == std::this_thread::get_id())
+      worker.detach();
+    else
+      worker.join();
   }
 
-private:
-  std::thread thread;
-  std::atomic_flag stop_flag = ATOMIC_FLAG_INIT;
-  std::binary_semaphore sema;
+  libremidi::API get_current_api() const noexcept override { return data->get_current_api(); }
+  std::vector<input_port> get_input_ports() const noexcept override { return data->get_input_ports(); }
+  std::vector<output_port> get_output_ports() const noexcept override { return data->get_output_ports(); }
 };
 }
-#endif
 
 NAMESPACE_LIBREMIDI::winmm
 {
@@ -206,6 +205,8 @@ inline std::unique_ptr<observer_api> make<observer_winmm>(
     return std::make_unique<observer_winmm>(std::move(conf), std::move(api));
   if (api.manual_poll)
     return std::make_unique<winmm::observer_manual>(std::move(conf), std::move(api));
+  else if (!conf.has_callbacks())
+    return std::make_unique<observer_winmm>(std::move(conf), std::move(api));
   else
     return std::make_unique<winmm::observer_threaded>(std::move(conf), std::move(api));
 }
