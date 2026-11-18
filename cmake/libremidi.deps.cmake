@@ -11,8 +11,9 @@ if(NOT WIN32)
 endif()
 
 check_cxx_compiler_flag(-Werror=return-type LIBREMIDI_CXX_HAS_WERROR_RETURN_TYPE)
-check_cxx_compiler_flag(-Wno-gnu-statement-expression-from-macro-expansion LIBREMIDI_CXX_HAS_WNO_GNU_STATEMENT)
-check_cxx_compiler_flag(-Wno-c99-extensions LIBREMIDI_CXX_HAS_WNO_C99_EXTENSIONS)
+# GCC silently accepts unknown -Wno-* options; probe the warning itself.
+check_cxx_compiler_flag(-Wgnu-statement-expression-from-macro-expansion LIBREMIDI_CXX_HAS_WGNU_STATEMENT)
+check_cxx_compiler_flag(-Wc99-extensions LIBREMIDI_CXX_HAS_WC99_EXTENSIONS)
 
 ### Dependencies ###
 find_package(Threads)
