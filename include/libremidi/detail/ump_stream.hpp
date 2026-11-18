@@ -3,6 +3,7 @@
 #include <libremidi/error.hpp>
 
 #include <cstdint>
+#include <span>
 
 NAMESPACE_LIBREMIDI
 {
@@ -12,6 +13,35 @@ enum class segmentation_error
   need_space,
   other
 };
+
+// Take the next contiguous run belonging to a port, without copying or splitting packets.
+// A negative group accepts all packets. An incomplete final packet is discarded.
+inline std::span<const uint32_t>
+next_ump_group_run(std::span<const uint32_t>& words, int group)
+{
+  std::size_t accepted = 0;
+  while (accepted < words.size())
+  {
+    const auto tail = words.subspan(accepted);
+    const std::size_t n = cmidi2_ump_get_num_bytes(tail.front()) / sizeof(uint32_t);
+    if (n > tail.size())
+      break;
+    if (group < 0 || cmidi2_ump_get_group(tail.data()) == group)
+    {
+      accepted += n;
+      continue;
+    }
+
+    const auto run = words.first(accepted);
+    words = tail.subspan(n);
+    if (!run.empty())
+      return run;
+  }
+
+  const auto run = words.first(accepted);
+  words = {};
+  return run;
+}
 
 /**
  * Utility function to segment an ump stream into individual messages.

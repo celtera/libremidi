@@ -4,6 +4,7 @@
 #include <libremidi/backends/winmidi/observer.hpp>
 #include <libremidi/detail/midi_in.hpp>
 #include <libremidi/detail/midi_stream_decoder.hpp>
+#include <libremidi/detail/ump_stream.hpp>
 
 NAMESPACE_LIBREMIDI::winmidi
 {
@@ -237,19 +238,19 @@ public:
         .has_samples = false,
     };
 
-    if(wordCount == 0)
+    // The COM event is a word-aligned batch, not necessarily all from the same group.
+    std::span<const uint32_t> words{ump, wordCount};
+    auto run = next_ump_group_run(words, m_group_filter);
+    if (run.empty())
       return;
 
-    if (m_group_filter >= 0)
-    {
-      int group = cmidi2_ump_get_group(ump);
-      if (group != m_group_filter)
-        return;
-    }
-
     auto to_ns = [this, t = timestamp] { return ticks_to_ns(t); };
-    m_processing.on_bytes(
-        {ump, ump + wordCount}, m_processing.timestamp<timestamp_info>(to_ns, 0));
+    const auto ts = m_processing.timestamp<timestamp_info>(to_ns, 0);
+    do
+    {
+      m_processing.on_bytes(run, ts);
+      run = next_ump_group_run(words, m_group_filter);
+    } while (!run.empty());
   }
 #endif
 
