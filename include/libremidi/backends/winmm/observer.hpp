@@ -3,6 +3,7 @@
 #include <libremidi/backends/winmm/helpers.hpp>
 #include <libremidi/detail/observer.hpp>
 
+#include <algorithm>
 #include <thread>
 
 NAMESPACE_LIBREMIDI
@@ -29,25 +30,38 @@ public:
       check_new_ports<false>();
   }
 
-  ~observer_winmm() { }
-
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
   std::vector<input_port> get_input_ports() const noexcept override
   {
-    return get_port_list<true>();
+    std::vector<input_port> ports;
+    winmm::get_port_list(ports);
+    return ports;
   }
 
   std::vector<output_port> get_output_ports() const noexcept override
   {
-    return get_port_list<false>();
+    std::vector<output_port> ports;
+    winmm::get_port_list(ports);
+    return ports;
   }
 
 protected:
   template <bool Notify>
   void check_new_ports()
   {
-    auto currInputPortList = get_port_list<true>();
+    check_input_ports<Notify>();
+    check_output_ports<Notify>();
+  }
+
+  template <bool Notify>
+  void check_input_ports()
+  {
+    if (!configuration.input_added && !configuration.input_removed)
+      return;
+    std::vector<input_port> currInputPortList;
+    if (!winmm::get_port_list(currInputPortList))
+      return; // An incomplete snapshot is not a removal.
 
     if constexpr (Notify)
     {
@@ -56,8 +70,16 @@ protected:
           configuration.input_removed);
     }
     inputPortList = std::move(currInputPortList);
+  }
 
-    auto currOutputPortList = get_port_list<false>();
+  template <bool Notify>
+  void check_output_ports()
+  {
+    if (!configuration.output_added && !configuration.output_removed)
+      return;
+    std::vector<output_port> currOutputPortList;
+    if (!winmm::get_port_list(currOutputPortList))
+      return;
 
     if constexpr (Notify)
     {
@@ -94,76 +116,6 @@ protected:
       }
     }
   }
-
-  input_port to_in_port_info(std::size_t index) const noexcept
-  {
-    MIDIINCAPS deviceCaps;
-    midiInGetDevCaps(index, &deviceCaps, sizeof(MIDIINCAPS));
-
-    auto rawName = ConvertToUTF8(deviceCaps.szPname);
-    auto portName = rawName;
-    MakeUniqueInPortName(portName, index);
-
-    return {
-        {.api = libremidi::API::WINDOWS_MM,
-         .client = 0,
-         .device
-         = usb_device_identifier{.vendor_id = deviceCaps.wMid, .product_id = deviceCaps.wPid},
-         .port = index,
-         .manufacturer = "",
-         .device_name = "",
-         .port_name = rawName,
-         .display_name = portName}};
-  }
-
-  output_port to_out_port_info(std::size_t index) const noexcept
-  {
-    MIDIOUTCAPS deviceCaps;
-    midiOutGetDevCaps(index, &deviceCaps, sizeof(MIDIOUTCAPS));
-
-    auto rawName = ConvertToUTF8(deviceCaps.szPname);
-    auto portName = rawName;
-    MakeUniqueOutPortName(portName, index);
-
-    return {
-        {.api = libremidi::API::WINDOWS_MM,
-         .client = 0,
-         .device
-         = usb_device_identifier{.vendor_id = deviceCaps.wMid, .product_id = deviceCaps.wPid},
-         .port = index,
-         .manufacturer = "",
-         .device_name = "",
-         .port_name = rawName,
-         .display_name = portName}};
-  }
-
-  template <bool Input>
-  auto get_port_list() const noexcept
-      -> std::vector<std::conditional_t<Input, input_port, output_port>>
-  {
-    std::vector<std::conditional_t<Input, input_port, output_port>> portList;
-
-    if constexpr (Input)
-    {
-      std::size_t nDevices = midiInGetNumDevs();
-      for (std::size_t i = 0; i < nDevices; ++i)
-      {
-        portList.push_back(to_in_port_info(i));
-      }
-    }
-    else
-    {
-      std::size_t nDevices = midiOutGetNumDevs();
-      for (std::size_t i = 0; i < nDevices; ++i)
-      {
-        portList.push_back(to_out_port_info(i));
-      }
-    }
-    return portList;
-  }
-
-  static constexpr bool INPUT = true;
-  static constexpr bool OUTPUT = false;
 
   std::vector<input_port> inputPortList;
   std::vector<output_port> outputPortList;
@@ -250,6 +202,8 @@ template <>
 inline std::unique_ptr<observer_api> make<observer_winmm>(
     libremidi::observer_configuration&& conf, libremidi::winmm_observer_configuration&& api)
 {
+  if (!conf.has_callbacks())
+    return std::make_unique<observer_winmm>(std::move(conf), std::move(api));
   if (api.manual_poll)
     return std::make_unique<winmm::observer_manual>(std::move(conf), std::move(api));
   else
