@@ -6,6 +6,10 @@
 #include <CoreMIDI/CoreMIDI.h>
 
 #include <bit>
+#include <map>
+#include <memory>
+#include <type_traits>
+#include <utility>
 
 NAMESPACE_LIBREMIDI
 {
@@ -46,26 +50,23 @@ public:
       return;
     }
 
+    // Seed both directions before user code can pump the client's run loop.
+    const auto initial_inputs
+        = seed(inputs, configuration.input_added, configuration.input_removed);
+    const auto initial_outputs
+        = seed(outputs, configuration.output_added, configuration.output_removed);
+
     if (configuration.on_create_context)
       configuration.on_create_context(client);
 
-    if (configuration.notify_in_constructor)
-    {
-      if (this->configuration.input_added)
-        for (auto& p : get_input_ports())
-          this->configuration.input_added(p);
-
-      if (this->configuration.output_added)
-        for (auto& p : get_output_ports())
-          this->configuration.output_added(p);
-    }
+    announce(initial_inputs, inputs, configuration.input_added);
+    announce(initial_outputs, outputs, configuration.output_added);
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::COREMIDI; }
 
-  template <bool Input>
-  auto to_port_info(MIDIObjectRef obj) const noexcept
-      -> std::optional<std::conditional_t<Input, input_port, output_port>>
+  template <typename Port>
+  auto to_port_info(MIDIEndpointRef obj) const noexcept -> std::optional<Port>
   {
     MIDIEntityRef e{};
     MIDIEndpointGetEntity(obj, &e);
@@ -122,12 +123,16 @@ public:
     if (!this->configuration.accepts(type))
       return {};
 
-    return std::conditional_t<Input, input_port, output_port>{
+    SInt32 unique_id;
+    if (MIDIObjectGetIntegerProperty(obj, kMIDIPropertyUniqueID, &unique_id) != noErr)
+      return {}; // The endpoint may already be gone when processing an add.
+
+    return Port{
         {.api = get_current_api(),
          .client = (std::uintptr_t)this->client,
          .container = usb_location_id,
          .device = usb_vendor_product,
-         .port = std::bit_cast<uint32_t>(get_int_property(obj, kMIDIPropertyUniqueID)),
+         .port = std::bit_cast<uint32_t>(unique_id),
          .manufacturer = get_string_property(obj, kMIDIPropertyManufacturer),
          .device_name = get_string_property(obj, kMIDIPropertyModel),
          .port_name = get_string_property(obj, kMIDIPropertyName),
@@ -137,87 +142,120 @@ public:
 
   std::vector<libremidi::input_port> get_input_ports() const noexcept override
   {
-    std::vector<libremidi::input_port> ret;
-
-    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-    for (ItemCount i = 0; i < MIDIGetNumberOfSources(); i++)
-    {
-      if (auto p = to_port_info<true>(MIDIGetSource(i)))
-        ret.push_back(std::move(*p));
-    }
-
-    return ret;
+    return list<input_port>();
   }
 
   std::vector<libremidi::output_port> get_output_ports() const noexcept override
   {
-    std::vector<libremidi::output_port> ret;
-
-    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-    for (ItemCount i = 0; i < MIDIGetNumberOfDestinations(); i++)
-    {
-      if (auto p = to_port_info<false>(MIDIGetDestination(i)))
-        ret.push_back(std::move(*p));
-    }
-    return ret;
+    return list<output_port>();
   }
 
   void notify(const MIDINotification* message)
   {
-    switch (message->messageID)
-    {
-      case kMIDIMsgObjectAdded: {
-        auto obj = reinterpret_cast<const MIDIObjectAddRemoveNotification*>(message);
+    if (message->messageID != kMIDIMsgObjectAdded && message->messageID != kMIDIMsgObjectRemoved)
+      return;
 
-        switch (obj->childType)
-        {
-          case kMIDIObjectType_Source:
-            if (auto& cb = configuration.input_added)
-              if (auto p = to_port_info<true>(obj->child))
-                cb(std::move(*p));
-            break;
-          case kMIDIObjectType_Destination:
-            if (auto& cb = configuration.output_added)
-              if (auto p = to_port_info<false>(obj->child))
-                cb(std::move(*p));
-            break;
-          default:
-            break;
-        }
-
-        break;
-      }
-
-      case kMIDIMsgObjectRemoved: {
-        auto obj = reinterpret_cast<const MIDIObjectAddRemoveNotification*>(message);
-
-        switch (obj->childType)
-        {
-          case kMIDIObjectType_Source:
-            if (auto& cb = configuration.input_removed)
-              if (auto p = to_port_info<true>(obj->child))
-                cb(std::move(*p));
-            break;
-          case kMIDIObjectType_Destination:
-            if (auto& cb = configuration.output_removed)
-              if (auto p = to_port_info<false>(obj->child))
-                cb(std::move(*p));
-            break;
-          default:
-            break;
-        }
-
-        break;
-      }
-
-      default:
-        break;
-    }
+    auto& obj = *reinterpret_cast<const MIDIObjectAddRemoveNotification*>(message);
+    if (obj.childType == kMIDIObjectType_Source)
+      update(obj, inputs, configuration.input_added, configuration.input_removed);
+    else if (obj.childType == kMIDIObjectType_Destination)
+      update(obj, outputs, configuration.output_added, configuration.output_removed);
   }
 
   ~observer_core() { MIDIClientDispose(this->client); }
 
 private:
+  // MIDIClientCreate delivers notifications on the creating thread's run loop.
+  // Public listings query CoreMIDI independently and never touch these maps.
+  template <typename Port>
+  using endpoints = std::map<MIDIEndpointRef, std::shared_ptr<const Port>>;
+  endpoints<input_port> inputs;
+  endpoints<output_port> outputs;
+
+  template <typename Port>
+  using initial_ports = std::vector<std::pair<MIDIEndpointRef, std::shared_ptr<const Port>>>;
+
+  template <typename Port>
+  static void for_each_endpoint(auto&& visit)
+  {
+    constexpr bool input = std::is_same_v<Port, input_port>;
+    const auto count = input ? MIDIGetNumberOfSources() : MIDIGetNumberOfDestinations();
+    for (ItemCount i = 0; i < count; ++i)
+    {
+      if (auto endpoint = input ? MIDIGetSource(i) : MIDIGetDestination(i))
+        visit(endpoint);
+    }
+  }
+
+  template <typename Port>
+  std::vector<Port> list() const noexcept
+  {
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+    std::vector<Port> ports;
+    for_each_endpoint<Port>([&](MIDIEndpointRef endpoint) {
+      if (auto p = to_port_info<Port>(endpoint))
+        ports.push_back(std::move(*p));
+    });
+    return ports;
+  }
+
+  template <typename Port>
+  auto remember(endpoints<Port>& known, MIDIEndpointRef endpoint) -> std::shared_ptr<const Port>
+  {
+    if (!known.contains(endpoint))
+      if (auto p = to_port_info<Port>(endpoint))
+      {
+        auto snapshot = std::make_shared<const Port>(std::move(*p));
+        known.emplace(endpoint, snapshot);
+        return snapshot;
+      }
+    return {};
+  }
+
+  template <typename Port>
+  initial_ports<Port> seed(endpoints<Port>& known, const auto& added, const auto& removed)
+  {
+    initial_ports<Port> initial;
+    const bool announce_existing = configuration.notify_in_constructor && added;
+    if (removed || announce_existing)
+      for_each_endpoint<Port>([&](MIDIEndpointRef endpoint) {
+        if (auto p = remember(known, endpoint); p && announce_existing)
+          initial.emplace_back(endpoint, std::move(p));
+      });
+    return initial;
+  }
+
+  static void announce(const auto& initial, const auto& known, const auto& added)
+  {
+    for (const auto& [endpoint, port] : initial)
+    {
+      // A previous callback may have delivered a removal, even reused the ref.
+      auto it = known.find(endpoint);
+      if (it != known.end() && it->second == port)
+        added(*port);
+    }
+  }
+
+  template <typename Port>
+  void update(
+      const MIDIObjectAddRemoveNotification& obj, endpoints<Port>& known,
+      const auto& added, const auto& removed)
+  {
+    if (obj.messageID == kMIDIMsgObjectAdded)
+    {
+      if (added || removed)
+        if (auto p = remember(known, obj.child); p && added)
+          added(*p);
+    }
+    else
+    {
+      // The ref is already disposed. Extract before calling out so reentrant
+      // notifications can't invalidate the snapshot or report a second removal.
+      if (auto node = known.extract(obj.child); node && removed)
+        removed(*node.mapped());
+    }
+  }
+
   MIDIClientRef client{};
 };
 }

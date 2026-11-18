@@ -21,4 +21,8 @@ libremidi::observer_configuration conf{
 libremidi::observer obs{std::move(conf)};
 ```
 
+On CoreMIDI, a removal callback receives the port's metadata as observed when
+the endpoint was discovered. This also applies to ports already connected when
+the observer starts, even if `notify_in_constructor` is false.
+
 See `midiobserve.cpp` or `emscripten_midiin.cpp` for an example.
