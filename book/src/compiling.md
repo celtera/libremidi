@@ -46,8 +46,6 @@ Note that when targetting Windows Store, WinMM APIs are not available, only UWP 
 
 Both MSVC and MSYS2 are supported (on all MSYS2 toolchains).
 
-If MSVC 14.52 reports that `T` is undefined in `system_error2.hpp`, update libremidi to a revision containing the [fix for #277](https://github.com/celtera/libremidi/issues/277) rather than downgrading the compiler.
-
 Note that for MIDI 2 support it is currently necessary for the end-user to install the [Windows MIDI Services](https://github.com/microsoft/MIDI/releases) on their computer. As of version 5, libremidi has been tested on Windows 10 and 11 with the DP9 NAMM Preview 4 release.
 
 ## On macOS & iOS
