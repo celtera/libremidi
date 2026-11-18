@@ -1,7 +1,11 @@
 # Context sharing
 
 This allows to share a single context across multiple MIDI objects (such as a `jack_client_t` with JACK, a PipeWire main loop & filter, or a `MIDIClientRef` on macOS with CoreMIDI). 
-If no context is passed, each object will create one as they used to.
+Most backends create a context per object when none is passed. Windows MIDI Services instead
+creates a shared session on first open, named after the host executable. Set `client_name`
+for a named session, or pass a `MidiSession*` in `context` to use a session you own.
+Inputs and outputs share one connection per endpoint within that session. Closing one port
+leaves the others connected. A hosted virtual device has its own private plugin connection.
 
 Example:
 
