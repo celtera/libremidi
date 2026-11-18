@@ -79,7 +79,7 @@ make_midi_out(const output_configuration& base_conf, const output_api_configurat
   else
   {
     if (auto api = libremidi::midi_api(api_conf); api == libremidi::API::UNSPECIFIED)
-      return make_midi_out(base_conf);
+      return {};
     else
       return make_midi_out_impl(base_conf, api_conf);
   }

@@ -11,7 +11,6 @@ NAMESPACE_LIBREMIDI::winmidi
 class midi_in_impl final
     : public midi2::in_api
     , public error_handler
-    , public winmidi_shared_data
 {
 public:
   struct
@@ -36,7 +35,7 @@ public:
         return E_POINTER;
 
       if (riid == __uuidof(IUnknown) ||
-          riid == libremidi::IID_IMidiEndpointConnectionMessagesReceivedCallback)
+          riid == ::IID_IMidiEndpointConnectionMessagesReceivedCallback)
       {
         *ppvObject = static_cast<IMidiEndpointConnectionMessagesReceivedCallback*>(this);
         AddRef();
@@ -62,7 +61,7 @@ public:
         GUID connectionId,
         UINT64 timestamp,
         UINT32 wordCount,
-        UINT32 *messages) override {
+        const UINT32* messages) override {
       HRESULT res{};
       self.process_message(sessionId, connectionId, timestamp, wordCount, messages);
       return res;
@@ -77,6 +76,8 @@ public:
             configuration.context ? *configuration.context
                                   : MidiSession::Create(to_hstring(configuration.client_name))}
   {
+    if (!m_session)
+      return;
     this->client_open_ = stdx::error{};
 
     m_tick_frequency_hz = MidiClock::TimestampFrequency();
@@ -122,12 +123,12 @@ public:
   #if !LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
       m_revoke_token = m_endpoint.MessageReceived(
           [this](
-              const winrt::Microsoft::Windows::Devices::Midi2::IMidiMessageReceivedEventSource&,
-              const winrt::Microsoft::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& args) {
+              const IMidiMessageReceivedEventSource&,
+              const winrt::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& args) {
         process_message(args);
       });
   #else
-      m_endpoint.as(libremidi::IID_IMidiEndpointConnectionRaw, m_raw_endpoint.put_void());
+      m_endpoint.as(::IID_IMidiEndpointConnectionRaw, m_raw_endpoint.put_void());
 
       m_raw_endpoint->SetMessagesReceivedCallback(
           &raw_callback
@@ -148,8 +149,7 @@ public:
   stdx::error open_virtual_port(std::string_view port_name) override
   {
     // Create endpoint information for the virtual device
-    using namespace winrt::Microsoft::Windows::Devices::Midi2;
-    using namespace winrt::Microsoft::Windows::Devices::Midi2::Endpoints::Virtual;
+    using namespace midi2v;
 
     auto conf = setup_virtualdevice_config(configuration.client_name, port_name, port_name, MidiFunctionBlockDirection::BlockInput);
 
@@ -170,8 +170,8 @@ public:
       // Register message received event handler
       m_revoke_token = m_endpoint.MessageReceived(
           [this](
-              const winrt::Microsoft::Windows::Devices::Midi2::IMidiMessageReceivedEventSource&,
-              const winrt::Microsoft::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& args) {
+              const IMidiMessageReceivedEventSource&,
+              const winrt::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& args) {
         process_message(args);
       });
 
@@ -196,7 +196,7 @@ public:
   }
 
   void process_message(
-      const winrt::Microsoft::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& msg)
+      const winrt::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& msg)
   {
     static constexpr timestamp_backend_info timestamp_info{
         .has_absolute_timestamps = true,
@@ -230,7 +230,7 @@ public:
       const GUID& /* connectionId */,
       UINT64 timestamp,
       UINT32 wordCount,
-      UINT32 *ump)
+      const UINT32* ump)
   {
     static constexpr timestamp_backend_info timestamp_info{
         .has_absolute_timestamps = true,
@@ -287,12 +287,12 @@ public:
 private:
   MidiSession m_session;
   winrt::event_token m_revoke_token{};
-  winrt::Microsoft::Windows::Devices::Midi2::MidiEndpointConnection m_endpoint{nullptr};
+  MidiEndpointConnection m_endpoint{nullptr};
 #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
   winrt::impl::com_ref<IMidiEndpointConnectionRaw> m_raw_endpoint{};
 #endif
 #if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
-  winrt::Microsoft::Windows::Devices::Midi2::Endpoints::Virtual::MidiVirtualDevice m_virtual{nullptr};
+  midi2v::MidiVirtualDevice m_virtual{nullptr};
 #endif
   midi2::input_state_machine m_processing{this->configuration};
   int m_group_filter = -1;
