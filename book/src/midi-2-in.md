@@ -38,3 +38,20 @@ midi.open_port(/* a port */);
 midi.open_port(libremidi::midi2::in_default_port());
 
 ```
+
+## Hosting a Windows MIDI Services virtual port
+
+`open_virtual_port(name)` creates one virtual device per classic input or output:
+one static function block, one UMP group (index 0), in the requested direction
+from the host's point of view. The display name may be shared; each new virtual
+device receives a separate product instance ID. The service publishes the
+client-facing endpoint after the host opens its private connection. Closing the
+port disconnects it; the same object can then open another port.
+
+The `winmidi_virtual_metadata_test` CTest checks the actual SDK configuration
+without creating an endpoint. On Windows with a working virtual transport and a
+fix for [Microsoft MIDI #1047](https://github.com/microsoft/MIDI/issues/1047),
+configure with `-DLIBREMIDI_TESTS=ON -DLIBREMIDI_TEST_WINMIDI_VIRTUAL=ON` and
+run `ctest -R winmidi_virtual_smoke --output-on-failure`. This opt-in test
+exchanges UMPs between a host and a separate client, closes both ports, and
+repeats on the same objects. Do not run it on a system affected by #1047.

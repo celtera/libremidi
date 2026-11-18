@@ -26,7 +26,7 @@ try
 
   // Create a midi in
   auto on_ump = [&](const libremidi::ump& message) {
-    if (midiout.is_port_connected())
+    if (midiout.is_port_open())
       midiout.send_ump(message);
   };
   midi_in midiin{{.on_message = on_ump}, lm2::in_default_configuration()};
