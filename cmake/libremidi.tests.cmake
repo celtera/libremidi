@@ -82,6 +82,15 @@ if(LIBREMIDI_HAS_COREMIDI)
   add_test(NAME coremidi_observer_test COMMAND coremidi_observer_test)
 endif()
 
+if(LIBREMIDI_HAS_WINMM)
+  # Compile the backend in isolation so the test can count calls at the WinMM boundary.
+  add_executable(winmm_enumeration_test tests/unit/winmm_enumeration.cpp)
+  target_include_directories(winmm_enumeration_test PRIVATE "${PROJECT_SOURCE_DIR}/include")
+  target_compile_definitions(winmm_enumeration_test PRIVATE LIBREMIDI_NO_BOOST UNICODE _UNICODE)
+  target_link_libraries(winmm_enumeration_test PRIVATE winmm)
+  add_test(NAME winmm_enumeration_test COMMAND winmm_enumeration_test)
+endif()
+
 # PipeWire shared-context regression tests. Standalone programs (no Catch2):
 # each skips with exit 0 when no daemon is reachable and arms a watchdog so a
 # lock-corruption regression fails instead of hanging.
