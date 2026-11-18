@@ -73,7 +73,8 @@ void client()
       {
         if (ep.Name() != in_name && ep.Name() != out_name)
           continue;
-        if (ep.GetTransportSuppliedInfo().TransportId() != midi2v::MidiVirtualDeviceManager::TransportId())
+        const auto transport = ep.GetTransportSuppliedInfo();
+        if (!transport || transport.TransportId() != midi2v::MidiVirtualDeviceManager::TransportId())
           continue;
         auto blocks = ep.GetDeclaredFunctionBlocks();
         if (blocks.Size() != 1)
