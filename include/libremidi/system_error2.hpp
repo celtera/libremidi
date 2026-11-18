@@ -2550,9 +2550,11 @@ constexpr T error_cast(error&& e) noexcept(
 
 namespace detail {
 
+// Keep T at class scope: MSVC 14.52 loses the member template parameter
+// in the dependent noexcept specifications when taking the callback addresses.
+template <class T>
 struct default_error_constructors
 {
-  template <class T>
   static error_value<> copy_constructor(const error& e) noexcept(
       std::is_nothrow_copy_constructible<T>::value
       && std::is_nothrow_move_constructible<T>::value
@@ -2562,7 +2564,6 @@ struct default_error_constructors
     return error_value<>{std::move(value)};
   }
 
-  template <class T>
   static error_value<> move_constructor(error&& e) noexcept(
       std::is_nothrow_move_constructible<T>::value
       )
@@ -2570,32 +2571,28 @@ struct default_error_constructors
     return error_value<>{error_cast<T>(std::move(e))};
   }
 
-  template <class T>
   static void destructor(error& e) noexcept
   {
     detail::erased_error& value = error_ref_access{e}.ref();
     stdx::launder(reinterpret_cast<T*>(&value.storage))->~T();
   }
 
-  template <class T>
   constexpr static error_resource_management::copy_constructor copy() noexcept
   {
     return is_trivially_copy_constructible<T>::value ?
-               nullptr : &copy_constructor<T>;
+               nullptr : &copy_constructor;
   }
 
-  template <class T>
   constexpr static error_resource_management::move_constructor move() noexcept
   {
     return is_trivially_move_constructible<T>::value ?
-               nullptr : &move_constructor<T>;
+               nullptr : &move_constructor;
   }
 
-  template <class T>
   constexpr static error_resource_management::destructor destroy() noexcept
   {
     return is_trivially_destructible<T>::value ?
-               nullptr : &destructor<T>;
+               nullptr : &destructor;
   }
 };
 
@@ -2607,9 +2604,9 @@ struct default_error_resource_management_t : error_resource_management
   constexpr default_error_resource_management_t() noexcept
       :
       error_resource_management{
-          detail::default_error_constructors::copy<T>(),
-          detail::default_error_constructors::move<T>(),
-          detail::default_error_constructors::destroy<T>()
+          detail::default_error_constructors<T>::copy(),
+          detail::default_error_constructors<T>::move(),
+          detail::default_error_constructors<T>::destroy()
       }
   {}
 };
