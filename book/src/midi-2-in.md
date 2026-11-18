@@ -6,6 +6,9 @@ the kind of backend used (e.g. one can send UMPs to MIDI 1 backends and MIDI 1 m
 Note also that libremidi by default will upscale MIDI 1 to MIDI 2 channel events when coming from user-code: it is safe to assume than when using UMP input, only MIDI 2 channel events have to be processed, not MIDI 1 channel events encapsulated into UMPs.
 
 For Windows MIDI Services, a toggle allows to change this behaviour.
+When Windows MIDI Services delivers a batch, the input port selects packets by group.
+Selected packets share the batch timestamp; the raw callback receives each contiguous run
+of selected words without copying them.
 
 ```cpp
 // Set the configuration of our MIDI port, same warnings apply than for MIDI 1.

@@ -1,6 +1,7 @@
 #include "../include_catch.hpp"
 
 #include <libremidi/detail/midi_stream_decoder.hpp>
+#include <libremidi/detail/ump_stream.hpp>
 
 #include <cstring>
 #include <memory>
@@ -963,6 +964,38 @@ TEST_CASE("midi2: on_bytes delivers every packet it is given", "[midi2][state_ma
 
     REQUIRE(c.messages.size() == 1);
     REQUIRE(c.messages[0].data[0] == words[0]);
+  }
+}
+
+TEST_CASE("midi2: select complete group runs from a batched input event", "[midi2][state_machine]")
+{
+  const uint32_t batch[]{
+      0x41903C00, 0x30160001, // Group 1; its payload looks like a group 0 header
+      0x30160102, 0x03040506, // Group 0 SysEx7 Start
+      0x30260708, 0x090A0B0C, // Continue
+      0x11F80000,             // Group 1 clock
+      0x30310D00, 0x00000000, // Group 0 SysEx7 End
+      0x50000000, 0x00000000, // Truncated 128-bit packet
+  };
+  std::span<const uint32_t> remaining{batch};
+
+  SECTION("a filtered port receives only its contiguous runs")
+  {
+    auto run = libremidi::next_ump_group_run(remaining, 0);
+    REQUIRE(run.data() == batch + 2);
+    REQUIRE(run.size() == 4);
+    run = libremidi::next_ump_group_run(remaining, 0);
+    REQUIRE(run.data() == batch + 7);
+    REQUIRE(run.size() == 2);
+    REQUIRE(libremidi::next_ump_group_run(remaining, 0).empty());
+  }
+
+  SECTION("an unfiltered port receives all complete packets together")
+  {
+    const auto run = libremidi::next_ump_group_run(remaining, -1);
+    REQUIRE(run.data() == batch);
+    REQUIRE(run.size() == 9);
+    REQUIRE(remaining.empty());
   }
 }
 
