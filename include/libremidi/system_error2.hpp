@@ -1642,6 +1642,8 @@ constexpr T* launder(T* p) noexcept
 #ifndef STDX_ERROR_HPP
   #define STDX_ERROR_HPP
 
+  #include <cerrno>
+  #include <cstddef>
   #include <cstdlib>
   #include <exception>
   #include <stdexcept>
@@ -2005,7 +2007,6 @@ using can_use_static_cast = bool_constant<
 struct erased_error
 {
   using integral_type = std::intptr_t;
-  using storage_type = std::aligned_storage_t<sizeof(integral_type), alignof(integral_type)>;
 
   constexpr erased_error() noexcept : code{}
   { }
@@ -2044,14 +2045,15 @@ struct erased_error
       int = 0
       >
   erased_error(T value) noexcept(std::is_nothrow_move_constructible<T>::value)
+      : storage{}
   {
-    new (&storage) T(std::move(value));
+    ::new (storage) T(std::move(value));
   }
 
   union
   {
     integral_type code;
-    storage_type storage;
+    alignas(integral_type) std::byte storage[sizeof(integral_type)];
   };
 };
 
@@ -2093,7 +2095,7 @@ constexpr T error_cast_impl(erased_error&& e) noexcept(
     std::is_nothrow_move_constructible<T>::value
     )
 {
-  return std::move(*stdx::launder(reinterpret_cast<T*>(&e.storage)));
+  return std::move(*stdx::launder(reinterpret_cast<T*>(e.storage)));
 }
 
 template <
@@ -2108,7 +2110,7 @@ constexpr T error_cast_impl(const erased_error& e) noexcept(
     std::is_nothrow_copy_constructible<T>::value
     )
 {
-  return *stdx::launder(reinterpret_cast<const T*>(&e.storage));
+  return *stdx::launder(reinterpret_cast<const T*>(e.storage));
 }
 
 } // end namespace detail
@@ -2575,7 +2577,7 @@ struct default_error_constructors
   static void destructor(error& e) noexcept
   {
     detail::erased_error& value = error_ref_access{e}.ref();
-    stdx::launder(reinterpret_cast<T*>(&value.storage))->~T();
+    stdx::launder(reinterpret_cast<T*>(value.storage))->~T();
   }
 
   constexpr static error_resource_management::copy_constructor copy() noexcept
@@ -3244,8 +3246,10 @@ inline string_ref generic_error_code_message(std::errc code) noexcept
       return "Protocol not available";
     case std::errc::no_space_on_device:
       return "No space left on device";
-    case std::errc::no_stream_resources:
+#if defined(ENOSR) && ENOSR != ENOMEM
+    case static_cast<std::errc>(ENOSR):
       return "Out of streams resources";
+#endif
     case std::errc::no_such_device_or_address:
       return "No such device or address";
     case std::errc::no_such_device:
@@ -3258,8 +3262,10 @@ inline string_ref generic_error_code_message(std::errc code) noexcept
       return "Not a directory";
     case std::errc::not_a_socket:
       return "Socket operation on non-socket";
-    case std::errc::not_a_stream:
+#if defined(ENOSTR) && ENOSTR != EINVAL
+    case static_cast<std::errc>(ENOSTR):
       return "Device not a stream";
+#endif
     case std::errc::not_connected:
       return "Transport endpoint is not connected";
     case std::errc::not_enough_memory:
@@ -3298,8 +3304,10 @@ inline string_ref generic_error_code_message(std::errc code) noexcept
       return "Numerical result out of range";
     case std::errc::state_not_recoverable:
       return "State not recoverable";
-    case std::errc::stream_timeout:
+#if defined(ETIME) && ETIME != ETIMEDOUT
+    case static_cast<std::errc>(ETIME):
       return "Timer expired";
+#endif
     case std::errc::text_file_busy:
       return "Text file busy";
     case std::errc::timed_out:
