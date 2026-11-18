@@ -37,7 +37,7 @@ try
 
   // Bring your own shared MidiSession:
   {
-    using namespace winrt::Microsoft::Windows::Devices::Midi2;
+    using namespace winrt::Windows::Devices::Midi2;
     auto my_session = MidiSession::Create(L"my app");
 
     std::vector<std::optional<libremidi::midi_in>> vec;

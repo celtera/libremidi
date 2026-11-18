@@ -37,6 +37,10 @@ without preventing application loading if the end user does not use it.
 | Observer      | Yes   | Yes | Yes     |
 | Scheduling    | No    | No  | No      |
 
+WinMIDI targets the [in-box Windows MIDI Services API](https://microsoft.github.io/MIDI/kb/porting-midi-libraries/). It requires an x64 or Arm64 process on Windows 11 25H2 (build 26200) or later, registration of the in-box API, and an available MIDI service. On other systems use WinMM or WinUWP. Initialize the caller's WinRT apartment before querying availability or constructing MIDI objects.
+
+During the preview, CMake generates the API projections from the pinned `Windows.Devices.Midi2 0.99.92-preview.11` NuGet package; no runtime DLL is deployed. Install a Windows SDK (for the platform metadata and C++/WinRT) or use the MSYS2 toolchain’s matching cppwinrt headers and generator with Windows SDK metadata. For offline builds, set `LIBREMIDI_WINMIDI_HEADERS_ZIP` to the local package. Set `LIBREMIDI_DOWNLOAD_CPPWINRT=OFF` to prevent downloads or `LIBREMIDI_NO_WINMIDI=ON` to disable the backend entirely.
+
 ## Mac & iOS
 
 |               | CoreMIDI |
