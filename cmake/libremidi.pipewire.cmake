@@ -28,7 +28,7 @@ if(PIPEWIRE_INCLUDEDIR AND SPA_INCLUDEDIR)
   unset(CMAKE_REQUIRED_INCLUDES)
 
   target_compile_options(libremidi
-    ${_private}
+    ${_public}
       $<$<AND:$<COMPILE_LANG_AND_ID:CXX,${CMAKE_CXX_COMPILER_ID}>,$<BOOL:${LIBREMIDI_CXX_HAS_WGNU_STATEMENT}>>:-Wno-gnu-statement-expression-from-macro-expansion>
       $<$<AND:$<COMPILE_LANG_AND_ID:CXX,${CMAKE_CXX_COMPILER_ID}>,$<BOOL:${LIBREMIDI_CXX_HAS_WC99_EXTENSIONS}>>:-Wno-c99-extensions>
   )
