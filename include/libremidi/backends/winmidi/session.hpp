@@ -115,7 +115,8 @@ struct port_receiver
   }
 };
 
-inline void receive_event(const MidiMessageReceivedEventArgs& args, auto&& receive)
+inline void receive_event(const winrt::Windows::Devices::Midi2::MidiMessageReceivedEventArgs& args,
+                          auto&& receive)
 {
   uint32_t words[4];
   auto count = args.FillWords(words[0], words[1], words[2], words[3]);

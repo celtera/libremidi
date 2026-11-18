@@ -84,7 +84,7 @@ public:
 
       m_input = std::make_shared<port_receiver>(configuration, -1);
       m_revoke_token = m_endpoint.MessageReceived(
-          [weak = std::weak_ptr{m_input}](const auto&, const MidiMessageReceivedEventArgs& args) {
+          [weak = std::weak_ptr{m_input}](const auto&, const auto& args) {
             if (auto input = weak.lock())
               receive_event(args, [&](auto words, auto ticks) { input->receive(words, ticks); });
           });
