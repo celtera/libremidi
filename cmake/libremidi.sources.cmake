@@ -103,7 +103,9 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/pipewire.hpp
     include/libremidi/backends/pipewire_ump.hpp
 
+    include/libremidi/backends/winmidi/com.hpp
     include/libremidi/backends/winmidi/config.hpp
+    include/libremidi/backends/winmidi/session_fwd.hpp
     include/libremidi/backends/winmidi/helpers.hpp
     include/libremidi/backends/winmidi/midi_in.hpp
     include/libremidi/backends/winmidi/midi_out.hpp

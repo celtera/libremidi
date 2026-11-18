@@ -76,6 +76,12 @@ add_test(NAME midi_timing_test COMMAND midi_timing_test)
 add_test(NAME rawio_test COMMAND rawio_test)
 add_test(NAME observer_filters_test COMMAND observer_filters_test)
 
+if(LIBREMIDI_HAS_WINMIDI)
+  add_executable(winmidi_activation_test tests/integration/winmidi_activation.cpp)
+  target_link_libraries(winmidi_activation_test PRIVATE libremidi)
+  add_test(NAME winmidi_activation_test COMMAND winmidi_activation_test)
+endif()
+
 if(LIBREMIDI_HAS_COREMIDI)
   add_executable(coremidi_observer_test tests/integration/coremidi_observer.cpp)
   target_link_libraries(coremidi_observer_test PRIVATE libremidi Catch2::Catch2WithMain)

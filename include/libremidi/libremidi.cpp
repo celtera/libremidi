@@ -94,7 +94,7 @@ libremidi::API midi_api(const observer_api_configuration& conf)
 LIBREMIDI_INLINE
 input_api_configuration midi_in_configuration_for(libremidi::API api)
 {
-  input_api_configuration ret;
+  input_api_configuration ret{api};
   midi_any::for_backend(api, [&]<typename T>(T) {
     using conf_type = typename T::midi_in_configuration;
     ret = conf_type{};
@@ -105,7 +105,7 @@ input_api_configuration midi_in_configuration_for(libremidi::API api)
 LIBREMIDI_INLINE
 output_api_configuration midi_out_configuration_for(libremidi::API api)
 {
-  output_api_configuration ret;
+  output_api_configuration ret{api};
   midi_any::for_backend(api, [&]<typename T>(T) {
     using conf_type = typename T::midi_out_configuration;
     ret = conf_type{};
@@ -116,7 +116,7 @@ output_api_configuration midi_out_configuration_for(libremidi::API api)
 LIBREMIDI_INLINE
 observer_api_configuration observer_configuration_for(libremidi::API api)
 {
-  observer_api_configuration ret;
+  observer_api_configuration ret{api};
   midi_any::for_backend(api, [&]<typename T>(T) {
     using conf_type = typename T::midi_observer_configuration;
     ret = conf_type{};
