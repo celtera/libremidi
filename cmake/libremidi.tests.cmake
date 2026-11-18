@@ -97,10 +97,11 @@ if(LIBREMIDI_HAS_WINMIDI)
   add_executable(winmidi_virtual_smoke tests/integration/winmidi_virtual.cpp)
   target_link_libraries(winmidi_virtual_smoke PRIVATE libremidi)
   option(LIBREMIDI_TEST_WINMIDI_VIRTUAL "Run the live virtual-port test on a serviced Windows host" OFF)
-  if(LIBREMIDI_TEST_WINMIDI_VIRTUAL)
-    add_test(NAME winmidi_virtual_smoke
-      COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:winmidi_virtual_smoke>
-              -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/winmidi_virtual.cmake)
+  add_test(NAME winmidi_virtual_smoke
+    COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:winmidi_virtual_smoke>
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/winmidi_virtual.cmake)
+  if(NOT LIBREMIDI_TEST_WINMIDI_VIRTUAL)
+    set_tests_properties(winmidi_virtual_smoke PROPERTIES DISABLED TRUE)
   endif()
 endif()
 

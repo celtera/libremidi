@@ -1,5 +1,5 @@
 #pragma once
-#include <libremidi/backends/winmidi/helpers.hpp>
+#include <libremidi/backends/winmidi/session.hpp>
 
 #if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
 #include <array>
@@ -44,60 +44,92 @@ inline midi2v::MidiVirtualDeviceCreationConfig setup_virtualdevice_config(
   return config;
 }
 
-struct virtual_port
+class virtual_port
 {
-  MidiEndpointConnection endpoint{nullptr};
-  event_token received{};
+  struct connection
+  {
+    midi_apartment apartment;
+    MidiSession session;
+    MidiEndpointConnection endpoint{nullptr};
+    event_token received{};
+    PTP_WORK retire;
+
+    explicit connection(const MidiSession& s)
+        : session{s}
+        , retire{CreateThreadpoolWork([](PTP_CALLBACK_INSTANCE, void* p, PTP_WORK) {
+            delete static_cast<connection*>(p);
+          }, this, nullptr)}
+    {
+      if (!retire)
+        throw_last_error();
+    }
+
+    ~connection()
+    {
+      if (endpoint)
+      {
+        if (received)
+          endpoint.MessageReceived(received);
+        // Disconnect calls Cleanup on the attached plugin and releases it.
+        session.DisconnectEndpointConnection(endpoint.ConnectionId());
+      }
+      CloseThreadpoolWork(retire);
+    }
+  };
+
+  struct release
+  {
+    void operator()(connection* c) const noexcept
+    {
+      // Disconnect can join the calling SDK receive thread.
+      if (receive_scope::inside)
+        SubmitThreadpoolWork(c->retire);
+      else
+        delete c;
+    }
+  };
+  using owner = std::unique_ptr<connection, release>;
+  owner active;
+
+public:
+  explicit operator bool() const noexcept { return bool(active); }
+  const MidiEndpointConnection& endpoint() const noexcept { return active->endpoint; }
+  void close() noexcept { active.reset(); }
 
   stdx::error open(
       const MidiSession& session, std::string_view manufacturer, std::string_view name,
       MidiFunctionBlockDirection direction,
-      const TypedEventHandler<IMidiMessageReceivedEventSource, MidiMessageReceivedEventArgs>& handler
-          = nullptr)
+      const TypedEventHandler<
+          IMidiMessageReceivedEventSource, winrt::Windows::Devices::Midi2::MidiMessageReceivedEventArgs>&
+          handler = nullptr)
   {
-    if (!session)
+    if (!session || !session.IsOpen())
       return std::errc::not_connected;
 
-    try
-    {
-      const auto config = setup_virtualdevice_config(manufacturer, name, direction);
-      const auto device = midi2v::MidiVirtualDeviceManager::CreateVirtualDevice(config);
-      if (!device)
-        return std::errc::device_or_resource_busy;
-      endpoint = session.CreateEndpointConnection(device.DeviceEndpointDeviceId());
-      if (!endpoint)
-        return std::errc::address_not_available;
+    // Build transactionally: the session owns an endpoint from Create onward,
+    // even if registration or Open later fails.
+    owner next{new connection{session}};
+    const auto config = setup_virtualdevice_config(manufacturer, name, direction);
+    const auto device = midi2v::MidiVirtualDeviceManager::CreateVirtualDevice(config);
+    if (!device)
+      return std::errc::device_or_resource_busy;
+    next->endpoint = session.CreateEndpointConnection(device.DeviceEndpointDeviceId());
+    if (!next->endpoint)
+      return std::errc::address_not_available;
 
-      // This private, device-side connection must not install a COM raw
-      // callback: it would bypass the plugin that answers discovery requests.
-      if (endpoint.AddMessageProcessingPlugin(device) == MidiMessageProcessingPluginAddResult::Succeeded)
-      {
-        if (handler)
-          received = endpoint.MessageReceived(handler);
-        if ((!handler || received) && endpoint.Open())
-          return {};
-      }
-    }
-    catch (const hresult_error&)
+    // A raw COM callback on this private connection would bypass discovery.
+    if (next->endpoint.AddMessageProcessingPlugin(device) != MidiMessageProcessingPluginAddResult::Succeeded)
+      return std::errc::protocol_error;
+    if (handler)
     {
-      // Roll back the session-owned connection, even if Open never succeeded.
+      next->received = next->endpoint.MessageReceived(handler);
+      if (!next->received)
+        return std::errc::io_error;
     }
-    close(session);
-    return std::errc::io_error;
-  }
-
-  void close(const MidiSession& session)
-  {
-    if (!endpoint)
-      return;
-    if (received)
-    {
-      endpoint.MessageReceived(received);
-      received = {};
-    }
-    // Disconnect calls Cleanup on the attached plugin and releases it.
-    session.DisconnectEndpointConnection(endpoint.ConnectionId());
-    endpoint = nullptr;
+    if (!next->endpoint.Open())
+      return std::errc::connection_refused;
+    active = std::move(next);
+    return {};
   }
 };
 }

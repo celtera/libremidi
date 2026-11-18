@@ -68,7 +68,7 @@ public:
       auto err = m_virtual.open(
           m_owner.get(configuration.client_name), configuration.client_name, port_name,
           MidiFunctionBlockDirection::BlockInput,
-          [weak = std::weak_ptr{input}](const auto&, const MidiMessageReceivedEventArgs& args) {
+          [weak = std::weak_ptr{input}](const auto&, const auto& args) {
             if (auto active = weak.lock())
               receive_event(args, [&](auto words, auto ticks) { active->receive(words, ticks); });
           });
