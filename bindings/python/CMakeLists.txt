@@ -13,8 +13,8 @@ set(BOOST_EXCLUDE_LIBRARIES context coroutine)
 
 add_subdirectory(../.. libremidi-src)
 
-find_package(Python 3.10 COMPONENTS Interpreter Development.Module REQUIRED)
-find_package(Python 3.10 COMPONENTS Development.SABIModule QUIET)
+find_package(Python 3.10 REQUIRED COMPONENTS Interpreter Development.Module
+                         OPTIONAL_COMPONENTS Development.SABIModule)
 
 if(NOT readerwriterqueue_FOUND AND NOT TARGET readerwriterqueue)
     FetchContent_Declare(
