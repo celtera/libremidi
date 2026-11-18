@@ -39,16 +39,13 @@ public:
 
   stdx::error open_port(const output_port& port, std::string_view) override
   {
-    auto device_id = get_if<std::string>(&port.device);
-    if (!device_id)
-      return std::errc::invalid_argument;
-
-    auto [ep, gp] = get_port(*device_id, port.port);
-    if (!ep || !gp)
-      return std::errc::address_not_available;
-
     try
     {
+      auto ep = get_port(port, port_direction::output);
+      if (!ep)
+        return std::errc::address_not_available;
+      // The MIDI 1 converter, unlike an explicit UMP, needs a destination group.
+      converter.context.group = static_cast<uint8_t>(port.port);
       m_endpoint = m_session.CreateEndpointConnection(ep.EndpointDeviceId());
       if (!m_endpoint)
         return std::errc::device_or_resource_busy;
@@ -71,6 +68,7 @@ public:
     // Create endpoint information for the virtual device
     using namespace midi2v;
 
+    converter.context.group = 0;
     auto conf = setup_virtualdevice_config(configuration.client_name, port_name, port_name, MidiFunctionBlockDirection::BlockOutput);
 
     m_virtual = MidiVirtualDeviceManager::CreateVirtualDevice(conf);
