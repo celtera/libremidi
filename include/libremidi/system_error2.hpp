@@ -1642,6 +1642,7 @@ constexpr T* launder(T* p) noexcept
 #ifndef STDX_ERROR_HPP
   #define STDX_ERROR_HPP
 
+  #include <cstdlib>
   #include <exception>
   #include <stdexcept>
   #include <system_error>
@@ -2459,7 +2460,7 @@ public:
   [[noreturn]] void throw_exception() const
   {
     domain().throw_exception(*this);
-    abort();
+    std::abort();
   }
 
   friend class error_domain;
