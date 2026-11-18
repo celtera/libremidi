@@ -17,7 +17,9 @@ jobs:
           - os: ubuntu-24.04-arm
             archs: aarch64
           - os: windows-latest
-            archs: AMD64 ARM64
+            archs: AMD64
+          - os: windows-11-arm
+            archs: ARM64
           - os: macos-latest
             archs: x86_64 arm64
 
