@@ -1,3 +1,4 @@
+#include <libremidi/config.hpp>
 #include <libremidi/backends/winmidi/virtual_port.hpp>
 
 #include <iostream>
@@ -14,31 +15,17 @@ try
   for (auto direction : {MidiFunctionBlockDirection::BlockInput, MidiFunctionBlockDirection::BlockOutput})
   {
     auto config = setup_virtualdevice_config("", name, direction);
-    auto check_info = [&](const auto& info) {
-      hstring id;
-      bool valid;
-      if constexpr (requires { info.ProductInstanceId(); })
-      {
-        id = info.ProductInstanceId();
-        valid = info.Name() == to_hstring(name) && info.HasStaticFunctionBlocks()
-                && info.DeclaredFunctionBlockCount() == 1;
-      }
-      else
-      {
-        id = info.ProductInstanceId;
-        valid = info.Name == to_hstring(name) && info.HasStaticFunctionBlocks
-                && info.DeclaredFunctionBlockCount == 1;
-      }
-      valid = valid && !id.empty() && id.size() <= 42 && previous != id
-              && std::ranges::all_of(id, [](wchar_t c) { return c >= 32 && c <= 126; });
-      previous = id;
-      return valid;
-    };
-    if (!check_info(config.DeclaredEndpointInfo()) || config.FunctionBlocks().Size() != 1)
+    auto info = config.DeclaredEndpointInfo();
+    auto id = info.ProductInstanceId();
+    if (info.Name() != to_hstring(name) || !info.HasStaticFunctionBlocks()
+        || info.DeclaredFunctionBlockCount() != 1 || config.FunctionBlocks().Size() != 1
+        || id.empty() || id.size() > 42 || previous == id
+        || !std::ranges::all_of(id, [](wchar_t c) { return c >= 32 && c <= 126; }))
     {
       std::cerr << "Invalid product instance ID or declared function-block count\n";
       return 1;
     }
+    previous = id;
     auto block = config.FunctionBlocks().GetAt(0);
     if (block.Name() != to_hstring(name) || !block.IsActive() || block.Number() != 0
         || block.FirstGroup().Index() != 0 || block.GroupCount() != 1 || block.Direction() != direction)

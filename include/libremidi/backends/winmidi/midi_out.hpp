@@ -90,26 +90,9 @@ public:
 
   static std::errc write(const MidiEndpointConnection& endpoint, const uint32_t* ump, int64_t bytes)
   {
-    MidiSendMessageResults ret{};
-    switch (bytes / 4)
-    {
-      case 1:
-        ret = endpoint.SendSingleMessagePacket(MidiMessage32(0, ump[0]));
-        break;
-      case 2:
-        ret = endpoint.SendSingleMessagePacket(MidiMessage64(0, ump[0], ump[1]));
-        break;
-      case 3:
-        ret = endpoint.SendSingleMessagePacket(MidiMessage96(0, ump[0], ump[1], ump[2]));
-        break;
-      case 4:
-        ret = endpoint.SendSingleMessagePacket(
-            MidiMessage128(0, ump[0], ump[1], ump[2], ump[3]));
-        break;
-      default:
-        return std::errc::bad_message;
-    }
-    if (ret != MidiSendMessageResults::Succeeded)
+    const auto words = static_cast<uint8_t>(bytes / sizeof(uint32_t));
+    const auto result = endpoint.SendSingleMessageWordArray(0, 0, words, {ump, ump + words});
+    if (!MidiEndpointConnection::SendMessageSucceeded(result))
       return std::errc::io_error;
     return std::errc{};
   }

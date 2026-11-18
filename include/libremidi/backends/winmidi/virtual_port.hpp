@@ -4,7 +4,6 @@
 #if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
 #include <array>
 #include <bit>
-#include <type_traits>
 
 NAMESPACE_LIBREMIDI::winmidi
 {
@@ -45,23 +44,6 @@ inline midi2v::MidiVirtualDeviceCreationConfig setup_virtualdevice_config(
   return config;
 }
 
-// rc2 returns void (ABI failure throws); preview 11 returns an explicit
-// result, including failure to initialize a plugin which *was* appended.
-inline bool register_virtual_plugin(const auto& endpoint, const auto& device)
-{
-  using result = decltype(endpoint.AddMessageProcessingPlugin(device));
-  if constexpr (std::is_void_v<result>)
-  {
-    endpoint.AddMessageProcessingPlugin(device);
-    uint32_t index{};
-    return endpoint.MessageProcessingPlugins().IndexOf(device, index);
-  }
-  else
-  {
-    return endpoint.AddMessageProcessingPlugin(device) == result::Succeeded;
-  }
-}
-
 struct virtual_port
 {
   MidiEndpointConnection endpoint{nullptr};
@@ -88,7 +70,7 @@ struct virtual_port
 
       // This private, device-side connection must not install a COM raw
       // callback: it would bypass the plugin that answers discovery requests.
-      if (register_virtual_plugin(endpoint, device))
+      if (endpoint.AddMessageProcessingPlugin(device) == MidiMessageProcessingPluginAddResult::Succeeded)
       {
         if (handler)
           received = endpoint.MessageReceived(handler);

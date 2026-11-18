@@ -1,3 +1,4 @@
+#include <libremidi/config.hpp>
 #include <libremidi/backends/winmidi/virtual_port.hpp>
 #include <libremidi/libremidi.hpp>
 
@@ -53,19 +54,10 @@ void host()
   }
 }
 
-bool is_virtual_transport(const auto& transport)
-{
-  if constexpr (requires { transport.TransportId(); })
-    return transport.TransportId() == midi2v::MidiVirtualDeviceManager::TransportId();
-  else
-    return transport.TransportId == midi2v::MidiVirtualDeviceManager::TransportId();
-}
-
 void client()
 {
   // Use the service's public view, independent of libremidi's observer/GTB fallback.
-  // Keep the SDK initialized in the client process as well as in the host.
-  winmidi_shared_data sdk;
+  require(service_available(), "Windows MIDI Services unavailable");
   const auto session = MidiSession::Create(L"libremidi virtual port smoke client");
   require(!!session, "could not create client session");
   for (int round = 0; round < 2; ++round)
@@ -81,7 +73,7 @@ void client()
       {
         if (ep.Name() != in_name && ep.Name() != out_name)
           continue;
-        if (!is_virtual_transport(ep.GetTransportSuppliedInfo()))
+        if (ep.GetTransportSuppliedInfo().TransportId() != midi2v::MidiVirtualDeviceManager::TransportId())
           continue;
         auto blocks = ep.GetDeclaredFunctionBlocks();
         if (blocks.Size() != 1)
