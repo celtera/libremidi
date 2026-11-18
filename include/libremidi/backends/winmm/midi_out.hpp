@@ -35,7 +35,8 @@ public:
 
   [[nodiscard]] stdx::error do_open(unsigned int portNumber)
   {
-    MMRESULT result = midiOutOpen(&this->outHandle, portNumber, 0, 0, CALLBACK_NULL);
+    HMIDIOUT handle{};
+    MMRESULT result = midiOutOpen(&handle, portNumber, 0, 0, CALLBACK_NULL);
     if (result != MMSYSERR_NOERROR)
     {
       libremidi_handle_error(
@@ -45,6 +46,7 @@ public:
       return from_mmerr(result);
     }
 
+    outHandle = handle;
     return stdx::error{};
   }
 
@@ -149,7 +151,7 @@ public:
   }
 
 private:
-  HMIDIOUT outHandle; // Handle to Midi Output Device
+  HMIDIOUT outHandle{}; // Null until midiOutOpen succeeds.
   std::vector<char> buffer;
 };
 
