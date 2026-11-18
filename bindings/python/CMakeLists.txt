@@ -41,7 +41,14 @@ else()
     message(STATUS "Building with Python version-specific ABI")
     nanobind_add_module(pylibremidi NB_STATIC pylibremidi.cpp)
 endif()
-target_link_libraries(pylibremidi PUBLIC libremidi readerwriterqueue Boost::headers Boost::variant2 Boost::container)
+target_link_libraries(pylibremidi PRIVATE libremidi readerwriterqueue Boost::headers)
+# Installed Boost puts these headers under one include root. A modular Boost
+# source tree supplies their include directories through the component targets.
+foreach(component IN ITEMS variant2 container)
+    if(TARGET Boost::${component})
+        target_link_libraries(pylibremidi PRIVATE Boost::${component})
+    endif()
+endforeach()
 
 install(TARGETS pylibremidi LIBRARY DESTINATION .)
 
