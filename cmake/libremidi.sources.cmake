@@ -115,6 +115,7 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/winmm/midi_in.hpp
     include/libremidi/backends/winmm/midi_out.hpp
     include/libremidi/backends/winmm/observer.hpp
+    include/libremidi/backends/winmm/observer_worker.hpp
     include/libremidi/backends/winmm.hpp
 
     include/libremidi/backends/winuwp/config.hpp
