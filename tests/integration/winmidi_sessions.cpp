@@ -1,6 +1,7 @@
 // Uses only the service's cross-wired diagnostic endpoints. No hardware or
 // virtual-device creation is involved. Return 77 when the service is unavailable.
 #include <libremidi/backends/winmidi/session.hpp>
+#include <combaseapi.h>
 #include <winrt/Windows.Devices.Midi2.Diagnostics.h>
 
 #include <barrier>
@@ -15,6 +16,14 @@ using namespace std::chrono_literals;
 static void require(bool pass, const char* what)
 {
   if (!pass) throw std::runtime_error{what};
+}
+
+static void require_sta()
+{
+  APTTYPE type{};
+  APTTYPEQUALIFIER qualifier{};
+  require(SUCCEEDED(CoGetApartmentType(&type, &qualifier)) && (type == APTTYPE_MAINSTA || type == APTTYPE_STA),
+          "host apartment changed");
 }
 
 struct input_log
@@ -44,6 +53,12 @@ int main() try
 {
   // The host owns this apartment; the backend must leave it STA.
   winrt::init_apartment(winrt::apartment_type::single_threaded);
+  // Exercise the COM guard even on CI machines without MIDI Services.
+  {
+    w::midi_apartment mta;
+    require_sta();
+  }
+  require_sta();
   if (!w::service_available()) return 77;
   namespace sdk = winrt::Windows::Devices::Midi2;
   using diagnostics = sdk::Diagnostics::MidiDiagnostics;
@@ -137,10 +152,7 @@ int main() try
   isolated.reset();
   require(session.IsOpen() && session.Connections().Size() == 0 && independent.Connections().Size() == 0,
           "last release leaked a connection or closed a supplied session");
-  APTTYPE type{};
-  APTTYPEQUALIFIER qualifier{};
-  require(SUCCEEDED(CoGetApartmentType(&type, &qualifier)) && (type == APTTYPE_MAINSTA || type == APTTYPE_STA),
-          "host apartment changed");
+  require_sta();
   std::puts("PASS: concurrent shared open; session isolation; group routing; draining close; self-close; last disconnect; STA preserved");
   return 0;
 }
