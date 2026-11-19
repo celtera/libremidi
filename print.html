@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "ayu";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-e08d89a4.js";
+            window.path_to_searchindex_js = "searchindex-6a4d8f4e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-33e60232.js"></script>
@@ -443,7 +443,10 @@ midi.send_message(libremidi::message{ /* a message */ });
 <p>Note that the MIDI 1 and MIDI 2 send and receive functions are useable no matter
 the kind of backend used (e.g. one can send UMPs to MIDI 1 backends and MIDI 1 messages to MIDI 2 backends). This conversion is done in a best-effort way.</p>
 <p>Note also that libremidi by default will upscale MIDI 1 to MIDI 2 channel events when coming from user-code: it is safe to assume than when using UMP input, only MIDI 2 channel events have to be processed, not MIDI 1 channel events encapsulated into UMPs.</p>
-<p>For Windows MIDI Services, a toggle allows to change this behaviour.</p>
+<p>For Windows MIDI Services, a toggle allows to change this behaviour.
+When Windows MIDI Services delivers a batch, the input port selects packets by group.
+Selected packets share the batch timestamp; the raw callback receives each contiguous run
+of selected words without copying them.</p>
 <pre><code class="language-cpp">// Set the configuration of our MIDI port, same warnings apply than for MIDI 1.
 // Note that an UMP message is always at most 4 * 32 bits = 16 bytes.
 // Added to the 64-bit timestamp this is 24 bytes for a libremidi::ump 
@@ -630,6 +633,9 @@ libremidi::observer_configuration conf{
 
 libremidi::observer obs{std::move(conf)};
 </code></pre>
+<p>On CoreMIDI, a removal callback receives the port’s metadata as observed when
+the endpoint was discovered. This also applies to ports already connected when
+the observer starts, even if <code>notify_in_constructor</code> is false.</p>
 <p>See <code>midiobserve.cpp</code> or <code>emscripten_midiin.cpp</code> for an example.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="error-handling"><a class="header" href="#error-handling">Error handling</a></h1>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "ayu";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-e08d89a4.js";
+            window.path_to_searchindex_js = "searchindex-6a4d8f4e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-33e60232.js"></script>
@@ -194,6 +194,9 @@ libremidi::observer_configuration conf{
 
 libremidi::observer obs{std::move(conf)};
 </code></pre>
+<p>On CoreMIDI, a removal callback receives the port’s metadata as observed when
+the endpoint was discovered. This also applies to ports already connected when
+the observer starts, even if <code>notify_in_constructor</code> is false.</p>
 <p>See <code>midiobserve.cpp</code> or <code>emscripten_midiin.cpp</code> for an example.</p>
 
                     </main>
