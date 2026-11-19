@@ -1,6 +1,6 @@
 #pragma once
 #include <libremidi/backends/winmidi/config.hpp>
-#include <libremidi/backends/winmidi/helpers.hpp>
+#include <libremidi/backends/winmidi/session.hpp>
 #include <libremidi/backends/winmidi/observer.hpp>
 #include <libremidi/detail/midi_out.hpp>
 #include <libremidi/detail/ump_stream.hpp>
@@ -21,13 +21,9 @@ public:
 
   midi_out_impl(libremidi::output_configuration&& conf, winmidi::output_configuration&& apiconf)
       : configuration{std::move(conf), std::move(apiconf)}
-      , m_session{
-            configuration.context ? *configuration.context
-                                  : MidiSession::Create(to_hstring(configuration.client_name))}
+      , m_owner{configuration.context}
   {
-    if (!m_session)
-      return;
-    this->client_open_ = stdx::error{};
+    if (service_available()) this->client_open_ = stdx::error{};
   }
 
   ~midi_out_impl() override { close_port(); }
@@ -46,13 +42,12 @@ public:
         return std::errc::address_not_available;
       // The MIDI 1 converter, unlike an explicit UMP, needs a destination group.
       converter.context.group = static_cast<uint8_t>(port.port);
-      m_endpoint = m_session.CreateEndpointConnection(ep.EndpointDeviceId());
-      if (!m_endpoint)
-        return std::errc::device_or_resource_busy;
-  #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
-      m_endpoint.as(::IID_IMidiEndpointConnectionRaw, m_raw_endpoint.put_void());
-    #endif
-      m_endpoint.Open();
+      m_connection = ordinary_connection::acquire(
+          m_owner.get(configuration.client_name), ep.EndpointDeviceId());
+      m_endpoint = m_connection->endpoint;
+#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
+      m_raw_endpoint = m_connection->raw;
+#endif
 
       return stdx::error{};
     }
@@ -77,6 +72,8 @@ public:
 
     try
     {
+      m_session = m_owner.get(configuration.client_name);
+      if (!m_session) return std::errc::not_connected;
       m_endpoint = m_session.CreateEndpointConnection(m_virtual.DeviceEndpointDeviceId());
       if (!m_endpoint)
         return std::errc::device_or_resource_busy;
@@ -96,10 +93,21 @@ public:
 
   stdx::error close_port() override
   {
+    if (m_connection)
+    {
+#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
+      m_raw_endpoint = nullptr;
+#endif
+      m_endpoint = nullptr;
+      m_connection.reset();
+      return stdx::error{};
+    }
     if(!m_endpoint)
       return std::errc::not_connected;
 
     m_session.DisconnectEndpointConnection(m_endpoint.ConnectionId());
+    m_endpoint = nullptr;
+    m_session = nullptr;
 #if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
     if (m_virtual)
     {
@@ -193,7 +201,9 @@ public:
   }
 
 private:
-  MidiSession m_session;
+  session_handle m_owner;
+  std::shared_ptr<ordinary_connection> m_connection;
+  MidiSession m_session{nullptr}; // private virtual-device connection only
   MidiEndpointConnection m_endpoint{nullptr};
 #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
   winrt::impl::com_ref<IMidiEndpointConnectionRaw> m_raw_endpoint{};

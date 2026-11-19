@@ -10,6 +10,7 @@ The library can be used header-only, with minimal modifications to your build sy
   * Windows (WinMM): `LIBREMIDI_WINMM=1` and link against `winmm`.
   * Windows (UWP): `LIBREMIDI_WINUWP=1` ; note that there is complex linking logic detailed in the CMakeLists.txt when using UWP.
   * Windows (MIDI Services): `LIBREMIDI_WINMIDI=1`. Use matching C++/WinRT base and `Windows.Devices.Midi2` projections, the NuGet package’s `build/native/include` for the raw COM extensions, and link `runtimeobject` and `windowsapp`.
+    The backend resolves the COM apartment usage functions at runtime; you do not need to raise the host application's `_WIN32_WINNT` to expose them in SDK headers.
   * emscripten: `LIBREMIDI_EMSCRIPTEN=1`.
   * Any platform with JACK: `LIBREMIDI_JACK=1`.
   * Network API: `LIBREMIDI_NETWORK=1` and include boost.
