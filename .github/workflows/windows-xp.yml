@@ -1,0 +1,58 @@
+name: Windows XP
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    tags: ['v*']
+    paths-ignore: ['docs/**', '**.md']
+  pull_request:
+    paths-ignore: ['docs/**', '**.md']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  winmm:
+    name: Windows XP x86 (WinMM)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install LLVM-MinGW-XP
+        working-directory: ${{ runner.temp }}
+        run: |
+          release=llvm-mingw-xp-23.1.5
+          archive=$release-msvcrt-ubuntu-22.04-x86_64.tar.xz
+          curl -fsSL "https://github.com/mon/llvm-mingw-xp/releases/download/$release/$archive" -o "$archive"
+          echo "26397945aa07e920e08b0390583770d0ae6aee3011a8bc5d74ea0a9d087d440f  $archive" | sha256sum --check
+          mkdir llvm-mingw-xp
+          tar -xJf "$archive" --strip-components=1 -C llvm-mingw-xp
+          echo "$RUNNER_TEMP/llvm-mingw-xp/bin" >> "$GITHUB_PATH"
+
+      - name: Cross-compile WinMM and link midiprobe
+        run: |
+          cmake -S . -B build -G Ninja \
+            --toolchain "$RUNNER_TEMP/llvm-mingw-xp/toolchain-files/cmake/i686-mingw32-clang.cmake" \
+            -DCMAKE_BUILD_TYPE=Release -DLIBREMIDI_EXAMPLES=ON -DLIBREMIDI_CI=ON \
+            -DLIBREMIDI_NO_WINUWP=ON -DLIBREMIDI_NO_WINMIDI=ON -DLIBREMIDI_NO_KDMAPI=ON \
+            -DLIBREMIDI_NO_BOOST=ON -DLIBREMIDI_NO_NETWORK=ON -DLIBREMIDI_NO_JACK=ON
+          cmake --build build --target midiprobe --parallel 4
+
+      - name: Check XP executable headers and WinMM import
+        run: |
+          llvm-objdump -p build/midiprobe.exe > "$RUNNER_TEMP/midiprobe.pe"
+          grep -F 'file format coff-i386' "$RUNNER_TEMP/midiprobe.pe"
+          grep -E '^MajorSubsystemVersion +5$' "$RUNNER_TEMP/midiprobe.pe"
+          grep -E '^MinorSubsystemVersion +1$' "$RUNNER_TEMP/midiprobe.pe"
+          grep -Fi 'DLL Name: WINMM.DLL' "$RUNNER_TEMP/midiprobe.pe"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: midiprobe-windows-xp-x86
+          path: build/midiprobe.exe
+          if-no-files-found: error

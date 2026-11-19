@@ -48,6 +48,12 @@ Both MSVC and MSYS2 are supported (on all MSYS2 toolchains).
 
 Note that for MIDI 2 support it is currently necessary for the end-user to install the [Windows MIDI Services](https://github.com/microsoft/MIDI/releases) on their computer. As of version 5, libremidi has been tested on Windows 10 and 11 with the DP9 NAMM Preview 4 release.
 
+### Cross-compiling for Windows XP (32-bit)
+
+The [Windows XP workflow](https://github.com/celtera/libremidi/blob/master/.github/workflows/windows-xp.yml) cross-compiles the WinMM backend on Linux with [LLVM-MinGW-XP](https://github.com/mon/llvm-mingw-xp). To reproduce it, unpack the pinned MSVCRT release, add its `bin` directory to `PATH`, and use the workflow's CMake command with `--toolchain` pointing to the archive's `toolchain-files/cmake/i686-mingw32-clang.cmake`. WinUWP and Windows MIDI Services are not available on XP.
+
+The workflow checks the linked executable's x86 format, subsystem version (5.1), and WinMM import. To enumerate ports on an XP machine, download the `midiprobe-windows-xp-x86` artifact and run `midiprobe.exe` from a command prompt; no separate C++ runtime is needed.
+
 ## On macOS & iOS
 Note that for MIDI 2 support, the application needs to target at least macOS 11.0.
 e.g. `-DCMAKE_OSX_DEPLOYMENT_TARGET=11` or more recent needs to be passed to CMake.
