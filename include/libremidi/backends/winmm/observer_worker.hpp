@@ -5,6 +5,7 @@
 #include <cfgmgr32.h>
 
 #include <algorithm>
+#include <bit>
 #include <chrono>
 #include <system_error>
 
@@ -32,7 +33,7 @@ class observer_worker
     // CM can register an arbitrary GUID even on Windows 8, before Windows
     // exposed these MIDI interface classes. Don't depend on the host manifest.
     using rtl_get_version = LONG(WINAPI*)(OSVERSIONINFOW*);
-    const auto version = reinterpret_cast<rtl_get_version>(
+    const auto version = std::bit_cast<rtl_get_version>(
         GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion"));
     OSVERSIONINFOW os{};
     os.dwOSVersionInfoSize = sizeof(os);
@@ -55,9 +56,9 @@ class observer_worker
     cfgmgr = LoadLibraryExW(L"cfgmgr32.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (!cfgmgr)
       return;
-    const auto reg = reinterpret_cast<decltype(&CM_Register_Notification)>(
+    const auto reg = std::bit_cast<decltype(&CM_Register_Notification)>(
         GetProcAddress(cfgmgr, "CM_Register_Notification"));
-    unregister_notification = reinterpret_cast<decltype(unregister_notification)>(
+    unregister_notification = std::bit_cast<decltype(unregister_notification)>(
         GetProcAddress(cfgmgr, "CM_Unregister_Notification"));
     if (!reg || !unregister_notification)
       return;
