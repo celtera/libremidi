@@ -14,38 +14,29 @@ NAMESPACE_LIBREMIDI::winmidi
 // threads without changing a UI thread's apartment or balancing its COM calls.
 class midi_apartment
 {
-  // The Windows SDK hides these declarations for a Windows 7 target. Resolve
-  // both before acquiring a cookie, without raising the host's target version.
-  struct mta_api
-  {
-    using increment_fn = HRESULT (WINAPI*)(void**);
-    using decrement_fn = HRESULT (WINAPI*)(void*);
-    std::unique_ptr<std::remove_pointer_t<HMODULE>, decltype(&FreeLibrary)> module{
-        LoadLibraryExW(L"combase.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32), &FreeLibrary};
-    increment_fn increment;
-    decrement_fn decrement;
+  using increment_fn = HRESULT (WINAPI*)(void**);
+  using decrement_fn = HRESULT (WINAPI*)(void*);
 
-    mta_api()
-    {
-      if (!module) winrt::throw_last_error();
-      increment = std::bit_cast<increment_fn>(GetProcAddress(module.get(), "CoIncrementMTAUsage"));
-      decrement = std::bit_cast<decrement_fn>(GetProcAddress(module.get(), "CoDecrementMTAUsage"));
-      if (!increment || !decrement)
-        throw winrt::hresult_error{HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND)};
-    }
-  };
-
-  static const mta_api& api()
-  {
-    static const mta_api functions;
-    return functions;
-  }
-
+  // Keep the entry points valid until this particular cookie is released,
+  // including when a host destroys its MIDI objects during static teardown.
+  std::unique_ptr<std::remove_pointer_t<HMODULE>, decltype(&FreeLibrary)> module{
+      LoadLibraryExW(L"combase.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32), &FreeLibrary};
+  decrement_fn decrement;
   void* cookie{};
 
 public:
-  midi_apartment() { winrt::check_hresult(api().increment(&cookie)); }
-  ~midi_apartment() { api().decrement(cookie); }
+  midi_apartment()
+  {
+    if (!module) winrt::throw_last_error();
+    // SDK headers hide the Windows 8 declarations for a Windows 7 target.
+    const auto increment = std::bit_cast<increment_fn>(
+        GetProcAddress(module.get(), "CoIncrementMTAUsage"));
+    decrement = std::bit_cast<decrement_fn>(GetProcAddress(module.get(), "CoDecrementMTAUsage"));
+    if (!increment || !decrement)
+      throw winrt::hresult_error{HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND)};
+    winrt::check_hresult(increment(&cookie));
+  }
+  ~midi_apartment() { decrement(cookie); }
   midi_apartment(const midi_apartment&) = delete;
   midi_apartment& operator=(const midi_apartment&) = delete;
 };
