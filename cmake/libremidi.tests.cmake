@@ -23,6 +23,9 @@ endif()
 add_executable(conversion_test tests/unit/conversion.cpp)
 target_link_libraries(conversion_test PRIVATE libremidi Catch2::Catch2WithMain)
 
+add_executable(controller_translation_test tests/unit/controller_translation.cpp)
+target_link_libraries(controller_translation_test PRIVATE libremidi Catch2::Catch2WithMain)
+
 add_executable(error_test tests/unit/error.cpp)
 target_link_libraries(error_test PRIVATE libremidi Catch2::Catch2WithMain)
 
@@ -63,6 +66,7 @@ target_link_libraries(observer_filters_test PRIVATE libremidi Catch2::Catch2With
 
 include(CTest)
 add_test(NAME conversion_test COMMAND conversion_test)
+add_test(NAME controller_translation_test COMMAND controller_translation_test)
 add_test(NAME error_test COMMAND error_test)
 add_test(NAME midiin_test COMMAND midiin_test --allow-running-no-tests)
 add_test(NAME midiout_test COMMAND midiout_test --allow-running-no-tests)
