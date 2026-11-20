@@ -2,6 +2,7 @@
 #include <libremidi/config.hpp>
 #include <libremidi/error.hpp>
 #include <libremidi/message.hpp>
+#include <libremidi/types.hpp>
 #include <libremidi/ump.hpp>
 
 #include <functional>
@@ -133,5 +134,10 @@ struct ump_input_configuration
   //! Note that this only has an effect on Windows with MIDI Services
   //! as other platforms already do this by default.
   uint32_t midi1_channel_events_to_midi2 : 1 = true;
+
+  //! How the controllers of a MIDI 1 stream are translated when libremidi
+  //! does the translation, that is when this configuration is used with a
+  //! MIDI 1 backend.
+  controller_translation midi1_controllers = controller_translation::raw;
 };
 }

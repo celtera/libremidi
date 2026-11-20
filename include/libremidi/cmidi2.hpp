@@ -2724,6 +2724,12 @@ LIBREMIDI_STATIC uint32_t cmidi2_upscale_14_to_32(uint32_t value)
 
 /** converts MIDI1 bytestream which can contain deltaTime in SMF, to MIDI2 UMP stream.
  * The resulting stream is native endianness.
+ *
+ * The bytestream is a whole one: an RPN / NRPN / DTE sequence that its end
+ * leaves unfinished is CMIDI2_CONVERSION_RESULT_INVALID_DTE_SEQUENCE, and that
+ * state is one for all channels. A stream that comes a message at a time goes
+ * through libremidi::midi1_to_midi2 (detail/conversion.hpp), which keeps this
+ * function for system exclusive messages only.
  */
 static enum cmidi2_midi_conversion_result
 cmidi2_convert_midi1_to_ump(cmidi2_midi_conversion_context* context)

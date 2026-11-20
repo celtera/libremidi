@@ -16,6 +16,25 @@ enum class midi_protocol : uint8_t
   both = midi1 | midi2
 };
 
+/// How a MIDI 1 stream translated to MIDI 2 treats the controllers that
+/// only mean something across several messages: bank select (CC 0, 32), data
+/// entry (CC 6, 38) and parameter selection (CC 98 to 101).
+enum class controller_translation : uint8_t
+{
+  /// Every message is translated on its own: each of these controllers gives
+  /// the MIDI 2 control change of the same index, a program change carries no
+  /// bank. Translated back, the stream is the one that came in, whatever a
+  /// device uses these controllers for.
+  raw,
+
+  /// The default translation of the UMP specification (appendix D.3.3),
+  /// channel by channel: a data entry on a selected parameter gives a MIDI 2
+  /// registered or assignable controller message, on CC 6 and again on CC 38,
+  /// and a bank select is carried by the program change that follows it. The
+  /// controllers themselves give nothing.
+  semantic
+};
+
 enum transport_type : uint8_t
 {
   unknown = 0,

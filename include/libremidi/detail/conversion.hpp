@@ -6,11 +6,13 @@
 #include <libremidi/cmidi2.hpp>
 #include <libremidi/error.hpp>
 #include <libremidi/message.hpp>
+#include <libremidi/types.hpp>
 #include <libremidi/ump.hpp>
 
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstring>
 #include <limits>
 #include <span>
 #include <utility>
@@ -298,8 +300,27 @@ LIBREMIDI_STATIC void for_each_ump_packet(
   }
 }
 
+/**
+ * Translates a stream of MIDI 1 messages to UMP, MIDI 2 channel voice
+ * messages for the channel voice ones.
+ *
+ * convert() takes whole messages, one or several per call, running status
+ * included within a call. Each channel voice message is translated when it
+ * comes; what a controller_translation::semantic translation remembers
+ * between messages is kept per channel across calls. A message that gives no
+ * UMP is not an error, and the UMP made before an error is found in the
+ * input are given to the callback all the same.
+ *
+ * Nothing allocates: it can be called from a real-time callback.
+ */
 struct midi1_to_midi2
 {
+  midi1_to_midi2() = default;
+  explicit midi1_to_midi2(controller_translation c) noexcept
+      : controllers{c}
+  {
+  }
+
   /**
    * Like convert(), but calls @p on_packet once per UMP packet: a
    * system-exclusive message gives every SysEx7 packet it is made of.
@@ -313,46 +334,335 @@ struct midi1_to_midi2
     });
   }
 
+  /**
+   * Calls @p on_ump (words, count, timestamp) with the UMP the messages in
+   * @p message translate to: once in general, more than once when they do not
+   * fit the buffer at once, not at all when they give none.
+   *
+   * Returns the first error: of @p on_ump, or of the input, which is
+   * translated up to the byte in error.
+   */
   stdx::error
   convert(const unsigned char* message, std::size_t size, int64_t timestamp, auto on_ump)
   {
-    context.midi1 = const_cast<unsigned char*>(message);
-    context.midi1_num_bytes = size;
-    context.midi1_proceeded_bytes = 0;
-    context.ump = ump;
-    context.ump_num_bytes = sizeof(ump);
-    context.ump_proceeded_bytes = 0;
-    context.skip_delta_time = true;
+    stdx::error ret{};
+    std::size_t words = 0;
+    const auto keep_first = [&ret](stdx::error e) {
+      if (e != stdx::error{} && ret == stdx::error{})
+        ret = e;
+    };
+    const auto flush = [&] {
+      if (words > 0)
+        keep_first(on_ump(ump, words, timestamp));
+      words = 0;
+    };
+    const auto put32 = [&](uint32_t w) {
+      if (words + 1 > capacity)
+        flush();
+      ump[words++] = w;
+    };
+    const auto put64 = [&](uint64_t m) {
+      if (words + 2 > capacity)
+        flush();
+      ump[words++] = uint32_t(m >> 32);
+      ump[words++] = uint32_t(m);
+    };
 
-    switch (auto err = cmidi2_convert_midi1_to_ump(&context))
+    // Running status holds within a call only: a call starts on a message.
+    uint8_t running = 0;
+    std::size_t at = 0;
+    while (at < size)
     {
-      case CMIDI2_CONVERSION_RESULT_OK: {
-        if (auto n = context.ump_proceeded_bytes; n > 0)
-          return on_ump(context.ump, context.ump_proceeded_bytes / 4, timestamp);
-        else
-          return std::errc::no_message;
+      uint8_t status = message[at];
+      if (status == 0xF0)
+      {
+        running = 0;
+        const auto* f7
+            = static_cast<const unsigned char*>(std::memchr(message + at, 0xF7, size - at));
+        if (!f7)
+        {
+          keep_first(from_cmidi2_result(CMIDI2_CONVERSION_RESULT_INVALID_SYSEX));
+          break;
+        }
+        const std::size_t length = std::size_t(f7 - (message + at)) + 1;
+        auto res = sysex(message + at, length, words);
+        if (res == CMIDI2_CONVERSION_RESULT_OUT_OF_SPACE && words > 0)
+        {
+          flush();
+          res = sysex(message + at, length, words);
+        }
+        if (res != CMIDI2_CONVERSION_RESULT_OK)
+        {
+          keep_first(from_cmidi2_result(res));
+          break;
+        }
+        words += context.ump_proceeded_bytes / sizeof(uint32_t);
+        at += length;
       }
-      case CMIDI2_CONVERSION_RESULT_OUT_OF_SPACE:
-      case CMIDI2_CONVERSION_RESULT_INVALID_SYSEX:
-      case CMIDI2_CONVERSION_RESULT_INVALID_DTE_SEQUENCE:
-      case CMIDI2_CONVERSION_RESULT_INVALID_STATUS:
-      case CMIDI2_CONVERSION_RESULT_INCOMPLETE_SYSEX7:
-      case CMIDI2_CONVERSION_RESULT_INVALID_INPUT:
-        return from_cmidi2_result(err);
-      default:
-        return std::errc::operation_not_supported;
+      else if (status >= 0xF8)
+      {
+        // Real-time: one byte, and running status goes on after it.
+        put32(uint32_t(cmidi2_ump_system_message(context.group, status, 0, 0)));
+        at += 1;
+      }
+      else if (status > 0xF0)
+      {
+        running = 0;
+        std::size_t length = 1;
+        switch (status)
+        {
+          case CMIDI2_SYSTEM_STATUS_MIDI_TIME_CODE:
+          case CMIDI2_SYSTEM_STATUS_SONG_SELECT:
+            length = 2;
+            break;
+          case CMIDI2_SYSTEM_STATUS_SONG_POSITION:
+            length = 3;
+            break;
+          case CMIDI2_SYSTEM_STATUS_TUNE_REQUEST:
+            break;
+          default:
+            length = 0;
+            break;
+        }
+        if (length == 0)
+        {
+          keep_first(from_cmidi2_result(CMIDI2_CONVERSION_RESULT_INVALID_STATUS));
+          break;
+        }
+        if (at + length > size)
+        {
+          keep_first(from_cmidi2_result(CMIDI2_CONVERSION_RESULT_INVALID_INPUT));
+          break;
+        }
+        const uint8_t b1 = length > 1 ? message[at + 1] : 0;
+        const uint8_t b2 = length > 2 ? message[at + 2] : 0;
+        put32(uint32_t(cmidi2_ump_system_message(context.group, status, b1, b2)));
+        at += length;
+      }
+      else
+      {
+        if (status & 0x80)
+        {
+          running = status;
+          at += 1;
+        }
+        else if (running != 0)
+        {
+          status = running;
+        }
+        else
+        {
+          keep_first(from_cmidi2_result(CMIDI2_CONVERSION_RESULT_INVALID_STATUS));
+          break;
+        }
+
+        const std::size_t length = (status & 0xE0) == 0xC0 ? 1 : 2;
+        if (at + length > size)
+        {
+          keep_first(from_cmidi2_result(CMIDI2_CONVERSION_RESULT_INVALID_INPUT));
+          break;
+        }
+        const uint8_t b1 = message[at];
+        const uint8_t b2 = length > 1 ? message[at + 1] : 0;
+        if ((b1 | b2) & 0x80)
+        {
+          keep_first(from_cmidi2_result(CMIDI2_CONVERSION_RESULT_INVALID_INPUT));
+          break;
+        }
+        channel_voice(status, b1, b2, put64);
+        at += length;
+      }
     }
+    flush();
+    return ret;
   }
 
+  //! Forgets the parameter selections, data entries and bank selections
+  //! received so far, on every channel.
+  void reset() noexcept
+  {
+    for (auto& c : channels)
+      c = channel_state{};
+  }
+
+  //! How bank select, data entry and parameter selection controllers are
+  //! translated. Can be changed between two calls of convert().
+  controller_translation controllers{controller_translation::raw};
+
+  //! Its group, and use_sysex8, apply to the translation.
   cmidi2_midi_conversion_context context = [] {
     cmidi2_midi_conversion_context tmp;
     cmidi2_midi_conversion_context_initialize(&tmp);
     return tmp;
   }();
 
-  uint32_t ump[65536 / 4];
+  static constexpr std::size_t capacity = 65536 / 4;
+  uint32_t ump[capacity];
+
+private:
+  // What controller_translation::semantic keeps of one channel.
+  struct channel_state
+  {
+    // A parameter number half that was never received.
+    static constexpr uint8_t unset = 0x80;
+    // MSB (CC 101, 99), then LSB (CC 100, 98).
+    uint8_t rpn[2]{unset, unset};
+    uint8_t nrpn[2]{unset, unset};
+    // The kind the last selection controller was of: 0, CMIDI2_STATUS_RPN or
+    // CMIDI2_STATUS_NRPN.
+    uint8_t active{};
+    // The last CC 6 since the selection: a CC 38 refines it.
+    uint8_t data_msb{};
+    uint8_t bank_msb{};
+    uint8_t bank_lsb{};
+    // A bank select came since the last program change.
+    bool bank_pending{};
+  };
+
+  cmidi2_midi_conversion_result
+  sysex(const unsigned char* bytes, std::size_t length, std::size_t words) noexcept
+  {
+    // The context only sees system-exclusive messages: its controller state
+    // stays as initialized, so that it has nothing pending at the end.
+    context.midi1 = const_cast<unsigned char*>(bytes);
+    context.midi1_num_bytes = length;
+    context.midi1_proceeded_bytes = 0;
+    context.ump = ump + words;
+    context.ump_num_bytes = (capacity - words) * sizeof(uint32_t);
+    context.ump_proceeded_bytes = 0;
+    context.skip_delta_time = true;
+    return cmidi2_convert_midi1_to_ump(&context);
+  }
+
+  void channel_voice(uint8_t status, uint8_t b1, uint8_t b2, auto& put) noexcept
+  {
+    const uint8_t group = context.group;
+    const uint8_t channel = status & 0x0F;
+    switch (status & 0xF0)
+    {
+      case CMIDI2_STATUS_NOTE_OFF:
+        put(cmidi2_ump_midi2_note_off(group, channel, b1, 0, uint16_t(b2) << 9, 0));
+        break;
+      case CMIDI2_STATUS_NOTE_ON:
+        put(cmidi2_ump_midi2_note_on(group, channel, b1, 0, uint16_t(b2) << 9, 0));
+        break;
+      case CMIDI2_STATUS_PAF:
+        put(cmidi2_ump_midi2_paf(group, channel, b1, uint32_t(b2) << 25));
+        break;
+      case CMIDI2_STATUS_CC:
+        if (controllers == controller_translation::semantic)
+          controller(channel, b1, b2, put);
+        else
+          put(cmidi2_ump_midi2_cc(group, channel, b1, uint32_t(b2) << 25));
+        break;
+      case CMIDI2_STATUS_PROGRAM: {
+        if (controllers == controller_translation::semantic)
+        {
+          auto& st = channels[channel];
+          if (st.bank_pending)
+            put(cmidi2_ump_midi2_program(
+                group, channel, CMIDI2_PROGRAM_CHANGE_OPTION_BANK_VALID, b1, st.bank_msb,
+                st.bank_lsb));
+          else
+            put(cmidi2_ump_midi2_program(
+                group, channel, CMIDI2_PROGRAM_CHANGE_OPTION_NONE, b1, 0, 0));
+          st.bank_pending = false;
+        }
+        else
+        {
+          put(cmidi2_ump_midi2_program(
+              group, channel, CMIDI2_PROGRAM_CHANGE_OPTION_NONE, b1, 0, 0));
+        }
+        break;
+      }
+      case CMIDI2_STATUS_CAF:
+        put(cmidi2_ump_midi2_caf(group, channel, uint32_t(b1) << 25));
+        break;
+      case CMIDI2_STATUS_PITCH_BEND:
+        // Least significant byte first.
+        put(cmidi2_ump_midi2_pitch_bend_direct(
+            group, channel, cmidi2_upscale_14_to_32((uint32_t(b2) << 7) + b1)));
+        break;
+      default:
+        break;
+    }
+  }
+
+  // UMP specification, appendix D.3.3, with the parameter sent on CC 6
+  // already: many devices never send CC 38.
+  void controller(uint8_t channel, uint8_t index, uint8_t value, auto& put) noexcept
+  {
+    auto& st = channels[channel];
+    const auto select = [&st](uint8_t* number, int half, uint8_t kind, uint8_t v) {
+      number[half] = v;
+      st.active = kind;
+      st.data_msb = 0;
+    };
+    switch (index)
+    {
+      case CMIDI2_CC_RPN_MSB:
+        select(st.rpn, 0, CMIDI2_STATUS_RPN, value);
+        break;
+      case CMIDI2_CC_RPN_LSB:
+        select(st.rpn, 1, CMIDI2_STATUS_RPN, value);
+        break;
+      case CMIDI2_CC_NRPN_MSB:
+        select(st.nrpn, 0, CMIDI2_STATUS_NRPN, value);
+        break;
+      case CMIDI2_CC_NRPN_LSB:
+        select(st.nrpn, 1, CMIDI2_STATUS_NRPN, value);
+        break;
+      case CMIDI2_CC_DTE_MSB:
+      case CMIDI2_CC_DTE_LSB: {
+        const uint8_t* number = st.active == CMIDI2_STATUS_RPN    ? st.rpn
+                                : st.active == CMIDI2_STATUS_NRPN ? st.nrpn
+                                                                  : nullptr;
+        // Nothing selected, half a selection, or the null parameter: the
+        // data entry is for nothing.
+        if (!number || ((number[0] | number[1]) & 0x80)
+            || (number[0] == 0x7F && number[1] == 0x7F))
+          break;
+
+        uint8_t lsb = 0;
+        if (index == CMIDI2_CC_DTE_MSB)
+          st.data_msb = value;
+        else
+          lsb = value;
+        const uint32_t data = (uint32_t(st.data_msb) << 25) | (uint32_t(lsb) << 18);
+        if (st.active == CMIDI2_STATUS_RPN)
+          put(cmidi2_ump_midi2_rpn(context.group, channel, number[0], number[1], data));
+        else
+          put(cmidi2_ump_midi2_nrpn(context.group, channel, number[0], number[1], data));
+        break;
+      }
+      case CMIDI2_CC_BANK_SELECT:
+        st.bank_msb = value;
+        st.bank_pending = true;
+        break;
+      case CMIDI2_CC_BANK_SELECT_LSB:
+        st.bank_lsb = value;
+        st.bank_pending = true;
+        break;
+      default:
+        put(cmidi2_ump_midi2_cc(context.group, channel, index, uint32_t(value) << 25));
+        break;
+    }
+  }
+
+  channel_state channels[16];
 };
 
+/**
+ * Translates UMP to MIDI 1 messages, each packet on its own: a MIDI 2 control
+ * change gives the control change of the same index, whichever it is, a
+ * registered or assignable controller gives the four control changes that
+ * make it (CC 101 or 99, 100 or 98, 6, 38), a program change with a valid
+ * bank gives CC 0, CC 32 and the program change.
+ *
+ * The MIDI 1 messages made before an error is found are given to the callback
+ * all the same, and packets that have no MIDI 1 form give nothing, which is
+ * not an error. A last packet cut short by the end of the input is one.
+ */
 struct midi2_to_midi1
 {
   stdx::error convert(const uint32_t* message, std::size_t size, int64_t timestamp, auto on_midi)
@@ -360,19 +670,29 @@ struct midi2_to_midi1
     context.midi1 = static_cast<unsigned char*>(midi);
     context.midi1_num_bytes = sizeof(midi);
     context.midi1_proceeded_bytes = 0;
+    // Only whole packets are read: the words of a last packet cut short by
+    // the end of the input are not there.
+    std::size_t whole = 0;
+    while (whole < size && whole + std::size_t(ump_packet_words(message[whole])) <= size)
+      whole += std::size_t(ump_packet_words(message[whole]));
+
     context.ump = const_cast<uint32_t*>(message);
-    context.ump_num_bytes = size * sizeof(uint32_t);
+    context.ump_num_bytes = whole * sizeof(uint32_t);
     context.ump_proceeded_bytes = 0;
     context.skip_delta_time = true;
 
-    switch (auto err = cmidi2_convert_ump_to_midi1(&context))
+    auto err = cmidi2_convert_ump_to_midi1(&context);
+    if (err == CMIDI2_CONVERSION_RESULT_OK && whole < size)
+      err = CMIDI2_CONVERSION_RESULT_INVALID_INPUT;
+
+    stdx::error ret{};
+    if (auto n = context.midi1_proceeded_bytes; n > 0)
+      ret = on_midi(midi, n, timestamp);
+
+    switch (err)
     {
-      case CMIDI2_CONVERSION_RESULT_OK: {
-        if (auto n = context.midi1_proceeded_bytes; n > 0)
-          return on_midi(midi, n, timestamp);
-        else
-          return std::errc::no_message;
-      }
+      case CMIDI2_CONVERSION_RESULT_OK:
+        return ret;
       case CMIDI2_CONVERSION_RESULT_OUT_OF_SPACE:
       case CMIDI2_CONVERSION_RESULT_INVALID_SYSEX:
       case CMIDI2_CONVERSION_RESULT_INVALID_DTE_SEQUENCE:

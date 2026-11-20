@@ -59,7 +59,8 @@ convert_midi2_to_midi1_input_configuration(const ump_input_configuration& base_c
 {
   libremidi::input_configuration c2;
   c2.on_message = [cb = base_conf.on_message,
-                   converter = midi1_to_midi2{}](libremidi::message&& msg) mutable -> void {
+                   converter = midi1_to_midi2{base_conf.midi1_controllers}](
+                      libremidi::message&& msg) mutable -> void {
     // System-exclusive gives every SysEx7 packet it is made of.
     converter.convert_packets(
         msg.bytes.data(), msg.bytes.size(), msg.timestamp,
