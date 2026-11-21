@@ -5,6 +5,11 @@ This table shows which feature is supported by which backend so far, for advance
 It may be because the backend does not provide the ability at all (N/A), 
 or because it has not been implemented yet.
 
+Name lookups and the `*_configuration_for` helpers describe compiled backends;
+they do not check service or device availability. Use `available_apis()` or
+`available_ump_apis()` to query runtime availability. An explicit request for an
+unavailable backend reports an error rather than selecting another backend.
+Use `API::UNSPECIFIED` to try available backends in preference order.
 
 ## Linux & BSD
 

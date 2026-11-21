@@ -15,7 +15,7 @@ make_midi_out_impl(auto base_conf, output_api_configuration api_conf)
 {
   std::unique_ptr<midi_out_api> ptr;
   auto from_api = [&]<typename T>(T& /*backend*/) mutable {
-    if (auto conf = get_if<typename T::midi_out_configuration>(&api_conf))
+    if (auto conf = get_if<typename T::midi_out_configuration>(&api_conf); conf && T::available())
     {
       ptr = libremidi::make<typename T::midi_out>(std::move(base_conf), std::move(*conf));
       return true;
@@ -31,29 +31,13 @@ make_midi_out_impl(auto base_conf, output_api_configuration api_conf)
 LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<midi_out_api>
 make_midi_out(const output_configuration& base_conf)
 {
-  for (const auto& api : available_apis())
-  {
-    try
-    {
-      if (auto ret = make_midi_out_impl(base_conf, midi_out_configuration_for(api)))
-        return ret;
-    }
-    catch (const std::exception& e)
-    {
-    }
-  }
-
-  for (const auto& api : available_ump_apis())
-  {
-    try
-    {
-      if (auto ret = make_midi_out_impl(base_conf, midi_out_configuration_for(api)))
-        return ret;
-    }
-    catch (const std::exception& e)
-    {
-    }
-  }
+  if (auto impl = midi_any::make_first_available<midi_out_api>(
+          [&]<typename T>(T) {
+            return libremidi::make<typename T::midi_out>(
+                output_configuration{base_conf}, typename T::midi_out_configuration{});
+          },
+          midi1::available_backends, midi2::available_backends))
+    return impl;
 
   return std::make_unique<midi_out_dummy>(output_configuration{}, dummy_configuration{});
 }
@@ -78,10 +62,7 @@ make_midi_out(const output_configuration& base_conf, const output_api_configurat
   }
   else
   {
-    if (auto api = libremidi::midi_api(api_conf); api == libremidi::API::UNSPECIFIED)
-      return {};
-    else
-      return make_midi_out_impl(base_conf, api_conf);
+    return make_midi_out_impl(base_conf, api_conf);
   }
 }
 

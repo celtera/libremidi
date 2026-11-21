@@ -1,6 +1,8 @@
 #pragma once
 #include <libremidi/config.hpp>
 
+#include <exception>
+#include <memory>
 #include <tuple>
 
 #if !__has_include(<jack/jack.h>)
@@ -154,18 +156,9 @@ LIBREMIDI_STATIC constexpr auto available_backends = make_tl(
 static_assert(std::tuple_size_v<decltype(available_backends)> >= 1);
 
 template <typename F>
-auto for_all_backends(F&& f)
+void for_available_backends(F&& f)
 {
   std::apply([&](auto&&... x) { ((x.available() && (f(x), true)), ...); }, available_backends);
-}
-
-template <typename F>
-auto for_backend(libremidi::API api, F&& f)
-{
-  static constexpr auto is_api = [](auto& backend, libremidi::API api) {
-    return backend.API == api && backend.available();
-  };
-  std::apply([&](auto&&... b) { ((is_api(b, api) && (f(b), true)) || ...); }, available_backends);
 }
 }
 
@@ -205,17 +198,9 @@ LIBREMIDI_STATIC constexpr auto available_backends = make_tl(
 static_assert(std::tuple_size_v<decltype(available_backends)> >= 1);
 
 template <typename F>
-auto for_all_backends(F&& f)
+void for_available_backends(F&& f)
 {
   std::apply([&](auto&&... x) { ((x.available() && (f(x), true)), ...); }, available_backends);
-}
-
-template <typename F>
-auto for_backend(libremidi::API api, F&& f)
-{
-  static constexpr auto is_api
-      = [](auto& backend, libremidi::API api) { return backend.API == api && backend.available(); };
-  std::apply([&](auto&&... b) { ((is_api(b, api) && (f(b), true)) || ...); }, available_backends);
 }
 }
 
@@ -223,17 +208,43 @@ namespace midi_any
 {
 
 template <typename F>
-auto for_all_backends(F&& f)
+void for_compiled_backends(F&& f)
 {
-  midi1::for_all_backends(f);
-  midi2::for_all_backends(f);
+  auto visit = [&](auto&&... b) { (f(b), ...); };
+  std::apply(visit, midi1::available_backends);
+  std::apply(visit, midi2::available_backends);
 }
 
 template <typename F>
-auto for_backend(libremidi::API api, F&& f)
+void for_compiled_backend(libremidi::API api, F&& f)
 {
-  midi1::for_backend(api, f);
-  midi2::for_backend(api, f);
+  auto visit = [&](auto&&... b) { return ((b.API == api && (f(b), true)) || ...); };
+  if (!std::apply(visit, midi1::available_backends))
+    std::apply(visit, midi2::available_backends);
+}
+
+// Automatic selection tries backends in preference order. In particular, don't
+// activate services for later candidates once one has succeeded.
+template <typename Api, typename F, typename... Backends>
+std::unique_ptr<Api> make_first_available(F make, const Backends&... backends)
+{
+  std::unique_ptr<Api> result;
+  auto try_backend = [&](auto backend) {
+    if (backend.available())
+    {
+      try
+      {
+        result = make(backend);
+      }
+      catch (const std::exception&)
+      {
+      }
+    }
+    return bool(result);
+  };
+  auto visit = [&](auto&&... b) { return (try_backend(b) || ...); };
+  (void)(std::apply(visit, backends) || ...);
+  return result;
 }
 
 void for_input_configuration(auto f, libremidi::input_api_configuration& api_conf)

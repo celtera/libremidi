@@ -48,14 +48,14 @@ void libremidi_midi1_available_apis(void* ctx, void (*cb)(void* ctx, libremidi_a
 {
   if (!cb)
     return;
-  libremidi::midi1::for_all_backends([=](auto b) { cb(ctx, b.API); });
+  libremidi::midi1::for_available_backends([=](auto b) { cb(ctx, b.API); });
 }
 
 void libremidi_midi2_available_apis(void* ctx, void (*cb)(void* ctx, libremidi_api))
 {
   if (!cb)
     return;
-  libremidi::midi2::for_all_backends([=](auto b) { cb(ctx, b.API); });
+  libremidi::midi2::for_available_backends([=](auto b) { cb(ctx, b.API); });
 }
 
 const char* libremidi_api_identifier(libremidi_api api)
@@ -70,12 +70,7 @@ const char* libremidi_api_display_name(libremidi_api api)
 
 libremidi_api libremidi_get_compiled_api_by_identifier(const char* name)
 {
-  libremidi_api ret = libremidi_api::UNSPECIFIED;
-  libremidi::midi_any::for_all_backends([&](auto& b) {
-    if (name == b.name)
-      ret = b.API;
-  });
-  return ret;
+  return libremidi::get_compiled_api_by_name(name);
 }
 
 int libremidi_midi_api_configuration_init(libremidi_api_configuration* conf)
