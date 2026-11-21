@@ -24,10 +24,7 @@ public:
     if (!configuration.has_callbacks())
       return;
 
-    if (configuration.notify_in_constructor)
-      check_new_ports<true>();
-    else
-      check_new_ports<false>();
+    check_new_ports();
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
@@ -47,78 +44,61 @@ public:
   }
 
 protected:
-  template <bool Notify>
   void check_new_ports()
   {
-    check_input_ports<Notify>();
-    check_output_ports<Notify>();
+    check_input_ports();
+    check_output_ports();
   }
 
-  template <bool Notify>
   void check_input_ports()
   {
-    if (!configuration.input_added && !configuration.input_removed)
-      return;
-    std::vector<input_port> currInputPortList;
-    if (!winmm::get_port_list(currInputPortList))
-      return; // An incomplete snapshot is not a removal.
-
-    if constexpr (Notify)
-    {
-      compare_port_lists_and_notify_clients(
-          inputPortList, currInputPortList, configuration.input_added,
-          configuration.input_removed);
-    }
-    inputPortList = std::move(currInputPortList);
+    check_ports(
+        inputPortList, notifyInputs, configuration.input_added, configuration.input_removed);
   }
 
-  template <bool Notify>
   void check_output_ports()
   {
-    if (!configuration.output_added && !configuration.output_removed)
-      return;
-    std::vector<output_port> currOutputPortList;
-    if (!winmm::get_port_list(currOutputPortList))
-      return;
-
-    if constexpr (Notify)
-    {
-      compare_port_lists_and_notify_clients(
-          outputPortList, currOutputPortList, configuration.output_added,
-          configuration.output_removed);
-    }
-    outputPortList = std::move(currOutputPortList);
+    check_ports(
+        outputPortList, notifyOutputs, configuration.output_added, configuration.output_removed);
   }
 
-  void compare_port_lists_and_notify_clients(
-      const auto& prevList, const auto& currList, const auto& portAddedFunc,
-      const auto& portRemovedFunc)
+  template <typename Port>
+  void check_ports(
+      std::vector<Port>& previous, bool& notify, const auto& added, const auto& removed)
   {
-    if (portAddedFunc)
-    {
-      for (const auto& port : currList)
-      {
-        auto iter
-            = std::ranges::find(prevList, port.display_name, &port_information::display_name);
-        if (iter == prevList.end())
-          portAddedFunc(port);
-      }
-    }
+    if (!added && !removed)
+      return;
 
-    if (portRemovedFunc)
+    std::vector<Port> current;
+    if (!winmm::get_port_list(current))
+      return; // Only a complete scan establishes or updates the baseline.
+
+    if (notify)
     {
-      for (const auto& port : prevList)
-      {
-        auto iter
-            = std::ranges::find(currList, port.display_name, &port_information::display_name);
-        if (iter == currList.end())
-          portRemovedFunc(port);
-      }
+      // For listed ports the numbered name identifies the occurrence, and
+      // find_port also requires the manufacturer and product to match.
+      auto report_missing = [](const auto& from, const auto& other, const auto& report) {
+        if (!report)
+          return;
+        for (const auto& port : from)
+        {
+          if (std::ranges::none_of(other, [&](const auto& p) {
+                return p.display_name == port.display_name && p.device == port.device;
+              }))
+            report(port);
+        }
+      };
+      report_missing(previous, current, removed);
+      report_missing(current, previous, added);
     }
+    previous = std::move(current);
+    notify = true;
   }
 
   std::vector<input_port> inputPortList;
   std::vector<output_port> outputPortList;
+  bool notifyInputs = configuration.notify_in_constructor;
+  bool notifyOutputs = configuration.notify_in_constructor;
 };
 }
 
@@ -135,7 +115,7 @@ public:
     thread = std::jthread([this](std::stop_token tk) {
       while (!tk.stop_requested())
       {
-        check_new_ports<true>();
+        check_new_ports();
         std::this_thread::sleep_for(this->configuration.poll_period);
       }
     });
@@ -160,7 +140,7 @@ public:
     thread = std::thread([this] {
       while (!stop_flag.test(std::memory_order_acquire))
       {
-        check_new_ports<true>();
+        check_new_ports();
         std::this_thread::sleep_for(this->configuration.poll_period);
       }
       sema.release();
@@ -190,7 +170,7 @@ public:
   explicit observer_manual(observer_configuration&& conf, winmm_observer_configuration&& apiconf)
       : observer_winmm{std::move(conf), std::move(apiconf)}
   {
-    this->configuration.manual_poll({.callback = [this] { this->check_new_ports<true>(); }});
+    this->configuration.manual_poll({.callback = [this] { this->check_new_ports(); }});
   }
 
   ~observer_manual() { }
