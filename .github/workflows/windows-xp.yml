@@ -43,13 +43,11 @@ jobs:
             -DLIBREMIDI_NO_BOOST=ON -DLIBREMIDI_NO_NETWORK=ON -DLIBREMIDI_NO_JACK=ON
           cmake --build build --target midiprobe --parallel 4
 
-      - name: Check XP executable headers and WinMM import
+      - name: Check XP headers and imported DLLs and symbols
         run: |
-          llvm-objdump -p build/midiprobe.exe > "$RUNNER_TEMP/midiprobe.pe"
-          grep -F 'file format coff-i386' "$RUNNER_TEMP/midiprobe.pe"
-          grep -E '^MajorSubsystemVersion +5$' "$RUNNER_TEMP/midiprobe.pe"
-          grep -E '^MinorSubsystemVersion +1$' "$RUNNER_TEMP/midiprobe.pe"
-          grep -Fi 'DLL Name: WINMM.DLL' "$RUNNER_TEMP/midiprobe.pe"
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends python3-pefile
+          /usr/bin/python3 .github/scripts/check-xp-midiprobe.py build/midiprobe.exe
 
       - uses: actions/upload-artifact@v7
         with:
