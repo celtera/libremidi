@@ -26,15 +26,21 @@ public:
 
   ~midi_out_winmm() override
   {
-    // Close a connection if it exists.
-    midi_out_winmm::close_port();
-    this->client_open_ = std::errc::not_connected;
+    if (close_port() == from_mmerr(MIDIERR_STILLPLAYING))
+    {
+      // There is no caller left to retry. Return pending buffers before closing.
+      midiOutReset(outHandle);
+      close_port();
+    }
   }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
   [[nodiscard]] stdx::error do_open(unsigned int portNumber)
   {
+    if (outHandle)
+      return std::errc::operation_not_supported;
+
     HMIDIOUT handle{};
     MMRESULT result = midiOutOpen(&handle, portNumber, 0, 0, CALLBACK_NULL);
     if (result != MMSYSERR_NOERROR)
@@ -73,12 +79,18 @@ public:
 
   stdx::error close_port() override
   {
-    if (this->outHandle)
-      midiOutClose(this->outHandle);
+    if (!outHandle)
+      return {};
 
-    this->outHandle = nullptr;
-    return stdx::error{};
+    const auto result = midiOutClose(outHandle);
+    if (result == MMSYSERR_NOERROR || result == MMSYSERR_INVALHANDLE)
+      outHandle = nullptr;
+    if (result != MMSYSERR_NOERROR)
+      return from_mmerr(result);
+    return {};
   }
+
+  bool retains_port_on_close_error() const noexcept override { return outHandle != nullptr; }
 
   stdx::error send_message(const unsigned char* message, size_t size) override
   {

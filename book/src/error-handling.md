@@ -11,6 +11,11 @@ if (auto err = midiin.open_port(pi[0]); err != stdx::error{}) {
   // etc.
 }
 ```
+
+On WinMM, `midi_out::close_port()` returns `MIDIERR_STILLPLAYING` in the WinMM
+error domain if the driver still has queued output. The port remains open;
+retry `close_port()` after playback finishes before opening another port.
+
 ## Error callbacks
 
 It is also possible to set a callback function which will be invoked upon error, for the `midi_in`, `observer` `midi_out` classes.
