@@ -3,6 +3,10 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 NAMESPACE_LIBREMIDI::winmidi
@@ -12,11 +16,12 @@ enum class port_direction { input, output };
 inline transport_type transport_from_code(std::string_view code) noexcept
 {
   using enum transport_type;
-  if (code.starts_with("KS")) return hardware;
-  if (code.starts_with("BLE")) return transport_type(hardware | bluetooth);
-  if (code == "VPB" || code == "APP") return software;
-  if (code == "LOOP") return transport_type(software | loopback);
-  if (code.starts_with("NET")) return network;
+  // The codes of the transports that Windows MIDI Services ships.
+  if (code == "KS" || code == "KSA") return hardware;
+  if (code == "BLEMIDI") return transport_type(hardware | bluetooth);
+  if (code == "APP" || code == "GMSYNTH") return software;
+  if (code == "LOOP" || code == "BLOOP" || code == "DIAG") return transport_type(software | loopback);
+  if (code == "NET2UDP" || code == "RTPMIDI") return network;
   return unknown;
 }
 
@@ -24,6 +29,18 @@ inline bool accepts_endpoint(const libremidi::observer_configuration& conf, tran
 {
   // Preserve hardware tracking for endpoints from unrecognised transports.
   return conf.accepts(type == transport_type::unknown ? transport_type::hardware : type);
+}
+
+// Given to the callbacks for a group that no block describes.
+struct no_block { };
+
+// The service reads function blocks one by one, and stops waiting for them
+// after a timeout: until all the declared ones are there, they cannot replace
+// the group terminal blocks.
+inline bool has_all_function_blocks(const auto& ep, const auto& blocks)
+{
+  return blocks.Size() != 0 && ep.IsEndpointDiscoveryComplete()
+         && blocks.Size() == ep.GetDeclaredEndpointInfo().DeclaredFunctionBlockCount();
 }
 
 // The SDK exposes the same range and direction properties on both block types.
@@ -55,16 +72,23 @@ void for_each_group(const Endpoint& ep, Emit emit)
   };
 
   const auto& fbs = ep.GetDeclaredFunctionBlocks();
-  if (fbs.Size() != 0)
+  const auto& gtbs = ep.GetGroupTerminalBlocks();
+  if (has_all_function_blocks(ep, fbs) || (fbs.Size() != 0 && gtbs.Size() == 0))
   {
     for (const auto& fb : fbs)
       if (fb.IsActive())
         visit(fb);
   }
+  else if (gtbs.Size() != 0)
+  {
+    for (const auto& gtb : gtbs)
+      visit(gtb);
+  }
   else
   {
-    for (const auto& gtb : ep.GetGroupTerminalBlocks())
-      visit(gtb);
+    // Like the MIDI 1 ports that the service makes for such an endpoint.
+    emit(port_direction::input, 0u, no_block{});
+    emit(port_direction::output, 0u, no_block{});
   }
 }
 
@@ -81,11 +105,11 @@ inline auto resolve_group(const port_information& port, port_direction dir, auto
 {
   // Older observers stored client = 0 and a block number. It cannot safely
   // be interpreted as a group, even if the number happens to be in [0,15].
-  const auto* id = get_if<std::string>(&port.device);
-  using endpoint = decltype(lookup(*id));
-  if (!id || id->empty() || port.client == 0 || port.port >= 16)
+  const auto* device_id = get_if<std::string>(&port.device);
+  using endpoint = decltype(lookup(*device_id));
+  if (!device_id || device_id->empty() || port.client == 0 || port.port >= 16)
     return endpoint{nullptr};
-  auto ep = lookup(*id);
+  auto ep = lookup(*device_id);
   if (ep && has_group(ep, dir, port.port))
     return ep;
   return endpoint{nullptr};
@@ -110,7 +134,8 @@ inline group_ports make_group_ports(
         : static_cast<port_information&>(ports.outputs.emplace_back());
     p = base;
     p.port = group;
-    p.port_name = block_name(block);
+    if constexpr (!std::is_same_v<std::remove_cvref_t<decltype(block)>, no_block>)
+      p.port_name = block_name(block);
     p.display_name = p.device_name + " (Group " + std::to_string(group + 1);
     if (!p.port_name.empty()) p.display_name += ", " + p.port_name;
     p.display_name += ")";
@@ -133,6 +158,8 @@ struct group_changes
 
 // Each vector describes one endpoint and one direction, so only group indices
 // distinguish its members. Always replace metadata, even on a silent initial seed.
+// There is no "changed" callback: a port whose names changed is removed under
+// its old names, then added under the new ones.
 inline group_changes replace_groups(
     group_ports& current, group_ports next, const libremidi::observer_configuration& conf,
     bool notify = true)
@@ -140,22 +167,21 @@ inline group_changes replace_groups(
   group_changes changes;
   auto diff = [&](auto& old, const auto& fresh, auto& removed, auto& added,
                   const auto& on_remove, const auto& on_add) {
-    auto mask = [](const auto& ports) {
-      unsigned bits{};
-      for (const auto& p : ports) bits |= 1u << p.port;
-      return bits;
+    auto same = [](const auto& ports, const auto& wanted) {
+      for (const auto& p : ports)
+        if (p.port == wanted.port)
+          return p.port_name == wanted.port_name && p.display_name == wanted.display_name;
+      return false;
     };
     if (on_add)
     {
-      auto previous = mask(old);
       for (const auto& p : fresh)
-        if (!(previous & (1u << p.port))) added.push_back(p);
+        if (!same(old, p)) added.push_back(p);
     }
     if (on_remove)
     {
-      auto present = mask(fresh);
       for (auto& p : old)
-        if (!(present & (1u << p.port))) removed.push_back(std::move(p));
+        if (!same(fresh, p)) removed.push_back(std::move(p));
     }
   };
   if (notify)

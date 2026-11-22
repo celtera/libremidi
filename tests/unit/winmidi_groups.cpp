@@ -2,6 +2,7 @@
 #include <libremidi/detail/conversion.hpp>
 #include <libremidi/detail/ump_stream.hpp>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <string_view>
@@ -32,13 +33,29 @@ struct blocks : std::vector<block>
   using vector::vector;
   auto Size() const { return size(); }
 };
-struct description { blocks functions, terminals; };
+struct description
+{
+  blocks functions, terminals;
+  // What the endpoint announced, when it is more than what the service has read.
+  std::size_t declared_functions = 0;
+  bool discovered = true;
+};
+struct declared_info
+{
+  std::size_t count;
+  std::size_t DeclaredFunctionBlockCount() const { return count; }
+};
 struct endpoint
 {
   const description* value;
   explicit operator bool() const { return value != nullptr; }
   const blocks& GetDeclaredFunctionBlocks() const { return value->functions; }
   const blocks& GetGroupTerminalBlocks() const { return value->terminals; }
+  bool IsEndpointDiscoveryComplete() const { return value->discovered; }
+  declared_info GetDeclaredEndpointInfo() const
+  {
+    return {std::max(value->declared_functions, value->functions.size())};
+  }
 };
 
 const std::string id = R"(\\?\swd#midisrv#midiu_test#{endpoint-a})";
@@ -99,6 +116,55 @@ void projection_and_open()
   CHECK(resolve_group(ports.outputs[1], port_direction::output, lookup));
 }
 
+void incomplete_metadata()
+{
+  auto lookup = [](const description& data) {
+    return [&data](const std::string& key) { return endpoint{key == id ? &data : nullptr}; };
+  };
+
+  // One function block out of three arrived before the service stopped waiting:
+  // the groups of the other two are still those of the group terminal blocks.
+  description data{{{0, 0, 1, direction::Bidirectional, true, "Keys"}},
+                   {{1, 0, 3, direction::Bidirectional, true, "USB"}}};
+  data.declared_functions = 3;
+  auto ports = project(data);
+  CHECK(ports.inputs.size() == 3 && ports.outputs.size() == 3);
+  CHECK(ports.inputs[2].port == 2 && ports.inputs[0].port_name == "USB");
+  CHECK(resolve_group(ports.outputs[2], port_direction::output, lookup(data)));
+
+  // All of them, but discovery is still running.
+  data.functions = {{0, 0, 1, direction::Bidirectional, true, "Keys"},
+                    {1, 1, 1, direction::BlockOutput, true, "Pads"},
+                    {2, 2, 1, direction::BlockInput, true, "Lights"}};
+  data.discovered = false;
+  CHECK(project(data).outputs.size() == 3);
+  data.discovered = true;
+  ports = project(data);
+  CHECK(ports.inputs.size() == 2 && ports.outputs.size() == 2);
+  CHECK(ports.inputs[1].port_name == "Pads" && ports.outputs[1].port == 2);
+  CHECK(!resolve_group(ports.inputs[1], port_direction::output, lookup(data)));
+
+  // Without group terminal blocks, the function blocks read so far are all there is.
+  data.terminals.clear();
+  data.functions.resize(1);
+  data.declared_functions = 3;
+  ports = project(data);
+  CHECK(ports.inputs.size() == 1 && ports.outputs.size() == 1 && ports.inputs[0].port_name == "Keys");
+
+  // No block of any kind: group 1, in both directions.
+  const description bare;
+  ports = project(bare);
+  CHECK(ports.inputs.size() == 1 && ports.outputs.size() == 1);
+  CHECK(ports.inputs[0].port == 0 && ports.outputs[0].port == 0);
+  CHECK(ports.inputs[0].port_name.empty() && ports.inputs[0].display_name == "Synth (Group 1)");
+  CHECK(resolve_group(ports.inputs[0], port_direction::input, lookup(bare)));
+  CHECK(resolve_group(ports.outputs[0], port_direction::output, lookup(bare)));
+  auto other = ports.outputs[0];
+  other.port = 1;
+  CHECK(!resolve_group(other, port_direction::output, lookup(bare)));
+  CHECK(project(bare, true, false).outputs.empty());
+}
+
 void watcher_diffs()
 {
   description data{{}, {{1, 3, 2, direction::Bidirectional, true, "Before discovery"}}};
@@ -117,23 +183,59 @@ void watcher_diffs()
   data.functions = {{0, 3, 1, direction::Bidirectional, true, "Discovered"},
                     {1, 5, 1, direction::BlockOutput, true, "Keys"}};
   update();
-  CHECK((events == std::vector<std::string>{"out-4:Before discovery", "in+5:Keys"}));
+  // The output of group 4 is gone, and the one of group 3 has a new name.
+  CHECK((events == std::vector<std::string>{"out-3:Before discovery", "out-4:Before discovery",
+                                            "in+3:Discovered", "in+5:Keys"}));
+  // Only a name changed: the port leaves under the old one and comes back
+  // under the new one, and the port of the other block is left alone.
   data.functions[0].name = "Renamed";
   update();
-  CHECK(events.size() == 2 && cached.outputs.front().port_name == "Renamed");
+  CHECK(events.size() == 6 && events[4] == "out-3:Discovered" && events[5] == "in+3:Renamed");
+  CHECK(cached.outputs.front().port_name == "Renamed");
+  update(); // nothing changed
+  CHECK(events.size() == 6);
   replace_groups(cached, {}, conf).notify(conf);
-  CHECK(events.size() == 3 && events.back() == "out-3:Renamed");
+  CHECK(events.size() == 7 && events.back() == "out-3:Renamed");
   update(); // notify_in_constructor = true on an empty cache
-  CHECK(events.size() == 5 && events[3] == "in+3:Renamed" && events[4] == "in+5:Keys");
+  CHECK(events.size() == 9 && events[7] == "in+3:Renamed" && events[8] == "in+5:Keys");
 
-  CHECK(!accepts_endpoint(conf, transport_from_code("APP")));
+  // An endpoint that announces its blocks after it appeared.
+  cached = {};
+  events.clear();
+  data = {};
+  update();
+  CHECK((events == std::vector<std::string>{"in+0:"}));
+  data.functions = {{0, 0, 1, direction::Bidirectional, true, "Late"}};
+  update();
+  CHECK(events.size() == 3 && events[1] == "out-0:" && events[2] == "in+0:Late");
+}
+
+void transports()
+{
+  using enum transport_type;
+  CHECK(transport_from_code("KS") == hardware && transport_from_code("KSA") == hardware);
+  CHECK(transport_from_code("BLEMIDI") == transport_type(hardware | bluetooth));
+  CHECK(transport_from_code("APP") == software && transport_from_code("GMSYNTH") == software);
+  for (auto code : {"LOOP", "BLOOP", "DIAG"})
+    CHECK(transport_from_code(code) == transport_type(software | loopback));
+  CHECK(transport_from_code("NET2UDP") == network && transport_from_code("RTPMIDI") == network);
+  CHECK(transport_from_code("") == unknown && transport_from_code("FUTURE") == unknown);
+
+  libremidi::observer_configuration conf;
+  CHECK(accepts_endpoint(conf, transport_from_code("KSA")));
+  CHECK(accepts_endpoint(conf, transport_from_code("RTPMIDI")));
+  CHECK(accepts_endpoint(conf, transport_from_code("FUTURE"))); // counted as hardware
+  for (auto code : {"APP", "GMSYNTH", "BLOOP"})
+    CHECK(!accepts_endpoint(conf, transport_from_code(code)));
   conf.track_virtual = true;
   conf.track_hardware = conf.track_network = false;
-  CHECK(accepts_endpoint(conf, transport_from_code("APP")));
+  for (auto code : {"APP", "GMSYNTH", "LOOP", "BLOOP"})
+    CHECK(accepts_endpoint(conf, transport_from_code(code)));
   CHECK(!accepts_endpoint(conf, transport_from_code("NET2UDP")));
-  CHECK(!accepts_endpoint(conf, transport_from_code("BLE20")));
+  CHECK(!accepts_endpoint(conf, transport_from_code("RTPMIDI")));
+  CHECK(!accepts_endpoint(conf, transport_from_code("BLEMIDI")));
   conf.track_any = true;
-  CHECK(accepts_endpoint(conf, transport_from_code("BLE10")));
+  CHECK(accepts_endpoint(conf, transport_from_code("BLEMIDI")));
 }
 
 void group_io()
@@ -169,7 +271,9 @@ void group_io()
 int main()
 {
   projection_and_open();
+  incomplete_metadata();
   watcher_diffs();
+  transports();
   group_io();
   std::puts("WinMIDI projection/open, watcher diffs, and group I/O: passed");
 }
