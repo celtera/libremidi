@@ -54,9 +54,10 @@ bool read_caps(UINT index, port_caps& port) noexcept
 
 // Fills ports with every device whose capabilities could be read. An unreadable
 // device takes no occurrence number, here and in find_port. Returns whether
-// every device was read.
+// every device was read. cancelled() is checked before each capability read,
+// which a driver can make slow; a cancelled listing is incomplete too.
 template <typename Port>
-bool get_port_list(std::vector<Port>& ports)
+bool get_port_list(std::vector<Port>& ports, const auto& cancelled)
 {
   const UINT count = device_count<Port>();
   ports.reserve(count); // The name views below point into these ports.
@@ -64,6 +65,8 @@ bool get_port_list(std::vector<Port>& ports)
   bool complete = true;
   for (UINT i = 0; i < count; ++i)
   {
+    if (cancelled())
+      return false;
     port_caps caps;
     if (!read_caps<Port>(i, caps))
     {
@@ -99,6 +102,12 @@ parse_numbered_name(std::string_view display, std::string_view& raw, UINT& ordin
     return false;
   raw = display.substr(0, space);
   return true;
+}
+
+template <typename Port>
+bool get_port_list(std::vector<Port>& ports)
+{
+  return get_port_list(ports, [] { return false; });
 }
 
 template <typename Port>

@@ -2,11 +2,12 @@
 #include <libremidi/config.hpp>
 
 #include <windows.h>
-#include <cfgmgr32.h>
 
 #include <algorithm>
 #include <bit>
 #include <chrono>
+#include <cstddef>
+#include <iterator>
 #include <system_error>
 
 NAMESPACE_LIBREMIDI::winmm
@@ -16,6 +17,39 @@ class observer_worker
   using clock = std::chrono::steady_clock;
   using milliseconds = std::chrono::milliseconds;
 
+  // cfgmgr32.h only declares the notification API for a Windows 8 target, and
+  // some MinGW SDKs lack it. The entry points are resolved at run time, so
+  // their ABI is restated here: neither the availability of notifications nor
+  // the layout of this class depend on the WINVER of the including file.
+  // Only a build for Windows XP leaves the registration out, and with it the
+  // loader imports that such a build is not otherwise checked for.
+  struct notify_filter // CM_NOTIFY_FILTER
+  {
+    DWORD size;
+    DWORD flags;
+    DWORD type; // 0: CM_NOTIFY_FILTER_TYPE_DEVICEINTERFACE
+    DWORD reserved;
+    union
+    {
+      GUID interface_class;
+      HANDLE target;
+      WCHAR instance_id[200]; // MAX_DEVICE_ID_LEN
+    } u;
+  };
+  // CM_NOTIFY_ACTION_DEVICEINTERFACEARRIVAL and CM_NOTIFY_ACTION_DEVICEINTERFACEREMOVAL
+  static constexpr DWORD interface_arrival = 0, interface_removal = 1;
+  using notify_callback = DWORD(CALLBACK*)(void*, void*, DWORD, void*, DWORD);
+  using register_fn = DWORD(WINAPI*)(notify_filter*, void*, notify_callback, void**);
+  using unregister_fn = DWORD(WINAPI*)(void*);
+#if defined(CM_NOTIFY_FILTER_FLAG_ALL_INTERFACE_CLASSES)
+  static_assert(sizeof(notify_filter) == sizeof(CM_NOTIFY_FILTER)
+                && offsetof(notify_filter, type) == offsetof(CM_NOTIFY_FILTER, FilterType)
+                && offsetof(notify_filter, u) == offsetof(CM_NOTIFY_FILTER, u)
+                && CM_NOTIFY_ACTION_DEVICEINTERFACEARRIVAL == interface_arrival
+                && CM_NOTIFY_ACTION_DEVICEINTERFACEREMOVAL == interface_removal
+                && CM_NOTIFY_FILTER_TYPE_DEVICEINTERFACE == 0 && CR_SUCCESS == 0);
+#endif
+
   // The first handle is always the stop event (highest wait priority). Each
   // successful registration appends one auto-reset event for its direction.
   HANDLE events[3]{};
@@ -23,14 +57,9 @@ class observer_worker
   bool is_input[3]{};
   const bool inputs, outputs;
 
-#if defined(CM_NOTIFY_FILTER_FLAG_ALL_INTERFACE_CLASSES)
-  // Some MinGW SDKs provide the notification types but not the function declarations.
-  using register_fn = CONFIGRET(WINAPI*)(PCM_NOTIFY_FILTER, PVOID, PCM_NOTIFY_CALLBACK,
-                                         PHCMNOTIFICATION);
-  using unregister_fn = CONFIGRET(WINAPI*)(HCMNOTIFICATION);
-  HMODULE cfgmgr{};
-  unregister_fn unregister_notification{};
-  HCMNOTIFICATION notifications[3]{};
+  [[maybe_unused]] HMODULE cfgmgr{};
+  [[maybe_unused]] unregister_fn unregister_notification{};
+  [[maybe_unused]] void* notifications[3]{};
 
   static bool supports_midi_interfaces() noexcept
   {
@@ -44,25 +73,24 @@ class observer_worker
     return version && version(&os) == 0 && os.dwMajorVersion >= 10;
   }
 
-  static DWORD CALLBACK changed(HCMNOTIFICATION, void* event, CM_NOTIFY_ACTION action,
-                                CM_NOTIFY_EVENT_DATA*, DWORD) noexcept
+  static DWORD CALLBACK changed(void*, void* event, DWORD action, void*, DWORD) noexcept
   {
-    if (action == CM_NOTIFY_ACTION_DEVICEINTERFACEARRIVAL
-        || action == CM_NOTIFY_ACTION_DEVICEINTERFACEREMOVAL)
+    if (action == interface_arrival || action == interface_removal)
       SetEvent(event);
     return ERROR_SUCCESS;
   }
 
+#if !defined(_WIN32_WINNT) || _WIN32_WINNT >= 0x0600
   void subscribe() noexcept
   {
     if (!supports_midi_interfaces())
       return;
-    cfgmgr = LoadLibraryExW(L"cfgmgr32.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    cfgmgr = LoadLibraryExW(L"cfgmgr32.dll", nullptr, 0x00000800 /* LOAD_LIBRARY_SEARCH_SYSTEM32 */);
     if (!cfgmgr)
       return;
     const auto reg = std::bit_cast<register_fn>(
         GetProcAddress(cfgmgr, "CM_Register_Notification"));
-    unregister_notification = std::bit_cast<decltype(unregister_notification)>(
+    unregister_notification = std::bit_cast<unregister_fn>(
         GetProcAddress(cfgmgr, "CM_Unregister_Notification"));
     if (!reg || !unregister_notification)
       return;
@@ -74,14 +102,13 @@ class observer_worker
     static constexpr GUID midi_output{0x6dc23320, 0xab33, 0x4ce4,
                                       {0x80, 0xd4, 0xbb, 0xb3, 0xeb, 0xbf, 0x28, 0x14}};
     const auto add = [&](bool input, const GUID& guid) {
-      CM_NOTIFY_FILTER filter{};
-      filter.cbSize = sizeof(filter);
-      filter.FilterType = CM_NOTIFY_FILTER_TYPE_DEVICEINTERFACE;
-      filter.u.DeviceInterface.ClassGuid = guid;
+      notify_filter filter{};
+      filter.size = sizeof(filter);
+      filter.u.interface_class = guid;
       auto event = CreateEventW(nullptr, FALSE, FALSE, nullptr);
       if (!event)
         return false;
-      if (reg(&filter, event, &changed, &notifications[count]) != CR_SUCCESS)
+      if (reg(&filter, event, &changed, &notifications[count]) != 0 /* CR_SUCCESS */)
       {
         CloseHandle(event);
         return false;
@@ -109,6 +136,9 @@ class observer_worker
       cfgmgr = nullptr;
     }
   }
+#else
+  void subscribe() noexcept { }
+  void unsubscribe() noexcept { }
 #endif
 
   static DWORD timeout(milliseconds duration) noexcept
@@ -116,16 +146,37 @@ class observer_worker
     return static_cast<DWORD>(std::clamp<milliseconds::rep>(duration.count(), 0, INFINITE - 1));
   }
 
+  void poll(milliseconds poll_period, auto& scan)
+  {
+    while (WaitForSingleObject(events[0], timeout(poll_period)) == WAIT_TIMEOUT)
+    {
+      if (inputs)
+        scan(true);
+      if (outputs && !stopped())
+        scan(false);
+    }
+  }
+
 public:
+  // WinMM can publish a port some time after its device interface: a
+  // notification is followed by scans at these delays, until one sees a change.
+  static constexpr milliseconds settle[]{
+      milliseconds{100}, milliseconds{400}, milliseconds{1000}};
+
+  // WinMM can also change without any notification. Quiet directions are
+  // rechecked at this period, never more often than the application asked for.
+  static constexpr milliseconds reconcile_period(milliseconds poll_period) noexcept
+  {
+    return std::max(poll_period, milliseconds{2000});
+  }
+
   observer_worker(bool inputs, bool outputs)
       : inputs{inputs}, outputs{outputs}
   {
     events[0] = CreateEventW(nullptr, TRUE, FALSE, nullptr);
     if (!events[0])
       throw std::system_error(static_cast<int>(GetLastError()), std::system_category());
-#if defined(CM_NOTIFY_FILTER_FLAG_ALL_INTERFACE_CLASSES)
     subscribe();
-#endif
   }
 
   observer_worker(const observer_worker&) = delete;
@@ -133,55 +184,63 @@ public:
 
   ~observer_worker()
   {
-#if defined(CM_NOTIFY_FILTER_FLAG_ALL_INTERFACE_CLASSES)
     unsubscribe();
-#endif
     CloseHandle(events[0]);
   }
 
   void stop() noexcept { SetEvent(events[0]); }
   bool stopped() const noexcept { return WaitForSingleObject(events[0], 0) == WAIT_OBJECT_0; }
 
+  // scan(bool input) returns whether the ports of that direction changed.
   void run(milliseconds poll_period, auto scan)
   {
     if (count == 1)
-    {
-      while (WaitForSingleObject(events[0], timeout(poll_period)) == WAIT_TIMEOUT)
-      {
-        if (inputs)
-          scan(true);
-        if (outputs && !stopped())
-          scan(false);
-      }
-      return;
-    }
+      return poll(poll_period, scan);
 
-    constexpr milliseconds debounce{100}, reconcile{2000};
-    // WinMM can publish ports late or return incomplete snapshots, without
-    // another CM notification. Keep a low-frequency deadline per direction.
-    clock::time_point due[3];
-    std::fill(due + 1, due + count, clock::now() + reconcile);
+    const auto reconcile = reconcile_period(poll_period);
+    constexpr std::size_t settled = std::size(settle);
+    struct
+    {
+      clock::time_point due, hint;
+      std::size_t step{settled};
+    } flow[3];
+    for (DWORD i = 1; i < count; ++i)
+      flow[i].due = clock::now() + reconcile;
+
     for (;;)
     {
-      const auto next = *std::min_element(due + 1, due + count);
+      auto next = flow[1].due;
+      for (DWORD i = 2; i < count; ++i)
+        next = std::min(next, flow[i].due);
       const auto delay = timeout(std::chrono::ceil<milliseconds>(next - clock::now()));
       const auto result = WaitForMultipleObjects(count, events, FALSE, delay);
-      if (result == WAIT_OBJECT_0 || result == WAIT_FAILED)
+      if (result == WAIT_OBJECT_0)
         return;
+      if (result == WAIT_FAILED)
+        return poll(poll_period, scan); // The notifications cannot be waited for anymore.
+
       const auto now = clock::now();
       if (result != WAIT_TIMEOUT)
       {
-        const auto i = result - WAIT_OBJECT_0;
         // Coalesce from the first hint: later arrivals cannot postpone a scan.
-        due[i] = std::min(due[i], now + debounce);
+        auto& f = flow[result - WAIT_OBJECT_0];
+        f.hint = now;
+        f.step = 0;
+        f.due = std::min(f.due, now + settle[0]);
       }
       for (DWORD i = 1; i < count; ++i)
       {
-        if (due[i] > now)
+        auto& f = flow[i];
+        if (f.due > now || stopped())
           continue;
-        due[i] = now + reconcile;
-        if (!stopped())
-          scan(is_input[i]);
+        const bool found = scan(is_input[i]);
+        if (f.step < settled && !found && ++f.step < settled)
+          f.due = f.hint + settle[f.step];
+        else
+        {
+          f.step = settled;
+          f.due = clock::now() + reconcile;
+        }
       }
     }
   }

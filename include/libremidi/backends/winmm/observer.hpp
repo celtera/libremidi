@@ -51,53 +51,59 @@ protected:
     check_output_ports();
   }
 
-  void check_input_ports(const winmm::observer_worker* worker = nullptr)
+  bool check_input_ports(const winmm::observer_worker* worker = nullptr)
   {
-    check_ports(
+    return check_ports(
         inputPortList, notifyInputs, configuration.input_added, configuration.input_removed, worker);
   }
 
-  void check_output_ports(const winmm::observer_worker* worker = nullptr)
+  bool check_output_ports(const winmm::observer_worker* worker = nullptr)
   {
-    check_ports(
+    return check_ports(
         outputPortList, notifyOutputs, configuration.output_added, configuration.output_removed, worker);
   }
 
+  // Returns whether a complete scan differs from the previous one.
   template <typename Port>
-  void check_ports(
+  bool check_ports(
       std::vector<Port>& previous, bool& notify, const auto& added, const auto& removed,
       const winmm::observer_worker* worker)
   {
     if (!added && !removed)
-      return;
+      return false;
 
+    // A stopping observer does not wait for the remaining drivers to answer.
     // A device that cannot be read is absent from the scan, not a reason to
     // hide the other ones.
+    const auto stopping = [worker] { return worker && worker->stopped(); };
     std::vector<Port> current;
-    winmm::get_port_list(current);
+    winmm::get_port_list(current, stopping);
+    if (stopping())
+      return false; // An interrupted scan does not update the baseline.
 
-    if (notify)
-    {
-      // For listed ports the numbered name identifies the occurrence.
-      auto report_missing = [worker](const auto& from, const auto& other, const auto& report) {
-        if (!report)
+    // For listed ports the numbered name identifies the occurrence.
+    bool changed = false;
+    auto report_missing = [&](const auto& from, const auto& other, const auto& report) {
+      for (const auto& port : from)
+      {
+        // A callback may destroy its automatic observer in the middle of a diff.
+        if (stopping())
           return;
-        for (const auto& port : from)
+        if (std::ranges::none_of(other, [&](const auto& p) {
+              return p.display_name == port.display_name && p.device == port.device;
+            }))
         {
-          // A callback may destroy its automatic observer in the middle of a diff.
-          if (worker && worker->stopped())
-            return;
-          if (std::ranges::none_of(other, [&](const auto& p) {
-                return p.display_name == port.display_name && p.device == port.device;
-              }))
+          changed = true;
+          if (notify && report)
             report(port);
         }
-      };
-      report_missing(previous, current, removed);
-      report_missing(current, previous, added);
-    }
+      }
+    };
+    report_missing(previous, current, removed);
+    report_missing(current, previous, added);
     previous = std::move(current);
     notify = true;
+    return changed;
   }
 
   std::vector<input_port> inputPortList;
@@ -125,10 +131,7 @@ class observer_threaded final : public observer_api
     void watch()
     {
       run(configuration.poll_period, [this](bool input) {
-        if (input)
-          check_input_ports(this);
-        else
-          check_output_ports(this);
+        return input ? check_input_ports(this) : check_output_ports(this);
       });
     }
   };
@@ -184,8 +187,6 @@ inline std::unique_ptr<observer_api> make<observer_winmm>(
     return std::make_unique<observer_winmm>(std::move(conf), std::move(api));
   if (api.manual_poll)
     return std::make_unique<winmm::observer_manual>(std::move(conf), std::move(api));
-  else if (!conf.has_callbacks())
-    return std::make_unique<observer_winmm>(std::move(conf), std::move(api));
   else
     return std::make_unique<winmm::observer_threaded>(std::move(conf), std::move(api));
 }
