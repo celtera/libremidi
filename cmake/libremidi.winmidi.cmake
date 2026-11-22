@@ -1,4 +1,8 @@
-if(LIBREMIDI_NO_WINMIDI OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+if(LIBREMIDI_NO_WINMIDI)
+  return()
+endif()
+if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+  message(STATUS "libremidi: Windows MIDI Services is not available for 32-bit targets")
   return()
 endif()
 if(NOT LIBREMIDI_WINMIDI_HEADERS_ZIP AND NOT LIBREMIDI_DOWNLOAD_CPPWINRT)
@@ -26,10 +30,34 @@ set(_package "${LIBREMIDI_WINMIDI_HEADERS_ZIP}")
 if(NOT _package)
   set(_version 0.99.92-preview.11)
   set(_package "${_sdk}/Windows.Devices.Midi2.${_version}.nupkg")
-  file(DOWNLOAD
-    "https://github.com/microsoft/MIDI/releases/download/inbox-preview-11/Windows.Devices.Midi2.${_version}.nupkg"
-    "${_package}" TLS_VERIFY ON
-    EXPECTED_HASH SHA256=13afc6e6da2adac309ab8c174352f46f1c0ebe2d79e65475bd6274defb73df74)
+  set(_hash 13afc6e6da2adac309ab8c174352f46f1c0ebe2d79e65475bd6274defb73df74)
+  set(_have "")
+  if(EXISTS "${_package}")
+    file(SHA256 "${_package}" _have)
+  endif()
+  if(NOT _have STREQUAL _hash)
+    # Without EXPECTED_HASH: a failed download is reported, not fatal.
+    file(DOWNLOAD
+      "https://github.com/microsoft/MIDI/releases/download/inbox-preview-11/Windows.Devices.Midi2.${_version}.nupkg"
+      "${_package}" TLS_VERIFY ON STATUS _status)
+    list(GET _status 0 _code)
+    if(_code EQUAL 0)
+      file(SHA256 "${_package}" _have)
+    endif()
+    if(NOT _code EQUAL 0 OR NOT _have STREQUAL _hash)
+      file(REMOVE "${_package}")
+      message(WARNING
+        "libremidi: could not download the Windows.Devices.Midi2 package (${_status}): "
+        "building without Windows MIDI Services. "
+        "Set LIBREMIDI_WINMIDI_HEADERS_ZIP to a local copy of the package to enable it.")
+      return()
+    endif()
+  endif()
+endif()
+if(NOT EXISTS "${_package}")
+  message(WARNING "libremidi: LIBREMIDI_WINMIDI_HEADERS_ZIP does not exist: ${_package}. "
+                  "Building without Windows MIDI Services.")
+  return()
 endif()
 # Only metadata and native COM declarations. Never extract/deploy a runtime DLL.
 file(ARCHIVE_EXTRACT INPUT "${_package}" DESTINATION "${_sdk}"

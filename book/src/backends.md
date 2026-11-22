@@ -42,9 +42,42 @@ without preventing application loading if the end user does not use it.
 | Observer      | Yes   | Yes | Yes     |
 | Scheduling    | No    | No  | No      |
 
-WinMIDI targets the [in-box Windows MIDI Services API](https://microsoft.github.io/MIDI/kb/porting-midi-libraries/). It requires an x64 or Arm64 process on Windows 11 25H2 (build 26200) or later, registration of the in-box API, and an available MIDI service. On other systems use WinMM or WinUWP. Initialize the caller's WinRT apartment before querying availability or constructing MIDI objects.
+WinMIDI targets the [in-box Windows MIDI Services API](https://microsoft.github.io/MIDI/kb/porting-midi-libraries/). It requires an x64 or Arm64 process on Windows 11 25H2 (build 26200) or later, the `Windows.Devices.Midi2` runtime, and an available MIDI service. On other systems use WinMM or WinUWP.
 
-During the preview, CMake generates the API projections from the pinned `Windows.Devices.Midi2 0.99.92-preview.11` NuGet package; no runtime DLL is deployed. Install a Windows SDK (for the platform metadata and C++/WinRT) or use the MSYS2 toolchain’s matching cppwinrt headers and generator with Windows SDK metadata. For offline builds, set `LIBREMIDI_WINMIDI_HEADERS_ZIP` to the local package. Set `LIBREMIDI_DOWNLOAD_CPPWINRT=OFF` to prevent downloads or `LIBREMIDI_NO_WINMIDI=ON` to disable the backend entirely.
+### Runtime
+
+libremidi neither installs nor deploys `Windows.Devices.Midi2.dll`. Until Windows ships it, no system has it: deploy the DLL from the `Windows.Devices.Midi2` NuGet package (`runtimes/win-<arch>/native`) next to your executable. The loader looks in the directory of the executable and in the system directory, not in the directory of the DLL that contains libremidi: a plug-in cannot bring its own copy, the host application has to provide it.
+
+Without the runtime the backend reports itself as unavailable and is skipped by automatic selection.
+
+### Availability and selection
+
+- `libremidi::available_ump_apis()` and the default configuration helpers only check that the runtime is present. They never start the MIDI service.
+- Constructing a `midi_in`, `midi_out` or `observer` for this backend starts the service if needed, which can take a few seconds the first time.
+- Initialize the caller's WinRT or COM apartment before either of them. On a thread that did not, the check leaves the process with an implicit multi-threaded apartment.
+- `midi2::in_default_configuration()`, `out_default_configuration()`, `observer_default_configuration()` and the `midi1::` ones give the platform's preferred backend when it is compiled in and available, and otherwise let the constructor pick the first backend that works.
+- A backend requested explicitly, through a `libremidi::API` value or one of its configuration types, is never replaced by another one: when it cannot be used, the `on_error` callback is called and the object does nothing (`get_current_api()` is `API::DUMMY`). The C API returns `-ENOTSUP` from the `*_new` function instead.
+
+### Building
+
+CMake generates the API projection from the pinned `Windows.Devices.Midi2 0.99.92-preview.11` NuGet package (about 100 MB, downloaded at configure time). If the download fails, a warning is printed and libremidi is built without this backend.
+
+| CMake variable | Role |
+|---|---|
+| `LIBREMIDI_NO_WINMIDI=ON` | Disables the backend. |
+| `LIBREMIDI_DOWNLOAD_CPPWINRT=OFF` | Forbids the download. The backend is then only built with `LIBREMIDI_WINMIDI_HEADERS_ZIP`. |
+| `LIBREMIDI_WINMIDI_HEADERS_ZIP` | Path of a local copy of the NuGet package, for offline builds. |
+| `CPPWINRT_PATH` | Directory of the C++/WinRT base headers (`winrt/base.h`). Found in the Windows SDK or in the toolchain (MSYS2) by default. |
+| `CPPWINRT_TOOL` | The `cppwinrt` generator. It must be the release that produced the headers in `CPPWINRT_PATH`. |
+
+The backend is not built for 32-bit targets.
+
+The generated headers are installed in `include/libremidi-winmidi`, without `winrt/base.h`. They only compile against the C++/WinRT release that generated them: an application that uses another one (for instance the `Microsoft.Windows.CppWinRT` NuGet package, or another Windows SDK) gets a "Mismatched C++/WinRT headers" error. Build libremidi with that application's `CPPWINRT_PATH` and `CPPWINRT_TOOL` in this case.
+
+### Changes from the out-of-box SDK
+
+- `winmidi::input_configuration::context` and `winmidi::output_configuration::context` are now `winrt::Windows::Devices::Midi2::MidiSession*` instead of `winrt::Microsoft::Windows::Devices::Midi2::MidiSession*`.
+- The `for_all_backends` and `for_backend` helpers of `<libremidi/backends.hpp>` are replaced by `for_available_backends`, `for_compiled_backends` and `for_compiled_backend`.
 
 ## Mac & iOS
 
