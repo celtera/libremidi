@@ -25,10 +25,18 @@ midi.send_ump(libremidi::ump{ /* a message */ });
 The pointer/count and span overloads take a nonempty stream of complete UMPs
 in order. A packet's message type determines its length (one to four words);
 the stream as a whole is not limited to four words. A send is not atomic:
-an error does not undo packets the backend has already sent.
+an error does not undo packets the backend has already sent. A packet cut short
+by the end of the stream gives `bad_message`, after the complete packets before
+it were sent. Two backends do not look at the words: raw ALSA writes them to the
+device as given, and raw I/O passes them to the `write_ump` callback.
 
 On Windows MIDI Services, a raw output connection batches contiguous, complete
-UMPs up to the connection's word limit. Zero NOOP/padding words between packets
+UMPs: at most 171 words per batch, or the connection's own limit if it is lower.
+The connection accepts four times as much, but the service translates a batch
+for MIDI 1 clients and drops one that no longer fits its buffers once
+translated. The service delivers a batch as a unit, at least once: when it
+retries a delivery, the receiver gets the whole batch again.
+Zero NOOP/padding words between packets
 are skipped, not zero words inside packets. A truncated packet, a packet larger
 than the limit, or a failed transmission stops the send and returns an error.
 Earlier batches may already have reached the endpoint; they are never retried.

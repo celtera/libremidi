@@ -186,15 +186,14 @@ public:
 
   stdx::error schedule_ump(int64_t ts, const uint32_t* message, size_t size) override
   {
-    // FIXME
-    if (size > 4)
-      return std::errc::message_size;
-
-    libremidi::ump m;
-    std::copy_n(message, size, m.data);
-    m.timestamp = convert_timestamp(ts);
-    m_queue.enqueue(std::move(m)); // FIXME actually send them scheudled
-    return stdx::error{};
+    // FIXME actually send them scheduled
+    const auto timestamp = convert_timestamp(ts);
+    return segment_ump_stream(message, size, [&](const uint32_t* words, int bytes) {
+      libremidi::ump m;
+      std::copy_n(words, bytes / sizeof(uint32_t), m.data);
+      m.timestamp = timestamp;
+      return m_queue.enqueue(std::move(m)) ? std::errc{} : std::errc::not_enough_memory;
+    });
   }
 
   moodycamel::ReaderWriterQueue<libremidi::ump> m_queue;

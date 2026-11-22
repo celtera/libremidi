@@ -112,9 +112,10 @@ public:
       return {};
     };
 
-    if (auto err = segment_ump_stream(ump_stream, count, append); err.is_set())
-      return err;
-    return push_event_list(eventList);
+    // The packets added before a truncated tail are complete: send them too.
+    const auto err = segment_ump_stream(ump_stream, count, append);
+    const auto pushed = push_event_list(eventList);
+    return err.is_set() ? err : pushed;
   }
 
   stdx::error push_event_list(MIDIEventList* eventList)

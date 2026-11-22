@@ -231,6 +231,9 @@ public:
 
   //! Immediately send a nonempty sequence of complete UMP packets. Size is in
   //! 32-bit words, not bytes; the four-word limit is per packet, not per call.
+  //! A packet cut short by the end of the sequence is an error, reported after
+  //! the packets before it were sent. The raw ALSA and raw I/O backends write
+  //! the words as given, without this check.
   stdx::error send_ump(const uint32_t* message, size_t size) const;
   stdx::error send_ump(std::span<const uint32_t>) const;
 
