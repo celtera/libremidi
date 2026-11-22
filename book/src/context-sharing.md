@@ -1,7 +1,23 @@
 # Context sharing
 
 This allows to share a single context across multiple MIDI objects (such as a `jack_client_t` with JACK, a PipeWire main loop & filter, or a `MIDIClientRef` on macOS with CoreMIDI). 
-If no context is passed, each object will create one as they used to.
+Most backends create a context per object when none is passed. Windows MIDI Services instead
+creates a shared session on first open, named after the host executable. Set `client_name`
+for a named session, or pass a `MidiSession*` in `context` to use a session you own.
+Inputs and outputs share one connection per endpoint within that session. Closing one port
+leaves the others connected. A hosted virtual device has its own private plugin connection.
+
+On a shared Windows MIDI Services connection, an exception during input delivery stops
+that input's current delivery, not its subscription. If the input is still open, its
+`on_error` handler is notified when configured. Other inputs still receive the data;
+neither the original exception nor an exception from `on_error` fails the SDK callback.
+
+Closing an ordinary input port from **outside** a Windows MIDI Services receive callback
+waits for that port's current delivery to finish. Closing from **inside** a receive callback
+disables further delivery but does not wait: if A's callback closes B while B's callback is
+running, B can still be executing after close returns. libremidi keeps B's callback object
+alive, not objects it references. Capture shared ownership of any state B still needs, or
+wait for B to finish outside the receive callback before destroying that state.
 
 Example:
 

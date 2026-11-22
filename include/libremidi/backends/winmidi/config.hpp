@@ -10,13 +10,13 @@ NAMESPACE_LIBREMIDI::winmidi
 
 struct input_configuration
 {
-  std::string client_name = "libremidi input";
+  std::string client_name; // Empty: share the host application's default session.
   winrt::Windows::Devices::Midi2::MidiSession* context{};
 };
 
 struct output_configuration
 {
-  std::string client_name = "libremidi output";
+  std::string client_name;
   winrt::Windows::Devices::Midi2::MidiSession* context{};
 };
 
