@@ -43,3 +43,7 @@ Earlier batches may already have reached the endpoint; they are never retried.
 The WinRT fallback, including the hosting side of a virtual port, sends one
 complete packet at a time. It likewise skips boundary padding and stops at a
 truncated packet (`bad_message`) or a failed write (`io_error`).
+
+Hosting a virtual output has its own constraints on Windows MIDI Services,
+including a service defect that an application cannot detect: see
+[Hosting a Windows MIDI Services virtual port](midi-2-in.md#hosting-a-windows-midi-services-virtual-port).

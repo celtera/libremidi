@@ -4,6 +4,7 @@
 #if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
 #include <array>
 #include <bit>
+#include <string_view>
 
 NAMESPACE_LIBREMIDI::winmidi
 {
@@ -54,11 +55,50 @@ inline hstring virtual_product_instance_id(std::string_view endpoint_id)
   return hstring{text.data(), static_cast<uint32_t>(out - text.begin())};
 }
 
+// The function block name notification carries the fewest UTF-8 bytes of the
+// names announced for a port.
+inline constexpr std::size_t virtual_port_name_max_bytes = 91;
+
+// One string for the endpoint, its device entry and its function block. The
+// SDK trims the device entry only, and cuts each announced name at its own
+// limit. Empty when nothing is left to name the port.
+inline hstring virtual_port_name(std::string_view requested)
+{
+  requested = requested.substr(0, requested.find('\0'));
+  if (requested.empty())
+    return {};
+  const hstring wide = to_hstring(requested);
+  std::wstring_view name{wide};
+
+  constexpr std::wstring_view blank = L" \t\n\r";
+  const auto first = name.find_first_not_of(blank);
+  if (first == name.npos)
+    return {};
+  name.remove_prefix(first);
+
+  std::size_t bytes = 0, length = 0;
+  while (length < name.size())
+  {
+    const wchar_t c = name[length];
+    const bool pair = c >= 0xD800 && c <= 0xDBFF && length + 1 < name.size();
+    const std::size_t encoded = c < 0x80 ? 1 : c < 0x800 ? 2 : pair ? 4 : 3;
+    if (bytes + encoded > virtual_port_name_max_bytes)
+      break;
+    bytes += encoded;
+    length += pair ? 2 : 1;
+  }
+  name = name.substr(0, length);
+  return hstring{name.substr(0, name.find_last_not_of(blank) + 1)};
+}
+
+// port_name: not empty once passed through virtual_port_name.
 inline midi2v::MidiVirtualDeviceCreationConfig setup_virtualdevice_config(
     std::string_view manufacturer, std::string_view port_name, MidiFunctionBlockDirection direction,
     std::string_view endpoint_id = {})
 {
-  const auto name = to_hstring(port_name);
+  const auto name = virtual_port_name(port_name);
+  if (name.empty())
+    throw hresult_invalid_argument{};
   MidiDeclaredEndpointInfo info{
       name, virtual_product_instance_id(endpoint_id), true, true, false, false,
       /* static function blocks */ true, /* declared function block count */ 1, 1, 1};
@@ -71,6 +111,9 @@ inline midi2v::MidiVirtualDeviceCreationConfig setup_virtualdevice_config(
   block.FirstGroup(MidiGroup(uint8_t{0}));
   block.GroupCount(1);
   block.Direction(direction);
+  block.UIHint(
+      direction == MidiFunctionBlockDirection::BlockInput ? MidiFunctionBlockUIHint::Receiver
+                                                          : MidiFunctionBlockUIHint::Sender);
   config.FunctionBlocks().Append(block);
   return config;
 }
@@ -134,6 +177,8 @@ public:
           handler = nullptr)
   {
     if (!endpoint_id.empty() && !valid_virtual_endpoint_id(endpoint_id))
+      return std::errc::invalid_argument;
+    if (virtual_port_name(name).empty())
       return std::errc::invalid_argument;
     if (!session || !session.IsOpen())
       return std::errc::not_connected;

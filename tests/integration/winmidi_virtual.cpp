@@ -3,8 +3,11 @@
 #include <libremidi/libremidi.hpp>
 
 #include <chrono>
+#include <cstdint>
 #include <iostream>
-#include <semaphore>
+#include <stdexcept>
+#include <string>
+#include <string_view>
 #include <thread>
 
 using namespace libremidi::winmidi;
@@ -26,13 +29,26 @@ void check(stdx::error error)
     error.throw_exception();
 }
 
+// Auto-reset: the service may deliver a packet more than once.
+winrt::handle signal()
+{
+  winrt::handle event{CreateEventW(nullptr, FALSE, FALSE, nullptr)};
+  require(!!event, "could not create event");
+  return event;
+}
+
+bool wait(const winrt::handle& event, std::chrono::milliseconds limit)
+{
+  return WaitForSingleObject(event.get(), static_cast<DWORD>(limit.count())) == WAIT_OBJECT_0;
+}
+
 void host()
 {
-  std::binary_semaphore request{0};
+  const auto request = signal();
   libremidi::ump_input_configuration cfg{
       .on_message = [&](const libremidi::ump& msg) {
         if (msg.size() == 2 && msg[0] == cc && msg[1] == ping)
-          request.release();
+          SetEvent(request.get());
       }};
   // Both rounds reuse the identifiers: the client expects the same endpoints again.
   input_configuration in_api;
@@ -49,10 +65,11 @@ void host()
     const auto event_name = to_hstring(name);
     winrt::handle ready{CreateEventW(nullptr, FALSE, FALSE, event_name.c_str())};
     require(!!ready && GetLastError() != ERROR_ALREADY_EXISTS, "could not create round event");
+    ResetEvent(request.get()); // A late duplicate of the previous round's request.
     check(in.open_virtual_port(name + "-in"));
     check(out.open_virtual_port(name + "-out"));
     std::cout << name << std::endl; // pipe to the client, not a MIDI device selector from the user
-    require(request.try_acquire_for(40s), "host did not receive the client's request");
+    require(wait(request, 40s), "host did not receive the client's request");
     check(out.send_ump(cc, pong));
     require(WaitForSingleObject(ready.get(), 20000) == WAIT_OBJECT_0, "client did not disconnect");
     check(out.close_port());
@@ -90,19 +107,19 @@ void wait_for_removal(const hstring& destination, const hstring& source)
 
 void exchange(const MidiSession& session, const hstring& destination, const hstring& source)
 {
-  std::binary_semaphore response{0};
+  const auto response = signal();
   auto to_host = session.CreateEndpointConnection(destination);
   auto from_host = session.CreateEndpointConnection(source);
   require(to_host && from_host, "could not create public endpoint connections");
   auto handler = from_host.MessageReceived(auto_revoke, [&](const auto&, const auto& args) {
     uint32_t a{}, b{}, c{}, d{};
     if (args.FillWords(a, b, c, d) == 2 && a == cc && b == pong)
-      response.release();
+      SetEvent(response.get());
   });
   require(from_host.Open() && to_host.Open(), "could not open public endpoints");
   require(to_host.SendSingleMessageWords(0, cc, ping) == MidiSendMessageResults::Succeeded,
           "could not send request");
-  require(response.try_acquire_for(10s), "client did not receive host's reply");
+  require(wait(response, 10s), "client did not receive host's reply");
   handler.revoke();
   session.DisconnectEndpointConnection(from_host.ConnectionId());
   session.DisconnectEndpointConnection(to_host.ConnectionId());

@@ -41,9 +41,27 @@ midi.open_port(libremidi::midi2::in_default_port());
 
 ## Hosting a Windows MIDI Services virtual port
 
+This section applies to `midi_in` and `midi_out` alike.
+
+> **Warning.** On Windows builds where the fix for
+> [Microsoft MIDI #1047](https://github.com/microsoft/MIDI/issues/1047) is not
+> enabled yet, closing a virtual port, or ending or killing the process that
+> hosts one, can leave the MIDI service unable to create sessions for any
+> application until the service is restarted. `open_virtual_port` can then block
+> for minutes. The fix is switched on by Windows servicing, not by a version an
+> application can read: libremidi cannot detect an affected system.
+
 `open_virtual_port(name)` creates one virtual device per classic input or output:
 one static function block, one UMP group (index 0), in the requested direction
-from the host's point of view. The display name may be shared; by default each
+from the host's point of view.
+
+The name is cut at its first NUL character and stripped of surrounding spaces,
+tabs and line breaks. What follows the 91st UTF-8 byte is dropped, without
+splitting a character: this is the longest name a function block can announce,
+and the endpoint, its device entry and its block share one name. A name with
+nothing left returns `std::errc::invalid_argument`.
+
+The display name may be shared; by default each
 new virtual device receives a separate, random product instance ID, so its
 endpoint device ID changes on every open.
 

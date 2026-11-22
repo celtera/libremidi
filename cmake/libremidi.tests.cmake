@@ -131,7 +131,7 @@ if(LIBREMIDI_HAS_WINMIDI)
     COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:winmidi_virtual_smoke>
             -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/winmidi_virtual.cmake)
   set_tests_properties(winmidi_virtual_smoke PROPERTIES
-    SKIP_REGULAR_EXPRESSION "SKIP: WinMIDI virtual transport unavailable")
+    SKIP_REGULAR_EXPRESSION "SKIP: WinMIDI virtual transport unavailable" TIMEOUT 240)
   if(NOT LIBREMIDI_TEST_WINMIDI_VIRTUAL)
     set_tests_properties(winmidi_virtual_smoke PROPERTIES DISABLED TRUE)
   endif()
