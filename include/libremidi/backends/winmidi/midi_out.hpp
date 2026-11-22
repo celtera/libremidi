@@ -67,7 +67,7 @@ public:
     {
       auto err = m_virtual.open(
           m_owner.get(configuration.client_name), configuration.client_name, port_name,
-          MidiFunctionBlockDirection::BlockOutput);
+          configuration.virtual_endpoint_id, MidiFunctionBlockDirection::BlockOutput);
       if (!err.is_set())
         converter.reset();
       return err;

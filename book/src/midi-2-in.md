@@ -43,8 +43,26 @@ midi.open_port(libremidi::midi2::in_default_port());
 
 `open_virtual_port(name)` creates one virtual device per classic input or output:
 one static function block, one UMP group (index 0), in the requested direction
-from the host's point of view. The display name may be shared; each new virtual
-device receives a separate product instance ID. The service publishes the
+from the host's point of view. The display name may be shared; by default each
+new virtual device receives a separate, random product instance ID, so its
+endpoint device ID changes on every open.
+
+Other applications can only find the same endpoint again across runs if the
+identifier stays the same. Set it in the backend configuration:
+
+```cpp
+libremidi::winmidi::input_configuration conf;
+conf.virtual_endpoint_id = "my_synth-in"; // 1 to 32 characters among [A-Za-z0-9_-]
+libremidi::midi_in in{libremidi::ump_input_configuration{/* ... */}, conf};
+in.open_virtual_port("My synth");
+```
+
+The service compares identifiers without case, and refuses one that a live
+virtual device already uses: an input and an output, or two instances of the
+application, need different identifiers. `open_virtual_port` returns
+`std::errc::invalid_argument` for an identifier the service would reject or cut.
+
+The service publishes the
 client-facing endpoint after the host opens its private connection. Closing the
 port disconnects it; the same object can then open another port.
 If opening fails, libremidi releases its references and disconnects any endpoint

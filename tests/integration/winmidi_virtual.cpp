@@ -34,8 +34,13 @@ void host()
         if (msg.size() == 2 && msg[0] == cc && msg[1] == ping)
           request.release();
       }};
-  libremidi::midi_in in{cfg, input_configuration{}};
-  libremidi::midi_out out{{}, output_configuration{}};
+  // Both rounds reuse the identifiers: the client expects the same endpoints again.
+  input_configuration in_api;
+  in_api.virtual_endpoint_id = "libremidi_Smoke-in";
+  output_configuration out_api;
+  out_api.virtual_endpoint_id = "libremidi_Smoke-out";
+  libremidi::midi_in in{cfg, in_api};
+  libremidi::midi_out out{{}, out_api};
   for (int round = 0; round < 2; ++round)
   {
     const auto name = "lm-" + to_string(virtual_product_instance_id());
@@ -108,6 +113,7 @@ void client()
   // Use the service's public view, independent of libremidi's observer/GTB fallback.
   const auto session = MidiSession::Create(L"libremidi virtual port smoke client");
   require(!!session, "could not create client session");
+  hstring first_destination, first_source;
   for (int round = 0; round < 2; ++round)
   {
     std::string name;
@@ -145,6 +151,18 @@ void client()
       std::this_thread::sleep_for(250ms);
     } while (std::chrono::steady_clock::now() < deadline);
     require(!destination.empty() && !source.empty(), "public endpoints or declared blocks missing");
+
+    // The configured identifiers name the endpoints, in lower case, on every open.
+    require(std::wstring_view{destination}.find(L"libremidi_smoke-in") != std::wstring_view::npos
+                && std::wstring_view{source}.find(L"libremidi_smoke-out") != std::wstring_view::npos,
+            "endpoint IDs do not carry the configured identifiers");
+    if (round == 0)
+    {
+      first_destination = destination;
+      first_source = source;
+    }
+    require(destination == first_destination && source == first_source,
+            "endpoint IDs changed between two opens with the same identifiers");
 
     exchange(session, destination, source);
     check_bool(SetEvent(ready.get()));

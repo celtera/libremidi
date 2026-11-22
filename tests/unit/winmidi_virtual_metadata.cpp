@@ -19,8 +19,8 @@ try
     auto id = info.ProductInstanceId();
     if (info.Name() != to_hstring(name) || !info.HasStaticFunctionBlocks()
         || info.DeclaredFunctionBlockCount() != 1 || config.FunctionBlocks().Size() != 1
-        || id.empty() || id.size() > 42 || previous == id
-        || !std::ranges::all_of(id, [](wchar_t c) { return c >= 32 && c <= 126; }))
+        || id.size() != virtual_endpoint_id_max_length || previous == id
+        || !valid_virtual_endpoint_id(to_string(id)))
     {
       std::cerr << "Invalid product instance ID or declared function-block count\n";
       return 1;
@@ -34,7 +34,27 @@ try
       return 1;
     }
   }
-  std::cout << "Two same-name ports: unique printable IDs and one declared group each\n";
+
+  // A configured identifier is announced as the service stores it.
+  static_assert(valid_virtual_endpoint_id("My_Synth-01"));
+  static_assert(valid_virtual_endpoint_id(std::string_view{"0123456789abcdef0123456789abcdef"}));
+  static_assert(!valid_virtual_endpoint_id(""));
+  static_assert(!valid_virtual_endpoint_id(std::string_view{"0123456789abcdef0123456789abcdef0"}));
+  static_assert(!valid_virtual_endpoint_id("my synth"));
+  static_assert(!valid_virtual_endpoint_id("synth\xc3\xa9"));
+  static_assert(!valid_virtual_endpoint_id(std::string_view{"a\0b", 3}));
+  for (int run = 0; run < 2; ++run)
+  {
+    auto config = setup_virtualdevice_config(
+        "", name, MidiFunctionBlockDirection::BlockInput, "My_Synth-01");
+    if (config.DeclaredEndpointInfo().ProductInstanceId() != L"my_synth-01")
+    {
+      std::cerr << "Configured endpoint identifier was not kept\n";
+      return 1;
+    }
+  }
+  std::cout << "Two same-name ports: unique service-valid IDs and one declared group each; "
+               "configured ID kept\n";
 }
 catch (const hresult_error& error)
 {
