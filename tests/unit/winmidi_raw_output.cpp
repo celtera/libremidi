@@ -106,3 +106,79 @@ TEST_CASE("64 KiB SysEx7 uses the negotiated capacity", "[winmidi][raw_output]")
   }
   REQUIRE(offset == words.size());
 }
+
+// The bound holds for the service's two translated buffers: 6 bytes of MIDI 1
+// byte stream, or 2 words of MIDI 1 protocol UMP, for each word sent.
+static_assert(libremidi::winmidi::max_batch_words == 171);
+static_assert(libremidi::winmidi::max_batch_words * 6 <= 2048);
+static_assert(libremidi::winmidi::max_batch_words * 2 * sizeof(uint32_t) <= 2736);
+static_assert(libremidi::winmidi::batch_words(684) == 171);
+static_assert(libremidi::winmidi::batch_words(171) == 171);
+static_assert(libremidi::winmidi::batch_words(172) == 171);
+static_assert(libremidi::winmidi::batch_words(170) == 170);
+static_assert(libremidi::winmidi::batch_words(0) == 0);
+
+TEST_CASE("Batches stop at the service's translation bound", "[winmidi][raw_output]")
+{
+  using libremidi::winmidi::batch_words;
+  using libremidi::winmidi::max_batch_words;
+  using call = recording_endpoint::call;
+  constexpr uint32_t note = 0x2090407f, sysex7[2]{0x30260102, 0x03040506};
+  recording_endpoint endpoint;
+  // What the SDK reports for a connection.
+  const libremidi::winmidi::raw_output output{batch_words(684), 7};
+
+  SECTION("One word less than the bound, the bound, one word more")
+  {
+    std::vector<uint32_t> words(max_batch_words + 1, note);
+    const auto* w = words.data();
+
+    REQUIRE(output.send(endpoint, {w, max_batch_words - 1}) == stdx::error{});
+    REQUIRE(endpoint.calls == std::vector<call>{{7, max_batch_words - 1, w}});
+
+    endpoint.calls.clear();
+    REQUIRE(output.send(endpoint, {w, max_batch_words}) == stdx::error{});
+    REQUIRE(endpoint.calls == std::vector<call>{{7, max_batch_words, w}});
+
+    endpoint.calls.clear();
+    REQUIRE(output.send(endpoint, words) == stdx::error{});
+    REQUIRE(endpoint.calls == std::vector<call>{{7, max_batch_words, w}, {7, 1, w + max_batch_words}});
+  }
+  SECTION("A packet that would straddle the bound starts the next batch")
+  {
+    std::vector<uint32_t> words(max_batch_words - 1, note);
+    words.insert(words.end(), std::begin(sysex7), std::end(sysex7));
+    words.push_back(note);
+    const auto* w = words.data();
+    REQUIRE(output.send(endpoint, words) == stdx::error{});
+    REQUIRE(endpoint.calls == std::vector<call>{{7, max_batch_words - 1, w}, {7, 3, w + max_batch_words - 1}});
+  }
+  SECTION("A packet that ends on the bound stays in the batch")
+  {
+    std::vector<uint32_t> words(max_batch_words - 2, note);
+    words.insert(words.end(), std::begin(sysex7), std::end(sysex7));
+    words.push_back(note);
+    const auto* w = words.data();
+    REQUIRE(output.send(endpoint, words) == stdx::error{});
+    REQUIRE(endpoint.calls == std::vector<call>{{7, max_batch_words, w}, {7, 1, w + max_batch_words}});
+  }
+  SECTION("A lower connection maximum wins")
+  {
+    const libremidi::winmidi::raw_output small{batch_words(5), 7};
+    const std::vector<uint32_t> words{note, sysex7[0], sysex7[1], sysex7[0], sysex7[1], note, note};
+    const auto* w = words.data();
+    REQUIRE(small.send(endpoint, words) == stdx::error{});
+    REQUIRE(endpoint.calls == std::vector<call>{{7, 5, w}, {7, 2, w + 5}});
+  }
+  SECTION("A full-size SysEx7 batch fits a MIDI 1 byte stream")
+  {
+    // 1 MiB of SysEx7 continue packets, 6 data bytes each.
+    std::vector<uint32_t> words;
+    for (int i = 0; i < 174763; ++i)
+      words.insert(words.end(), {0x30260102u, 0x03040506u});
+    REQUIRE(output.send(endpoint, words) == stdx::error{});
+    for (const auto& c : endpoint.calls)
+      REQUIRE(c.count / 2 * 6 <= 2048);
+    REQUIRE(endpoint.calls.front().count == 170);
+  }
+}

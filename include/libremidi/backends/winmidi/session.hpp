@@ -408,7 +408,7 @@ public:
       }
 #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
       c->output = {
-          c->raw->GetSupportedMaxMidiWordsPerTransmission(),
+          batch_words(c->raw->GetSupportedMaxMidiWordsPerTransmission()),
           MidiClock::TimestampConstantSendImmediately()};
 #endif
       return c;
