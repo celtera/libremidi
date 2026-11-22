@@ -118,6 +118,23 @@ if(LIBREMIDI_HAS_WINMIDI)
   add_test(NAME winmidi_unload_test
            COMMAND winmidi_unload_test $<TARGET_FILE:winmidi_unload_plugin>)
   set_tests_properties(winmidi_unload_test PROPERTIES TIMEOUT 60)
+
+  add_executable(winmidi_virtual_metadata_test tests/unit/winmidi_virtual_metadata.cpp)
+  target_link_libraries(winmidi_virtual_metadata_test PRIVATE libremidi)
+  add_test(NAME winmidi_virtual_metadata_test COMMAND winmidi_virtual_metadata_test)
+  set_tests_properties(winmidi_virtual_metadata_test PROPERTIES SKIP_RETURN_CODE 77)
+
+  add_executable(winmidi_virtual_smoke tests/integration/winmidi_virtual.cpp)
+  target_link_libraries(winmidi_virtual_smoke PRIVATE libremidi)
+  option(LIBREMIDI_TEST_WINMIDI_VIRTUAL "Run the live virtual-port test on a serviced Windows host" OFF)
+  add_test(NAME winmidi_virtual_smoke
+    COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:winmidi_virtual_smoke>
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/winmidi_virtual.cmake)
+  set_tests_properties(winmidi_virtual_smoke PROPERTIES
+    SKIP_REGULAR_EXPRESSION "SKIP: WinMIDI virtual transport unavailable")
+  if(NOT LIBREMIDI_TEST_WINMIDI_VIRTUAL)
+    set_tests_properties(winmidi_virtual_smoke PROPERTIES DISABLED TRUE)
+  endif()
 endif()
 
 add_executable(winmidi_pool_test tests/unit/winmidi_pool.cpp)
