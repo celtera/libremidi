@@ -23,9 +23,6 @@ public:
   open_port(const output_port& pt, std::string_view local_port_name)
       = 0;
 
-  // Most backends detach the port even if native cleanup reports an error.
-  virtual bool retains_port_on_close_error() const noexcept { return false; }
-
   [[nodiscard]] virtual int64_t current_time() const noexcept { return 0; }
 
   virtual stdx::error send_message(const unsigned char* message, std::size_t size) = 0;
