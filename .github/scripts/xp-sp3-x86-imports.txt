@@ -1,3 +1,9 @@
+# Snapshot of the static imports of the executables checked by the Windows XP
+# workflow, one "dll!symbol" per line. It is not a catalog of the XP API: a new
+# import fails the workflow until it is reviewed and added here.
+#
+# Imports of midiprobe.exe, checked against the exports of the 32-bit
+# Windows XP SP3 system DLLs.
 kernel32.dll!AreFileApisANSI
 kernel32.dll!CloseHandle
 kernel32.dll!CreateEventA
@@ -167,3 +173,27 @@ winmm.dll!midiInGetDevCapsW
 winmm.dll!midiInGetNumDevs
 winmm.dll!midiOutGetDevCapsW
 winmm.dll!midiOutGetNumDevs
+#
+# Additional imports of echo.exe (WinMM input and output). Not checked against
+# XP SP3 DLLs: each one is documented by Microsoft with a minimum supported
+# client of Windows 2000 Professional (winmm.dll, learn.microsoft.com
+# /windows/win32/api/mmeapi/nf-mmeapi-<function>) or Windows XP (kernel32.dll,
+# .../synchapi/nf-synchapi-initializecriticalsectionandspincount and
+# .../processthreadsapi/nf-processthreadsapi-switchtothread), as read on
+# 2026-11-22.
+kernel32.dll!InitializeCriticalSectionAndSpinCount
+kernel32.dll!SwitchToThread
+winmm.dll!midiInAddBuffer
+winmm.dll!midiInClose
+winmm.dll!midiInOpen
+winmm.dll!midiInPrepareHeader
+winmm.dll!midiInReset
+winmm.dll!midiInStart
+winmm.dll!midiInStop
+winmm.dll!midiInUnprepareHeader
+winmm.dll!midiOutClose
+winmm.dll!midiOutLongMsg
+winmm.dll!midiOutOpen
+winmm.dll!midiOutPrepareHeader
+winmm.dll!midiOutShortMsg
+winmm.dll!midiOutUnprepareHeader
