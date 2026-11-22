@@ -84,7 +84,7 @@ make_midi_in(auto base_conf, input_api_configuration api_conf, auto backends)
   assert(base_conf.on_message || base_conf.on_raw_data);
 
   auto from_api = [&]<typename T>(T& /*backend*/) mutable {
-    if (auto conf = get_if<typename T::midi_in_configuration>(&api_conf); conf && T::available())
+    if (auto conf = get_if<typename T::midi_in_configuration>(&api_conf); conf && midi_any::ready<T>())
     {
       ptr = libremidi::make<typename T::midi_in>(std::move(base_conf), std::move(*conf));
       return true;

@@ -24,6 +24,22 @@ struct libremidi_midi_out_handle
   libremidi::midi_out self;
 };
 
+// An API asked for by name is never replaced by another one. Fail instead of
+// handing back an object that does nothing.
+template <typename Handle>
+static int libremidi_publish_handle(Handle* ptr, int requested, Handle** out)
+{
+  const auto api = static_cast<libremidi::API>(requested);
+  if (api != libremidi::API::UNSPECIFIED && api != libremidi::API::DUMMY
+      && ptr->self.get_current_api() == libremidi::API::DUMMY)
+  {
+    delete ptr;
+    return -ENOTSUP;
+  }
+  *out = ptr;
+  return 0;
+}
+
 NAMESPACE_LIBREMIDI
 {
 
@@ -174,6 +190,8 @@ int libremidi_midi_observer_new(
   if (!out || !c)
     return -EINVAL;
 
+  *out = nullptr;
+
   libremidi::observer_configuration conf;
   libremidi::assign_error_callback(c->on_error, conf.on_error);
   libremidi::assign_error_callback(c->on_warning, conf.on_warning);
@@ -214,8 +232,7 @@ int libremidi_midi_observer_new(
   {
     auto ptr = new libremidi_midi_observer_handle{
         libremidi::observer{std::move(conf), std::move(api_conf)}};
-    *out = ptr;
-    return 0;
+    return libremidi_publish_handle(ptr, api->api, out);
   }
   catch (...)
   {
@@ -311,7 +328,8 @@ int libremidi_midi_in_new(
       {
         auto ptr = new libremidi_midi_in_handle{
             libremidi::midi_in{std::move(conf), std::move(api_conf)}};
-        *out = ptr;
+        if (int ret = libremidi_publish_handle(ptr, api->api, out); ret != 0)
+          return ret;
       }
       catch (...)
       {
@@ -355,7 +373,8 @@ int libremidi_midi_in_new(
       {
         auto ptr = new libremidi_midi_in_handle{
             libremidi::midi_in{std::move(conf), std::move(api_conf)}};
-        *out = ptr;
+        if (int ret = libremidi_publish_handle(ptr, api->api, out); ret != 0)
+          return ret;
       }
       catch (...)
       {
@@ -436,7 +455,8 @@ int libremidi_midi_out_new(
   {
     auto ptr
         = new libremidi_midi_out_handle{libremidi::midi_out{std::move(conf), std::move(api_conf)}};
-    *out = ptr;
+    if (int ret = libremidi_publish_handle(ptr, api->api, out); ret != 0)
+      return ret;
   }
   catch (...)
   {

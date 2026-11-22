@@ -9,6 +9,7 @@
 #include <libremidi/detail/midi_api.hpp>
 
 #include <algorithm>
+#include <atomic>
 #include <bit>
 #include <cctype>
 #include <string>
@@ -74,8 +75,10 @@ get_port(const std::string& device_name, int group_terminal_block)
   return {nullptr, nullptr};
 }
 
+// Whether this system has the Windows MIDI Services runtime. Cheap, and never
+// starts the service: safe for listing and selecting backends.
 // Do not use version helpers: the host application's manifest is outside our control.
-inline bool service_available() noexcept
+inline bool runtime_available() noexcept
 {
 #if defined(_M_X64) || defined(__x86_64__) || defined(_M_ARM64) || defined(__aarch64__)
   static const bool supported_os = [] {
@@ -89,13 +92,30 @@ inline bool service_available() noexcept
   if (!supported_os)
     return false;
 
+  // Only a positive answer is kept: the runtime can be deployed while we run.
+  static std::atomic_bool found{false};
+  if (found.load(std::memory_order_relaxed))
+    return true;
+
   // MidiApi is a static runtimeclass. Resolve its factory, not an instance;
-  // a supported build may still lack the API or be in Legacy API mode.
-  const auto api = try_get_activation_factory<MidiApi, IMidiApiStatics>();
-  return api && api.EnsureServiceAvailable();
+  // a supported build may still lack the API.
+  if (!try_get_activation_factory<MidiApi, IMidiApiStatics>())
+    return false;
+  found.store(true, std::memory_order_relaxed);
+  return true;
 #else
   return false;
 #endif
+}
+
+// Starts the service when it is not running, which can take seconds: only
+// call it when an object is about to be created. False in Legacy API mode.
+inline bool service_available() noexcept
+{
+  if (!runtime_available())
+    return false;
+  const auto api = try_get_activation_factory<MidiApi, IMidiApiStatics>();
+  return api && api.EnsureServiceAvailable();
 }
 
 inline midi2v::MidiVirtualDeviceCreationConfig setup_virtualdevice_config(

@@ -28,7 +28,7 @@ LIBREMIDI_INLINE auto make_observer_impl(auto base_conf, observer_api_configurat
   std::unique_ptr<observer_api> ptr;
   auto from_api = [&]<typename T>(T& /*backend*/) mutable {
     if (auto conf = get_if<typename T::midi_observer_configuration>(&api_conf);
-        conf && T::available())
+        conf && midi_any::ready<T>())
     {
       ptr = libremidi::make<typename T::midi_observer>(std::move(base_conf), std::move(*conf));
       return true;

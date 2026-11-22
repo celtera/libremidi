@@ -1,6 +1,7 @@
 #pragma once
 #include <libremidi/config.hpp>
 
+#include <concepts>
 #include <exception>
 #include <memory>
 #include <tuple>
@@ -223,6 +224,25 @@ void for_compiled_backend(libremidi::API api, F&& f)
     std::apply(visit, midi2::available_backends);
 }
 
+// available() only tells whether a backend can be listed and selected. A
+// backend with a service to start does it in ready(), which is only asked when
+// an object is about to be created.
+template <typename Backend>
+bool ready() noexcept
+{
+  if constexpr (requires { { Backend::ready() } -> std::convertible_to<bool>; })
+    return Backend::ready();
+  else
+    return Backend::available();
+}
+
+inline bool is_available(libremidi::API api) noexcept
+{
+  bool ret = false;
+  for_compiled_backend(api, [&](auto& b) { ret = b.available(); });
+  return ret;
+}
+
 // Automatic selection tries backends in preference order. In particular, don't
 // activate services for later candidates once one has succeeded.
 template <typename Api, typename F, typename... Backends>
@@ -230,13 +250,14 @@ std::unique_ptr<Api> make_first_available(F make, const Backends&... backends)
 {
   std::unique_ptr<Api> result;
   auto try_backend = [&](auto backend) {
-    if (backend.available())
+    if (ready<decltype(backend)>())
     {
+      // Not only std::exception: backends also throw their platform's types.
       try
       {
         result = make(backend);
       }
-      catch (const std::exception&)
+      catch (...)
       {
       }
     }

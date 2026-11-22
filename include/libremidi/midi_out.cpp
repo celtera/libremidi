@@ -15,7 +15,7 @@ make_midi_out_impl(auto base_conf, output_api_configuration api_conf)
 {
   std::unique_ptr<midi_out_api> ptr;
   auto from_api = [&]<typename T>(T& /*backend*/) mutable {
-    if (auto conf = get_if<typename T::midi_out_configuration>(&api_conf); conf && T::available())
+    if (auto conf = get_if<typename T::midi_out_configuration>(&api_conf); conf && midi_any::ready<T>())
     {
       ptr = libremidi::make<typename T::midi_out>(std::move(base_conf), std::move(*conf));
       return true;

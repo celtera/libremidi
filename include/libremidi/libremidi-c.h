@@ -218,6 +218,11 @@ int libremidi_midi_out_port_handle(
     const libremidi_midi_out_port* port, uint64_t* handle);
 
 /// Observer API
+///
+/// For every *_new function: with api = UNSPECIFIED, the first working
+/// compiled API is used. Any other API is used as is, or the function
+/// returns -ENOTSUP and creates nothing when that API is not compiled in
+/// or cannot run on this system.
 LIBREMIDI_EXPORT
 int libremidi_midi_observer_new(
     const libremidi_observer_configuration*, libremidi_api_configuration*,

@@ -143,11 +143,6 @@ public:
 
     for (const auto& ep : MidiEndpointDeviceInformation::FindAll())
     {
-      if (ep.Name().starts_with(L"Diagnostics"))
-      {
-        continue;
-      }
-
       for (const auto& gp : ep.GetDeclaredFunctionBlocks())
       {
         if (gp.Direction() != MidiFunctionBlockDirection::BlockOutput)
@@ -172,11 +167,6 @@ public:
 
     for (const auto& ep : MidiEndpointDeviceInformation::FindAll())
     {
-      if (ep.Name().starts_with(L"Diagnostics"))
-      {
-        continue;
-      }
-
       for (const auto& gp : ep.GetDeclaredFunctionBlocks())
       {
         if (gp.Direction() != MidiFunctionBlockDirection::BlockInput)

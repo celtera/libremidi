@@ -3,6 +3,7 @@
 #include <libremidi/backends/keyboard/config.hpp>
 #include <libremidi/libremidi.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <mutex>
 #include <thread>
@@ -39,9 +40,14 @@ TEST_CASE("creation", "[midi_in]")
   {
     libremidi::ump_input_configuration conf{.on_message = [](auto) { }};
     libremidi::midi_in in(conf);
-    THEN("created with the default MIDI 2 api for the platform")
+    THEN("created with the default MIDI 2 api for the platform, where it is available")
     {
-      REQUIRE(in.get_current_api() == libremidi::midi2::default_api());
+      const auto apis = libremidi::available_ump_apis();
+      const auto preferred = libremidi::midi2::default_api();
+      if (std::find(apis.begin(), apis.end(), preferred) != apis.end())
+        REQUIRE(in.get_current_api() == preferred);
+      else
+        REQUIRE(in.get_current_api() != preferred);
     }
   }
 

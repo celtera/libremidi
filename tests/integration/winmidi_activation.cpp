@@ -25,12 +25,14 @@ int main()
   // Query the SDK independently of libremidi, including on supported machines
   // where the API is not installed. This test never opens a device.
   const auto factory = winrt::try_get_activation_factory<sdk::MidiApi, sdk::IMidiApiStatics>();
-  const bool usable = os.dwBuildNumber >= 26200 && factory && factory.EnsureServiceAvailable();
-  std::printf("Windows %lu, MidiApi factory: %d, usable: %d\n", os.dwBuildNumber, !!factory, usable);
+  const bool present = os.dwBuildNumber >= 26200 && factory;
   constexpr auto requested = API::WINDOWS_MIDI_SERVICES;
+  // Listing only needs the runtime: it must not depend on the service.
   const auto apis = available_ump_apis();
-  if ((std::find(apis.begin(), apis.end(), requested) != apis.end()) != usable)
+  if ((std::find(apis.begin(), apis.end(), requested) != apis.end()) != present)
     return 2;
+  const bool usable = present && factory.EnsureServiceAvailable();
+  std::printf("Windows %lu, MidiApi factory: %d, usable: %d\n", os.dwBuildNumber, !!factory, usable);
 
   int errors = 0;
   const auto report = [&](auto&&...) { ++errors; };
