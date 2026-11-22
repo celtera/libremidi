@@ -62,6 +62,7 @@ public:
     }
     catch (...)
     {
+      close_port();
       return std::errc::io_error;
     }
   }
@@ -82,7 +83,10 @@ public:
     {
       m_endpoint = m_session.CreateEndpointConnection(m_virtual.DeviceEndpointDeviceId());
       if (!m_endpoint)
+      {
+        close_port();
         return std::errc::device_or_resource_busy;
+      }
 
       m_endpoint.AddMessageProcessingPlugin(m_virtual);
 
@@ -98,17 +102,18 @@ public:
     }
     catch (...)
     {
+      close_port();
       return std::errc::io_error;
     }
   }
 #endif
 
+  // Also releases what a failed open left behind.
   stdx::error close_port() override
   {
-    if(!m_endpoint)
-      return std::errc::not_connected;
-
-    m_session.DisconnectEndpointConnection(m_endpoint.ConnectionId());
+    const bool connected{m_endpoint};
+    if (connected)
+      m_session.DisconnectEndpointConnection(m_endpoint.ConnectionId());
     m_endpoint = nullptr;
 #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
     m_raw_endpoint = nullptr;
@@ -120,6 +125,8 @@ public:
       m_virtual = nullptr;
     }
   #endif
+    if (!connected)
+      return std::errc::not_connected;
     return stdx::error{};
   }
 
