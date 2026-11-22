@@ -98,20 +98,22 @@ public:
     MIDIEventPacket* packet = MIDIEventListInit(eventList, kMIDIProtocol_2_0);
     const MIDITimeStamp ts = LIBREMIDI_AUDIO_GET_CURRENT_HOST_TIME();
 
-    auto write_fun = [ts, &packet, &eventList](const uint32_t* ump, int bytes) -> std::errc {
+    auto append = [&](const uint32_t* ump, int bytes) -> stdx::error {
       packet = MIDIEventListAdd(eventList, event_list_max_size, packet, ts, bytes / 4, ump);
-      if (packet)
-        return std::errc{0};
-      else
-        return std::errc::not_enough_memory;
+      if (!packet)
+      {
+        if (auto err = push_event_list(eventList); err.is_set())
+          return err;
+        packet = MIDIEventListInit(eventList, kMIDIProtocol_2_0);
+        packet = MIDIEventListAdd(eventList, event_list_max_size, packet, ts, bytes / 4, ump);
+        if (!packet)
+          return std::errc::not_enough_memory;
+      }
+      return {};
     };
 
-    auto realloc_fun = [this, &packet, &eventList] {
-      push_event_list(eventList);
-      packet = MIDIEventListInit(eventList, kMIDIProtocol_2_0);
-    };
-
-    segment_ump_stream(ump_stream, count, write_fun, realloc_fun);
+    if (auto err = segment_ump_stream(ump_stream, count, append); err.is_set())
+      return err;
     return push_event_list(eventList);
   }
 

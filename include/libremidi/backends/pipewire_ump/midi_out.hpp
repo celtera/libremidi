@@ -2,6 +2,7 @@
 #include <libremidi/backends/pipewire/helpers.hpp>
 #include <libremidi/backends/pipewire_ump/config.hpp>
 #include <libremidi/detail/midi_out.hpp>
+#include <libremidi/detail/ump_stream.hpp>
 
 #include <spa/control/control.h>
 #include <spa/pod/builder.h>
@@ -162,15 +163,12 @@ public:
 
   stdx::error send_ump(const uint32_t* message, size_t size) override
   {
-    // FIXME
-    if (size > 4)
-      return std::errc::message_size;
-
-    libremidi::ump m;
-    std::copy_n(message, size, m.data);
-    m.timestamp = 0;
-    m_queue.enqueue(std::move(m));
-    return stdx::error{};
+    return segment_ump_stream(message, size, [this](const uint32_t* words, int bytes) {
+      libremidi::ump m;
+      std::copy_n(words, bytes / sizeof(uint32_t), m.data);
+      m.timestamp = 0;
+      return m_queue.enqueue(std::move(m)) ? std::errc{} : std::errc::not_enough_memory;
+    });
   }
 
   int convert_timestamp(int64_t user) const noexcept

@@ -1,6 +1,7 @@
 #pragma once
 #include <libremidi/backends/winmidi/connection_pool.hpp>
 #include <libremidi/backends/winmidi/helpers.hpp>
+#include <libremidi/backends/winmidi/raw_output.hpp>
 #include <libremidi/detail/midi_stream_decoder.hpp>
 #include <libremidi/detail/ump_stream.hpp>
 
@@ -319,10 +320,18 @@ class ordinary_connection
     CloseThreadpoolWork(retire);
   }
 
+#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
+  winrt::com_ptr<IMidiEndpointConnectionRaw> raw;
+  raw_output output;
+#endif
+
 public:
   MidiEndpointConnection endpoint{nullptr};
 #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
-  winrt::com_ptr<IMidiEndpointConnectionRaw> raw;
+  stdx::error send(std::span<const uint32_t> words) const
+  {
+    return output.send(*raw.get(), words);
+  }
 #endif
 
   winrt::event_token lost{};
@@ -397,6 +406,11 @@ public:
         if (std::exchange(attached, false)) c->inputs->remove(input);
         throw winrt::hresult_error{E_FAIL};
       }
+#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
+      c->output = {
+          c->raw->GetSupportedMaxMidiWordsPerTransmission(),
+          MidiClock::TimestampConstantSendImmediately()};
+#endif
       return c;
     }, [](const ordinary_connection& c) { return c.usable(); });
     if (!connection) throw endpoint_busy{};

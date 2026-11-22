@@ -229,10 +229,13 @@ public:
   //! (currently not implemented anywhere)
   stdx::error schedule_message(int64_t timestamp, const unsigned char* message, size_t size) const;
 
-  //! Immediately send a single UMP packet to an open MIDI output port.
+  //! Immediately send a nonempty sequence of complete UMP packets. Size is in
+  //! 32-bit words, not bytes; the four-word limit is per packet, not per call.
   stdx::error send_ump(const uint32_t* message, size_t size) const;
-  stdx::error send_ump(const libremidi::ump&) const;
   stdx::error send_ump(std::span<const uint32_t>) const;
+
+  //! Immediately send a single complete UMP packet to an open MIDI output port.
+  stdx::error send_ump(const libremidi::ump&) const;
   stdx::error send_ump(uint32_t b0) const;
   stdx::error send_ump(uint32_t b0, uint32_t b1) const;
   stdx::error send_ump(uint32_t b0, uint32_t b1, uint32_t b2) const;

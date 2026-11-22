@@ -3,6 +3,7 @@
 #include <libremidi/backends/net/helpers.hpp>
 #include <libremidi/cmidi2.hpp>
 #include <libremidi/detail/midi_out.hpp>
+#include <libremidi/detail/ump_stream.hpp>
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/udp.hpp>
@@ -263,13 +264,17 @@ public:
 
   stdx::error send_ump(const uint32_t* message, size_t size) override
   {
-    if (auto err = pkt.set_packet_content(message, size); err != stdx::error{})
-      return err;
+    return segment_ump_stream(message, size, [this](const uint32_t* ump, int bytes) -> stdx::error {
+      if (auto err = pkt.set_packet_content(ump, bytes / sizeof(uint32_t)); err.is_set())
+        return err;
 
-    auto dat = pkt.get_data();
-    boost::system::error_code ec;
-    m_socket.send_to(boost::asio::const_buffer(dat.data(), dat.size()), m_endpoint, 0, ec);
-    return stdx::error{}; // FIXME
+      auto dat = pkt.get_data();
+      boost::system::error_code ec;
+      m_socket.send_to(boost::asio::const_buffer(dat.data(), dat.size()), m_endpoint, 0, ec);
+      if (ec)
+        return static_cast<std::error_code>(ec);
+      return {};
+    });
   }
 
   stdx::error schedule_ump(int64_t, const uint32_t*, size_t) override
