@@ -106,6 +106,7 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/winmidi/com.hpp
     include/libremidi/backends/winmidi/config.hpp
     include/libremidi/backends/winmidi/session_fwd.hpp
+    include/libremidi/backends/winmidi/group_ports.hpp
     include/libremidi/backends/winmidi/helpers.hpp
     include/libremidi/backends/winmidi/midi_in.hpp
     include/libremidi/backends/winmidi/midi_out.hpp

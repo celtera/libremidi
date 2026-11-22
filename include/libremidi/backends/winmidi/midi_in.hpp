@@ -98,24 +98,12 @@ public:
 
   stdx::error open_port(const input_port& port, std::string_view) override
   {
-    auto device_id = get_if<std::string>(&port.device);
-    if (!device_id)
-      return std::errc::invalid_argument;
-
-    auto [ep, gp] = get_port(*device_id, port.port);
-    if (!ep || !gp)
-      return std::errc::address_not_available;
-
-    // port.port is the Group Terminal Block Number(), which is not necessarily equal to
-    // the UMP group index the block spans. For example a USB MIDI 1.0 device may expose
-    // its input GTB as Number()==2 while its messages arrive on group 0. Using
-    // `port.port - 1` as the group filter therefore silently drops all input from such
-    // devices. Filter on the resolved block's actual first group instead.
-    m_group_filter = gp.FirstGroup().Index();
-
     try
     {
-      // TODO use a MidiGroupEndpointListener for the filtering
+      auto ep = get_port(port, port_direction::input);
+      if (!ep)
+        return std::errc::address_not_available;
+      m_group_filter = static_cast<int>(port.port);
       m_endpoint = m_session.CreateEndpointConnection(ep.EndpointDeviceId());
       if (!m_endpoint)
         return std::errc::device_or_resource_busy;
@@ -148,6 +136,7 @@ public:
 #if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
   stdx::error open_virtual_port(std::string_view port_name) override
   {
+    m_group_filter = -1; // A virtual device is not a single projected group.
     // Create endpoint information for the virtual device
     using namespace midi2v;
 
@@ -204,14 +193,9 @@ public:
         .has_samples = false,
     };
 
+    if (!ump_matches_group(msg.PeekFirstWord(), m_group_filter))
+      return;
     const auto& ump = msg.GetMessagePacket();
-    auto pk = msg.PeekFirstWord();
-    if (m_group_filter >= 0)
-    {
-      int group = cmidi2_ump_get_group(&pk);
-      if (group != m_group_filter)
-        return;
-    }
 
     const auto& b = ump.GetAllWords();
 

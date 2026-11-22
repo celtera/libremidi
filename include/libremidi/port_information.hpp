@@ -28,7 +28,7 @@ struct LIBREMIDI_EXPORT port_information
   // JACK: jack_client_t*
   // PipeWire: unused // FIXME: pw_context? pw_main_loop?
   // WebMIDI: unused
-  // WinMIDI: TODO
+  // WinMIDI: unused (-1); older block-number handles used 0 and cannot be reopened.
   // WinMM: unused
   // WinUWP: unused
   client_handle client = static_cast<client_handle>(-1);
@@ -64,7 +64,7 @@ struct LIBREMIDI_EXPORT port_information
   // JACK: jack_port_id_t
   // PipeWire: "port.id" (uint32_t)
   // WebMIDI: index of the MIDI device in the list provided by the browser.
-  // WinMIDI: uint64_t terminal_block_number; (MidiGroupTerminalBlock::Number(), index is 1-based)
+  // WinMIDI: zero-based UMP group index [0,15] on `device`, for this port's direction.
   // WinMM: port index between 0 and midi{In,Out}GetNumDevs()
   // WinUWP: index of the MIDI device in the list provided by the OS.
   port_handle port = static_cast<port_handle>(-1);
@@ -119,7 +119,7 @@ struct LIBREMIDI_EXPORT port_information
   // CoreMIDI: kMIDIPropertyName
   // JACK: jack_port_name
   // PipeWire: "port.name"
-  // WinMIDI: MidiGroupTerminalBlock::Name
+  // WinMIDI: name of the function block (or fallback group terminal block) covering this group
   // WinMM: szPname
   // WinUWP: DeviceInformation.Id()
   std::string port_name{};

@@ -93,6 +93,10 @@ if(LIBREMIDI_HAS_WINMIDI)
   add_test(NAME winmidi_activation_test COMMAND winmidi_activation_test)
 endif()
 
+add_executable(winmidi_groups_test tests/unit/winmidi_groups.cpp)
+target_link_libraries(winmidi_groups_test PRIVATE libremidi)
+add_test(NAME winmidi_groups_test COMMAND winmidi_groups_test)
+
 if(LIBREMIDI_HAS_COREMIDI)
   add_executable(coremidi_observer_test tests/integration/coremidi_observer.cpp)
   target_link_libraries(coremidi_observer_test PRIVATE libremidi Catch2::Catch2WithMain)

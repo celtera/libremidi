@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <atomic>
 #include <bit>
-#include <cctype>
+#include <libremidi/backends/winmidi/group_ports.hpp>
 #include <string>
 #include <guiddef.h>
 #include <unknwn.h>
@@ -40,39 +40,11 @@ using namespace winrt::Windows::Devices::Midi2;
 using namespace winrt::Windows::Devices::Midi2::Enumeration;
 namespace midi2v = winrt::Windows::Devices::Midi2::Transports::Virtual;
 
-inline bool ichar_equals(char a, char b)
+inline MidiEndpointDeviceInformation get_port(const port_information& port, port_direction dir)
 {
-  return std::tolower(static_cast<unsigned char>(a))
-         == std::tolower(static_cast<unsigned char>(b));
-}
-
-inline bool iequals(std::string_view lhs, std::string_view rhs)
-{
-  return std::ranges::equal(lhs, rhs, ichar_equals);
-}
-
-inline std::pair<MidiEndpointDeviceInformation, MidiGroupTerminalBlock>
-get_port(const std::string& device_name, int group_terminal_block)
-{
-  auto eps = MidiEndpointDeviceInformation::FindAll();
-  for (const auto& ep : eps)
-  {
-    auto str = to_string(ep.EndpointDeviceId());
-    if (str.empty())
-      continue;
-
-    if (iequals(str, device_name))
-    {
-      for (const auto& gp : ep.GetGroupTerminalBlocks())
-      {
-        if (gp.Number() == group_terminal_block)
-        {
-          return std::make_pair(ep, gp);
-        }
-      }
-    }
-  }
-  return {nullptr, nullptr};
+  return resolve_group(port, dir, [](const std::string& id) {
+    return MidiEndpointDeviceInformation::CreateFromEndpointDeviceId(to_hstring(id));
+  });
 }
 
 // Whether this system has the Windows MIDI Services runtime. Cheap, and never

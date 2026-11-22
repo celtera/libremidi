@@ -39,23 +39,24 @@ public:
 
   stdx::error open_port(const output_port& port, std::string_view) override
   {
-    auto device_id = get_if<std::string>(&port.device);
-    if (!device_id)
-      return std::errc::invalid_argument;
-
-    auto [ep, gp] = get_port(*device_id, port.port);
-    if (!ep || !gp)
-      return std::errc::address_not_available;
-
     try
     {
+      auto ep = get_port(port, port_direction::output);
+      if (!ep)
+        return std::errc::address_not_available;
       m_endpoint = m_session.CreateEndpointConnection(ep.EndpointDeviceId());
       if (!m_endpoint)
         return std::errc::device_or_resource_busy;
   #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
       m_endpoint.as(::IID_IMidiEndpointConnectionRaw, m_raw_endpoint.put_void());
     #endif
-      m_endpoint.Open();
+      if (!m_endpoint.Open())
+      {
+        close_port();
+        return std::errc::io_error;
+      }
+
+      converter.reset(static_cast<uint8_t>(port.port));
 
       return stdx::error{};
     }
@@ -85,7 +86,13 @@ public:
 
       m_endpoint.AddMessageProcessingPlugin(m_virtual);
 
-      m_endpoint.Open();
+      if (!m_endpoint.Open())
+      {
+        close_port();
+        return std::errc::io_error;
+      }
+
+      converter.reset();
 
       return stdx::error{};
     }
@@ -102,6 +109,10 @@ public:
       return std::errc::not_connected;
 
     m_session.DisconnectEndpointConnection(m_endpoint.ConnectionId());
+    m_endpoint = nullptr;
+#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
+    m_raw_endpoint = nullptr;
+#endif
 #if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
     if (m_virtual)
     {
