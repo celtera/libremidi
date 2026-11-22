@@ -40,8 +40,9 @@ public:
       auto ep = get_port(port, port_direction::output);
       if (!ep)
         return std::errc::address_not_available;
-      m_connection = ordinary_connection::acquire(
-          m_owner.get(configuration.client_name), ep.EndpointDeviceId());
+      m_connection = m_owner.use(configuration.client_name, [&](const MidiSession& session) {
+        return ordinary_connection::acquire(session, ep.EndpointDeviceId());
+      });
       m_endpoint = m_connection->endpoint;
 #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
       m_raw_endpoint = m_connection->raw;
@@ -49,6 +50,11 @@ public:
       converter.reset(static_cast<uint8_t>(port.port));
 
       return stdx::error{};
+    }
+    catch (const endpoint_busy&)
+    {
+      // Opened from a receive callback while this endpoint is opening or closing.
+      return std::errc::resource_unavailable_try_again;
     }
     catch (...)
     {

@@ -54,10 +54,7 @@ int main() try
   // The host owns this apartment; the backend must leave it STA.
   winrt::init_apartment(winrt::apartment_type::single_threaded);
   // Exercise the COM guard even on CI machines without MIDI Services.
-  {
-    w::midi_apartment mta;
-    require_sta();
-  }
+  w::keep_mta_alive();
   require_sta();
   if (!w::service_available()) return 77;
   namespace sdk = winrt::Windows::Devices::Midi2;
@@ -94,7 +91,6 @@ int main() try
 
   std::barrier start{2};
   auto concurrent = std::async(std::launch::async, [&] {
-    w::midi_apartment mta;
     start.arrive_and_wait();
     return w::ordinary_connection::acquire(session, b, zero);
   });
@@ -114,7 +110,6 @@ int main() try
   require(entered.get_future().wait_for(5s) == std::future_status::ready, "group zero receive timeout");
   std::promise<void> requested;
   auto drained = std::async(std::launch::async, [&] {
-    w::midi_apartment mta;
     requested.set_value();
     zero->gate.stop();
     zero.reset();

@@ -46,11 +46,17 @@ public:
       if (!ep)
         return std::errc::address_not_available;
       auto input = std::make_shared<port_receiver>(configuration, static_cast<int>(port.port));
-      m_connection = ordinary_connection::acquire(
-          m_owner.get(configuration.client_name), ep.EndpointDeviceId(), input);
+      m_connection = m_owner.use(configuration.client_name, [&](const MidiSession& session) {
+        return ordinary_connection::acquire(session, ep.EndpointDeviceId(), input);
+      });
       m_input = std::move(input);
 
       return stdx::error{};
+    }
+    catch (const endpoint_busy&)
+    {
+      // Opened from a receive callback while this endpoint is opening or closing.
+      return std::errc::resource_unavailable_try_again;
     }
     catch (...)
     {
@@ -115,6 +121,8 @@ public:
     if (m_input)
     {
       m_input->gate.stop();
+      if (m_connection)
+        m_connection->detach(m_input);
       m_input.reset();
     }
     if (m_connection)

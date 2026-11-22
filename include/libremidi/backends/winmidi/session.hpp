@@ -6,7 +6,10 @@
 
 #include <bit>
 #include <exception>
+#include <map>
 #include <memory>
+#include <mutex>
+#include <string>
 #include <string_view>
 #include <type_traits>
 
@@ -14,34 +17,25 @@ NAMESPACE_LIBREMIDI::winmidi
 {
 // MIDI runtime classes are agile. Keep an MTA available on uninitialized host
 // threads without changing a UI thread's apartment or balancing its COM calls.
-class midi_apartment
+// The usage is taken once and kept for the life of the process: it must not be
+// released from DllMain, which is where a module embedding libremidi destroys
+// its remaining objects when it is unloaded.
+inline void keep_mta_alive()
 {
-  using increment_fn = HRESULT (WINAPI*)(void**);
-  using decrement_fn = HRESULT (WINAPI*)(void*);
-
-  // Keep the entry points valid until this particular cookie is released,
-  // including when a host destroys its MIDI objects during static teardown.
-  std::unique_ptr<std::remove_pointer_t<HMODULE>, decltype(&FreeLibrary)> module{
-      LoadLibraryExW(L"combase.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32), &FreeLibrary};
-  decrement_fn decrement;
-  void* cookie{};
-
-public:
-  midi_apartment()
-  {
-    if (!module) winrt::throw_last_error();
-    // SDK headers hide the Windows 8 declarations for a Windows 7 target.
+  static const bool taken = [] {
+    // SDK headers hide the Windows 8 declaration for a Windows 7 target.
+    using increment_fn = HRESULT (WINAPI*)(void**);
+    const auto combase = LoadLibraryExW(L"combase.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (!combase) winrt::throw_last_error();
     const auto increment = std::bit_cast<increment_fn>(
-        GetProcAddress(module.get(), "CoIncrementMTAUsage"));
-    decrement = std::bit_cast<decrement_fn>(GetProcAddress(module.get(), "CoDecrementMTAUsage"));
-    if (!increment || !decrement)
-      throw winrt::hresult_error{HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND)};
+        GetProcAddress(combase, "CoIncrementMTAUsage"));
+    if (!increment) throw winrt::hresult_error{HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND)};
+    void* cookie{};
     winrt::check_hresult(increment(&cookie));
-  }
-  ~midi_apartment() { decrement(cookie); }
-  midi_apartment(const midi_apartment&) = delete;
-  midi_apartment& operator=(const midi_apartment&) = delete;
-};
+    return true;
+  }();
+  (void)taken;
+}
 
 inline winrt::hstring host_session_name()
 {
@@ -61,7 +55,6 @@ inline winrt::hstring host_session_name()
 
 struct owned_session
 {
-  midi_apartment apartment;
   MidiSession session;
   explicit owned_session(const winrt::hstring& name) : session{MidiSession::Create(name)}
   {
@@ -69,35 +62,108 @@ struct owned_session
   }
 };
 
+// The endpoint is being opened or closed by the caller of this receive callback.
+struct endpoint_busy { };
+
+// What libremidi objects share: the session of the process, and named ones.
+// make(name) creates a session; usable(session) tells if it can still be shared.
+template <typename Session>
+class session_registry
+{
+  std::mutex mutex;
+  std::shared_ptr<Session> host;
+  std::map<std::string, std::weak_ptr<Session>> named;
+
+  std::shared_ptr<Session> find(const std::string& name)
+  {
+    if (name.empty()) return host;
+    const auto it = named.find(name);
+    return it == named.end() ? nullptr : it->second.lock();
+  }
+  void store(const std::string& name, const std::shared_ptr<Session>& session)
+  {
+    if (name.empty()) host = session;
+    else named[name] = session;
+  }
+
+public:
+  std::shared_ptr<Session> get(const std::string& name, auto&& make, auto&& usable)
+  {
+    std::lock_guard lock{mutex};
+    std::erase_if(named, [](const auto& e) { return e.second.expired(); });
+    auto session = find(name);
+    if (!session || !usable(*session))
+      store(name, session = make(name));
+    return session;
+  }
+
+  // A shared session keeps the service connection it was created on. When an
+  // attempt fails on it, try once on a new session, and share that one from
+  // then on only if it succeeds where the previous one could not.
+  // current is the session the caller keeps alive; busy is rethrown as is.
+  template <typename Busy>
+  auto use(std::shared_ptr<Session>& current, const std::string& name, auto&& make,
+           auto&& usable, auto&& attempt)
+  {
+    const auto session = current = get(name, make, usable);
+    std::exception_ptr failure;
+    try { return attempt(*session); }
+    catch (const Busy&) { throw; }
+    catch (...) { failure = std::current_exception(); }
+    try
+    {
+      auto fresh = make(name);
+      auto result = attempt(*fresh);
+      std::lock_guard lock{mutex};
+      const auto shared = find(name);
+      if (!shared || shared == session)
+        store(name, fresh);
+      current = std::move(fresh);
+      return result;
+    }
+    catch (...) { std::rethrow_exception(failure); }
+  }
+};
+
 class session_handle
 {
-  midi_apartment apartment;
+  // Never destroyed. The process-wide session would otherwise be closed from a
+  // static destructor, under the loader lock when the embedding module unloads.
+  static session_registry<owned_session>& sessions()
+  {
+    static auto* const all = new session_registry<owned_session>;
+    return *all;
+  }
+  static std::shared_ptr<owned_session> make(const std::string& name)
+  {
+    return std::make_shared<owned_session>(name.empty() ? host_session_name() : to_hstring(name));
+  }
+  static bool usable(const owned_session& s) { return s.session.IsOpen(); }
+
   MidiSession supplied;
   bool has_context;
-  std::shared_ptr<owned_session> named;
+  std::shared_ptr<owned_session> current;
 
 public:
   explicit session_handle(MidiSession* context)
-      : supplied{context ? *context : nullptr}, has_context{context != nullptr} { }
+      : supplied{context ? *context : nullptr}, has_context{context != nullptr}
+  {
+    keep_mta_alive();
+  }
 
   MidiSession get(const std::string& name)
   {
     if (has_context) return supplied; // The caller owns Close(), even when two wrappers share it.
-    if (name.empty())
-    {
-      static owned_session host{host_session_name()};
-      return host.session;
-    }
-    if (!named)
-    {
-      static std::mutex mutex;
-      static std::map<std::string, std::weak_ptr<owned_session>> sessions;
-      std::lock_guard lock{mutex};
-      std::erase_if(sessions, [](const auto& e) { return e.second.expired(); });
-      auto& weak = sessions[name];
-      if (!(named = weak.lock())) weak = named = std::make_shared<owned_session>(to_hstring(name));
-    }
-    return named->session;
+    current = sessions().get(name, make, usable);
+    return current->session;
+  }
+
+  // attempt(session) opens something in the session; see session_registry::use.
+  auto use(const std::string& name, auto&& attempt)
+  {
+    if (has_context) return attempt(supplied);
+    return sessions().use<endpoint_busy>(
+        current, name, make, usable, [&](const owned_session& s) { return attempt(s.session); });
   }
 };
 
@@ -177,7 +243,6 @@ using endpoint_pool = connection_pool<std::pair<winrt::guid, winrt::hstring>, or
 class ordinary_connection
 {
   endpoint_pool::reservation reservation; // destroyed last, after disconnect and COM releases
-  midi_apartment apartment;
   MidiSession session;
   PTP_WORK retire{};
   winrt::event_token token{};
@@ -188,7 +253,7 @@ class ordinary_connection
       dispatch([&](port_receiver& input) { input.receive(words, ticks); });
     }
   };
-  std::shared_ptr<receivers> inputs = std::make_shared<receivers>();
+  std::shared_ptr<receivers> inputs;
 #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
   struct raw_callback final : IMidiEndpointConnectionMessagesReceivedCallback
   {
@@ -229,8 +294,9 @@ class ordinary_connection
   winrt::com_ptr<raw_callback> callback;
 #endif
 
-  ordinary_connection(endpoint_pool::reservation ticket, const MidiSession& s)
-      : reservation{std::move(ticket)}, session{s}
+  ordinary_connection(
+      endpoint_pool::reservation ticket, const MidiSession& s, std::shared_ptr<receivers> r)
+      : reservation{std::move(ticket)}, session{s}, inputs{std::move(r)}
   {
     retire = CreateThreadpoolWork([](PTP_CALLBACK_INSTANCE, void* p, PTP_WORK) {
       delete static_cast<ordinary_connection*>(p);
@@ -258,6 +324,25 @@ public:
   winrt::com_ptr<IMidiEndpointConnectionRaw> raw;
 #endif
 
+  // A closed connection that its session no longer knows is never reopened.
+  // One that lost its device is still known: the SDK reopens it in place.
+  bool usable() const noexcept
+  {
+    try
+    {
+      return endpoint.IsOpen() || session.Connections().HasKey(endpoint.ConnectionId());
+    }
+    catch (...) { return false; }
+  }
+
+  void detach(const std::shared_ptr<port_receiver>& input) noexcept
+  {
+    // Not from a receive callback: this allocates the remaining list.
+    if (receive_scope::inside) return;
+    try { inputs->remove(input); }
+    catch (...) { } // It stays until the next change of the list, never invoked.
+  }
+
   static std::shared_ptr<ordinary_connection> acquire(
       const MidiSession& session, const winrt::hstring& canonical_id,
       const std::shared_ptr<port_receiver>& input = {})
@@ -265,14 +350,23 @@ public:
     if (!session || !session.IsOpen()) throw winrt::hresult_illegal_method_call{};
     static endpoint_pool pool;
     bool attached = false;
-    auto connection = pool.acquire({session.SessionId(), canonical_id}, [&](auto ticket) {
+    auto connection = pool.acquire(
+        {session.SessionId(), canonical_id},
+        [&](auto ticket, std::shared_ptr<ordinary_connection> dead) {
+      // The inputs still open on a dead connection continue on its replacement.
+      auto receiving = dead ? dead->inputs : std::make_shared<receivers>();
       std::shared_ptr<ordinary_connection> c{
-          new ordinary_connection{std::move(ticket), session}, [](ordinary_connection* p) {
+          new ordinary_connection{std::move(ticket), session, std::move(receiving)},
+          [](ordinary_connection* p) {
             // Disconnect may join the SDK receive thread. Never join it from its own callback.
             if (receive_scope::inside) SubmitThreadpoolWork(p->retire);
             else delete p;
           }};
-      c->endpoint = session.CreateEndpointConnection(canonical_id);
+      // With auto-reconnect the SDK reopens this connection, for every port
+      // sharing it, when its device comes back. Without, it stays open and
+      // silent after an unplug.
+      c->endpoint = session.CreateEndpointConnection(
+          canonical_id, MidiEndpointConnectionSettings{false, true});
       if (!c->endpoint) throw winrt::hresult_error{E_FAIL};
 #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
       c->endpoint.as(::IID_IMidiEndpointConnectionRaw, c->raw.put_void());
@@ -289,10 +383,14 @@ public:
         c->inputs->add(input);
         attached = true;
       }
-      if (!c->endpoint.Open()) throw winrt::hresult_error{E_FAIL};
+      if (!c->endpoint.Open())
+      {
+        if (std::exchange(attached, false)) c->inputs->remove(input);
+        throw winrt::hresult_error{E_FAIL};
+      }
       return c;
-    });
-    if (!connection) throw winrt::hresult_error{HRESULT_FROM_WIN32(ERROR_BUSY)};
+    }, [](const ordinary_connection& c) { return c.usable(); });
+    if (!connection) throw endpoint_busy{};
     if (input && !attached) connection->inputs->add(input);
     return connection;
   }
