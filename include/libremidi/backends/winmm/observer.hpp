@@ -69,14 +69,14 @@ protected:
     if (!added && !removed)
       return;
 
+    // A device that cannot be read is absent from the scan, not a reason to
+    // hide the other ones.
     std::vector<Port> current;
-    if (!winmm::get_port_list(current))
-      return; // Only a complete scan establishes or updates the baseline.
+    winmm::get_port_list(current);
 
     if (notify)
     {
-      // For listed ports the numbered name identifies the occurrence, and
-      // find_port also requires the manufacturer and product to match.
+      // For listed ports the numbered name identifies the occurrence.
       auto report_missing = [](const auto& from, const auto& other, const auto& report) {
         if (!report)
           return;

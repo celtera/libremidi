@@ -110,9 +110,20 @@ void passive_and_listings()
   outputs.devices = {{L"New"}};
   const auto fresh = manual->get_output_ports();
   CHECK(fresh.size() == 1 && fresh.front().display_name == "New 1");
+  // An unreadable device hides only itself, and takes no occurrence number.
   inputs.devices[1].name = nullptr;
-  const auto partial = manual->get_input_ports();
-  CHECK(partial.size() == 1 && partial.front().display_name == "Keys 1");
+  auto partial = manual->get_input_ports();
+  CHECK(partial.size() == 3);
+  if (partial.size() == 3)
+  {
+    CHECK(partial[0].display_name == "Keys 1" && partial[0].port == 0);
+    CHECK(partial[1].display_name == "Keys 2" && partial[1].port == 2);
+    CHECK(partial[2].display_name == "Keys 2 1" && partial[2].port == 3);
+  }
+  inputs.devices[0].name = nullptr;
+  partial = manual->get_input_ports();
+  CHECK(partial.size() == 2 && partial.front().display_name == "Keys 1"
+        && partial.front().port == 2);
 }
 
 void directional_notifications()
@@ -135,12 +146,28 @@ void directional_notifications()
     CHECK(poll);
     if (!poll) return;
     poll();
-    CHECK(added.empty() && removed.empty());
+    // The unreadable device is absent from this scan. The others are still diffed.
+    CHECK(added.size() == 1 && added[0] == "Replacement 1");
+    CHECK(removed.size() == 2 && removed[0] == "Existing 1" && removed[1] == "Other 1");
     inputs.devices[1].name = L"Other";
     poll();
-    CHECK(added.size() == 1 && added[0] == "Replacement 1");
-    CHECK(removed.size() == 1 && removed[0] == "Existing 1");
+    CHECK(added.size() == 2 && added[1] == "Other 1");
+    CHECK(removed.size() == 2);
     CHECK(inputs.counts == 3 && outputs.counts == 0);
+  }
+  {
+    // A device that is unreadable from the start does not hold back the baseline.
+    inputs.devices = {{nullptr}, {L"Late"}};
+    added.clear();
+    removed.clear();
+    auto input = make<observer_winmm>(
+        {.input_added = [&](const auto& p) { added.push_back(p.display_name); },
+         .input_removed = [&](const auto& p) { removed.push_back(p.display_name); }},
+        winmm_observer_configuration{manual});
+    CHECK(added.size() == 1 && added[0] == "Late 1" && removed.empty());
+    inputs.devices[0].name = L"Late";
+    poll();
+    CHECK(added.size() == 2 && added[1] == "Late 2" && removed.empty());
   }
   poll = {};
   inputs.counts = outputs.counts = 0;
@@ -170,27 +197,72 @@ void openings(direction& d, auto& backend)
     else CHECK(result == from_mmerr(MMSYSERR_ALLOCATED));
     return d.opened;
   };
+  const usb_device_identifier seven{42, 7}, stale{42, 99};
   d.devices = {{L"Keys"}, {L"Keys", 7}, {L"Pad"}, {L"Keys 2"}};
-  Port second{{.device = usb_device_identifier{42, 7}, .port = 1,
-               .port_name = "Keys", .display_name = "Keys 2"}};
+  Port second{{.device = seven, .port = 1, .port_name = "Keys", .display_name = "Keys 2"}};
   d.caps = 0;
   CHECK(open(second) == 1);
   CHECK(d.caps == 2); // No list, no second read and no query beyond the match.
-  CHECK(open(Port{{.port_name = "Keys"}}) == -1);
-  CHECK(open(Port{{.device = usb_device_identifier{42, 7}, .port_name = "Keys"}}) == 1);
+  CHECK(open(Port{{.device = seven, .port_name = "Keys"}}) == 1); // The model breaks the tie.
   std::swap(d.devices[1], d.devices[2]);
   CHECK(open(second) == 2); // Cached index now points to Pad.
   std::swap(d.devices[0], d.devices[2]);
-  CHECK(open(second) == -1); // Same raw name and ordinal, wrong product.
+  CHECK(open(second) == 0); // The two models exchanged positions: follow the model.
+  d.devices[0].product = 1;
+  CHECK(open(second) == 2); // No such model any more: the occurrence still opens.
   d.devices.erase(d.devices.begin() + 2);
-  CHECK(open(second) == -1); // Missing second occurrence, don't open the first.
-  CHECK(open(Port{{.port = 0, .port_name = "Pad"}}) == 1); // Legacy raw-only selector.
+  CHECK(open(second) == 0); // Second occurrence unplugged: the remaining one opens.
+  CHECK(open(Port{{.display_name = "Keys 2"}}) == 2); // No such occurrence, but such a name.
+  CHECK(open(Port{{.display_name = "Keys 3"}}) == 0);
   CHECK(open(Port{{.display_name = "Keys 2 1"}}) == 2); // Name itself ends in a number.
-  CHECK(open(Port{{.port_name = "Pad", .display_name = "Keys 1"}}) == -1);
   CHECK(open(Port{{.display_name = "Pad 01"}}) == -1);
+  CHECK(open(Port{{.display_name = "Nothing 1"}}) == -1);
+  CHECK(open(Port{{.port_name = "Nothing", .display_name = "Pad 1"}}) == -1);
   CHECK(open(Port{{.port = 0}}) == -1);
-  d.devices[0].name = nullptr;
-  CHECK(open(Port{{.display_name = "Pad 1"}}) == -1); // Unknown ordinal beyond a failed read.
+
+  // Selectors that previous versions opened: built by hand, saved before
+  // occurrences were numbered, or saved with other devices plugged in.
+  d.devices = {{L"USB Keys"}, {L"USB Keys"}};
+  std::vector<Port> listed;
+  winmm::get_port_list(listed);
+  CHECK(listed.size() == 2);
+  if (listed.size() == 2)
+  {
+    CHECK(open(listed[0]) == 0 && open(listed[1]) == 1);
+    CHECK(open(Port{{.port_name = "USB Keys"}}) == 0);
+    CHECK(open(Port{{.port_name = "USB Keys", .display_name = "USB Keys"}}) == 0);
+    d.devices = {{L"USB Keys"}};
+    CHECK(open(listed[1]) == 0);
+    CHECK(open(Port{{.display_name = "USB Keys 2"}}) == 0);
+    CHECK(open(Port{{.port_name = "USB Keys", .display_name = "USB Keys 2"}}) == 0);
+  }
+  d.devices = {{L"USB Keys"}, {L"Pad"}};
+  CHECK(open(Port{{.port_name = "Pad", .display_name = "Pad"}}) == 1);
+  CHECK(open(Port{{.port_name = "USB Keys", .display_name = "USB Keys"}}) == 0);
+  CHECK(open(Port{{.port_name = "Pad", .display_name = "My drum pad"}}) == 1);
+  CHECK(open(Port{{.port_name = "Pad", .display_name = "USB Keys 1"}}) == 1);
+  CHECK(open(Port{{.device = stale, .port_name = "Pad", .display_name = "Pad 1"}}) == 1);
+  CHECK(open(Port{{.device = stale, .port_name = "Pad"}}) == 1);
+  CHECK(open(Port{{.display_name = "Pad"}}) == 1);
+  d.devices = {{L"Port 2"}};
+  CHECK(open(Port{{.port_name = "Port 2", .display_name = "Port 2"}}) == 0);
+  CHECK(open(Port{{.display_name = "Port 2"}}) == 0);
+  d.devices = {{L"Port"}, {L"Port"}, {L"Port 2"}};
+  CHECK(open(Port{{.port_name = "Port 2", .display_name = "Port 2"}}) == 2);
+  CHECK(open(Port{{.display_name = "Port 2"}}) == 1);
+
+  // An unreadable device is skipped by the listing and by the lookup alike.
+  d.devices = {{nullptr}, {L"Pad"}, {L"Keys"}, {nullptr}, {L"Keys"}};
+  listed.clear();
+  CHECK(!winmm::get_port_list(listed) && listed.size() == 3);
+  if (listed.size() == 3)
+  {
+    CHECK(listed[2].display_name == "Keys 2");
+    CHECK(open(listed[0]) == 1 && open(listed[1]) == 2 && open(listed[2]) == 4);
+  }
+  CHECK(open(Port{{.port_name = "Pad"}}) == 1);
+  d.devices[2].name = nullptr;
+  CHECK(open(Port{{.display_name = "Keys 1"}}) == 4);
 }
 }
 

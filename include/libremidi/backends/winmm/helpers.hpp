@@ -52,17 +52,24 @@ bool read_caps(UINT index, port_caps& port) noexcept
   return true;
 }
 
+// Fills ports with every device whose capabilities could be read. An unreadable
+// device takes no occurrence number, here and in find_port. Returns whether
+// every device was read.
 template <typename Port>
 bool get_port_list(std::vector<Port>& ports)
 {
   const UINT count = device_count<Port>();
   ports.reserve(count); // The name views below point into these ports.
   std::unordered_map<std::string_view, UINT> occurrences;
+  bool complete = true;
   for (UINT i = 0; i < count; ++i)
   {
     port_caps caps;
     if (!read_caps<Port>(i, caps))
-      return false; // Later occurrences cannot be numbered reliably past a gap.
+    {
+      complete = false;
+      continue;
+    }
     auto& port = ports.emplace_back();
     port.api = libremidi::API::WINDOWS_MM;
     port.client = 0;
@@ -73,64 +80,86 @@ bool get_port_list(std::vector<Port>& ports)
     port.display_name.reserve(port.port_name.size() + 1 + ordinal.size());
     port.display_name.append(port.port_name).append(" ").append(ordinal);
   }
+  return complete;
+}
+
+// "<raw name> <occurrence>", as get_port_list writes it.
+inline bool
+parse_numbered_name(std::string_view display, std::string_view& raw, UINT& ordinal) noexcept
+{
+  const auto space = display.rfind(' ');
+  if (space == display.npos)
+    return false;
+  const auto suffix = display.substr(space + 1);
+  if (suffix.empty() || suffix.front() == '0')
+    return false;
+  const auto end = suffix.data() + suffix.size();
+  const auto [ptr, ec] = std::from_chars(suffix.data(), end, ordinal);
+  if (ec != std::errc{} || ptr != end)
+    return false;
+  raw = display.substr(0, space);
   return true;
 }
 
 template <typename Port>
 std::optional<UINT> find_port(const Port& wanted) noexcept
 {
-  std::string_view name = wanted.port_name;
-  UINT ordinal = 1;
-  const bool numbered = !wanted.display_name.empty();
-  if (numbered)
-  {
-    const std::string_view display = wanted.display_name;
-    const auto space = display.rfind(' ');
-    if (space == display.npos)
-      return {};
-    const auto suffix = display.substr(space + 1);
-    if (suffix.empty() || suffix.front() == '0')
-      return {};
-    const auto end = suffix.data() + suffix.size();
-    const auto [ptr, ec] = std::from_chars(suffix.data(), end, ordinal);
-    if (ec != std::errc{} || ptr != end)
-      return {};
-    const auto raw = display.substr(0, space);
-    if (!name.empty() && raw != name)
-      return {};
-    name = raw;
-  }
-  else if (name.empty())
+  const std::string_view port_name = wanted.port_name, display = wanted.display_name;
+
+  // The old index is not an identity. A listed port names an occurrence.
+  std::string_view numbered;
+  UINT ordinal = 0;
+  if (!parse_numbered_name(display, numbered, ordinal)
+      || (!port_name.empty() && numbered != port_name))
+    ordinal = 0;
+
+  // Other selectors, and occurrences that are gone, open by raw name: the
+  // first device of that name, as before occurrences were numbered.
+  const std::string_view raw = port_name.empty() ? display : port_name;
+  if (ordinal == 0 && raw.empty())
     return {};
 
+  // Among devices of the same name, one of the wanted model is preferred.
+  // Another model is still opened: these identifiers are often generic.
   const auto* device = libremidi::get_if<usb_device_identifier>(&wanted.device);
-  std::optional<UINT> raw_match;
+  std::optional<UINT> occurrence, numbered_model, numbered_first, raw_model, raw_first;
+  UINT seen = 0;
   const UINT count = device_count<Port>();
   for (UINT i = 0; i < count; ++i)
   {
-    // The old index is not an identity: even a matching name and model can
-    // be a different occurrence after reordering. Numbered names only need
-    // a prefix scan. Raw-only names must be unambiguous across the full list.
     port_caps caps;
     if (!read_caps<Port>(i, caps))
-      return {}; // An unread name makes the occurrence number uncertain.
-    if (caps.name() != name)
       continue;
-    if (numbered)
+    const bool model = device && *device == caps.device;
+    const auto name = caps.name();
+    if (ordinal != 0 && name == numbered)
     {
-      if (--ordinal != 0)
-        continue;
-      if (device && *device != caps.device)
-        return {}; // Never substitute another occurrence.
-      return i;
+      if (!numbered_first)
+        numbered_first = i;
+      if (model && !numbered_model)
+        numbered_model = i;
+      if (++seen == ordinal)
+      {
+        if (!device || model)
+          return i;
+        occurrence = i;
+      }
+      if (occurrence && numbered_model)
+        return numbered_model;
     }
-    if (!device || *device == caps.device)
+    if (name == raw)
     {
-      if (raw_match)
-        return {};
-      raw_match = i;
+      if (ordinal == 0 && (!device || model))
+        return i;
+      if (!raw_first)
+        raw_first = i;
+      if (model && !raw_model)
+        raw_model = i;
     }
   }
-  return raw_match;
+  for (auto match : {occurrence, raw_model, raw_first, numbered_model, numbered_first})
+    if (match)
+      return match;
+  return {};
 }
 }
