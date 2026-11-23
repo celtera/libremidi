@@ -105,6 +105,24 @@ TEST_CASE("poly aftertouch", "[midi_in]")
   SKIP("GH runners do not have MIDI support");
   #endif
 
+  // Only with a server that already runs: the ports below do not start one,
+  // and a server started by this client would not have them.
+  const auto& jack = libremidi::libjack::instance();
+  if (!jack.available)
+    SKIP("JACK is not installed");
+
+  jack_status_t status{};
+  auto jack_client = jack.client_open("libremidi-tester", JackNoStartServer, &status);
+  if (!jack_client)
+    SKIP("No JACK server is running");
+
+  struct close_client
+  {
+    const libremidi::libjack& jack;
+    jack_client_t* client;
+    ~close_client() { jack.client_close(client); }
+  } close_tester{jack, jack_client};
+
   std::vector<libremidi::message> queue;
   std::mutex qmtx;
 
@@ -122,13 +140,8 @@ TEST_CASE("poly aftertouch", "[midi_in]")
       libremidi::jack_input_configuration{.client_name = "libremidi-test"}};
   midi.open_virtual_port("port");
 
-  jack_options_t opt = JackNullOption;
-  jack_status_t status;
-  const auto& jack = libremidi::libjack::instance();
-  auto jack_client = jack.client_open("libremidi-tester", opt, &status);
   int ret = jack.activate(jack_client);
-  if (ret != 0)
-    return;
+  REQUIRE(ret == 0);
 
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   ret = jack.connect(jack_client, "libremidi-test-out:port", "libremidi-test:port");

@@ -169,11 +169,10 @@ struct jack_helpers : jack_client
           jack_port_t* port = self.port;
 
           // Is port created?
-          if (port == nullptr)
-            return 0;
+          if (port != nullptr)
+            self.process(nf);
 
-          self.process(nf);
-
+          // Also once the port is gone: do_close_port waits for this cycle.
           self.thread_lock.check_client_released();
           return 0;
         }, &self);
