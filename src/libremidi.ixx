@@ -134,6 +134,7 @@ module;
 #include <cassert>
 #include <cctype>
 #include <cerrno>
+#include <charconv>
 #include <chrono>
 #include <cinttypes>
 #include <compare>

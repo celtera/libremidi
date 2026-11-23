@@ -3,6 +3,7 @@
 #include <libremidi/backends/winmm/helpers.hpp>
 #include <libremidi/detail/observer.hpp>
 
+#include <algorithm>
 #include <thread>
 
 NAMESPACE_LIBREMIDI
@@ -23,150 +24,81 @@ public:
     if (!configuration.has_callbacks())
       return;
 
-    if (configuration.notify_in_constructor)
-      check_new_ports<true>();
-    else
-      check_new_ports<false>();
+    check_new_ports();
   }
-
-  ~observer_winmm() { }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
   std::vector<input_port> get_input_ports() const noexcept override
   {
-    return get_port_list<true>();
+    std::vector<input_port> ports;
+    winmm::get_port_list(ports);
+    return ports;
   }
 
   std::vector<output_port> get_output_ports() const noexcept override
   {
-    return get_port_list<false>();
+    std::vector<output_port> ports;
+    winmm::get_port_list(ports);
+    return ports;
   }
 
 protected:
-  template <bool Notify>
   void check_new_ports()
   {
-    auto currInputPortList = get_port_list<true>();
-
-    if constexpr (Notify)
-    {
-      compare_port_lists_and_notify_clients(
-          inputPortList, currInputPortList, configuration.input_added,
-          configuration.input_removed);
-    }
-    inputPortList = std::move(currInputPortList);
-
-    auto currOutputPortList = get_port_list<false>();
-
-    if constexpr (Notify)
-    {
-      compare_port_lists_and_notify_clients(
-          outputPortList, currOutputPortList, configuration.output_added,
-          configuration.output_removed);
-    }
-    outputPortList = std::move(currOutputPortList);
+    check_input_ports();
+    check_output_ports();
   }
 
-  void compare_port_lists_and_notify_clients(
-      const auto& prevList, const auto& currList, const auto& portAddedFunc,
-      const auto& portRemovedFunc)
+  void check_input_ports()
   {
-    if (portAddedFunc)
-    {
-      for (const auto& port : currList)
-      {
-        auto iter
-            = std::ranges::find(prevList, port.display_name, &port_information::display_name);
-        if (iter == prevList.end())
-          portAddedFunc(port);
-      }
-    }
-
-    if (portRemovedFunc)
-    {
-      for (const auto& port : prevList)
-      {
-        auto iter
-            = std::ranges::find(currList, port.display_name, &port_information::display_name);
-        if (iter == currList.end())
-          portRemovedFunc(port);
-      }
-    }
+    check_ports(
+        inputPortList, notifyInputs, configuration.input_added, configuration.input_removed);
   }
 
-  input_port to_in_port_info(std::size_t index) const noexcept
+  void check_output_ports()
   {
-    MIDIINCAPS deviceCaps;
-    midiInGetDevCaps(index, &deviceCaps, sizeof(MIDIINCAPS));
-
-    auto rawName = ConvertToUTF8(deviceCaps.szPname);
-    auto portName = rawName;
-    MakeUniqueInPortName(portName, index);
-
-    return {
-        {.api = libremidi::API::WINDOWS_MM,
-         .client = 0,
-         .device
-         = usb_device_identifier{.vendor_id = deviceCaps.wMid, .product_id = deviceCaps.wPid},
-         .port = index,
-         .manufacturer = "",
-         .device_name = "",
-         .port_name = rawName,
-         .display_name = portName}};
+    check_ports(
+        outputPortList, notifyOutputs, configuration.output_added, configuration.output_removed);
   }
 
-  output_port to_out_port_info(std::size_t index) const noexcept
+  template <typename Port>
+  void check_ports(
+      std::vector<Port>& previous, bool& notify, const auto& added, const auto& removed)
   {
-    MIDIOUTCAPS deviceCaps;
-    midiOutGetDevCaps(index, &deviceCaps, sizeof(MIDIOUTCAPS));
+    if (!added && !removed)
+      return;
 
-    auto rawName = ConvertToUTF8(deviceCaps.szPname);
-    auto portName = rawName;
-    MakeUniqueOutPortName(portName, index);
+    // A device that cannot be read is absent from the scan, not a reason to
+    // hide the other ones.
+    std::vector<Port> current;
+    winmm::get_port_list(current);
 
-    return {
-        {.api = libremidi::API::WINDOWS_MM,
-         .client = 0,
-         .device
-         = usb_device_identifier{.vendor_id = deviceCaps.wMid, .product_id = deviceCaps.wPid},
-         .port = index,
-         .manufacturer = "",
-         .device_name = "",
-         .port_name = rawName,
-         .display_name = portName}};
-  }
-
-  template <bool Input>
-  auto get_port_list() const noexcept
-      -> std::vector<std::conditional_t<Input, input_port, output_port>>
-  {
-    std::vector<std::conditional_t<Input, input_port, output_port>> portList;
-
-    if constexpr (Input)
+    if (notify)
     {
-      std::size_t nDevices = midiInGetNumDevs();
-      for (std::size_t i = 0; i < nDevices; ++i)
-      {
-        portList.push_back(to_in_port_info(i));
-      }
+      // For listed ports the numbered name identifies the occurrence.
+      auto report_missing = [](const auto& from, const auto& other, const auto& report) {
+        if (!report)
+          return;
+        for (const auto& port : from)
+        {
+          if (std::ranges::none_of(other, [&](const auto& p) {
+                return p.display_name == port.display_name && p.device == port.device;
+              }))
+            report(port);
+        }
+      };
+      report_missing(previous, current, removed);
+      report_missing(current, previous, added);
     }
-    else
-    {
-      std::size_t nDevices = midiOutGetNumDevs();
-      for (std::size_t i = 0; i < nDevices; ++i)
-      {
-        portList.push_back(to_out_port_info(i));
-      }
-    }
-    return portList;
+    previous = std::move(current);
+    notify = true;
   }
-
-  static constexpr bool INPUT = true;
-  static constexpr bool OUTPUT = false;
 
   std::vector<input_port> inputPortList;
   std::vector<output_port> outputPortList;
+  bool notifyInputs = configuration.notify_in_constructor;
+  bool notifyOutputs = configuration.notify_in_constructor;
 };
 }
 
@@ -183,7 +115,7 @@ public:
     thread = std::jthread([this](std::stop_token tk) {
       while (!tk.stop_requested())
       {
-        check_new_ports<true>();
+        check_new_ports();
         std::this_thread::sleep_for(this->configuration.poll_period);
       }
     });
@@ -208,7 +140,7 @@ public:
     thread = std::thread([this] {
       while (!stop_flag.test(std::memory_order_acquire))
       {
-        check_new_ports<true>();
+        check_new_ports();
         std::this_thread::sleep_for(this->configuration.poll_period);
       }
       sema.release();
@@ -238,7 +170,7 @@ public:
   explicit observer_manual(observer_configuration&& conf, winmm_observer_configuration&& apiconf)
       : observer_winmm{std::move(conf), std::move(apiconf)}
   {
-    this->configuration.manual_poll({.callback = [this] { this->check_new_ports<true>(); }});
+    this->configuration.manual_poll({.callback = [this] { this->check_new_ports(); }});
   }
 
   ~observer_manual() { }
@@ -250,6 +182,8 @@ template <>
 inline std::unique_ptr<observer_api> make<observer_winmm>(
     libremidi::observer_configuration&& conf, libremidi::winmm_observer_configuration&& api)
 {
+  if (!conf.has_callbacks())
+    return std::make_unique<observer_winmm>(std::move(conf), std::move(api));
   if (api.manual_poll)
     return std::make_unique<winmm::observer_manual>(std::move(conf), std::move(api));
   else
