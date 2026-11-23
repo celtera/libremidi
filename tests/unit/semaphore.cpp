@@ -73,3 +73,22 @@ TEST_CASE("a release gives up when the callback does not run", "[semaphore]")
   CHECK(answered.load());
   callback.join();
 }
+
+TEST_CASE("a cycle does not answer a request made after it started", "[semaphore]")
+{
+  semaphore_pair_lock lock;
+
+  // The cycle starts, then the other thread asks: this cycle did not see its change.
+  const auto cycle = lock.begin_cycle();
+  std::thread waiter{[&] { lock.prepare_release_client(); }};
+  while (lock.requested.load() == 0)
+    std::this_thread::yield();
+
+  lock.end_cycle(cycle);
+  CHECK(lock.acknowledged.load() == 0);
+
+  // The next one did.
+  lock.end_cycle(lock.begin_cycle());
+  waiter.join();
+  CHECK(lock.acknowledged.load() == 1);
+}

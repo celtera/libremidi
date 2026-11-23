@@ -117,6 +117,30 @@ struct jack_helpers : jack_client
 
   semaphore_pair_lock thread_lock;
 
+  // An output port being closed: its buffer still has to be emptied on each cycle,
+  // or JACK hands the events of its last cycle to the connected inputs again and again.
+  std::atomic<jack_port_t*> closing_output{nullptr};
+
+  // What the process callback runs on each cycle, for both kinds of client.
+  template <typename Self>
+  static void run_cycle(Self& self, jack_nframes_t nf)
+  {
+    // Read first: the requests answered at the end are the ones whose changes this cycle saw.
+    const auto request = self.thread_lock.begin_cycle();
+
+    if (jack_port_t* port = self.port; port != nullptr)
+    {
+      self.process(nf);
+    }
+    else if (jack_port_t* closing = self.closing_output.load(std::memory_order_acquire))
+    {
+      if (void* buffer = self.jack.port.get_buffer(closing, nf))
+        self.jack.midi.clear_buffer(buffer);
+    }
+
+    self.thread_lock.end_cycle(request);
+  }
+
   jack_helpers()
   {
     static std::atomic_int64_t instance{};
@@ -139,12 +163,8 @@ struct jack_helpers : jack_client
 
       configuration.set_process_func(
           {.token = this_instance,
-           .callback = [&self, p = std::weak_ptr{this->port.impl}](jack_nframes_t nf) -> int {
-        if (auto pt = p.lock())
-          if (pt->load())
-            self.process(nf);
-
-        self.thread_lock.check_client_released();
+           .callback = [&self](jack_nframes_t nf) -> int {
+        run_cycle(self, nf);
         return 0;
       }});
 
@@ -165,15 +185,7 @@ struct jack_helpers : jack_client
         }
 
         jack.set_process_callback(this->client, +[](jack_nframes_t nf, void* ctx) -> int {
-          auto& self = *static_cast<Self*>(ctx);
-          jack_port_t* port = self.port;
-
-          // Is port created?
-          if (port != nullptr)
-            self.process(nf);
-
-          // Also once the port is gone: do_close_port waits for this cycle.
-          self.thread_lock.check_client_released();
+          run_cycle(*static_cast<Self*>(ctx), nf);
           return 0;
         }, &self);
         jack.activate(this->client);
@@ -231,14 +243,25 @@ struct jack_helpers : jack_client
     if (this->port == nullptr)
       return stdx::error{};
 
-    // 1. Ensure that the next time the cycle runs it sees the port as nullptr
+    // 1. Ensure that the next time the cycle runs it sees the port as nullptr,
+    //    and that it empties the buffer of an output instead of writing to it
     jack_port_t* port_ptr = this->port.impl->load();
+    const bool is_output = jack.port.flags(port_ptr) & JackPortIsOutput;
+    if (is_output)
+      this->closing_output.store(port_ptr, std::memory_order_release);
     this->port = nullptr;
 
-    // 2. Signal through the semaphore and wait for the signal return
+    // 2. Wait for a cycle that started after that
     this->thread_lock.prepare_release_client();
 
-    // 3. Now we are sure that the client is not going to use the port anymore
+    // 3. Wait for the cycles that may still be emptying the buffer
+    if (is_output)
+    {
+      this->closing_output.store(nullptr, std::memory_order_release);
+      this->thread_lock.prepare_release_client();
+    }
+
+    // 4. Now we are sure that the client is not going to use the port anymore
     int err = jack.port.unregister(this->client, port_ptr);
     return from_errc(err);
   }

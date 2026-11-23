@@ -30,14 +30,22 @@ struct semaphore_pair_lock
         break;
   }
 
-  // Called by the callback on every cycle: does nothing unless someone waits.
-  void check_client_released()
+  // Called by the callback when a cycle starts, before it reads what the other thread changes...
+  std::uint64_t begin_cycle() const noexcept
   {
-    const auto request = this->requested.load(std::memory_order_acquire);
+    return this->requested.load(std::memory_order_acquire);
+  }
+
+  // ... and when it ends: only the requests made before the cycle started are answered.
+  // Does nothing unless someone waits.
+  void end_cycle(std::uint64_t request)
+  {
     if (this->acknowledged.load(std::memory_order_relaxed) != request)
     {
       this->acknowledged.store(request, std::memory_order_release);
       this->wakeup.release();
     }
   }
+
+  void check_client_released() { end_cycle(begin_cycle()); }
 };
