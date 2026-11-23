@@ -62,7 +62,16 @@ without preventing application loading if the end user does not use it.
 |               | JACK |
 |---------------|------|
 | MIDI 1        | Yes  |
-| MIDI 2        | N/A  |
+| MIDI 2        | Yes  |
 | Virtual ports | Yes  |
 | Observer      | Yes  |
 | Scheduling    | No   |
+
+### MIDI 2 over JACK
+The `JACK_UMP` back-end works with any JACK server: its ports are JACK MIDI ports
+that carry the MIDI 2 flag, and Universal MIDI Packets go through them unchanged.
+
+- PipeWire (1.4 and later) knows the flag and converts between such a port and a MIDI 1 client.
+- jack2 (as of 1.9.22) does not: a MIDI 1 client connected to one of these ports
+  receives the UMP bytes as they are, and UMP clients should only be connected to each other.
+  libremidi's own MIDI 1 JACK observer does not list these ports.
