@@ -7,8 +7,16 @@
 
 #include <jack/jack.h>
 
+#if defined(_WIN32) && __has_include(<winrt/base.h>)
+  #include <winrt/base.h>
+#endif
+
 #include <chrono>
+#include <optional>
+#include <stdexcept>
+#include <string>
 #include <thread>
+#include <vector>
 
 struct my_app
 {
