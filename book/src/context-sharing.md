@@ -18,12 +18,13 @@ When opening a port fails on a shared session, libremidi tries once on a new ses
 shares that one from then on if it works: a session does not survive a restart of the MIDI
 service. Ports that were open before stay on the previous session and have to be reopened.
 
-A shared connection follows its device: when the device is unplugged and plugged back, the
-SDK reopens the connection, and the ports that were open on it send and receive again
-without being reopened. A connection that was disconnected in the session behind libremidi's
-back, for instance through `MidiSession::DisconnectEndpointConnection` on a session you own,
-is not reopened: the next port opened on that endpoint creates a new connection, on which
-the inputs that were open continue to receive. Outputs opened before have to be reopened.
+A shared connection does not survive its device: when the device is unplugged, libremidi
+disconnects it, and sending on its ports reports an error. Reopen the ports when the
+observer reports the device again. The same holds for a connection that was disconnected
+in the session behind libremidi's back, for instance through
+`MidiSession::DisconnectEndpointConnection` on a session you own. In both cases the next
+port opened on that endpoint creates a new connection, on which the inputs that were open
+continue to receive. Outputs opened before have to be reopened.
 
 On a shared Windows MIDI Services connection, an exception during input delivery stops
 that input's current delivery, not its subscription. If the input is still open, its

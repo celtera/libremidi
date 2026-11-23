@@ -313,6 +313,7 @@ class ordinary_connection
 #else
       if (token.value) endpoint.MessageReceived(token);
 #endif
+      if (lost.value) endpoint.EndpointDeviceDisconnected(lost);
       session.DisconnectEndpointConnection(endpoint.ConnectionId());
     }
     CloseThreadpoolWork(retire);
@@ -324,8 +325,10 @@ public:
   winrt::com_ptr<IMidiEndpointConnectionRaw> raw;
 #endif
 
-  // A closed connection that its session no longer knows is never reopened.
-  // One that lost its device is still known: the SDK reopens it in place.
+  winrt::event_token lost{};
+
+  // A connection that lost its device, or that was disconnected underneath,
+  // is closed and unknown to its session: nothing reopens it.
   bool usable() const noexcept
   {
     try
@@ -362,12 +365,18 @@ public:
             if (receive_scope::inside) SubmitThreadpoolWork(p->retire);
             else delete p;
           }};
-      // With auto-reconnect the SDK reopens this connection, for every port
-      // sharing it, when its device comes back. Without, it stays open and
-      // silent after an unplug.
+      // Auto-reconnect is only asked for its notification: without it a
+      // connection stays open and silent after its device left. The connection
+      // the SDK reopens when the device returns carries no traffic, and keeps
+      // every other connection to that endpoint silent as long as it exists.
+      // Disconnect it as soon as the device leaves; the next open makes a new one.
       c->endpoint = session.CreateEndpointConnection(
           canonical_id, MidiEndpointConnectionSettings{false, true});
       if (!c->endpoint) throw winrt::hresult_error{E_FAIL};
+      c->lost = c->endpoint.EndpointDeviceDisconnected(
+          [session, id = c->endpoint.ConnectionId()](const auto&, const auto&) {
+        session.DisconnectEndpointConnection(id);
+      });
 #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
       c->endpoint.as(::IID_IMidiEndpointConnectionRaw, c->raw.put_void());
       c->callback.attach(new raw_callback{c->inputs});
