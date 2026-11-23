@@ -19,15 +19,11 @@ struct backend
   static const constexpr std::string_view name = "jack_ump";
   static const constexpr std::string_view display_name = "JACK (UMP)";
 
-  static inline bool available() noexcept
-  {
-    const auto& jack = libjack::instance();
-    if (!jack.available)
-      return false;
-
-    int major, minor, micro, patch;
-    jack.get_version(&major, &minor, &micro, &patch);
-    return (major >= 3 && minor >= 1 && micro >= 4);
-  }
+  // Any JACK server carries UMP: the ports are MIDI ports with the MIDI 2 flag set,
+  // and the packets go through unchanged. Servers that know the flag (PipeWire 1.4 and
+  // later) also convert for MIDI 1 clients; with the others, such as jack2, a MIDI 1
+  // client that connects to one of these ports gets the UMP bytes as they are.
+  // Whether to connect is left to the clients.
+  static inline bool available() noexcept { return libjack::instance().available; }
 };
 }
