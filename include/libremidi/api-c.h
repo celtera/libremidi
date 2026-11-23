@@ -35,7 +35,7 @@ enum libremidi_api
   WINDOWS_MIDI_SERVICES, /*!< Windows API for MIDI 2.0. Requires Windows 11 */
   KEYBOARD_UMP,          /*!< Computer keyboard input */
   NETWORK_UMP,           /*!< MIDI2 over IP */
-  JACK_UMP,              /*!< MIDI2 over JACK, type "32 bit raw UMP". Requires PipeWire v1.4+. */
+  JACK_UMP,              /*!< MIDI2 over JACK: MIDI ports with the MIDI 2 flag. Converted for MIDI 1 clients by PipeWire v1.4+ only. */
   PIPEWIRE_UMP,          /*!< MIDI2 over PipeWire. Requires v1.4+. */
   RAW_IO_UMP,            /*!< User-provided raw UMP I/O (serial, SPI, USB, etc.) */
 
