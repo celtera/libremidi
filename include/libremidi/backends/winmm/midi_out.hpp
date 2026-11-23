@@ -24,18 +24,17 @@ public:
     this->client_open_ = stdx::error{};
   }
 
-  ~midi_out_winmm() override
-  {
-    // Close a connection if it exists.
-    midi_out_winmm::close_port();
-    this->client_open_ = std::errc::not_connected;
-  }
+  ~midi_out_winmm() override { close_port(); }
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::WINDOWS_MM; }
 
   [[nodiscard]] stdx::error do_open(unsigned int portNumber)
   {
-    MMRESULT result = midiOutOpen(&this->outHandle, portNumber, 0, 0, CALLBACK_NULL);
+    if (outHandle)
+      return std::errc::device_or_resource_busy;
+
+    HMIDIOUT handle{};
+    MMRESULT result = midiOutOpen(&handle, portNumber, 0, 0, CALLBACK_NULL);
     if (result != MMSYSERR_NOERROR)
     {
       libremidi_handle_error(
@@ -45,6 +44,7 @@ public:
       return from_mmerr(result);
     }
 
+    outHandle = handle;
     return stdx::error{};
   }
 
@@ -71,11 +71,23 @@ public:
 
   stdx::error close_port() override
   {
-    if (this->outHandle)
-      midiOutClose(this->outHandle);
+    if (!outHandle)
+      return {};
 
-    this->outHandle = nullptr;
-    return stdx::error{};
+    auto result = midiOutClose(outHandle);
+    if (result == MIDIERR_STILLPLAYING)
+    {
+      // The driver still holds output buffers: get them back, then close.
+      midiOutReset(outHandle);
+      result = midiOutClose(outHandle);
+    }
+
+    // Never keep a handle that could not be closed: the port would stay
+    // neither usable nor reopenable.
+    outHandle = nullptr;
+    if (result != MMSYSERR_NOERROR)
+      return from_mmerr(result);
+    return {};
   }
 
   stdx::error send_message(const unsigned char* message, size_t size) override
@@ -149,7 +161,7 @@ public:
   }
 
 private:
-  HMIDIOUT outHandle; // Handle to Midi Output Device
+  HMIDIOUT outHandle{}; // Null until midiOutOpen succeeds.
   std::vector<char> buffer;
 };
 

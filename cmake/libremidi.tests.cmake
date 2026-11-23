@@ -1,3 +1,12 @@
+# Needs neither Catch2 nor the libremidi target.
+if(LIBREMIDI_HAS_WINMM)
+  add_executable(winmm_output_lifetime_test tests/unit/winmm_output_lifetime.cpp)
+  target_include_directories(winmm_output_lifetime_test PRIVATE "${PROJECT_SOURCE_DIR}/include")
+  target_compile_definitions(winmm_output_lifetime_test PRIVATE LIBREMIDI_NO_BOOST UNICODE _UNICODE)
+  target_link_libraries(winmm_output_lifetime_test PRIVATE winmm)
+  add_test(NAME winmm_output_lifetime_test COMMAND winmm_output_lifetime_test)
+endif()
+
 if(CMAKE_VERSION VERSION_GREATER 3.30)
     set(CMAKE_FETCHCONTENT_SYSTEM_KEYWORD SYSTEM)
 endif()

@@ -82,6 +82,8 @@ public:
         return "No driver callback";
       case MMSYSERR_MOREDATA:
         return "More data";
+      case MIDIERR_STILLPLAYING:
+        return "MIDI output buffers are still playing";
     }
     return "Unknown error code";
   }
