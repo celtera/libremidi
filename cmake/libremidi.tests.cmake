@@ -93,6 +93,15 @@ if(LIBREMIDI_HAS_WINMM)
   target_compile_definitions(winmm_enumeration_test PRIVATE LIBREMIDI_NO_BOOST UNICODE _UNICODE)
   target_link_libraries(winmm_enumeration_test PRIVATE winmm)
   add_test(NAME winmm_enumeration_test COMMAND winmm_enumeration_test)
+
+  # Isolate the instrumented backend from the library's own inline definitions.
+  add_executable(winmm_hotplug_test tests/integration/winmm_hotplug.cpp)
+  target_include_directories(winmm_hotplug_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+  target_compile_definitions(winmm_hotplug_test PRIVATE LIBREMIDI_NO_BOOST UNICODE _UNICODE)
+  target_compile_features(winmm_hotplug_test PRIVATE cxx_std_${CMAKE_CXX_STANDARD})
+  target_link_libraries(winmm_hotplug_test PRIVATE winmm)
+  add_test(NAME winmm_hotplug_test COMMAND winmm_hotplug_test)
+  set_tests_properties(winmm_hotplug_test PROPERTIES TIMEOUT 30)
 endif()
 
 # PipeWire shared-context regression tests. Standalone programs (no Catch2):

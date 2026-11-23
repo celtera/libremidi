@@ -82,6 +82,7 @@ module;
   #include <unknwn.h>
   #if defined(LIBREMIDI_WINMM)
     #include <mmsystem.h>
+    #include <cfgmgr32.h>
   #endif
 
   #if defined(LIBREMIDI_WINUWP)
