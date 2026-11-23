@@ -135,7 +135,9 @@ int main(void)
     return ret;
 
   observer_api_conf.configuration_type = Observer;
-  observer_api_conf.api = ALSA_SEQ;
+  // Let the library pick a working API. A named one fails with -ENOTSUP
+  // where it is not available.
+  observer_api_conf.api = UNSPECIFIED;
 
   libremidi_midi_observer_handle* observer = NULL;
   ret = libremidi_midi_observer_new(&observer_conf, &observer_api_conf, &observer);
@@ -166,7 +168,7 @@ int main(void)
     goto free_observer;
 
   midi_in_api_conf.configuration_type = Input;
-  midi_in_api_conf.api = ALSA_SEQ;
+  midi_in_api_conf.api = UNSPECIFIED;
 
   libremidi_midi_in_handle* midi_in = NULL;
   ret = libremidi_midi_in_new(&midi_in_conf, &midi_in_api_conf, &midi_in);
@@ -189,7 +191,7 @@ int main(void)
     goto free_midi_in;
 
   midi_out_api_conf.configuration_type = Output;
-  midi_out_api_conf.api = ALSA_SEQ;
+  midi_out_api_conf.api = UNSPECIFIED;
 
   libremidi_midi_out_handle* midi_out = NULL;
   ret = libremidi_midi_out_new(&midi_out_conf, &midi_out_api_conf, &midi_out);

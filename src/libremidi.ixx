@@ -84,20 +84,26 @@ module;
     #include <mmsystem.h>
   #endif
 
-  #if defined(LIBREMIDI_WINUWP)
+  #if defined(LIBREMIDI_WINUWP) || defined(LIBREMIDI_WINMIDI)
     #include <winrt/Windows.Devices.Enumeration.h>
-    #include <winrt/Windows.Devices.Midi.h>
     #include <winrt/Windows.Foundation.Collections.h>
     #include <winrt/Windows.Foundation.h>
     #include <winrt/Windows.Storage.Streams.h>
   #endif
 
+  #if defined(LIBREMIDI_WINUWP)
+    #include <winrt/Windows.Devices.Midi.h>
+  #endif
+
   #if defined(LIBREMIDI_WINMIDI)
-    #include <winrt/Microsoft.Windows.Devices.Midi2.h>
-    #include <WindowsMidiServicesAppSdkComExtensions.h>
-    #include <init/Microsoft.Windows.Devices.Midi2.Initialization.hpp>
+    #include <winrt/Windows.Devices.Midi2.h>
+    #include <winrt/Windows.Devices.Midi2.Enumeration.h>
+    #include <winrt/Windows.Devices.Midi2.Transports.Virtual.h>
+    #include <libremidi/backends/winmidi/com.hpp>
   #endif
 #endif
+
+#include <libremidi/backends/winmidi/session_fwd.hpp>
 
 #if !defined(_WIN32)
   #include <dlfcn.h>

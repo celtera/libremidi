@@ -19,21 +19,21 @@ std::string_view get_version() noexcept
 LIBREMIDI_INLINE std::string_view get_api_name(libremidi::API api)
 {
   std::string_view ret;
-  midi_any::for_backend(api, [&](auto& b) { ret = b.name; });
+  midi_any::for_compiled_backend(api, [&](auto& b) { ret = b.name; });
   return ret;
 }
 
 LIBREMIDI_INLINE std::string_view get_api_display_name(libremidi::API api)
 {
   std::string_view ret;
-  midi_any::for_backend(api, [&](auto& b) { ret = b.display_name; });
+  midi_any::for_compiled_backend(api, [&](auto& b) { ret = b.display_name; });
   return ret;
 }
 
 LIBREMIDI_INLINE libremidi::API get_compiled_api_by_name(std::string_view name)
 {
   libremidi::API ret = libremidi::API::UNSPECIFIED;
-  midi_any::for_all_backends([&](auto& b) {
+  midi_any::for_compiled_backends([&](auto& b) {
     if (name == b.name)
       ret = b.API;
   });
@@ -43,14 +43,14 @@ LIBREMIDI_INLINE libremidi::API get_compiled_api_by_name(std::string_view name)
 [[nodiscard]] LIBREMIDI_INLINE std::vector<libremidi::API> available_apis() noexcept
 {
   std::vector<libremidi::API> apis;
-  midi1::for_all_backends([&](auto b) { apis.push_back(b.API); });
+  midi1::for_available_backends([&](auto b) { apis.push_back(b.API); });
   return apis;
 }
 
 [[nodiscard]] LIBREMIDI_INLINE std::vector<libremidi::API> available_ump_apis() noexcept
 {
   std::vector<libremidi::API> apis;
-  midi2::for_all_backends([&](auto b) { apis.push_back(b.API); });
+  midi2::for_available_backends([&](auto b) { apis.push_back(b.API); });
   return apis;
 }
 
@@ -58,7 +58,7 @@ LIBREMIDI_INLINE
 libremidi::API midi_api(const input_api_configuration& conf)
 {
   libremidi::API ret = libremidi::API::UNSPECIFIED;
-  midi_any::for_all_backends([&]<typename T>(T) {
+  midi_any::for_compiled_backends([&]<typename T>(T) {
     if (get_if<typename T::midi_in_configuration>(&conf))
     {
       ret = T::API;
@@ -70,7 +70,7 @@ LIBREMIDI_INLINE
 libremidi::API midi_api(const output_api_configuration& conf)
 {
   libremidi::API ret = libremidi::API::UNSPECIFIED;
-  midi_any::for_all_backends([&]<typename T>(T) {
+  midi_any::for_compiled_backends([&]<typename T>(T) {
     if (get_if<typename T::midi_out_configuration>(&conf))
     {
       ret = T::API;
@@ -82,7 +82,7 @@ LIBREMIDI_INLINE
 libremidi::API midi_api(const observer_api_configuration& conf)
 {
   libremidi::API ret = libremidi::API::UNSPECIFIED;
-  midi_any::for_all_backends([&]<typename T>(T) {
+  midi_any::for_compiled_backends([&]<typename T>(T) {
     if (get_if<typename T::midi_observer_configuration>(&conf))
     {
       ret = T::API;
@@ -94,8 +94,8 @@ libremidi::API midi_api(const observer_api_configuration& conf)
 LIBREMIDI_INLINE
 input_api_configuration midi_in_configuration_for(libremidi::API api)
 {
-  input_api_configuration ret;
-  midi_any::for_backend(api, [&]<typename T>(T) {
+  input_api_configuration ret{api};
+  midi_any::for_compiled_backend(api, [&]<typename T>(T) {
     using conf_type = typename T::midi_in_configuration;
     ret = conf_type{};
   });
@@ -105,8 +105,8 @@ input_api_configuration midi_in_configuration_for(libremidi::API api)
 LIBREMIDI_INLINE
 output_api_configuration midi_out_configuration_for(libremidi::API api)
 {
-  output_api_configuration ret;
-  midi_any::for_backend(api, [&]<typename T>(T) {
+  output_api_configuration ret{api};
+  midi_any::for_compiled_backend(api, [&]<typename T>(T) {
     using conf_type = typename T::midi_out_configuration;
     ret = conf_type{};
   });
@@ -116,8 +116,8 @@ output_api_configuration midi_out_configuration_for(libremidi::API api)
 LIBREMIDI_INLINE
 observer_api_configuration observer_configuration_for(libremidi::API api)
 {
-  observer_api_configuration ret;
-  midi_any::for_backend(api, [&]<typename T>(T) {
+  observer_api_configuration ret{api};
+  midi_any::for_compiled_backend(api, [&]<typename T>(T) {
     using conf_type = typename T::midi_observer_configuration;
     ret = conf_type{};
   });
@@ -138,6 +138,34 @@ output_api_configuration midi_out_configuration_for(const libremidi::observer& o
 }
 
 LIBREMIDI_INLINE
+std::optional<input_port> in_default_port(const observer_api_configuration& conf) noexcept
+try
+{
+  libremidi::observer obs{{}, conf};
+  if (auto ports = obs.get_input_ports(); !ports.empty())
+    return ports.front();
+  return std::nullopt;
+}
+catch (...)
+{
+  return std::nullopt;
+}
+
+LIBREMIDI_INLINE
+std::optional<output_port> out_default_port(const observer_api_configuration& conf) noexcept
+try
+{
+  libremidi::observer obs{{}, conf};
+  if (auto ports = obs.get_output_ports(); !ports.empty())
+    return ports.front();
+  return std::nullopt;
+}
+catch (...)
+{
+  return std::nullopt;
+}
+
+LIBREMIDI_INLINE
 std::optional<input_port> in_default_port(libremidi::API api) noexcept
 try
 {
@@ -146,7 +174,7 @@ try
     return ports.front();
   return std::nullopt;
 }
-catch (const std::exception& e)
+catch (...)
 {
   return std::nullopt;
 }
@@ -160,9 +188,20 @@ try
     return ports.front();
   return std::nullopt;
 }
-catch (const std::exception& e)
+catch (...)
 {
   return std::nullopt;
+}
+
+// The platform's preferred backend when it can be used here. Otherwise an
+// unspecified configuration: the constructors then pick the first backend
+// that works, instead of failing on a backend the caller never asked for.
+template <typename Configuration>
+Configuration default_configuration(libremidi::API api, Configuration (*make)(libremidi::API))
+{
+  if (midi_any::is_available(api))
+    return make(api);
+  return Configuration{};
 }
 
 namespace midi1
@@ -170,19 +209,19 @@ namespace midi1
 LIBREMIDI_INLINE
 input_api_configuration in_default_configuration()
 {
-  return midi_in_configuration_for(default_api());
+  return default_configuration(default_api(), &midi_in_configuration_for);
 }
 
 LIBREMIDI_INLINE
 output_api_configuration out_default_configuration()
 {
-  return midi_out_configuration_for(default_api());
+  return default_configuration(default_api(), &midi_out_configuration_for);
 }
 
 LIBREMIDI_INLINE
 observer_api_configuration observer_default_configuration()
 {
-  return observer_configuration_for(default_api());
+  return default_configuration(default_api(), &observer_configuration_for);
 }
 }
 
@@ -191,19 +230,19 @@ namespace midi2
 LIBREMIDI_INLINE
 input_api_configuration in_default_configuration()
 {
-  return midi_in_configuration_for(default_api());
+  return default_configuration(default_api(), &midi_in_configuration_for);
 }
 
 LIBREMIDI_INLINE
 output_api_configuration out_default_configuration()
 {
-  return midi_out_configuration_for(default_api());
+  return default_configuration(default_api(), &midi_out_configuration_for);
 }
 
 LIBREMIDI_INLINE
 observer_api_configuration observer_default_configuration()
 {
-  return observer_configuration_for(default_api());
+  return default_configuration(default_api(), &observer_configuration_for);
 }
 }
 

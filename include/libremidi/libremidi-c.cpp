@@ -24,6 +24,22 @@ struct libremidi_midi_out_handle
   libremidi::midi_out self;
 };
 
+// An API asked for by name is never replaced by another one. Fail instead of
+// handing back an object that does nothing.
+template <typename Handle>
+static int libremidi_publish_handle(Handle* ptr, int requested, Handle** out)
+{
+  const auto api = static_cast<libremidi::API>(requested);
+  if (api != libremidi::API::UNSPECIFIED && api != libremidi::API::DUMMY
+      && ptr->self.get_current_api() == libremidi::API::DUMMY)
+  {
+    delete ptr;
+    return -ENOTSUP;
+  }
+  *out = ptr;
+  return 0;
+}
+
 NAMESPACE_LIBREMIDI
 {
 
@@ -48,14 +64,14 @@ void libremidi_midi1_available_apis(void* ctx, void (*cb)(void* ctx, libremidi_a
 {
   if (!cb)
     return;
-  libremidi::midi1::for_all_backends([=](auto b) { cb(ctx, b.API); });
+  libremidi::midi1::for_available_backends([=](auto b) { cb(ctx, b.API); });
 }
 
 void libremidi_midi2_available_apis(void* ctx, void (*cb)(void* ctx, libremidi_api))
 {
   if (!cb)
     return;
-  libremidi::midi2::for_all_backends([=](auto b) { cb(ctx, b.API); });
+  libremidi::midi2::for_available_backends([=](auto b) { cb(ctx, b.API); });
 }
 
 const char* libremidi_api_identifier(libremidi_api api)
@@ -70,12 +86,7 @@ const char* libremidi_api_display_name(libremidi_api api)
 
 libremidi_api libremidi_get_compiled_api_by_identifier(const char* name)
 {
-  libremidi_api ret = libremidi_api::UNSPECIFIED;
-  libremidi::midi_any::for_all_backends([&](auto& b) {
-    if (name == b.name)
-      ret = b.API;
-  });
-  return ret;
+  return libremidi::get_compiled_api_by_name(name);
 }
 
 int libremidi_midi_api_configuration_init(libremidi_api_configuration* conf)
@@ -179,6 +190,8 @@ int libremidi_midi_observer_new(
   if (!out || !c)
     return -EINVAL;
 
+  *out = nullptr;
+
   libremidi::observer_configuration conf;
   libremidi::assign_error_callback(c->on_error, conf.on_error);
   libremidi::assign_error_callback(c->on_warning, conf.on_warning);
@@ -219,8 +232,7 @@ int libremidi_midi_observer_new(
   {
     auto ptr = new libremidi_midi_observer_handle{
         libremidi::observer{std::move(conf), std::move(api_conf)}};
-    *out = ptr;
-    return 0;
+    return libremidi_publish_handle(ptr, api->api, out);
   }
   catch (...)
   {
@@ -316,7 +328,8 @@ int libremidi_midi_in_new(
       {
         auto ptr = new libremidi_midi_in_handle{
             libremidi::midi_in{std::move(conf), std::move(api_conf)}};
-        *out = ptr;
+        if (int ret = libremidi_publish_handle(ptr, api->api, out); ret != 0)
+          return ret;
       }
       catch (...)
       {
@@ -360,7 +373,8 @@ int libremidi_midi_in_new(
       {
         auto ptr = new libremidi_midi_in_handle{
             libremidi::midi_in{std::move(conf), std::move(api_conf)}};
-        *out = ptr;
+        if (int ret = libremidi_publish_handle(ptr, api->api, out); ret != 0)
+          return ret;
       }
       catch (...)
       {
@@ -441,7 +455,8 @@ int libremidi_midi_out_new(
   {
     auto ptr
         = new libremidi_midi_out_handle{libremidi::midi_out{std::move(conf), std::move(api_conf)}};
-    *out = ptr;
+    if (int ret = libremidi_publish_handle(ptr, api->api, out); ret != 0)
+      return ret;
   }
   catch (...)
   {

@@ -26,6 +26,12 @@ target_link_libraries(conversion_test PRIVATE libremidi Catch2::Catch2WithMain)
 add_executable(controller_translation_test tests/unit/controller_translation.cpp)
 target_link_libraries(controller_translation_test PRIVATE libremidi Catch2::Catch2WithMain)
 
+add_executable(backend_selection_test tests/unit/backend_selection.cpp)
+target_link_libraries(backend_selection_test PRIVATE libremidi Catch2::Catch2WithMain)
+if(LIBREMIDI_HEADER_ONLY)
+  target_sources(backend_selection_test PRIVATE include/libremidi/libremidi-c.cpp)
+endif()
+
 add_executable(error_test tests/unit/error.cpp)
 target_link_libraries(error_test PRIVATE libremidi Catch2::Catch2WithMain)
 
@@ -68,6 +74,7 @@ include(CTest)
 add_test(NAME conversion_test COMMAND conversion_test)
 add_test(NAME controller_translation_test COMMAND controller_translation_test)
 add_test(NAME error_test COMMAND error_test)
+add_test(NAME backend_selection_test COMMAND backend_selection_test)
 add_test(NAME midiin_test COMMAND midiin_test --allow-running-no-tests)
 add_test(NAME midiout_test COMMAND midiout_test --allow-running-no-tests)
 add_test(NAME midifile_read_test COMMAND midifile_read_test)
@@ -79,6 +86,12 @@ add_test(NAME midi_stream_decoder_stream_test COMMAND midi_stream_decoder_stream
 add_test(NAME midi_timing_test COMMAND midi_timing_test)
 add_test(NAME rawio_test COMMAND rawio_test)
 add_test(NAME observer_filters_test COMMAND observer_filters_test)
+
+if(LIBREMIDI_HAS_WINMIDI)
+  add_executable(winmidi_activation_test tests/integration/winmidi_activation.cpp)
+  target_link_libraries(winmidi_activation_test PRIVATE libremidi)
+  add_test(NAME winmidi_activation_test COMMAND winmidi_activation_test)
+endif()
 
 if(LIBREMIDI_HAS_COREMIDI)
   add_executable(coremidi_observer_test tests/integration/coremidi_observer.cpp)

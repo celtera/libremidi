@@ -12,29 +12,13 @@ NAMESPACE_LIBREMIDI
 
 LIBREMIDI_STATIC_INLINE_IMPLEMENTATION std::unique_ptr<observer_api> make_observer(const auto& base_conf)
 {
-  for (const auto& api : available_apis())
-  {
-    try
-    {
-      if (auto impl = make_observer(base_conf, observer_configuration_for(api)))
-        return impl;
-    }
-    catch (const std::exception& e)
-    {
-    }
-  }
-
-  for (const auto& api : available_ump_apis())
-  {
-    try
-    {
-      if (auto impl = make_observer(base_conf, observer_configuration_for(api)))
-        return impl;
-    }
-    catch (const std::exception& e)
-    {
-    }
-  }
+  if (auto impl = midi_any::make_first_available<observer_api>(
+          [&]<typename T>(T) {
+            return libremidi::make<typename T::midi_observer>(
+                observer_configuration{base_conf}, typename T::midi_observer_configuration{});
+          },
+          midi1::available_backends, midi2::available_backends))
+    return impl;
 
   return std::make_unique<observer_dummy>(observer_configuration{}, dummy_configuration{});
 }
@@ -43,7 +27,8 @@ LIBREMIDI_INLINE auto make_observer_impl(auto base_conf, observer_api_configurat
 {
   std::unique_ptr<observer_api> ptr;
   auto from_api = [&]<typename T>(T& /*backend*/) mutable {
-    if (auto conf = get_if<typename T::midi_observer_configuration>(&api_conf))
+    if (auto conf = get_if<typename T::midi_observer_configuration>(&api_conf);
+        conf && midi_any::ready<T>())
     {
       ptr = libremidi::make<typename T::midi_observer>(std::move(base_conf), std::move(*conf));
       return true;
@@ -76,10 +61,7 @@ make_observer(const auto& base_conf, observer_api_configuration api_conf)
   }
   else
   {
-    if (auto api = libremidi::midi_api(api_conf); api == libremidi::API::UNSPECIFIED)
-      return {};
-    else
-      return make_observer_impl(base_conf, api_conf);
+    return make_observer_impl(base_conf, std::move(api_conf));
   }
 }
 

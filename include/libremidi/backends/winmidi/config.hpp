@@ -3,29 +3,21 @@
 
 #include <string>
 
-#if !defined(LIBREMIDI_MODULE_BUILD) || !defined(_WIN32)
-namespace winrt::Microsoft::Windows::Devices::Midi2
-{
-struct MidiSession;
-struct MidiEndpointDeviceInformation;
-struct MidiEndpointConnection;
-}
-#endif
+#include <libremidi/backends/winmidi/session_fwd.hpp>
 
-// TODO allow to share midi session and endpoints
 NAMESPACE_LIBREMIDI::winmidi
 {
 
 struct input_configuration
 {
   std::string client_name = "libremidi input";
-  winrt::Microsoft::Windows::Devices::Midi2::MidiSession* context{};
+  winrt::Windows::Devices::Midi2::MidiSession* context{};
 };
 
 struct output_configuration
 {
   std::string client_name = "libremidi output";
-  winrt::Microsoft::Windows::Devices::Midi2::MidiSession* context{};
+  winrt::Windows::Devices::Midi2::MidiSession* context{};
 };
 
 struct observer_configuration

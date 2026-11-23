@@ -19,8 +19,7 @@ struct backend
   static const constexpr std::string_view name = "winmidi";
   static const constexpr std::string_view display_name = "Windows MIDI Services";
 
-  static inline bool available() noexcept {
-    return libremidi::instance<winmidi_shared_data_instance>()->ready;
-  }
+  static inline bool available() noexcept { return runtime_available(); }
+  static inline bool ready() noexcept { return service_available(); }
 };
 } // NAMESPACE_LIBREMIDI

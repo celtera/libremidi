@@ -10,6 +10,12 @@ try
 {
   winrt::init_apartment();
   std::cerr << "API: " << api::name << "\n";
+  // Without the runtime, the SDK calls below would throw.
+  if (!api::available())
+  {
+    std::cerr << "Windows MIDI Services is not available on this system\n";
+    return 0;
+  }
 
   libremidi::observer_configuration obs_config{.track_any = false};
   api::midi_observer_configuration obs_api_config;
@@ -37,14 +43,14 @@ try
 
   // Bring your own shared MidiSession:
   {
-    using namespace winrt::Microsoft::Windows::Devices::Midi2;
+    using namespace winrt::Windows::Devices::Midi2;
     auto my_session = MidiSession::Create(L"my app");
 
     std::vector<std::optional<libremidi::midi_in>> vec;
     vec.reserve(ports.size());
     static std::mutex mtx;
 
-    for (int i = 0; i < ports.size(); i++)
+    for (std::size_t i = 0; i < ports.size(); i++)
     {
       libremidi::ump_input_configuration in_config;
       in_config.on_message = [i, ports](const libremidi::ump& m) {
@@ -64,5 +70,10 @@ try
 catch (const std::exception& error)
 {
   std::cerr << error.what() << std::endl;
+  exit(EXIT_FAILURE);
+}
+catch (const winrt::hresult_error& error)
+{
+  std::cerr << winrt::to_string(error.message()) << std::endl;
   exit(EXIT_FAILURE);
 }

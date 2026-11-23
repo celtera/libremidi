@@ -1,4 +1,5 @@
 #pragma once
+#include <mutex>
 #include <optional>
 #include <libremidi/backends/winmidi/config.hpp>
 #include <libremidi/backends/winmidi/helpers.hpp>
@@ -14,7 +15,6 @@ struct port_info
 
 class observer_impl final
     : public observer_api
-    , public winmidi_shared_data
 {
 public:
   struct
@@ -101,7 +101,7 @@ public:
   auto to_port_info(const MidiEndpointDeviceInformation& p, const auto& gp)
       const noexcept -> std::conditional_t<Input, input_port, output_port>
   {
-    const auto& tinfo = p.GetTransportSuppliedInfo();
+    const auto tinfo = p.GetTransportSuppliedInfo();
 
     return {
         {.api = libremidi::API::WINDOWS_MIDI_SERVICES,
@@ -109,13 +109,13 @@ public:
          .container = std::bit_cast<libremidi::uuid>(p.ContainerId()),
          .device = to_string(p.EndpointDeviceId()),
          .port = gp.Number(),
-         .manufacturer = to_string(tinfo.ManufacturerName),
-         .product = to_string(tinfo.Name),
-         .serial = to_string(tinfo.SerialNumber),
+         .manufacturer = tinfo ? to_string(tinfo.ManufacturerName()) : std::string{},
+         .product = tinfo ? to_string(tinfo.Name()) : std::string{},
+         .serial = tinfo ? to_string(tinfo.SerialNumber()) : std::string{},
          .device_name = to_string(p.Name()),
          .port_name = to_string(gp.Name()),
          .display_name = to_string(gp.Name()) + " " + std::to_string(gp.Number()),
-         .type = code_to_type(to_string(p.GetTransportSuppliedInfo().TransportCode))}};
+         .type = tinfo ? code_to_type(to_string(tinfo.TransportCode())) : transport_type::unknown}};
   }
 
   //! The transport comes from the endpoint's transport code, so it is only
@@ -143,11 +143,6 @@ public:
 
     for (const auto& ep : MidiEndpointDeviceInformation::FindAll())
     {
-      if (ep.Name().starts_with(L"Diagnostics"))
-      {
-        continue;
-      }
-
       for (const auto& gp : ep.GetDeclaredFunctionBlocks())
       {
         if (gp.Direction() != MidiFunctionBlockDirection::BlockOutput)
@@ -172,11 +167,6 @@ public:
 
     for (const auto& ep : MidiEndpointDeviceInformation::FindAll())
     {
-      if (ep.Name().starts_with(L"Diagnostics"))
-      {
-        continue;
-      }
-
       for (const auto& gp : ep.GetDeclaredFunctionBlocks())
       {
         if (gp.Direction() != MidiFunctionBlockDirection::BlockInput)
@@ -206,18 +196,16 @@ public:
       const MidiEndpointDeviceWatcher&,
       const MidiEndpointDeviceInformationUpdatedEventArgs& result)
   {
-    // OPTIMIZEME
-    remove_device(result.EndpointDeviceId());
-
-    add_device(
-        MidiEndpointDeviceInformation::CreateFromEndpointDeviceId(result.EndpointDeviceId()));
+    const auto device = result.UpdatedDevice();
+    remove_device(device.EndpointDeviceId());
+    add_device(device);
   }
 
   void on_device_removed(
       const MidiEndpointDeviceWatcher&,
       const MidiEndpointDeviceInformationRemovedEventArgs& result)
   {
-    remove_device(result.EndpointDeviceId());
+    remove_device(result.RemovedDevice().EndpointDeviceId());
   }
 
   void add_block(const MidiEndpointDeviceInformation& ep, const auto& gp)

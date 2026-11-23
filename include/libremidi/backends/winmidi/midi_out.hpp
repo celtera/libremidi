@@ -11,7 +11,6 @@ NAMESPACE_LIBREMIDI::winmidi
 class midi_out_impl final
     : public midi2::out_api
     , public error_handler
-    , public winmidi_shared_data
 {
 public:
   struct
@@ -26,6 +25,8 @@ public:
             configuration.context ? *configuration.context
                                   : MidiSession::Create(to_hstring(configuration.client_name))}
   {
+    if (!m_session)
+      return;
     this->client_open_ = stdx::error{};
   }
 
@@ -52,7 +53,7 @@ public:
       if (!m_endpoint)
         return std::errc::device_or_resource_busy;
   #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
-      m_endpoint.as(libremidi::IID_IMidiEndpointConnectionRaw, m_raw_endpoint.put_void());
+      m_endpoint.as(::IID_IMidiEndpointConnectionRaw, m_raw_endpoint.put_void());
     #endif
       m_endpoint.Open();
 
@@ -68,8 +69,7 @@ public:
   stdx::error open_virtual_port(std::string_view port_name) override
   {
     // Create endpoint information for the virtual device
-    using namespace winrt::Microsoft::Windows::Devices::Midi2;
-    using namespace winrt::Microsoft::Windows::Devices::Midi2::Endpoints::Virtual;
+    using namespace midi2v;
 
     auto conf = setup_virtualdevice_config(configuration.client_name, port_name, port_name, MidiFunctionBlockDirection::BlockOutput);
 
@@ -119,20 +119,20 @@ public:
     switch (bytes / 4)
     {
       case 1:
-        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(1, (UINT32*)ump));
-        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 1, (UINT32*)ump);
+        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(1, ump));
+        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 1, ump);
         break;
       case 2:
-        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(2, (UINT32*)ump));
-        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 2, (UINT32*)ump);
+        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(2, ump));
+        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 2, ump);
         break;
       case 3:
-        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(3, (UINT32*)ump));
-        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 3, (UINT32*)ump);
+        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(3, ump));
+        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 3, ump);
         break;
       case 4:
-        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(4, (UINT32*)ump));
-        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 4, (UINT32*)ump);
+        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(4, ump));
+        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 4, ump);
         break;
       default:
         return std::errc::bad_message;
@@ -196,12 +196,12 @@ public:
 
 private:
   MidiSession m_session;
-  winrt::Microsoft::Windows::Devices::Midi2::MidiEndpointConnection m_endpoint{nullptr};
+  MidiEndpointConnection m_endpoint{nullptr};
 #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
   winrt::impl::com_ref<IMidiEndpointConnectionRaw> m_raw_endpoint{};
 #endif
 #if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
-  winrt::Microsoft::Windows::Devices::Midi2::Endpoints::Virtual::MidiVirtualDevice m_virtual{nullptr};
+  midi2v::MidiVirtualDevice m_virtual{nullptr};
 #endif
 };
 

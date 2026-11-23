@@ -129,6 +129,17 @@ jobs:
             examples: 0
           }
 
+        include:
+          - library_mode: LIBRARY
+            boost: 0
+            config:
+              name: "clang-cl x86_64"
+              os: windows-latest
+              cmakeflags: "-T ClangCL"
+              test_target: "RUN_TESTS"
+              tests: 1
+              examples: 1
+
         exclude:
           - config: { name: "iOS" }
             boost: 1
