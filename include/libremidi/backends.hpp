@@ -1,10 +1,10 @@
 #pragma once
 #include <libremidi/config.hpp>
 
-#include <concepts>
 #include <exception>
 #include <memory>
 #include <tuple>
+#include <type_traits>
 
 #if !__has_include(<jack/jack.h>)
   #if defined(LIBREMIDI_JACK)
@@ -230,7 +230,7 @@ void for_compiled_backend(libremidi::API api, F&& f)
 template <typename Backend>
 bool ready() noexcept
 {
-  if constexpr (requires { { Backend::ready() } -> std::convertible_to<bool>; })
+  if constexpr (requires { requires std::is_convertible_v<decltype(Backend::ready()), bool>; })
     return Backend::ready();
   else
     return Backend::available();
