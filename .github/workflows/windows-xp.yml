@@ -1,0 +1,57 @@
+name: Windows XP
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    tags: ['v*']
+    paths-ignore: ['book/**', '**.md']
+  pull_request:
+    paths-ignore: ['book/**', '**.md']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  winmm:
+    name: Windows XP x86 (WinMM)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install LLVM-MinGW-XP
+        working-directory: ${{ runner.temp }}
+        run: |
+          release=llvm-mingw-xp-23.1.5
+          archive=$release-msvcrt-ubuntu-22.04-x86_64.tar.xz
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors "https://github.com/mon/llvm-mingw-xp/releases/download/$release/$archive" -o "$archive"
+          echo "26397945aa07e920e08b0390583770d0ae6aee3011a8bc5d74ea0a9d087d440f  $archive" | sha256sum --check
+          mkdir llvm-mingw-xp
+          tar -xJf "$archive" --strip-components=1 -C llvm-mingw-xp
+          echo "$RUNNER_TEMP/llvm-mingw-xp/bin" >> "$GITHUB_PATH"
+
+      - name: Cross-compile WinMM and link midiprobe and echo
+        run: |
+          cmake -S . -B build -G Ninja \
+            --toolchain "$RUNNER_TEMP/llvm-mingw-xp/toolchain-files/cmake/i686-mingw32-clang.cmake" \
+            -DCMAKE_BUILD_TYPE=Release -DLIBREMIDI_EXAMPLES=ON -DLIBREMIDI_CI=ON \
+            -DLIBREMIDI_NO_WINUWP=ON -DLIBREMIDI_NO_WINMIDI=ON -DLIBREMIDI_NO_KDMAPI=ON \
+            -DLIBREMIDI_NO_BOOST=ON -DLIBREMIDI_NO_NETWORK=ON -DLIBREMIDI_NO_JACK=ON
+          cmake --build build --target midiprobe echo --parallel 4
+
+      - name: Check XP headers and imported DLLs and symbols
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends python3-pefile
+          # midiprobe only enumerates; echo also opens, reads and writes ports.
+          /usr/bin/python3 .github/scripts/check-xp-midiprobe.py build/midiprobe.exe build/echo.exe
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: midiprobe-windows-xp-x86
+          path: build/midiprobe.exe
+          if-no-files-found: error
