@@ -120,6 +120,7 @@ public:
     spa_pod_builder_push_sequence(&build, &f, 0);
 
     // for all events
+    bool written = false;
     while (auto m_ptr = m_queue.peek())
     {
       auto& m = *m_ptr;
@@ -136,13 +137,21 @@ public:
         continue;
       }
 
-      spa_pod_builder_control(&build, static_cast<int32_t>(m.timestamp), SPA_CONTROL_Midi);
-      int res
-          = spa_pod_builder_bytes(&build, m.bytes.data(), static_cast<uint32_t>(m.bytes.size()));
+      if (!pod_control_fits(build, m.bytes.size()))
+      {
+        // This buffer is full: keep the rest, in order, for the next one.
+        if (written)
+          break;
 
-      // Try again next buffer
-      if (res == -ENOSPC)
-        break;
+        // Larger than an empty buffer can ever hold: it would block the queue forever.
+        m_gcqueue.enqueue(std::move(m));
+        m_queue.pop();
+        continue;
+      }
+
+      spa_pod_builder_control(&build, static_cast<int32_t>(m.timestamp), SPA_CONTROL_Midi);
+      spa_pod_builder_bytes(&build, m.bytes.data(), static_cast<uint32_t>(m.bytes.size()));
+      written = true;
 
       // Recycle the memory
       m_gcqueue.enqueue(std::move(m));

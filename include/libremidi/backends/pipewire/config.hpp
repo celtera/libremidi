@@ -32,7 +32,10 @@ struct pipewire_output_configuration
   pw_main_loop* main_loop{};
   pw_core* core{};
 
-  int64_t output_buffer_size{65536};
+  // Bytes the output writes per cycle at most. PipeWire gives a MIDI input port a buffer
+  // of 8192 bytes unless it asks for more, and an input drops a whole cycle that is
+  // larger than its buffer: only raise this for receivers known to use larger buffers.
+  int64_t output_buffer_size{8192};
 };
 
 struct pipewire_observer_configuration

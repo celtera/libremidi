@@ -128,16 +128,26 @@ public:
     spa_pod_builder_push_sequence(&build, &f, 0);
 
     // for all events
+    bool written = false;
     while (auto m_ptr = m_queue.peek())
     {
       auto& m = *m_ptr;
+      const auto bytes = cmidi2_ump_get_message_size_bytes(m.data);
+
+      if (!pod_control_fits(build, bytes))
+      {
+        // This buffer is full: keep the rest, in order, for the next one.
+        if (written)
+          break;
+
+        // Larger than an empty buffer can ever hold: it would block the queue forever.
+        m_queue.pop();
+        continue;
+      }
 
       spa_pod_builder_control(&build, static_cast<int32_t>(m.timestamp), SPA_CONTROL_UMP);
-      int res = spa_pod_builder_bytes(&build, m.data, cmidi2_ump_get_message_size_bytes(m.data));
-
-      // Try again next buffer
-      if (res == -ENOSPC)
-        break;
+      spa_pod_builder_bytes(&build, m.data, bytes);
+      written = true;
 
       // Recycle the memory
       m_queue.pop();
