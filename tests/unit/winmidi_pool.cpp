@@ -27,6 +27,9 @@ struct connection
   pool_type::reservation reservation;
   std::shared_ptr<connection> replaced;
   std::atomic<bool> open{true};
+
+  explicit connection(pool_type::reservation&& ticket, std::shared_ptr<connection> dead = {})
+      : reservation{std::move(ticket)}, replaced{std::move(dead)} { }
 };
 
 struct counting_pool
