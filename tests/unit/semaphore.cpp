@@ -29,8 +29,10 @@ TEST_CASE("a release waits for a cycle that started after it", "[semaphore]")
   std::thread callback{[&] {
     while (!stop.load())
     {
+      // As the process callback does: the requests are read before the state they protect.
+      const auto cycle = lock.begin_cycle();
       seen.store(value.load());
-      lock.check_client_released();
+      lock.end_cycle(cycle);
       std::this_thread::sleep_for(100us);
     }
   }};
@@ -38,16 +40,19 @@ TEST_CASE("a release waits for a cycle that started after it", "[semaphore]")
   // Let the callback run many idle cycles first: none of them may count as an answer.
   std::this_thread::sleep_for(20ms);
 
+  int mismatches = 0;
   for (int i = 1; i <= 500; i++)
   {
     value.store(i);
     lock.prepare_release_client();
     // The callback acknowledged in a cycle that read the new value.
-    REQUIRE(seen.load() == i);
+    if (seen.load() != i)
+      mismatches++;
   }
 
   stop.store(true);
   callback.join();
+  REQUIRE(mismatches == 0);
 }
 
 TEST_CASE("a release gives up when the callback does not run", "[semaphore]")
