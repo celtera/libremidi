@@ -706,6 +706,7 @@ private:
         && (!m_ping_pending || now - m_ping_sent >= configuration.ping_interval))
     {
       m_ping_pending = true;
+      m_ping_awaited = true;
       m_ping_sent = now;
       m_ping_id = m_random();
       datagram_writer w;
@@ -823,13 +824,11 @@ private:
 
   void on_retransmit_request(const command_view& cmd, datagram_writer& reply)
   {
-    if (cmd.payload.size() < 4)
-    {
-      reply.nak(nak_reason::command_malformed, cmd.header);
-      return;
-    }
+    // Without a count, or with zero: everything from there on
     const uint16_t from = cmd.specific_16();
-    uint16_t count = static_cast<uint16_t>((cmd.payload[0] << 8) | cmd.payload[1]);
+    uint16_t count = cmd.payload.size() >= 4
+                         ? static_cast<uint16_t>((cmd.payload[0] << 8) | cmd.payload[1])
+                         : uint16_t{0};
 
     auto it = std::find_if(m_sent.begin(), m_sent.end(), [&](const sent_command& s) {
       return s.sequence == from;
@@ -840,7 +839,6 @@ private:
       return;
     }
 
-    // Zero: everything from there on
     if (count == 0)
       count = static_cast<uint16_t>(m_sent.end() - it);
 
@@ -954,7 +952,17 @@ private:
         break;
 
       case command::ping_reply:
-        // Having received anything already says the peer is there
+        // Having received anything already says the peer is there;
+        // what is left is to refuse an answer to a question we did not ask.
+        if (cmd.payload.size() < 4)
+          reply.nak(nak_reason::command_malformed, cmd.header);
+        else if (
+            const uint32_t id = (uint32_t(cmd.payload[0]) << 24) | (uint32_t(cmd.payload[1]) << 16)
+                                | (uint32_t(cmd.payload[2]) << 8) | cmd.payload[3];
+            !m_ping_awaited || id != m_ping_id)
+          reply.nak(nak_reason::bad_ping_reply, cmd.header);
+        else
+          m_ping_awaited = false;
         break;
 
       case command::ump_data:
@@ -1153,6 +1161,8 @@ private:
   // Liveness
   uint64_t m_last_received = 0;
   bool m_ping_pending = false;
+  // A Ping of ours has not been answered yet
+  bool m_ping_awaited = false;
   uint64_t m_ping_sent = 0;
   uint32_t m_ping_id = 0;
 

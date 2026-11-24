@@ -12,8 +12,9 @@ namespace
 {
 using bytes = std::vector<uint8_t>;
 
-// Two sessions and what is in flight between them
-struct link
+// Two sessions and what is in flight between them.
+// Not "link": that is a POSIX function.
+struct test_link
 {
   struct datagram
   {
@@ -34,7 +35,7 @@ struct link
   double duplication = 0.;
   uint32_t jitter = 0;
 
-  explicit link(nm2::session_configuration host_conf = {}, nm2::session_configuration client_conf = {})
+  explicit test_link(nm2::session_configuration host_conf = {}, nm2::session_configuration client_conf = {})
       : host{nm2::role::host, std::move(host_conf)}
       , client{nm2::role::client, std::move(client_conf)}
   {
@@ -143,7 +144,7 @@ TEST_CASE("SHA-256 test vectors", "[network_midi2]")
 
 TEST_CASE("the invitation has the layout of the specification", "[network_midi2]")
 {
-  link l{{}, {.endpoint_name = "Synth", .product_instance_id = "ABC-1"}};
+  test_link l{{}, {.endpoint_name = "Synth", .product_instance_id = "ABC-1"}};
   l.loss = 1.;
   l.client.invite(l.now);
 
@@ -156,7 +157,7 @@ TEST_CASE("the invitation has the layout of the specification", "[network_midi2]
 
 TEST_CASE("a UMP Data command carries its sequence number and big-endian words", "[network_midi2]")
 {
-  link l{{}, {.forward_error_correction = 0}};
+  test_link l{{}, {.forward_error_correction = 0}};
   l.connect();
   REQUIRE(l.client.established());
   l.sent_by_client.clear();
@@ -174,7 +175,7 @@ TEST_CASE("a UMP Data command carries its sequence number and big-endian words",
 
 TEST_CASE("each datagram repeats the previous commands", "[network_midi2]")
 {
-  link l;
+  test_link l;
   l.connect();
   l.sent_by_client.clear();
 
@@ -196,7 +197,7 @@ TEST_CASE("each datagram repeats the previous commands", "[network_midi2]")
 
 TEST_CASE("a session opens, carries UMP both ways and closes", "[network_midi2]")
 {
-  link l{{.endpoint_name = "The host", .product_instance_id = "H1"},
+  test_link l{{.endpoint_name = "The host", .product_instance_id = "H1"},
          {.endpoint_name = "The client", .product_instance_id = "C1"}};
   l.connect();
 
@@ -229,7 +230,7 @@ TEST_CASE("a session opens, carries UMP both ways and closes", "[network_midi2]"
 
 TEST_CASE("sending needs an established session and whole packets", "[network_midi2]")
 {
-  link l;
+  test_link l;
   const uint32_t ump[2] = {0x40903C00, 0};
   CHECK(l.client.send_ump(ump, 2, l.now) == std::errc::not_connected);
   l.connect();
@@ -242,14 +243,14 @@ TEST_CASE("a shared secret is checked by the host", "[network_midi2]")
 {
   SECTION("the right one")
   {
-    link l{{.shared_secret = "opensesame"}, {.shared_secret = "opensesame"}};
+    test_link l{{.shared_secret = "opensesame"}, {.shared_secret = "opensesame"}};
     l.connect();
     CHECK(l.host.established());
     CHECK(l.client.established());
   }
   SECTION("the wrong one")
   {
-    link l{{.shared_secret = "opensesame"}, {.shared_secret = "letmein"}};
+    test_link l{{.shared_secret = "opensesame"}, {.shared_secret = "letmein"}};
     l.connect();
     CHECK_FALSE(l.host.established());
     CHECK(l.client.state() == nm2::session_state::closed);
@@ -257,14 +258,14 @@ TEST_CASE("a shared secret is checked by the host", "[network_midi2]")
   }
   SECTION("none on the client")
   {
-    link l{{.shared_secret = "opensesame"}, {}};
+    test_link l{{.shared_secret = "opensesame"}, {}};
     l.connect();
     CHECK_FALSE(l.host.established());
     CHECK(l.client.state() == nm2::session_state::closed);
   }
   SECTION("none asked by the host")
   {
-    link l{{}, {.shared_secret = "unused"}};
+    test_link l{{}, {.shared_secret = "unused"}};
     l.connect();
     CHECK(l.host.established());
     CHECK(l.client.established());
@@ -275,7 +276,7 @@ TEST_CASE("the invitation is repeated until the host answers", "[network_midi2]"
 {
   SECTION("then accepted")
   {
-    link l;
+    test_link l;
     l.loss = 1.;
     l.client.invite(l.now);
     l.run(2500);
@@ -288,7 +289,7 @@ TEST_CASE("the invitation is repeated until the host answers", "[network_midi2]"
   }
   SECTION("or given up after a while")
   {
-    link l;
+    test_link l;
     l.loss = 1.;
     l.client.invite(l.now);
     l.run(11000);
@@ -300,7 +301,7 @@ TEST_CASE("the invitation is repeated until the host answers", "[network_midi2]"
 TEST_CASE("lost, repeated and reordered datagrams do not show in the stream", "[network_midi2]")
 {
   // Enough attempts that nothing is given up on: see the next test for that case
-  link l{{.retransmit_attempts = 20}, {.retransmit_attempts = 20}};
+  test_link l{{.retransmit_attempts = 20}, {.retransmit_attempts = 20}};
   l.connect();
   REQUIRE(l.client.established());
 
@@ -335,7 +336,7 @@ TEST_CASE("lost, repeated and reordered datagrams do not show in the stream", "[
 TEST_CASE("what cannot be recovered is skipped, and the stream goes on", "[network_midi2]")
 {
   // No repeats, and a buffer too small to answer the retransmit request
-  link l{{}, {.forward_error_correction = 0, .retransmit_buffer_commands = 1}};
+  test_link l{{}, {.forward_error_correction = 0, .retransmit_buffer_commands = 1}};
   l.connect();
 
   const uint32_t a = 0x20903C01, b = 0x20903C02, c = 0x20903C03, d = 0x20903C04;
@@ -353,7 +354,7 @@ TEST_CASE("what cannot be recovered is skipped, and the stream goes on", "[netwo
 
 TEST_CASE("a silent peer is pinged, then the session times out", "[network_midi2]")
 {
-  link l;
+  test_link l;
   l.connect();
   l.sent_by_host.clear();
 
@@ -380,7 +381,7 @@ TEST_CASE("a silent peer is pinged, then the session times out", "[network_midi2
 
 TEST_CASE("pings are answered with their identifier", "[network_midi2]")
 {
-  link l;
+  test_link l;
   l.connect();
   l.sent_by_host.clear();
 
@@ -392,7 +393,7 @@ TEST_CASE("pings are answered with their identifier", "[network_midi2]")
 
 TEST_CASE("an unknown command is refused with a NAK that quotes it", "[network_midi2]")
 {
-  link l;
+  test_link l;
   l.connect();
   l.sent_by_host.clear();
 
@@ -405,7 +406,7 @@ TEST_CASE("an unknown command is refused with a NAK that quotes it", "[network_m
 
 TEST_CASE("what is not Network MIDI 2.0 is ignored", "[network_midi2]")
 {
-  link l;
+  test_link l;
   l.connect();
   l.sent_by_host.clear();
 
@@ -420,10 +421,44 @@ TEST_CASE("what is not Network MIDI 2.0 is ignored", "[network_midi2]")
 
 TEST_CASE("UMP data outside a session is answered with Bye", "[network_midi2]")
 {
-  link l;
+  test_link l;
   const bytes data{M, I, D, I, 0xFF, 1, 0, 0, 0x20, 0x90, 0x3C, 0x40};
   l.host.on_datagram(data, l.now);
   REQUIRE(l.sent_by_host.size() == 1);
   CHECK(l.sent_by_host[0] == bytes{M, I, D, I, 0xF0, 0, 0x05, 0});
   CHECK(l.host_received.empty());
+}
+
+TEST_CASE("a ping reply nobody asked for is refused", "[network_midi2]")
+{
+  test_link l;
+  l.connect();
+  l.sent_by_host.clear();
+
+  const bytes reply{M, I, D, I, 0x21, 1, 0, 0, 0, 0, 0, 0x99};
+  l.host.on_datagram(reply, l.now);
+  REQUIRE(l.sent_by_host.size() == 1);
+  CHECK(l.sent_by_host[0] == bytes{M, I, D, I, 0x8F, 1, 0x20, 0, 0x21, 1, 0, 0});
+  CHECK(l.host.established());
+}
+
+TEST_CASE("a retransmit request without a count gets everything from there on", "[network_midi2]")
+{
+  test_link l{{.forward_error_correction = 0}, {}};
+  l.connect();
+  for (uint32_t i = 0; i < 4; i++)
+  {
+    const uint32_t ump = 0x20903C00 | i;
+    l.host.send_ump(&ump, 1, l.now);
+  }
+  l.run(5);
+  l.sent_by_host.clear();
+
+  // From sequence number 2, no payload at all
+  const bytes request{M, I, D, I, 0x80, 0, 0, 2};
+  l.host.on_datagram(request, l.now);
+  REQUIRE(l.sent_by_host.size() == 1);
+  CHECK(
+      l.sent_by_host[0]
+      == bytes{M, I, D, I, 0xFF, 1, 0, 2, 0x20, 0x90, 0x3C, 2, 0xFF, 1, 0, 3, 0x20, 0x90, 0x3C, 3});
 }
