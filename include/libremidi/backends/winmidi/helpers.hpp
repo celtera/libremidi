@@ -90,47 +90,4 @@ inline bool service_available() noexcept
   return api && api.EnsureServiceAvailable();
 }
 
-inline midi2v::MidiVirtualDeviceCreationConfig setup_virtualdevice_config(
-    std::string_view manufacturer_name,
-    std::string_view product_id,
-    std::string_view port_name,
-    MidiFunctionBlockDirection direction)
-{
-  using namespace midi2v;
-
-  MidiDeclaredEndpointInfo endpointInfo;
-  endpointInfo.HasStaticFunctionBlocks(true);
-  endpointInfo.DeclaredFunctionBlockCount(1);
-  endpointInfo.Name(to_hstring(port_name));
-  endpointInfo.ProductInstanceId(to_hstring(product_id));
-  endpointInfo.SupportsMidi10Protocol(true);
-  endpointInfo.SupportsMidi20Protocol(true);
-  endpointInfo.SupportsReceivingJitterReductionTimestamps(false);
-  endpointInfo.SupportsSendingJitterReductionTimestamps(false);
-  endpointInfo.SpecificationVersionMajor(1);
-  endpointInfo.SpecificationVersionMinor(1);
-
-  // Create the virtual device configuration
-  if(manufacturer_name.empty())
-    manufacturer_name = "libremidi";
-
-  MidiVirtualDeviceCreationConfig creationConfig(
-      to_hstring(port_name), // name
-      to_hstring(std::string("Virtual input port: ") + std::string(port_name)), // description
-      to_hstring(manufacturer_name), // manufacturer
-      endpointInfo);
-
-  // Add a default function block for the virtual device
-  MidiFunctionBlock block0;
-  block0.Number(0);
-  block0.IsActive(true);
-  block0.Name(to_hstring(port_name));
-  block0.FirstGroup(MidiGroup(static_cast<uint8_t>(0)));
-  block0.GroupCount(16);  // All 16 groups
-  block0.Direction(direction);
-  creationConfig.FunctionBlocks().Append(block0);
-
-  return creationConfig;
-
-}
 }

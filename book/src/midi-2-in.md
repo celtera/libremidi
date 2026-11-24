@@ -38,3 +38,63 @@ midi.open_port(/* a port */);
 midi.open_port(libremidi::midi2::in_default_port());
 
 ```
+
+## Hosting a Windows MIDI Services virtual port
+
+This section applies to `midi_in` and `midi_out` alike.
+
+> **Warning.** On Windows builds where the fix for
+> [Microsoft MIDI #1047](https://github.com/microsoft/MIDI/issues/1047) is not
+> enabled yet, closing a virtual port, or ending or killing the process that
+> hosts one, can leave the MIDI service unable to create sessions for any
+> application until the service is restarted. `open_virtual_port` can then block
+> for minutes. The fix is switched on by Windows servicing, not by a version an
+> application can read: libremidi cannot detect an affected system.
+
+`open_virtual_port(name)` creates one virtual device per classic input or output:
+one static function block, one UMP group (index 0), in the requested direction
+from the host's point of view.
+
+The name is cut at its first NUL character and stripped of surrounding spaces,
+tabs and line breaks. What follows the 91st UTF-8 byte is dropped, without
+splitting a character: this is the longest name a function block can announce,
+and the endpoint, its device entry and its block share one name. A name with
+nothing left returns `std::errc::invalid_argument`.
+
+The display name may be shared; by default each
+new virtual device receives a separate, random product instance ID, so its
+endpoint device ID changes on every open.
+
+Other applications can only find the same endpoint again across runs if the
+identifier stays the same. Set it in the backend configuration:
+
+```cpp
+libremidi::winmidi::input_configuration conf;
+conf.virtual_endpoint_id = "my_synth-in"; // 1 to 32 characters among [A-Za-z0-9_-]
+libremidi::midi_in in{libremidi::ump_input_configuration{/* ... */}, conf};
+in.open_virtual_port("My synth");
+```
+
+The service compares identifiers without case, and refuses one that a live
+virtual device already uses: an input and an output, or two instances of the
+application, need different identifiers. `open_virtual_port` returns
+`std::errc::invalid_argument` for an identifier the service would reject or cut.
+
+The service publishes the
+client-facing endpoint after the host opens its private connection. Closing the
+port disconnects it; the same object can then open another port.
+If opening fails, libremidi releases its references and disconnects any endpoint
+connection it created in the session. If the service already created a private
+device, the SDK has no explicit remove operation: libremidi cannot guarantee
+that the service removes that device on failure.
+
+The `winmidi_virtual_metadata_test` CTest checks the actual SDK configuration
+without creating an endpoint. On Windows with a working virtual transport and a
+fix for [Microsoft MIDI #1047](https://github.com/microsoft/MIDI/issues/1047),
+configure with `-DLIBREMIDI_TESTS=ON -DLIBREMIDI_TEST_WINMIDI_VIRTUAL=ON` and
+run `ctest -R winmidi_virtual_smoke --output-on-failure`. This opt-in test
+exchanges UMPs between a host and a separate client and reopens the same host
+objects. After each close, including the last, the client checks that both
+previously discovered endpoint IDs disappear. The test skips if the service or
+virtual transport is unavailable. Availability does not detect #1047; do not
+enable the test on an affected system.

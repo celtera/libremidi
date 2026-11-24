@@ -112,6 +112,7 @@ target_sources(libremidi PRIVATE
     include/libremidi/backends/winmidi/midi_out.hpp
     include/libremidi/backends/winmidi/observer.hpp
     include/libremidi/backends/winmidi/raw_output.hpp
+    include/libremidi/backends/winmidi/virtual_port.hpp
     include/libremidi/backends/winmidi.hpp
 
     include/libremidi/backends/winmm/config.hpp
