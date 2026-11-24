@@ -442,7 +442,7 @@ TEST_CASE("a ping reply nobody asked for is refused", "[network_midi2]")
   CHECK(l.host.established());
 }
 
-TEST_CASE("a retransmit request without a count gets everything from there on", "[network_midi2]")
+TEST_CASE("retransmit requests are answered with what they name", "[network_midi2]")
 {
   test_link l{{.forward_error_correction = 0}, {}};
   l.connect();
@@ -454,13 +454,69 @@ TEST_CASE("a retransmit request without a count gets everything from there on", 
   l.run(5);
   l.sent_by_host.clear();
 
-  // From sequence number 2, no payload at all
-  const bytes request{M, I, D, I, 0x80, 0, 0, 2};
-  l.host.on_datagram(request, l.now);
-  REQUIRE(l.sent_by_host.size() == 1);
+  SECTION("no count: that command")
+  {
+    const bytes request{M, I, D, I, 0x80, 0, 0, 2};
+    l.host.on_datagram(request, l.now);
+    REQUIRE(l.sent_by_host.size() == 1);
+    CHECK(l.sent_by_host[0] == bytes{M, I, D, I, 0xFF, 1, 0, 2, 0x20, 0x90, 0x3C, 2});
+  }
+  SECTION("a count: that many")
+  {
+    const bytes request{M, I, D, I, 0x80, 1, 0, 1, 0, 2, 0, 0};
+    l.host.on_datagram(request, l.now);
+    REQUIRE(l.sent_by_host.size() == 1);
+    CHECK(
+        l.sent_by_host[0]
+        == bytes{M, I, D, I, 0xFF, 1, 0, 1, 0x20, 0x90, 0x3C, 1, 0xFF, 1, 0, 2, 0x20, 0x90, 0x3C, 2});
+  }
+  SECTION("a count of zero: everything from there on")
+  {
+    const bytes request{M, I, D, I, 0x80, 1, 0, 2, 0, 0, 0, 0};
+    l.host.on_datagram(request, l.now);
+    REQUIRE(l.sent_by_host.size() == 1);
+    CHECK(
+        l.sent_by_host[0]
+        == bytes{M, I, D, I, 0xFF, 1, 0, 2, 0x20, 0x90, 0x3C, 2, 0xFF, 1, 0, 3, 0x20, 0x90, 0x3C, 3});
+  }
+  SECTION("what is not there anymore: an error naming what is")
+  {
+    const bytes request{M, I, D, I, 0x80, 1, 0x12, 0x34, 0, 1, 0, 0};
+    l.host.on_datagram(request, l.now);
+    REQUIRE(l.sent_by_host.size() == 1);
+    CHECK(l.sent_by_host[0] == bytes{M, I, D, I, 0x81, 1, 1, 0, 0, 0, 0, 0});
+  }
+}
+
+TEST_CASE("every missing command is asked for by name, in one datagram", "[network_midi2]")
+{
+  test_link l{{}, {.forward_error_correction = 0}};
+  l.connect();
+  l.sent_by_host.clear();
+
+  // 0 arrives, 1 to 3 are lost, 4 arrives
+  const uint32_t ump = 0x20903C00;
+  l.client.send_ump(&ump, 1, l.now);
+  l.loss = 1.;
+  for (int i = 0; i < 3; i++)
+    l.client.send_ump(&ump, 1, l.now);
+  l.loss = 0.;
+  l.client.send_ump(&ump, 1, l.now);
+
+  // Until the host asks
+  for (int i = 0; i < 30 && l.sent_by_host.empty(); i++)
+  {
+    l.deliver(l.to_host, l.host);
+    l.host.tick(l.now++);
+  }
+  REQUIRE(!l.sent_by_host.empty());
   CHECK(
       l.sent_by_host[0]
-      == bytes{M, I, D, I, 0xFF, 1, 0, 2, 0x20, 0x90, 0x3C, 2, 0xFF, 1, 0, 3, 0x20, 0x90, 0x3C, 3});
+      == bytes{M,    I, D, I, 0x80, 1, 0, 1, 0, 1, 0, 0, 0x80, 1, 0, 2,
+               0,    1, 0, 0, 0x80, 1, 0, 3, 0, 1, 0, 0});
+
+  l.run(50);
+  CHECK(l.host_received.size() == 5);
 }
 
 TEST_CASE("names always end with a zero", "[network_midi2]")

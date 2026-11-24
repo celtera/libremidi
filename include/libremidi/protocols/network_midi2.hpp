@@ -764,13 +764,27 @@ private:
     }
   }
 
+  // One request per missing command, all in one datagram: some implementations
+  // only resend the command a request names, whatever count it carries.
   void request_missing()
   {
     if (m_held.empty())
       return;
-    const uint16_t count = static_cast<uint16_t>(m_held.front().sequence - m_expected);
+
     datagram_writer w;
-    w.retransmit_request(m_expected, count);
+    int requests = 0;
+    uint16_t sequence = m_expected;
+    for (const auto& held : m_held)
+    {
+      for (; sequence != held.sequence && requests < max_requests_per_datagram; sequence++)
+      {
+        w.retransmit_request(sequence, 1);
+        requests++;
+      }
+      sequence = static_cast<uint16_t>(held.sequence + 1);
+      if (requests >= max_requests_per_datagram)
+        break;
+    }
     flush(w);
   }
 
@@ -843,11 +857,12 @@ private:
 
   void on_retransmit_request(const command_view& cmd, datagram_writer& reply)
   {
-    // Without a count, or with zero: everything from there on
+    // Some implementations send no count and one request per missing command:
+    // that asks for this one. A count of zero asks for everything from there on.
     const uint16_t from = cmd.specific_16();
     uint16_t count = cmd.payload.size() >= 4
                          ? static_cast<uint16_t>((cmd.payload[0] << 8) | cmd.payload[1])
-                         : uint16_t{0};
+                         : uint16_t{1};
 
     auto it = std::find_if(m_sent.begin(), m_sent.end(), [&](const sent_command& s) {
       return s.sequence == from;
@@ -1155,6 +1170,7 @@ private:
   }
 
   static constexpr std::size_t max_held_commands = 256;
+  static constexpr int max_requests_per_datagram = 64;
 
   role m_role;
   session_state m_state = session_state::idle;
