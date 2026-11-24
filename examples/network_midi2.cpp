@@ -160,7 +160,9 @@ int main(int argc, char** argv)
   int failed_sends = 0;
   for (int i = 0; i < notes; i++)
   {
-    const uint32_t ump[2] = {0x40903C00u | (uint32_t(i) & 0x7F), 0x80000000u | uint32_t(i)};
+    // Note number i, and i again in the low bits of the velocity word to tell them apart
+    const uint32_t ump[2]
+        = {0x40900000u | ((uint32_t(i) & 0x7F) << 8), 0x80000000u | uint32_t(i)};
     if (endpoint.send_ump(ump, 2) != stdx::error{})
       failed_sends++;
     std::this_thread::sleep_for(10ms);

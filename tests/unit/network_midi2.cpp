@@ -462,3 +462,53 @@ TEST_CASE("a retransmit request without a count gets everything from there on", 
       l.sent_by_host[0]
       == bytes{M, I, D, I, 0xFF, 1, 0, 2, 0x20, 0x90, 0x3C, 2, 0xFF, 1, 0, 3, 0x20, 0x90, 0x3C, 3});
 }
+
+TEST_CASE("names always end with a zero", "[network_midi2]")
+{
+  // Four bytes exactly: a fifth, zero, has to follow
+  test_link l{{}, {.endpoint_name = "ABCD", .product_instance_id = "1234"}};
+  l.loss = 1.;
+  l.client.invite(l.now);
+
+  REQUIRE(l.sent_by_client.size() == 1);
+  CHECK(
+      l.sent_by_client[0]
+      == bytes{M,    I,    D,    I,    0x01, 4, 2, 0, 0x41, 0x42, 0x43, 0x44, 0, 0, 0, 0,
+               0x31, 0x32, 0x33, 0x34, 0,    0, 0, 0});
+}
+
+TEST_CASE("a host with a secret asks for it whatever the client announces", "[network_midi2]")
+{
+  test_link l{{.shared_secret = "opensesame"}, {}};
+  l.sent_by_host.clear();
+
+  // An invitation that announces no capability
+  const bytes invitation{M, I, D, I, 0x01, 2, 1, 0, 0x41, 0, 0, 0, 0x42, 0, 0, 0};
+  l.host.on_datagram(invitation, l.now);
+  REQUIRE(l.sent_by_host.size() == 1);
+  CHECK(l.sent_by_host[0][4] == 0x12);
+  CHECK(l.host.state() == nm2::session_state::authenticating);
+}
+
+TEST_CASE("a side that only listens still shows that it is there", "[network_midi2]")
+{
+  test_link l;
+  l.connect();
+  l.sent_by_client.clear();
+
+  // The host sends data all along; the client has nothing to say
+  for (int i = 0; i < 250; i++)
+  {
+    const uint32_t ump = 0x20903C00;
+    l.host.send_ump(&ump, 1, l.now);
+    l.run(100);
+  }
+
+  int pings = 0;
+  for (const auto& d : l.sent_by_client)
+    pings += d.size() >= 12 && d[4] == 0x20;
+  CHECK(pings >= 2);
+  CHECK(pings <= 3);
+  CHECK(l.host.established());
+  CHECK(l.client.established());
+}

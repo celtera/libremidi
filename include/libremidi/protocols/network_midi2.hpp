@@ -300,15 +300,19 @@ struct datagram_writer
 
   void raw(std::span<const uint8_t> data) { bytes.insert(bytes.end(), data.begin(), data.end()); }
 
-  /// Text, padded with zeros to a multiple of four bytes
+  /// Text, ended by at least one zero and padded with zeros to a multiple of
+  /// four bytes. Other implementations read these fields as C strings: without
+  /// a zero, a name of exactly 4, 8, 12... bytes runs into the next field for them.
   void text(std::string_view s)
   {
     bytes.insert(bytes.end(), s.begin(), s.end());
-    for (std::size_t i = s.size(); i % 4 != 0; i++)
+    std::size_t i = s.size();
+    do
       bytes.push_back(0);
+    while (++i % 4 != 0);
   }
 
-  static constexpr std::size_t text_words(std::string_view s) noexcept { return (s.size() + 3) / 4; }
+  static constexpr std::size_t text_words(std::string_view s) noexcept { return s.size() / 4 + 1; }
 
   /// The commands that carry a UMP Endpoint name and a Product Instance Id,
   /// optionally after a nonce
@@ -623,6 +627,16 @@ private:
       send_datagram(w.bytes);
   }
 
+  void establish(uint64_t now)
+  {
+    reset_streams();
+    m_last_sent_data = now;
+    m_ping_sent = now;
+    m_ping_pending = false;
+    m_ping_awaited = false;
+    set_state(session_state::established);
+  }
+
   void reset_streams()
   {
     m_next_sequence = 0;
@@ -701,9 +715,14 @@ private:
       return;
     }
 
-    // Peer silent: ask
-    if (now - m_last_received >= configuration.ping_interval
-        && (!m_ping_pending || now - m_ping_sent >= configuration.ping_interval))
+    // The peer is silent: ask. We are silent: say that we are still there,
+    // or the peer, which only hears from us when we have data, gives up on us.
+    const bool peer_silent = now - m_last_received >= configuration.ping_interval
+                             && (!m_ping_pending
+                                 || now - m_ping_sent >= configuration.ping_interval);
+    const bool we_are_silent
+        = now - std::max(m_last_sent_data, m_ping_sent) >= configuration.ping_interval;
+    if (peer_silent || we_are_silent)
     {
       m_ping_pending = true;
       m_ping_awaited = true;
@@ -912,8 +931,7 @@ private:
         if (m_role == role::client && m_state == session_state::inviting)
         {
           read_identity(cmd, 0);
-          reset_streams();
-          set_state(session_state::established);
+          establish(now);
         }
         else if (!(m_role == role::client && m_state == session_state::established))
           reply.nak(nak_reason::command_not_expected, cmd.header);
@@ -1018,7 +1036,7 @@ private:
     }
   }
 
-  void on_invitation(const command_view& cmd, datagram_writer& reply, uint64_t)
+  void on_invitation(const command_view& cmd, datagram_writer& reply, uint64_t now)
   {
     if (m_role != role::host)
     {
@@ -1042,12 +1060,8 @@ private:
 
     if (!configuration.shared_secret.empty())
     {
-      if (!(cmd.specific_2 & supports_authentication))
-      {
-        reply.bye(bye_reason::no_matching_authentication_method);
-        finish(bye_reason::no_matching_authentication_method, false);
-        return;
-      }
+      // Asked whatever capabilities the invitation announces:
+      // some clients authenticate without announcing it.
       if (m_state != session_state::authenticating)
       {
         new_nonce();
@@ -1060,14 +1074,14 @@ private:
       return;
     }
 
-    reset_streams();
     reply.identity(
         command::invitation_reply_accepted, 0, configuration.endpoint_name,
         configuration.product_instance_id);
-    set_state(session_state::established);
+    establish(now);
   }
 
-  void on_invitation_with_authentication(const command_view& cmd, datagram_writer& reply, uint64_t)
+  void on_invitation_with_authentication(
+      const command_view& cmd, datagram_writer& reply, uint64_t now)
   {
     if (m_role != role::host)
     {
@@ -1095,11 +1109,10 @@ private:
     const auto expected = sha256::hash(m_nonce, configuration.shared_secret);
     if (std::equal(expected.begin(), expected.end(), cmd.payload.begin()))
     {
-      reset_streams();
       reply.identity(
           command::invitation_reply_accepted, 0, configuration.endpoint_name,
           configuration.product_instance_id);
-      set_state(session_state::established);
+      establish(now);
     }
     else if (++m_authentication_attempts >= 3)
     {
