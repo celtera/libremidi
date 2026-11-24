@@ -287,7 +287,6 @@ stdx::error midi_out::send_ump(const uint32_t* message, size_t size) const
 
 #if defined(LIBREMIDI_ASSERTIONS)
   assert(size > 0);
-  assert(size <= 4);
 #endif
 
   return m_impl->send_ump(message, size);

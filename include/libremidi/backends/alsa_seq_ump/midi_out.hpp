@@ -132,10 +132,10 @@ public:
       static_assert(std::errc{0} == std::errc{});
       return std::errc{};
     };
-    segment_ump_stream(ump_stream, count, write_func, []() { });
-
-    snd.seq.drain_output(this->seq);
-    return stdx::error{};
+    if (auto err = segment_ump_stream(ump_stream, count, write_func); err.is_set())
+      return err;
+    const int ret = snd.seq.drain_output(this->seq);
+    return ret < 0 ? from_errc(ret) : std::errc{};
   }
 };
 }

@@ -486,6 +486,15 @@ struct pipewire_helpers
     return ret;
   }
 };
+
+// Whether one more control event with that many bytes of data fits in the sequence
+// being built. The builder moves its offset forward even when it has no room left to
+// write, and PipeWire then discards the whole buffer: ask before writing.
+inline bool pod_control_fits(const spa_pod_builder& build, std::size_t bytes) noexcept
+{
+  const std::size_t needed = sizeof(spa_pod_control) + SPA_ROUND_UP_N(bytes, std::size_t{8});
+  return build.state.offset <= build.size && needed <= build.size - build.state.offset;
+}
 }
 
 #if defined(__clang__)

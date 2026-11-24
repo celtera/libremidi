@@ -2,6 +2,7 @@
 #include <libremidi/backends/pipewire/helpers.hpp>
 #include <libremidi/backends/pipewire_ump/config.hpp>
 #include <libremidi/detail/midi_out.hpp>
+#include <libremidi/detail/ump_stream.hpp>
 
 #include <spa/control/control.h>
 #include <spa/pod/builder.h>
@@ -127,16 +128,26 @@ public:
     spa_pod_builder_push_sequence(&build, &f, 0);
 
     // for all events
+    bool written = false;
     while (auto m_ptr = m_queue.peek())
     {
       auto& m = *m_ptr;
+      const auto bytes = cmidi2_ump_get_message_size_bytes(m.data);
+
+      if (!pod_control_fits(build, bytes))
+      {
+        // This buffer is full: keep the rest, in order, for the next one.
+        if (written)
+          break;
+
+        // Larger than an empty buffer can ever hold: it would block the queue forever.
+        m_queue.pop();
+        continue;
+      }
 
       spa_pod_builder_control(&build, static_cast<int32_t>(m.timestamp), SPA_CONTROL_UMP);
-      int res = spa_pod_builder_bytes(&build, m.data, cmidi2_ump_get_message_size_bytes(m.data));
-
-      // Try again next buffer
-      if (res == -ENOSPC)
-        break;
+      spa_pod_builder_bytes(&build, m.data, bytes);
+      written = true;
 
       // Recycle the memory
       m_queue.pop();
@@ -162,15 +173,12 @@ public:
 
   stdx::error send_ump(const uint32_t* message, size_t size) override
   {
-    // FIXME
-    if (size > 4)
-      return std::errc::message_size;
-
-    libremidi::ump m;
-    std::copy_n(message, size, m.data);
-    m.timestamp = 0;
-    m_queue.enqueue(std::move(m));
-    return stdx::error{};
+    return segment_ump_stream(message, size, [this](const uint32_t* words, int bytes) {
+      libremidi::ump m;
+      std::copy_n(words, bytes / sizeof(uint32_t), m.data);
+      m.timestamp = 0;
+      return m_queue.enqueue(std::move(m)) ? std::errc{} : std::errc::not_enough_memory;
+    });
   }
 
   int convert_timestamp(int64_t user) const noexcept
@@ -188,15 +196,14 @@ public:
 
   stdx::error schedule_ump(int64_t ts, const uint32_t* message, size_t size) override
   {
-    // FIXME
-    if (size > 4)
-      return std::errc::message_size;
-
-    libremidi::ump m;
-    std::copy_n(message, size, m.data);
-    m.timestamp = convert_timestamp(ts);
-    m_queue.enqueue(std::move(m)); // FIXME actually send them scheudled
-    return stdx::error{};
+    // FIXME actually send them scheduled
+    const auto timestamp = convert_timestamp(ts);
+    return segment_ump_stream(message, size, [&](const uint32_t* words, int bytes) {
+      libremidi::ump m;
+      std::copy_n(words, bytes / sizeof(uint32_t), m.data);
+      m.timestamp = timestamp;
+      return m_queue.enqueue(std::move(m)) ? std::errc{} : std::errc::not_enough_memory;
+    });
   }
 
   moodycamel::ReaderWriterQueue<libremidi::ump> m_queue;

@@ -295,12 +295,21 @@ public:
     while (jack.ringbuffer.peek(ringbuffer, reinterpret_cast<char*>(&sz), size_sz) == size_sz
            && jack.ringbuffer.read_space(ringbuffer) >= size_sz + sz)
     {
-      jack.ringbuffer.read_advance(ringbuffer, size_sz);
-
       if (auto midi = jack.midi.event_reserve(jack_events, 0, sz))
+      {
+        jack.ringbuffer.read_advance(ringbuffer, size_sz);
         jack.ringbuffer.read(ringbuffer, reinterpret_cast<char*>(midi), sz);
+      }
+      else if (jack.midi.get_event_count(jack_events) > 0)
+      {
+        // This cycle's buffer is full: keep the rest, in order, for the next one.
+        break;
+      }
       else
-        jack.ringbuffer.read_advance(ringbuffer, sz);
+      {
+        // Larger than an empty buffer can ever hold: it would block the queue forever.
+        jack.ringbuffer.read_advance(ringbuffer, size_sz + sz);
+      }
     }
   }
 

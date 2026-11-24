@@ -2,6 +2,7 @@
 #include <libremidi/backends/jack/helpers.hpp>
 #include <libremidi/backends/jack_ump/config.hpp>
 #include <libremidi/detail/midi_out.hpp>
+#include <libremidi/detail/ump_stream.hpp>
 
 NAMESPACE_LIBREMIDI::jack_ump
 {
@@ -89,7 +90,10 @@ public:
 
   stdx::error send_ump(const uint32_t* message, std::size_t size) override
   {
-    return m_queue.write((unsigned char*)message, size * sizeof(uint32_t));
+    // One JACK event per packet.
+    return segment_ump_stream(message, size, [this](const uint32_t* words, int bytes) {
+      return m_queue.write(reinterpret_cast<const unsigned char*>(words), bytes);
+    });
   }
 
   int process(jack_nframes_t nframes)
@@ -142,8 +146,11 @@ public:
   stdx::error send_ump(const uint32_t* message, std::size_t size) override
   {
     void* buff = jack.port.get_buffer(this->port, buffer_size);
-    int ret = jack.midi.event_write(buff, 0, (unsigned char*)message, size * sizeof(uint32_t));
-    return from_errc(ret);
+    // One JACK event per packet.
+    return segment_ump_stream(message, size, [&](const uint32_t* words, int bytes) {
+      return from_errc(
+          jack.midi.event_write(buff, 0, reinterpret_cast<const unsigned char*>(words), bytes));
+    });
   }
 
   int convert_timestamp(int64_t user) const noexcept

@@ -44,9 +44,6 @@ public:
         return ordinary_connection::acquire(session, ep.EndpointDeviceId());
       });
       m_endpoint = m_connection->endpoint;
-#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
-      m_raw_endpoint = m_connection->raw;
-#endif
       converter.reset(static_cast<uint8_t>(port.port));
 
       return stdx::error{};
@@ -111,9 +108,6 @@ public:
   {
     if (m_connection)
     {
-#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
-      m_raw_endpoint = nullptr;
-#endif
       m_endpoint = nullptr;
       m_connection.reset();
       return stdx::error{};
@@ -134,39 +128,6 @@ public:
     if (!connected)
       return std::errc::not_connected;
     return stdx::error{};
-  }
-
-  std::errc write_raw(const uint32_t* ump, int64_t bytes)
-  {
-#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
-    HRESULT ret{};
-    switch (bytes / 4)
-    {
-      case 1:
-        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(1, ump));
-        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 1, ump);
-        break;
-      case 2:
-        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(2, ump));
-        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 2, ump);
-        break;
-      case 3:
-        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(3, ump));
-        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 3, ump);
-        break;
-      case 4:
-        assert(m_raw_endpoint->ValidateBufferHasOnlyCompleteUmps(4, ump));
-        ret = m_raw_endpoint->SendMidiMessagesRaw(0, 4, ump);
-        break;
-      default:
-        return std::errc::bad_message;
-    }
-    if(ret < 0)
-      return std::errc::io_error;
-    return std::errc{};
-  #else
-    return write(ump, bytes);
-  #endif
   }
 
   std::errc write(const uint32_t* ump, int64_t bytes)
@@ -197,25 +158,14 @@ public:
 
   stdx::error send_ump(const uint32_t* message, size_t size) override
   {
-#if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
-    if(m_virtual)
-    {
-      // Virtual port does not support raw API per
-      // https://github.com/celtera/libremidi/issues/194#issuecomment-4156127901
-
-      return segment_ump_stream(message, size,
-                                [this](const uint32_t* ump, int64_t bytes) -> std::errc {
-        return write(ump, bytes);
-      }, []() { });
-    }
-    else
+#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
+    // The virtual-device host uses the WinRT plugin path, not a raw connection.
+    if (m_connection)
+      return m_connection->send({message, size});
 #endif
-    {
-      return segment_ump_stream(message, size,
-                                [this](const uint32_t* ump, int64_t bytes) -> std::errc {
-        return write_raw(ump, bytes);
-      }, []() { });
-    }
+    return segment_ump_stream(message, size, [this](const uint32_t* ump, int64_t bytes) {
+      return write(ump, bytes);
+    });
   }
 
 private:
@@ -223,9 +173,6 @@ private:
   std::shared_ptr<ordinary_connection> m_connection;
   MidiSession m_session{nullptr}; // private virtual-device connection only
   MidiEndpointConnection m_endpoint{nullptr};
-#if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
-  winrt::impl::com_ref<IMidiEndpointConnectionRaw> m_raw_endpoint{};
-#endif
 #if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
   midi2v::MidiVirtualDevice m_virtual{nullptr};
 #endif

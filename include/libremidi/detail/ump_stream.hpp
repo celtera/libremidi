@@ -57,7 +57,7 @@ next_ump_group_run(std::span<const uint32_t>& words, int group)
  * Used to send a stream to APIs that work message-by-message.
  */
 inline stdx::error
-segment_ump_stream(const uint32_t* ump_stream, int64_t count, auto write_func, auto realloc_func)
+segment_ump_stream(const uint32_t* ump_stream, std::size_t count, auto write_func)
 {
   while (count > 0)
   {
@@ -75,24 +75,10 @@ segment_ump_stream(const uint32_t* ump_stream, int64_t count, auto write_func, a
 
     // A packet cut short by the end of the buffer is not sent.
     if (ump_bytes / 4 > count)
-      break;
+      return std::errc::bad_message;
 
-    // FIXME std::expected, propagate the error back to caller?
-    switch (int err = static_cast<int>(write_func(ump_stream, ump_bytes)))
-    {
-      case 0:
-        break;
-      case -ENOMEM:
-      case ENOMEM:
-        // Try again if we didn't have enough space in the OS queue
-        realloc_func();
-        if (auto err = write_func(ump_stream, ump_bytes); err != std::errc{})
-          return std::make_error_code(err);
-        break;
-      default:
-        return from_errc(err);
-    }
-
+    if (stdx::error err = write_func(ump_stream, ump_bytes); err.is_set())
+      return err;
     const auto ump_uints = ump_bytes / 4;
     ump_stream += ump_uints;
     count -= ump_uints;
