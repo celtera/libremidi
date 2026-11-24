@@ -91,6 +91,7 @@ target_sources(libremidi PRIVATE
 
     include/libremidi/backends/net/config.hpp
     include/libremidi/backends/net/helpers.hpp
+    include/libremidi/backends/net/midi2_udp.hpp
     include/libremidi/backends/net/midi_in.hpp
     include/libremidi/backends/net/midi_out.hpp
     include/libremidi/backends/net/observer.hpp

@@ -1,6 +1,7 @@
 #pragma once
 #include <libremidi/backends/net/config.hpp>
 #include <libremidi/backends/net/helpers.hpp>
+#include <libremidi/backends/net/midi2_udp.hpp>
 #include <libremidi/cmidi2.hpp>
 #include <libremidi/detail/midi_out.hpp>
 
@@ -222,6 +223,12 @@ public:
       , ctx{configuration.io_context}
       , m_socket{ctx.get()}
   {
+    if (configuration.protocol == protocol::MIDI2_UDP)
+    {
+      this->client_open_ = stdx::error{};
+      return;
+    }
+
     m_socket.open(boost::asio::ip::udp::v4());
     m_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
     m_socket.set_option(boost::asio::socket_base::broadcast(true));
@@ -237,13 +244,57 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::NETWORK_UMP; }
 
+  network_midi2::session_configuration session_configuration(std::string_view name) const
+  {
+    network_midi2::session_configuration c;
+    c.endpoint_name = name.empty() ? configuration.client_name : std::string(name);
+    c.product_instance_id = configuration.product_instance_id;
+    c.shared_secret = configuration.shared_secret;
+    return c;
+  }
+
   stdx::error open_port(const output_port& /* port */, std::string_view portName) override
   {
+    if (configuration.protocol == protocol::MIDI2_UDP)
+    {
+      // Client of the host at host:port
+      m_udp = std::make_unique<midi2_udp_endpoint>(
+          configuration.io_context, session_configuration(portName));
+      if (auto err = m_udp->open_client(configuration.host, configuration.port);
+          err != stdx::error{})
+      {
+        m_udp.reset();
+        return err;
+      }
+      if (!configuration.io_context && configuration.connection_timeout_ms > 0)
+      {
+        if (!m_udp->wait_until_established(
+                std::chrono::milliseconds(configuration.connection_timeout_ms)))
+        {
+          m_udp.reset();
+          return std::errc::timed_out;
+        }
+      }
+      return stdx::error{};
+    }
     return open_virtual_port(portName);
   }
 
   stdx::error open_virtual_port(std::string_view portName) override
   {
+    if (configuration.protocol == protocol::MIDI2_UDP)
+    {
+      // Host: clients invite us on the configured port
+      m_udp = std::make_unique<midi2_udp_endpoint>(
+          configuration.io_context, session_configuration(portName));
+      if (auto err = m_udp->open_host("", configuration.port); err != stdx::error{})
+      {
+        m_udp.reset();
+        return err;
+      }
+      return stdx::error{};
+    }
+
     // Random arbitrary limit to avoid abuse
     if (portName.size() >= 512)
       return std::errc::invalid_argument;
@@ -255,6 +306,7 @@ public:
 
   stdx::error close_port() override
   {
+    m_udp.reset();
     pkt.deinit();
     if (m_socket.is_open())
       m_socket.close();
@@ -263,6 +315,9 @@ public:
 
   stdx::error send_ump(const uint32_t* message, size_t size) override
   {
+    if (configuration.protocol == protocol::MIDI2_UDP)
+      return m_udp ? m_udp->send_ump(message, size) : stdx::error{std::errc::not_connected};
+
     if (auto err = pkt.set_packet_content(message, size); err != stdx::error{})
       return err;
 
@@ -283,6 +338,8 @@ public:
   boost::asio::ip::udp::socket m_socket;
 
   osc_midi2_packet pkt;
+
+  std::unique_ptr<midi2_udp_endpoint> m_udp;
 };
 
 }
