@@ -310,6 +310,64 @@ TEST_CASE("semantic: bank select", "[controller_translation]")
   }
 }
 
+TEST_CASE("semantic: reset starts over on a group", "[controller_translation]")
+{
+  stream s{controller_translation::semantic};
+
+  // Half of everything the translation keeps, on three channels.
+  const auto leave_state = [&] {
+    CHECK(s.feed({rpn_msb0, rpn_lsb0}).empty());
+    CHECK(s.feed({{0xB1, 0x63, 0x01}, {0xB1, 0x62, 0x02}}).empty());
+    CHECK(s.feed({{0xB0, 0x00, 0x01}, {0xB0, 0x20, 0x02}}).empty());
+    CHECK(s.feed({0xB2, 0x20, 0x03}).empty());
+  };
+
+  SECTION("nothing received before applies after")
+  {
+    leave_state();
+    s.conv.reset(5);
+    CHECK(s.feed({0xB0, 0x06, 0x0C}).empty());
+    CHECK(s.feed({0xB1, 0x06, 0x10}).empty());
+    CHECK(s.feed({0xC0, 0x05}) == words{0x45C00000, 0x05000000});
+    CHECK(s.feed({0xC2, 0x07}) == words{0x45C20000, 0x07000000});
+  }
+
+  SECTION("every message goes to the group")
+  {
+    for (uint8_t group = 0; group < 16; ++group)
+    {
+      leave_state();
+      s.conv.reset(group);
+      CHECK(s.conv.context.group == group);
+      const auto out = s.feed(
+          {{0x90, 0x3C, 0x40}, {0x80, 0x3C, 0x00}, {0xA0, 0x3C, 0x10}, {0xB0, 0x07, 0x40},
+           {0xC0, 0x05}, {0xD0, 0x20}, {0xE0, 0x00, 0x40},
+           {0xB3, 0x65, 0x00}, {0xB3, 0x64, 0x00}, {0xB3, 0x06, 0x0C},
+           {0xB3, 0x63, 0x01}, {0xB3, 0x62, 0x02}, {0xB3, 0x06, 0x10},
+           {0xB4, 0x00, 0x01}, {0xB4, 0x20, 0x02}, {0xC4, 0x05},
+           {0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7}, {0xF8}});
+      std::size_t packets = 0;
+      for (std::size_t at = 0; at < out.size(); ++packets)
+      {
+        const auto type = out[at] >> 28;
+        CAPTURE(int(group), at, out[at]);
+        // Channel voice, SysEx7 and system real-time: all of them have a group.
+        CHECK((type == 0x4 || type == 0x3 || type == 0x1));
+        CHECK(((out[at] >> 24) & 0xF) == group);
+        at += cmidi2_ump_get_num_bytes(out[at]) / 4;
+      }
+      CHECK(packets == 12);
+    }
+  }
+
+  SECTION("without argument: group 1")
+  {
+    s.conv.reset(9);
+    s.conv.reset();
+    CHECK(s.feed({0x90, 0x3C, 0x40}) == words{0x40903C00, 0x80000000});
+  }
+}
+
 TEST_CASE("raw: each message gives its own UMP", "[controller_translation]")
 {
   stream s{controller_translation::raw};

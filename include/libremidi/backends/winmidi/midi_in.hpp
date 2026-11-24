@@ -98,24 +98,12 @@ public:
 
   stdx::error open_port(const input_port& port, std::string_view) override
   {
-    auto device_id = get_if<std::string>(&port.device);
-    if (!device_id)
-      return std::errc::invalid_argument;
-
-    auto [ep, gp] = get_port(*device_id, port.port);
-    if (!ep || !gp)
-      return std::errc::address_not_available;
-
-    // port.port is the Group Terminal Block Number(), which is not necessarily equal to
-    // the UMP group index the block spans. For example a USB MIDI 1.0 device may expose
-    // its input GTB as Number()==2 while its messages arrive on group 0. Using
-    // `port.port - 1` as the group filter therefore silently drops all input from such
-    // devices. Filter on the resolved block's actual first group instead.
-    m_group_filter = gp.FirstGroup().Index();
-
     try
     {
-      // TODO use a MidiGroupEndpointListener for the filtering
+      auto ep = get_port(port, port_direction::input);
+      if (!ep)
+        return std::errc::address_not_available;
+      m_group_filter = static_cast<int>(port.port);
       m_endpoint = m_session.CreateEndpointConnection(ep.EndpointDeviceId());
       if (!m_endpoint)
         return std::errc::device_or_resource_busy;
@@ -129,18 +117,24 @@ public:
       });
   #else
       m_endpoint.as(::IID_IMidiEndpointConnectionRaw, m_raw_endpoint.put_void());
-
-      m_raw_endpoint->SetMessagesReceivedCallback(
-          &raw_callback
-      );
+      if (!m_raw_endpoint || m_raw_endpoint->SetMessagesReceivedCallback(&raw_callback) < 0)
+      {
+        close_port();
+        return std::errc::io_error;
+      }
   #endif
 
-      m_endpoint.Open();
+      if (!m_endpoint.Open())
+      {
+        close_port();
+        return std::errc::io_error;
+      }
 
       return stdx::error{};
     }
     catch (...)
     {
+      close_port();
       return std::errc::io_error;
     }
   }
@@ -148,6 +142,7 @@ public:
 #if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
   stdx::error open_virtual_port(std::string_view port_name) override
   {
+    m_group_filter = -1; // A virtual device is not a single projected group.
     // Create endpoint information for the virtual device
     using namespace midi2v;
 
@@ -162,7 +157,10 @@ public:
       // Create a connection to the device-side endpoint
       m_endpoint = m_session.CreateEndpointConnection(m_virtual.DeviceEndpointDeviceId());
       if (!m_endpoint)
+      {
+        close_port();
         return std::errc::device_or_resource_busy;
+      }
 
       // Add the virtual device as a message processing plugin to receive messages
       m_endpoint.AddMessageProcessingPlugin(m_virtual);
@@ -175,12 +173,17 @@ public:
         process_message(args);
       });
 
-      m_endpoint.Open();
+      if (!m_endpoint.Open())
+      {
+        close_port();
+        return std::errc::io_error;
+      }
 
       return stdx::error{};
     }
     catch (...)
     {
+      close_port();
       return std::errc::io_error;
     }
   }
@@ -204,14 +207,9 @@ public:
         .has_samples = false,
     };
 
+    if (!ump_matches_group(msg.PeekFirstWord(), m_group_filter))
+      return;
     const auto& ump = msg.GetMessagePacket();
-    auto pk = msg.PeekFirstWord();
-    if (m_group_filter >= 0)
-    {
-      int group = cmidi2_ump_get_group(&pk);
-      if (group != m_group_filter)
-        return;
-    }
 
     const auto& b = ump.GetAllWords();
 
@@ -254,23 +252,27 @@ public:
   }
 #endif
 
+  // Also releases what a failed open left behind.
   stdx::error close_port() override
   {
-    if(!m_endpoint)
-      return std::errc::not_connected;
-
+    const bool connected{m_endpoint};
+    if (connected)
+    {
 #if LIBREMIDI_WINMIDI_HAS_COM_EXTENSIONS
-    if(m_raw_endpoint) {
-      m_raw_endpoint->RemoveMessagesReceivedCallback();
-      m_raw_endpoint = nullptr;
-    }
-    // When no raw API: everything goes through revoke_token.
-    // Otherwise: only virtual ports.
-    else if(m_virtual)
+      if(m_raw_endpoint) {
+        m_raw_endpoint->RemoveMessagesReceivedCallback();
+        m_raw_endpoint = nullptr;
+      }
+      // When no raw API: everything goes through revoke_token.
+      // Otherwise: only virtual ports.
+      else if(m_virtual)
 #endif
-      m_endpoint.MessageReceived(m_revoke_token);
+        m_endpoint.MessageReceived(m_revoke_token);
+      m_revoke_token = {};
 
-    m_session.DisconnectEndpointConnection(m_endpoint.ConnectionId());
+      m_session.DisconnectEndpointConnection(m_endpoint.ConnectionId());
+      m_endpoint = nullptr;
+    }
 
 #if LIBREMIDI_WINMIDI_HAS_VIRTUAL_DEVICE
     if (m_virtual)
@@ -279,6 +281,8 @@ public:
       m_virtual = nullptr;
     }
   #endif
+    if (!connected)
+      return std::errc::not_connected;
     return stdx::error{};
   }
 

@@ -14,6 +14,15 @@ enum class segmentation_error
   other
 };
 
+// Utility and Stream messages describe an endpoint; the second nibble of a
+// reserved message type is not a group either. Do not leak these to group 0.
+inline constexpr bool ump_matches_group(uint32_t first_word, int group) noexcept
+{
+  const auto mt = first_word >> 28;
+  return group < 0 || (((mt >= 1 && mt <= 5) || mt == 0xd)
+                       && static_cast<int>((first_word >> 24) & 0xf) == group);
+}
+
 // Take the next contiguous run belonging to a port, without copying or splitting packets.
 // A negative group accepts all packets. An incomplete final packet is discarded.
 inline std::span<const uint32_t>
@@ -26,7 +35,7 @@ next_ump_group_run(std::span<const uint32_t>& words, int group)
     const std::size_t n = cmidi2_ump_get_num_bytes(tail.front()) / sizeof(uint32_t);
     if (n > tail.size())
       break;
-    if (group < 0 || cmidi2_ump_get_group(tail.data()) == group)
+    if (ump_matches_group(tail.front(), group))
     {
       accepted += n;
       continue;

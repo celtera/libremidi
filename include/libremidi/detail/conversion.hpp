@@ -477,12 +477,22 @@ struct midi1_to_midi2
     return ret;
   }
 
+  static cmidi2_midi_conversion_context initial_context() noexcept
+  {
+    cmidi2_midi_conversion_context ctx{};
+    cmidi2_midi_conversion_context_initialize(&ctx);
+    return ctx;
+  }
+
   //! Forgets the parameter selections, data entries and bank selections
-  //! received so far, on every channel.
-  void reset() noexcept
+  //! received so far, on every channel, and starts a new translation
+  //! addressed to this group.
+  void reset(uint8_t group = 0) noexcept
   {
     for (auto& c : channels)
       c = channel_state{};
+    context = initial_context();
+    context.group = group;
   }
 
   //! How bank select, data entry and parameter selection controllers are
@@ -490,11 +500,7 @@ struct midi1_to_midi2
   controller_translation controllers{controller_translation::raw};
 
   //! Its group, and use_sysex8, apply to the translation.
-  cmidi2_midi_conversion_context context = [] {
-    cmidi2_midi_conversion_context tmp;
-    cmidi2_midi_conversion_context_initialize(&tmp);
-    return tmp;
-  }();
+  cmidi2_midi_conversion_context context = initial_context();
 
   static constexpr std::size_t capacity = 65536 / 4;
   uint32_t ump[capacity];

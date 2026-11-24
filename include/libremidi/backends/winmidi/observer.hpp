@@ -1,305 +1,176 @@
 #pragma once
+#include <map>
 #include <mutex>
-#include <optional>
 #include <libremidi/backends/winmidi/config.hpp>
 #include <libremidi/backends/winmidi/helpers.hpp>
 #include <libremidi/detail/observer.hpp>
 
 NAMESPACE_LIBREMIDI::winmidi
 {
-struct port_info
+
+inline auto find_standard_endpoints()
 {
-  winrt::hstring id;
-  winrt::hstring name;
+  return MidiEndpointDeviceInformation::FindAll(
+      MidiEndpointDeviceInformationSortOrder::Name,
+      MidiEndpointDeviceInformationFilters::AllStandardEndpoints);
+}
+
+inline group_ports project_ports(
+    const MidiEndpointDeviceInformation& ep, const libremidi::observer_configuration& conf,
+    bool inputs = true, bool outputs = true)
+{
+  const auto info = ep.GetTransportSuppliedInfo();
+  const auto type = info ? transport_from_code(to_string(info.TransportCode())) : transport_type::unknown;
+  if (!accepts_endpoint(conf, type))
+    return {};
+
+  const port_information base{
+      .api = API::WINDOWS_MIDI_SERVICES,
+      .container = std::bit_cast<libremidi::uuid>(ep.ContainerId()),
+      .device = to_string(ep.EndpointDeviceId()),
+      .manufacturer = info ? to_string(info.ManufacturerName()) : std::string{},
+      .product = info ? to_string(info.Name()) : std::string{},
+      .serial = info ? to_string(info.SerialNumber()) : std::string{},
+      .device_name = to_string(ep.Name()),
+      .type = type};
+
+  return make_group_ports(ep, base, inputs, outputs, [](const auto& block) {
+    return to_string(block.Name());
+  });
+}
+
+// Device interface IDs are case insensitive; watcher removal args need not
+// preserve the casing used by the endpoint-information object.
+struct endpoint_id_less
+{
+  bool operator()(const winrt::hstring& a, const winrt::hstring& b) const noexcept
+  {
+    return CompareStringOrdinal(a.c_str(), a.size(), b.c_str(), b.size(), TRUE) == CSTR_LESS_THAN;
+  }
 };
 
-class observer_impl final
-    : public observer_api
+struct watched_groups
 {
+  libremidi::observer_configuration conf;
+  mutable std::mutex mutex;
+  std::map<winrt::hstring, group_ports, endpoint_id_less> known;
+
+  void replace(const winrt::hstring& id, group_ports next, bool notify = true)
+  {
+    group_changes changes;
+    {
+      std::lock_guard guard{mutex};
+      auto it = known.find(id);
+      if (it == known.end())
+      {
+        if (next.empty()) return;
+        it = known.try_emplace(id).first;
+      }
+      changes = replace_groups(it->second, std::move(next), conf, notify);
+      if (it->second.empty()) known.erase(it);
+    }
+    changes.notify(conf);
+  }
+
+  void update(const MidiEndpointDeviceInformation& ep, bool notify = true)
+  {
+    if (ep) replace(ep.EndpointDeviceId(), project_ports(ep, conf), notify);
+  }
+
+  void enumeration_completed(const MidiEndpointDeviceWatcher& watcher)
+  {
+    // An endpoint may have disappeared between our synchronous constructor
+    // snapshot and Start(). It will not get an initial Added or Removed event.
+    const auto enumerated = watcher.EnumeratedEndpointDevices();
+    std::vector<winrt::hstring> missing;
+    {
+      std::lock_guard guard{mutex};
+      for (const auto& [id, _] : known)
+        if (!enumerated.HasKey(id)) missing.push_back(id);
+    }
+    for (const auto& id : missing) replace(id, {});
+  }
+};
+
+class observer_impl final : public observer_api
+{
+  std::shared_ptr<watched_groups> state;
+  MidiEndpointDeviceWatcher watcher{nullptr};
+  MidiEndpointDeviceWatcher::Added_revoker added;
+  MidiEndpointDeviceWatcher::Updated_revoker updated;
+  MidiEndpointDeviceWatcher::Removed_revoker removed;
+  MidiEndpointDeviceWatcher::EnumerationCompleted_revoker completed;
+
 public:
-  struct
-      : libremidi::observer_configuration
-      , winmidi::observer_configuration
+  explicit observer_impl(libremidi::observer_configuration&& conf, winmidi::observer_configuration&&)
+      : state{std::make_shared<watched_groups>()}
   {
-  } configuration;
+    state->conf = std::move(conf);
+    if (!state->conf.has_callbacks()) return;
+    watcher = MidiEndpointDeviceWatcher::Create(MidiEndpointDeviceInformationFilters::AllStandardEndpoints);
+    if (!watcher) return;
 
-  MidiEndpointDeviceWatcher watcher = nullptr;
-  MidiEndpointDeviceWatcher::Added_revoker m_addHandler;
-  MidiEndpointDeviceWatcher::Updated_revoker m_updHandler;
-  MidiEndpointDeviceWatcher::Removed_revoker m_delHandler;
-  std::map<winrt::hstring, std::vector<input_port>> m_known_input_devices;
-  std::map<winrt::hstring, std::vector<output_port>> m_known_output_devices;
-  std::mutex m_devices_mtx;
-  std::atomic_bool m_in_constructor{true};
+    added = watcher.Added(winrt::auto_revoke, [s = state](auto&&, const auto& args) {
+      s->update(args.AddedDevice());
+    });
+    updated = watcher.Updated(winrt::auto_revoke, [s = state](auto&&, const auto& args) {
+      // Read all metadata: a rename or transport update need not change blocks.
+      s->update(args.UpdatedDevice());
+    });
+    removed = watcher.Removed(winrt::auto_revoke, [s = state](auto&&, const auto& args) {
+      s->replace(args.RemovedDevice().EndpointDeviceId(), {});
+    });
+    completed = watcher.EnumerationCompleted(winrt::auto_revoke, [s = state](const auto& w, auto&&) {
+      s->enumeration_completed(w);
+    });
 
-  explicit observer_impl(
-      libremidi::observer_configuration&& conf, winmidi::observer_configuration&& apiconf)
-      : configuration{std::move(conf), std::move(apiconf)}
+    // Seed even remove-only observers. Initial Added callbacks from Start()
+    // diff against this snapshot rather than reporting existing ports twice.
+    for (const auto& ep : find_standard_endpoints())
+      state->update(ep, state->conf.notify_in_constructor);
+    watcher.Start();
+  }
+
+  ~observer_impl() override
   {
-    struct on_delete { observer_impl& self; ~on_delete() { self.m_in_constructor = false; } } on_delete{*this};
+    if (!watcher) return;
+    added.revoke();
+    updated.revoke();
+    removed.revoke();
+    completed.revoke();
+    watcher.Stop();
+  }
 
-    if (!configuration.has_callbacks())
-      return;
+  libremidi::API get_current_api() const noexcept override { return API::WINDOWS_MIDI_SERVICES; }
 
-    // Note: winmidi also notifies for existing devices, so the "notify in constructor"
-    // is handled in the callbacks
-    if ((watcher = MidiEndpointDeviceWatcher::Create()))
+  template <typename Port>
+  auto list(std::vector<Port> group_ports::*member) const
+  {
+    std::vector<Port> result;
+    if (watcher)
     {
-      namespace enumeration = winrt::Windows::Devices::Enumeration;
-      auto addHandler = foundation::TypedEventHandler<
-          MidiEndpointDeviceWatcher, MidiEndpointDeviceInformationAddedEventArgs>(
-          this, &observer_impl::on_device_added);
-      auto updHandler = foundation::TypedEventHandler<
-          MidiEndpointDeviceWatcher, MidiEndpointDeviceInformationUpdatedEventArgs>(
-          this, &observer_impl::on_device_updated);
-      auto delHandler = foundation::TypedEventHandler<
-          MidiEndpointDeviceWatcher, MidiEndpointDeviceInformationRemovedEventArgs>(
-          this, &observer_impl::on_device_removed);
-
-      m_addHandler = watcher.Added(winrt::auto_revoke, addHandler);
-      m_updHandler = watcher.Updated(winrt::auto_revoke, updHandler);
-      m_delHandler = watcher.Removed(winrt::auto_revoke, delHandler);
-
-      watcher.Start();
-    }
-  }
-
-  ~observer_impl()
-  {
-    if (!configuration.has_callbacks())
-      return;
-
-    m_addHandler.revoke();
-    m_updHandler.revoke();
-    m_delHandler.revoke();
-  }
-
-  libremidi::API get_current_api() const noexcept override
-  {
-    return libremidi::API::WINDOWS_MIDI_SERVICES;
-  }
-
-  static transport_type code_to_type(std::string_view str) noexcept
-  {
-    using enum transport_type;
-
-    if (str.starts_with("KS"))
-      return hardware;
-    if (str == "BLE")
-      return transport_type(hardware | bluetooth);
-    if (str == "VPB" || str == "APP")
-      return software;
-    if (str == "LOOP")
-      return transport_type(software | loopback);
-    if (str.starts_with("NET"))
-      return network;
-    return unknown;
-  }
-
-  // gp can be either MidiGroupTerminalBlock or MidiFunctionBlock
-  template <bool Input>
-  auto to_port_info(const MidiEndpointDeviceInformation& p, const auto& gp)
-      const noexcept -> std::conditional_t<Input, input_port, output_port>
-  {
-    const auto tinfo = p.GetTransportSuppliedInfo();
-
-    return {
-        {.api = libremidi::API::WINDOWS_MIDI_SERVICES,
-         .client = 0,
-         .container = std::bit_cast<libremidi::uuid>(p.ContainerId()),
-         .device = to_string(p.EndpointDeviceId()),
-         .port = gp.Number(),
-         .manufacturer = tinfo ? to_string(tinfo.ManufacturerName()) : std::string{},
-         .product = tinfo ? to_string(tinfo.Name()) : std::string{},
-         .serial = tinfo ? to_string(tinfo.SerialNumber()) : std::string{},
-         .device_name = to_string(p.Name()),
-         .port_name = to_string(gp.Name()),
-         .display_name = to_string(gp.Name()) + " " + std::to_string(gp.Number()),
-         .type = tinfo ? code_to_type(to_string(tinfo.TransportCode())) : transport_type::unknown}};
-  }
-
-  //! The transport comes from the endpoint's transport code, so it is only
-  //! known once the port has been built.
-  template <bool Input>
-  auto wanted_port(const MidiEndpointDeviceInformation& p, const auto& gp) const noexcept
-      -> std::optional<std::conditional_t<Input, input_port, output_port>>
-  {
-    auto info = to_port_info<Input>(p, gp);
-
-    // An unrecognised transport code still names a real endpoint, so it is
-    // filtered as hardware: `unknown` is only selected by track_any.
-    auto transport = info.type;
-    if (transport == transport_type::unknown)
-      transport = transport_type::hardware;
-
-    if (!this->configuration.accepts(transport))
-      return std::nullopt;
-    return info;
-  }
-
-  std::vector<libremidi::input_port> get_input_ports() const noexcept override
-  {
-    std::vector<libremidi::input_port> ret;
-
-    for (const auto& ep : MidiEndpointDeviceInformation::FindAll())
-    {
-      for (const auto& gp : ep.GetDeclaredFunctionBlocks())
+      std::lock_guard guard{state->mutex};
+      for (const auto& [_, snapshot] : state->known)
       {
-        if (gp.Direction() != MidiFunctionBlockDirection::BlockOutput)
-          if (auto p = wanted_port<true>(ep, gp))
-            ret.emplace_back(std::move(*p));
-      }
-
-      for (const auto& gp : ep.GetGroupTerminalBlocks())
-      {
-        if (gp.Direction() != MidiGroupTerminalBlockDirection::BlockOutput)
-          if (auto p = wanted_port<true>(ep, gp))
-            ret.emplace_back(std::move(*p));
+        const auto& ports = snapshot.*member;
+        result.insert(result.end(), ports.begin(), ports.end());
       }
     }
-
-    return ret;
-  }
-
-  std::vector<libremidi::output_port> get_output_ports() const noexcept override
-  {
-    std::vector<libremidi::output_port> ret;
-
-    for (const auto& ep : MidiEndpointDeviceInformation::FindAll())
+    else
     {
-      for (const auto& gp : ep.GetDeclaredFunctionBlocks())
+      constexpr bool input = std::is_same_v<Port, input_port>;
+      for (const auto& ep : find_standard_endpoints())
       {
-        if (gp.Direction() != MidiFunctionBlockDirection::BlockInput)
-          if (auto p = wanted_port<false>(ep, gp))
-            ret.emplace_back(std::move(*p));
-      }
-
-      for (const auto& gp : ep.GetGroupTerminalBlocks())
-      {
-        if (gp.Direction() != MidiGroupTerminalBlockDirection::BlockInput)
-          if (auto p = wanted_port<false>(ep, gp))
-            ret.emplace_back(std::move(*p));
+        auto snapshot = project_ports(ep, state->conf, input, !input);
+        auto& ports = snapshot.*member;
+        result.insert(result.end(), std::make_move_iterator(ports.begin()), std::make_move_iterator(ports.end()));
       }
     }
-
-    return ret;
+    return result;
   }
 
-  // Note: these callbacks are called from some random thread!
-  void on_device_added(
-      const MidiEndpointDeviceWatcher&, const MidiEndpointDeviceInformationAddedEventArgs& result)
-  {
-    add_device(result.AddedDevice());
-  }
-
-  void on_device_updated(
-      const MidiEndpointDeviceWatcher&,
-      const MidiEndpointDeviceInformationUpdatedEventArgs& result)
-  {
-    const auto device = result.UpdatedDevice();
-    remove_device(device.EndpointDeviceId());
-    add_device(device);
-  }
-
-  void on_device_removed(
-      const MidiEndpointDeviceWatcher&,
-      const MidiEndpointDeviceInformationRemovedEventArgs& result)
-  {
-    remove_device(result.RemovedDevice().EndpointDeviceId());
-  }
-
-  void add_block(const MidiEndpointDeviceInformation& ep, const auto& gp)
-  {
-    const auto add_input = [&] {
-      if (configuration.input_added)
-      {
-        auto ip = to_port_info<true>(ep, gp);
-        {
-          std::lock_guard _{m_devices_mtx};
-          m_known_input_devices[ep.EndpointDeviceId()].push_back(ip);
-        }
-
-        if(!m_in_constructor || configuration.notify_in_constructor)
-          configuration.input_added(std::move(ip));
-      }
-    };
-    auto add_output = [&] {
-      if (configuration.output_added)
-      {
-        auto op = to_port_info<false>(ep, gp);
-        {
-          std::lock_guard _{m_devices_mtx};
-          m_known_output_devices[ep.EndpointDeviceId()].push_back(op);
-        }
-
-        if(!m_in_constructor || configuration.notify_in_constructor)
-          configuration.output_added(std::move(op));
-      }
-    };
-
-    using direction_type = decltype(gp.Direction());
-    switch (gp.Direction())
-    {
-      case direction_type::Bidirectional:
-        add_input();
-        add_output();
-        break;
-      case direction_type::BlockInput:
-        add_input();
-        break;
-      case direction_type::BlockOutput:
-          add_output();
-        break;
-      default:
-        // Undefined direction, does it make sense to handle it somewhere?
-        break;
-    }
-  }
-
-  void add_device(const MidiEndpointDeviceInformation& ep)
-  {
-    for (const auto& fb : ep.GetDeclaredFunctionBlocks())
-    {
-      add_block(ep, fb);
-    }
-    for (const auto& gp : ep.GetGroupTerminalBlocks())
-    {
-      add_block(ep, gp);
-    }
-  }
-
-  void remove_device(winrt::hstring eid)
-  {
-    std::vector<input_port> to_remove_in;
-    std::vector<output_port> to_remove_out;
-
-    {
-      std::lock_guard _{m_devices_mtx};
-      if (auto it = m_known_input_devices.find(eid); it != m_known_input_devices.end())
-      {
-        for (auto& ip : it->second)
-        {
-          to_remove_in.push_back(ip);
-        }
-        m_known_input_devices.erase(it);
-      }
-      if (auto it = m_known_output_devices.find(eid); it != m_known_output_devices.end())
-      {
-        for (auto& op : it->second)
-        {
-          to_remove_out.push_back(op);
-        }
-        m_known_output_devices.erase(it);
-      }
-    }
-
-    if (configuration.input_removed)
-      for (auto& port : to_remove_in)
-        configuration.input_removed(port);
-    if (configuration.output_removed)
-      for (auto& port : to_remove_out)
-        configuration.output_removed(port);
-  }
+  std::vector<input_port> get_input_ports() const noexcept override { return list(&group_ports::inputs); }
+  std::vector<output_port> get_output_ports() const noexcept override { return list(&group_ports::outputs); }
 };
 
 }
