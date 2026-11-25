@@ -148,6 +148,11 @@ int main(int argc, char** argv)
   // Wait for a session
   while (!endpoint.wait_until_established(200ms))
   {
+    if (endpoint.refused())
+    {
+      std::printf("the host refused us\n");
+      return 1;
+    }
     if (expired())
     {
       std::printf("no session was established\n");

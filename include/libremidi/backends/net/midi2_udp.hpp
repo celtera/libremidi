@@ -29,6 +29,9 @@ public:
   // At most this many clients at a time for a host
   static constexpr std::size_t max_sessions = 32;
 
+  // A client invites again this long after its session ended
+  static constexpr uint64_t reinvite_delay_ms = 2000;
+
   // How often the timers of the sessions are looked at
   static constexpr std::chrono::milliseconds tick_period{2};
 
@@ -44,7 +47,13 @@ public:
   {
   }
 
-  ~midi2_udp_endpoint() { close(); }
+  ~midi2_udp_endpoint()
+  {
+    close();
+    // With the context of the application, handlers of ours can still be
+    // queued in it: they see this and leave.
+    *m_alive = false;
+  }
 
   midi2_udp_endpoint(const midi2_udp_endpoint&) = delete;
   midi2_udp_endpoint& operator=(const midi2_udp_endpoint&) = delete;
@@ -54,6 +63,8 @@ public:
   /// the system has both: some clients (macOS) come over IPv6 link-local addresses.
   stdx::error open_host(const std::string& address, int port)
   {
+    if (port < 0 || port > 65535)
+      return std::errc::invalid_argument;
     const auto p = static_cast<unsigned short>(port);
     if (address.empty() || address == "0.0.0.0" || address == "::")
     {
@@ -81,6 +92,8 @@ public:
   /// Returns at once: see wait_until_established.
   stdx::error open_client(const std::string& host, int port, int local_port = 0)
   {
+    if (port < 1 || port > 65535 || local_port < 0 || local_port > 65535)
+      return std::errc::invalid_argument;
     boost::system::error_code ec;
     const auto ip = boost::asio::ip::make_address(host, ec);
     if (ec)
@@ -120,17 +133,23 @@ public:
     return n;
   }
 
-  /// Waits until a session is established: true when one is.
+  /// Waits until a session is established: true when one is. Does not wait
+  /// further once the host refused us (see refused()).
   /// Only with a context of our own; otherwise the application has to run its context.
   bool wait_until_established(std::chrono::milliseconds timeout)
   {
     std::unique_lock lock{m_mutex};
-    return m_changed.wait_for(lock, timeout, [&] {
-      for (const auto& [ep, s] : m_sessions)
-        if (s->established())
-          return true;
-      return false;
-    });
+    m_changed.wait_for(lock, timeout, [&] { return any_established() || refused_locked(); });
+    return any_established();
+  }
+
+  /// Client: the host does not want us (wrong or missing secret, no room).
+  /// It is not invited again; anything else that ends the session is
+  /// followed by a new invitation every few seconds.
+  bool refused() const
+  {
+    std::lock_guard lock{m_mutex};
+    return refused_locked();
   }
 
   /// To every established session
@@ -162,6 +181,7 @@ public:
 
     {
       std::lock_guard lock{m_mutex};
+      m_closing = true;
       const auto t = now();
       for (auto& [ep, s] : m_sessions)
         s->close(t);
@@ -217,7 +237,8 @@ private:
         return std::errc::address_family_not_supported;
       }
     }
-    m_socket.set_option(udp::socket::reuse_address(true), ec);
+    // Without reuse_address: a second host on the same port has to fail,
+    // and on Windows that option lets any other process take the port over.
     m_socket.bind(local, ec);
     if (ec)
     {
@@ -228,8 +249,57 @@ private:
     return stdx::error{};
   }
 
+  // With m_mutex held
+  bool any_established() const
+  {
+    for (const auto& [ep, s] : m_sessions)
+      if (s->established())
+        return true;
+    return false;
+  }
+
+  static bool is_refusal(network_midi2::bye_reason r) noexcept
+  {
+    using enum network_midi2::bye_reason;
+    return r == too_many_sessions || r == rejected_by_user || r == authentication_failed
+           || r == username_not_found || r == no_matching_authentication_method
+           || r == authentication_without_prior_invitation;
+  }
+
+  bool refused_locked() const
+  {
+    if (m_role != network_midi2::role::client)
+      return false;
+    for (const auto& [ep, s] : m_sessions)
+      if (s->state() == network_midi2::session_state::closed && is_refusal(s->close_reason()))
+        return true;
+    return false;
+  }
+
+  // A full host makes room by forgetting whoever only ever sent an invitation,
+  // the one silent for the longest: invitations cost nothing to forge.
+  // With m_mutex held; false when everybody there has proven to be there.
+  bool forget_an_unproven_session()
+  {
+    auto victim = m_sessions.end();
+    for (auto it = m_sessions.begin(); it != m_sessions.end(); ++it)
+    {
+      const auto& s = *it->second;
+      if (s.established() && s.heard_since_established())
+        continue;
+      if (victim == m_sessions.end() || s.last_received() < victim->second->last_received())
+        victim = it;
+    }
+    if (victim == m_sessions.end())
+      return false;
+    m_sessions.erase(victim);
+    return true;
+  }
+
   void start()
   {
+    m_closing = false;
+    m_reinvite_at = 0;
     receive();
     schedule_tick();
 
@@ -262,8 +332,8 @@ private:
   {
     m_socket.async_receive_from(
         boost::asio::mutable_buffer(m_data, sizeof(m_data)), m_from,
-        [this](boost::system::error_code ec, std::size_t size) {
-      if (ec == boost::asio::error::operation_aborted || !m_socket.is_open())
+        [this, alive = m_alive](boost::system::error_code ec, std::size_t size) {
+      if (!*alive || ec == boost::asio::error::operation_aborted || !m_socket.is_open())
         return;
 
       if (!ec && size > 0)
@@ -286,7 +356,7 @@ private:
       if (m_role != network_midi2::role::host)
         return;
 
-      if (m_sessions.size() >= max_sessions)
+      if (m_sessions.size() >= max_sessions && !forget_an_unproven_session())
       {
         network_midi2::datagram_writer w;
         w.bye(network_midi2::bye_reason::too_many_sessions);
@@ -304,8 +374,8 @@ private:
   void schedule_tick()
   {
     m_timer.expires_after(tick_period);
-    m_timer.async_wait([this](boost::system::error_code ec) {
-      if (ec || !m_socket.is_open())
+    m_timer.async_wait([this, alive = m_alive](boost::system::error_code ec) {
+      if (!*alive || ec || !m_socket.is_open())
         return;
 
       {
@@ -320,9 +390,26 @@ private:
           if (m_role == network_midi2::role::host
               && (state == network_midi2::session_state::closed
                   || state == network_midi2::session_state::idle))
+          {
             it = m_sessions.erase(it);
-          else
-            ++it;
+            continue;
+          }
+
+          // A client whose session ended without us asking, and without the
+          // host refusing us, invites again: the host may be back later.
+          if (m_role == network_midi2::role::client
+              && state == network_midi2::session_state::closed && !m_closing
+              && !is_refusal(it->second->close_reason()))
+          {
+            if (m_reinvite_at == 0)
+              m_reinvite_at = t + reinvite_delay_ms;
+            else if (t >= m_reinvite_at)
+            {
+              m_reinvite_at = 0;
+              it->second->invite(t);
+            }
+          }
+          ++it;
         }
       }
       schedule_tick();
@@ -338,6 +425,13 @@ private:
   mutable std::recursive_mutex m_mutex;
   std::condition_variable_any m_changed;
   std::map<udp::endpoint, std::unique_ptr<network_midi2::session>> m_sessions;
+
+  bool m_closing = false;
+  uint64_t m_reinvite_at = 0;
+
+  // Shared with the handlers. Only read and written from the thread that runs
+  // the context, or after our own thread has ended.
+  std::shared_ptr<bool> m_alive = std::make_shared<bool>(true);
 
   std::thread m_thread;
   udp::endpoint m_from;

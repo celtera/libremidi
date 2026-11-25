@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <deque>
@@ -395,7 +396,8 @@ struct session_configuration
 
   // All in milliseconds
   uint32_t invitation_retry = 1000;
-  // Client: gives up on a host that does not answer at all
+  // Client: gives up on a host that does not answer at all.
+  // Host: gives up on a client that does not answer the authentication request.
   uint32_t invitation_timeout = 10000;
   // A Ping is sent when nothing was received for this long
   uint32_t ping_interval = 10000;
@@ -446,6 +448,12 @@ public:
   /// Whether the peer closed it
   bool closed_by_peer() const noexcept { return m_closed_by_peer; }
 
+  /// When the last datagram of the peer arrived
+  uint64_t last_received() const noexcept { return m_last_received; }
+  /// Whether the peer was heard again after the session was established:
+  /// an invitation alone can come from anybody, with any source address.
+  bool heard_since_established() const noexcept { return m_heard_since_established; }
+
   const std::string& remote_endpoint_name() const noexcept { return m_remote_name; }
   const std::string& remote_product_instance_id() const noexcept { return m_remote_piid; }
 
@@ -457,6 +465,7 @@ public:
     reset_streams();
     m_invite_started = now;
     m_last_received = now;
+    m_invitation_pending = false;
     set_state(session_state::inviting);
     send_invitation(now);
   }
@@ -527,11 +536,21 @@ public:
 
     m_last_received = now;
     m_ping_pending = false;
+    if (m_state == session_state::established)
+      m_heard_since_established = true;
+
+    m_data_commands = 0;
+    m_data_commands_in_sequence = 0;
 
     datagram_writer reply;
     command_view cmd;
     while (reader.next(cmd))
     {
+      // Answers stay within one datagram of ours, whatever is asked:
+      // past that, only data is still looked at.
+      if (reply.size() >= max_datagram_bytes && cmd.code != command::ump_data)
+        continue;
+
       on_command(cmd, reply, now);
       if (m_state == session_state::closed)
         break;
@@ -539,7 +558,10 @@ public:
     flush(reply);
 
     if (m_state == session_state::established)
+    {
       deliver_in_order(now);
+      check_synchronisation();
+    }
   }
 
   /// Timers: call every few milliseconds
@@ -548,7 +570,9 @@ public:
     switch (m_state)
     {
       case session_state::inviting:
-        if (now - m_invite_started >= configuration.invitation_timeout && !m_invitation_pending)
+        // A host that said "wait" is waited for as long as it says something
+        if (m_invitation_pending ? now - m_last_received >= configuration.timeout
+                                 : now - m_invite_started >= configuration.invitation_timeout)
         {
           // Nobody there
           datagram_writer w;
@@ -579,7 +603,7 @@ public:
         break;
 
       case session_state::authenticating:
-        if (now - m_last_received >= configuration.timeout)
+        if (now - m_last_received >= configuration.invitation_timeout)
           finish(bye_reason::timeout, false);
         break;
 
@@ -634,6 +658,9 @@ private:
     m_ping_sent = now;
     m_ping_pending = false;
     m_ping_awaited = false;
+    m_heard_since_established = false;
+    m_retransmit_allowance = retransmit_allowance_max();
+    m_retransmit_refilled = now;
     set_state(session_state::established);
   }
 
@@ -647,6 +674,36 @@ private:
     m_gap_attempts = 0;
     m_idle_commands = 0;
     m_has_sent_data = false;
+    m_out_of_sequence_datagrams = 0;
+  }
+
+  // Commands resent on request: this many at once, and as many per second
+  // as there are milliseconds. A request is a few bytes and can ask for the
+  // whole buffer, from an address that anybody can write on a datagram.
+  uint64_t retransmit_allowance_max() const noexcept
+  {
+    return 2 * static_cast<uint64_t>(configuration.retransmit_buffer_commands);
+  }
+
+  // Datagrams of data in a row without anything at or after what we expect:
+  // the peer counts from somewhere else (it started again, or something made
+  // us jump ahead). Both sides start again from zero.
+  void check_synchronisation()
+  {
+    if (m_data_commands == 0)
+      return;
+    if (m_data_commands_in_sequence > 0)
+    {
+      m_out_of_sequence_datagrams = 0;
+      return;
+    }
+    if (++m_out_of_sequence_datagrams < max_out_of_sequence_datagrams)
+      return;
+
+    reset_streams();
+    datagram_writer w;
+    w.simple(command::session_reset);
+    flush(w);
   }
 
   void send_invitation(uint64_t now)
@@ -725,9 +782,11 @@ private:
     if (peer_silent || we_are_silent)
     {
       m_ping_pending = true;
-      m_ping_awaited = true;
       m_ping_sent = now;
-      m_ping_id = m_random();
+      // The same question until it is answered: a late answer is still one
+      if (!m_ping_awaited)
+        m_ping_id = m_random();
+      m_ping_awaited = true;
       datagram_writer w;
       w.ping(command::ping, m_ping_id);
       flush(w);
@@ -828,9 +887,17 @@ private:
   {
     const uint16_t sequence = cmd.specific_16();
 
+    m_data_commands++;
+
     // Already delivered: a repeat
     if (sequence != m_expected && !sequence_after(sequence, m_expected))
       return;
+
+    // Further ahead than loss explains: not from this stream
+    if (static_cast<uint16_t>(sequence - m_expected) > max_sequence_jump)
+      return;
+
+    m_data_commands_in_sequence++;
 
     // Already waiting
     auto it = std::find_if(m_held.begin(), m_held.end(), [&](const held_command& h) {
@@ -858,8 +925,12 @@ private:
     }
   }
 
-  void on_retransmit_request(const command_view& cmd, datagram_writer& reply)
+  void on_retransmit_request(const command_view& cmd, datagram_writer& reply, uint64_t now)
   {
+    m_retransmit_allowance = std::min<uint64_t>(
+        retransmit_allowance_max(), m_retransmit_allowance + (now - m_retransmit_refilled));
+    m_retransmit_refilled = now;
+
     // Some implementations send no count and one request per missing command:
     // that asks for this one. A count of zero asks for everything from there on.
     const uint16_t from = cmd.specific_16();
@@ -880,7 +951,8 @@ private:
       count = static_cast<uint16_t>(m_sent.end() - it);
 
     datagram_writer w;
-    for (; it != m_sent.end() && count > 0; ++it, --count)
+    for (; it != m_sent.end() && count > 0 && m_retransmit_allowance > 0;
+         ++it, --count, --m_retransmit_allowance)
     {
       if (w.size() + 4 + it->words.size() * 4 > max_datagram_bytes)
       {
@@ -911,14 +983,27 @@ private:
     return true;
   }
 
-  void new_nonce()
+  // From the system's source of randomness. Where that one is weak (it is
+  // allowed to be), the time, a counter and our own generator still make
+  // every nonce different; all of it goes through the hash so that a nonce
+  // says nothing about the next one.
+  void new_nonce(uint64_t now)
   {
-    for (std::size_t i = 0; i < m_nonce.size(); i += 4)
-    {
-      const uint32_t r = m_random();
-      for (std::size_t j = 0; j < 4; j++)
-        m_nonce[i + j] = static_cast<uint8_t>(r >> (8 * j));
-    }
+    static std::atomic<uint64_t> counter{0};
+    std::random_device system;
+    datagram_writer seed;
+    for (int i = 0; i < 8; i++)
+      seed.word(static_cast<uint32_t>(system()));
+    seed.word(static_cast<uint32_t>(now >> 32));
+    seed.word(static_cast<uint32_t>(now));
+    const uint64_t n = counter++;
+    seed.word(static_cast<uint32_t>(n >> 32));
+    seed.word(static_cast<uint32_t>(n));
+    seed.word(static_cast<uint32_t>(m_random()));
+    seed.raw(m_nonce);
+
+    const auto digest = sha256::hash(seed.bytes);
+    std::copy_n(digest.begin(), m_nonce.size(), m_nonce.begin());
   }
 
   void on_command(const command_view& cmd, datagram_writer& reply, uint64_t now)
@@ -935,11 +1020,10 @@ private:
 
       case command::invitation_with_user_authentication:
         // We never ask for it
-        if (m_role == role::host)
+        if (m_role == role::host && m_state != session_state::established)
         {
           reply.bye(bye_reason::no_matching_authentication_method);
-          if (m_state != session_state::established)
-            finish(bye_reason::no_matching_authentication_method, false);
+          finish(bye_reason::no_matching_authentication_method, false);
         }
         else
           reply.nak(nak_reason::command_not_expected, cmd.header);
@@ -1004,13 +1088,15 @@ private:
       case command::ump_data:
         if (m_state == session_state::established)
           on_ump_data(cmd);
-        else if (m_state != session_state::closing)
+        // A client that is still inviting says nothing: the host may have
+        // accepted already, in an answer that was lost and will come again.
+        else if (m_state != session_state::closing && m_state != session_state::inviting)
           reply.bye(bye_reason::session_not_established);
         break;
 
       case command::retransmit_request:
         if (m_state == session_state::established)
-          on_retransmit_request(cmd, reply);
+          on_retransmit_request(cmd, reply, now);
         else
           reply.nak(nak_reason::command_not_expected, cmd.header);
         break;
@@ -1025,6 +1111,9 @@ private:
         if (m_state == session_state::established)
         {
           reset_streams();
+          // What came before it in this datagram belongs to the old numbering
+          m_data_commands = 0;
+          m_data_commands_in_sequence = 0;
           reply.simple(command::session_reset_reply);
         }
         else
@@ -1061,7 +1150,7 @@ private:
       reply.nak(nak_reason::command_not_expected, cmd.header);
       return;
     }
-    if (!read_identity(cmd, 0))
+    if (cmd.payload.size() < std::size_t{cmd.specific_1} * 4)
     {
       reply.nak(nak_reason::command_malformed, cmd.header);
       return;
@@ -1069,12 +1158,23 @@ private:
 
     if (m_state == session_state::established)
     {
-      // Our answer was lost: say it again, the session goes on
+      // Our answer was lost: say it again, the session goes on.
       reply.identity(
           command::invitation_reply_accepted, 0, configuration.endpoint_name,
           configuration.product_instance_id);
+
+      // Unless data came already: then this is the client starting again from
+      // the same address without having said goodbye, counting from zero.
+      // The reset makes both sides do so, whichever of the two cases it is.
+      if (m_expected != 0 || !m_held.empty())
+      {
+        reset_streams();
+        reply.simple(command::session_reset);
+      }
       return;
     }
+
+    read_identity(cmd, 0);
 
     if (!configuration.shared_secret.empty())
     {
@@ -1082,7 +1182,7 @@ private:
       // some clients authenticate without announcing it.
       if (m_state != session_state::authenticating)
       {
-        new_nonce();
+        new_nonce(now);
         m_authentication_attempts = 0;
       }
       set_state(session_state::authenticating);
@@ -1140,7 +1240,7 @@ private:
     else
     {
       // Wrong: once more, with a new nonce
-      new_nonce();
+      new_nonce(now);
       reply.identity(
           command::invitation_reply_authentication_required, 1, configuration.endpoint_name,
           configuration.product_instance_id, m_nonce);
@@ -1168,12 +1268,16 @@ private:
     const auto digest = sha256::hash(cmd.payload.first(16), configuration.shared_secret);
     reply.begin(command::invitation_with_authentication, 8);
     reply.raw(digest);
-    // The plain invitation must not be sent again meanwhile
+    // The host is there: wait for it as long as it answers. The invitation
+    // keeps going out, and brings the request again if this answer is lost.
     m_invitation_pending = true;
   }
 
   static constexpr std::size_t max_held_commands = 256;
   static constexpr int max_requests_per_datagram = 64;
+  // What is further ahead than this is not waited for
+  static constexpr uint16_t max_sequence_jump = 4096;
+  static constexpr int max_out_of_sequence_datagrams = 64;
 
   role m_role;
   session_state m_state = session_state::idle;
@@ -1192,6 +1296,7 @@ private:
 
   // Liveness
   uint64_t m_last_received = 0;
+  bool m_heard_since_established = false;
   bool m_ping_pending = false;
   // A Ping of ours has not been answered yet
   bool m_ping_awaited = false;
@@ -1208,12 +1313,18 @@ private:
   uint64_t m_last_sent_data = 0;
   bool m_has_sent_data = false;
   int m_idle_commands = 0;
+  uint64_t m_retransmit_allowance = 0;
+  uint64_t m_retransmit_refilled = 0;
 
   // Receiving
   uint16_t m_expected = 0;
   std::deque<held_command> m_held;
   std::optional<uint64_t> m_gap_since;
   int m_gap_attempts = 0;
+  // In the datagram being read
+  int m_data_commands = 0;
+  int m_data_commands_in_sequence = 0;
+  int m_out_of_sequence_datagrams = 0;
 
   std::minstd_rand m_random{std::random_device{}()};
 };

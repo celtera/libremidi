@@ -271,8 +271,9 @@ public:
         if (!m_udp->wait_until_established(
                 std::chrono::milliseconds(configuration.connection_timeout_ms)))
         {
+          const bool refused = m_udp->refused();
           m_udp.reset();
-          return std::errc::timed_out;
+          return refused ? std::errc::permission_denied : std::errc::timed_out;
         }
       }
       return stdx::error{};

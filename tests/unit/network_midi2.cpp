@@ -600,3 +600,245 @@ TEST_CASE("a side that only listens still shows that it is there", "[network_mid
   CHECK(l.host.established());
   CHECK(l.client.established());
 }
+
+// ---- What a peer, or somebody writing its address on datagrams, can do
+
+namespace
+{
+// One UMP Data command with one word that tells its sequence number
+bytes data_command(uint16_t sequence)
+{
+  const auto hi = static_cast<uint8_t>(sequence >> 8);
+  const auto lo = static_cast<uint8_t>(sequence);
+  return bytes{M, I, D, I, 0xFF, 1, hi, lo, 0x20, 0x90, hi, lo};
+}
+
+std::size_t total_bytes(const std::vector<bytes>& datagrams)
+{
+  std::size_t n = 0;
+  for (const auto& d : datagrams)
+    n += d.size();
+  return n;
+}
+
+bool has_command(const std::vector<bytes>& datagrams, uint8_t code)
+{
+  for (const auto& d : datagrams)
+  {
+    nm2::datagram_reader reader{d};
+    nm2::command_view cmd;
+    while (reader.next(cmd))
+      if (static_cast<uint8_t>(cmd.code) == code)
+        return true;
+  }
+  return false;
+}
+}
+
+TEST_CASE("retransmit requests cannot be made to send without end", "[network_midi2][hostile]")
+{
+  test_link l;
+  l.connect();
+  const auto words = notes(32);
+  for (int i = 0; i < 128; i++)
+    l.host.send_ump(words.data(), words.size(), l.now);
+  l.run(5);
+  l.sent_by_host.clear();
+
+  // One datagram, eight thousand times "everything from the start on"
+  bytes request{M, I, D, I};
+  for (int i = 0; i < 8000; i++)
+    request.insert(request.end(), {0x80, 1, 0, 0, 0, 0, 0, 0});
+  l.host.on_datagram(request, l.now);
+
+  // The buffer twice at most, not eight thousand times
+  CHECK(total_bytes(l.sent_by_host) <= 2 * 128 * (4 + 64 * 4) + 4 * 64);
+
+  // And the allowance comes back with time
+  l.sent_by_host.clear();
+  l.now += 1000;
+  const bytes one{M, I, D, I, 0x80, 1, 0, 5, 0, 1, 0, 0};
+  l.host.on_datagram(one, l.now);
+  REQUIRE(l.sent_by_host.size() == 1);
+  CHECK(l.sent_by_host[0][4] == 0xFF);
+}
+
+TEST_CASE("the answer to a datagram stays one datagram", "[network_midi2][hostile]")
+{
+  test_link l;
+  l.connect();
+  l.sent_by_host.clear();
+
+  // Sixteen thousand commands nobody knows
+  bytes junk{M, I, D, I};
+  for (int i = 0; i < 16000; i++)
+    junk.insert(junk.end(), {0x55, 0, 0, 0});
+  l.host.on_datagram(junk, l.now);
+
+  REQUIRE(l.sent_by_host.size() == 1);
+  CHECK(l.sent_by_host[0].size() <= nm2::max_datagram_bytes + 8);
+  CHECK(l.host.established());
+}
+
+TEST_CASE("a sequence number from far ahead is not waited for", "[network_midi2][hostile]")
+{
+  test_link l;
+  l.connect();
+
+  l.host.on_datagram(data_command(0x5000), l.now);
+  l.run(200);
+  CHECK(l.host_received.empty());
+
+  // The stream is where it was
+  l.host.on_datagram(data_command(0), l.now);
+  l.run(5);
+  CHECK(l.host_received == std::vector<uint32_t>{0x20900000});
+}
+
+TEST_CASE("a stream that lost its place is started again", "[network_midi2][hostile]")
+{
+  test_link l;
+  l.connect();
+
+  // Close enough to be waited for, then skipped to: the host is now ahead of its client
+  l.host.on_datagram(data_command(1000), l.now);
+  l.run(200);
+  REQUIRE(l.host_received == std::vector<uint32_t>{0x209003E8});
+  l.host_received.clear();
+  l.sent_by_host.clear();
+
+  // The client knows nothing of it and goes on from zero
+  for (uint32_t i = 0; i < 300; i++)
+  {
+    const uint32_t ump = 0x20800000 | i;
+    l.client.send_ump(&ump, 1, l.now);
+    l.run(2);
+  }
+  l.run(500);
+
+  // The host asked to start again, and what was sent after that arrived
+  CHECK(has_command(l.sent_by_host, 0x82));
+  REQUIRE(!l.host_received.empty());
+  CHECK(l.host_received.back() == (0x20800000u | 299));
+  CHECK(l.host_received.size() >= 200);
+  CHECK(l.host.established());
+  CHECK(l.client.established());
+}
+
+TEST_CASE("a client that starts again from the same address is heard", "[network_midi2]")
+{
+  test_link l;
+  l.connect();
+  const auto invitation = l.sent_by_client.at(0);
+
+  const auto words = notes(50);
+  for (int i = 0; i < 50; i++)
+    l.client.send_ump(words.data() + 2 * i, 2, l.now);
+  l.run(20);
+  REQUIRE(l.host_received == words);
+  l.host_received.clear();
+  l.sent_by_host.clear();
+
+  // It was killed and started again: no goodbye, the same invitation, and data from zero
+  l.host.on_datagram(invitation, l.now);
+  REQUIRE(l.sent_by_host.size() == 1);
+  CHECK(l.sent_by_host[0][4] == 0x10);
+  CHECK(has_command(l.sent_by_host, 0x82));
+  CHECK(l.host.established());
+
+  l.host.on_datagram(data_command(0), l.now);
+  l.host.tick(l.now);
+  CHECK(l.host_received == std::vector<uint32_t>{0x20900000});
+}
+
+TEST_CASE("an invitation that comes twice does not disturb a session without data", "[network_midi2]")
+{
+  test_link l;
+  l.connect();
+  const auto invitation = l.sent_by_client.at(0);
+  l.sent_by_host.clear();
+
+  l.host.on_datagram(invitation, l.now);
+  REQUIRE(l.sent_by_host.size() == 1);
+  CHECK(l.sent_by_host[0][4] == 0x10);
+  CHECK_FALSE(has_command(l.sent_by_host, 0x82));
+}
+
+TEST_CASE("a client that is still inviting does not refuse early data", "[network_midi2]")
+{
+  test_link l;
+  l.loss = 1.;
+  l.client.invite(l.now);
+  l.sent_by_client.clear();
+
+  // The host accepted, its answer was lost, and it already sends
+  l.client.on_datagram(data_command(0), l.now);
+  CHECK(l.sent_by_client.empty());
+  CHECK(l.client.state() == nm2::session_state::inviting);
+}
+
+TEST_CASE("a host that said to wait and then went away is given up on", "[network_midi2]")
+{
+  test_link l;
+  l.loss = 1.;
+  l.client.invite(l.now);
+
+  const bytes pending{M, I, D, I, 0x11, 0, 0, 0};
+  l.client.on_datagram(pending, l.now);
+
+  // Longer than without that answer
+  l.run(15000);
+  CHECK(l.client.state() == nm2::session_state::inviting);
+  // But not forever
+  l.run(20000);
+  CHECK(l.client.state() == nm2::session_state::closed);
+  CHECK(l.client.close_reason() == nm2::bye_reason::timeout);
+}
+
+TEST_CASE("every authentication request has its own nonce", "[network_midi2][hostile]")
+{
+  nm2::datagram_writer invitation;
+  invitation.identity(nm2::command::invitation, 1, "somebody", "id");
+  bytes wrong{M, I, D, I, 0x02, 8, 0, 0};
+  wrong.resize(wrong.size() + 32);
+
+  std::vector<bytes> nonces;
+  for (int session = 0; session < 8; session++)
+  {
+    nm2::session host{nm2::role::host, {.shared_secret = "opensesame"}};
+    host.send_datagram = [&](std::span<const uint8_t> d) {
+      if (d.size() >= 24 && d[4] == 0x12)
+        nonces.emplace_back(d.begin() + 8, d.begin() + 24);
+    };
+    // The same time for all of them: the clock is not what tells them apart
+    host.on_datagram(invitation.bytes, 1000);
+    host.on_datagram(wrong, 1000);
+    host.on_datagram(wrong, 1000);
+  }
+
+  REQUIRE(nonces.size() == 24);
+  for (std::size_t a = 0; a < nonces.size(); a++)
+  {
+    for (std::size_t b = a + 1; b < nonces.size(); b++)
+    {
+      CHECK(nonces[a] != nonces[b]);
+      // Not even a word in common
+      for (int w = 0; w < 4; w++)
+        CHECK_FALSE(std::equal(
+            nonces[a].begin() + 4 * w, nonces[a].begin() + 4 * w + 4, nonces[b].begin() + 4 * w));
+    }
+  }
+}
+
+TEST_CASE("a client that never answers the authentication request is forgotten", "[network_midi2]")
+{
+  test_link l{{.shared_secret = "opensesame"}, {}};
+  nm2::datagram_writer invitation;
+  invitation.identity(nm2::command::invitation, 1, "somebody", "id");
+  l.host.on_datagram(invitation.bytes, l.now);
+  REQUIRE(l.host.state() == nm2::session_state::authenticating);
+
+  for (int i = 0; i < 11000; i++)
+    l.host.tick(l.now++);
+  CHECK(l.host.state() == nm2::session_state::closed);
+}

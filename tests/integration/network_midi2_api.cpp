@@ -4,6 +4,10 @@
 
 #include <libremidi/configurations.hpp>
 #include <libremidi/libremidi.hpp>
+#include <libremidi/protocols/network_midi2.hpp>
+
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/udp.hpp>
 
 #include <chrono>
 #include <mutex>
@@ -221,4 +225,84 @@ TEST_CASE("nobody at the other end: the output says so", "[network_midi2][api]")
   libremidi::midi_out out{{}, conf};
   CHECK(out.open_port(port_of<libremidi::output_port>(out), "client") != stdx::error{});
   CHECK(out.send_ump(some_ump.data(), some_ump.size()) != stdx::error{});
+}
+
+TEST_CASE("an output finds its host again after the host went away", "[network_midi2][api]")
+{
+  const int port = free_port();
+  libremidi::midi_out out{{}, output(port)};
+
+  {
+    received r;
+    libremidi::midi_in in{r.configuration(), input(port)};
+    REQUIRE(in.open_virtual_port("host") == stdx::error{});
+    REQUIRE(out.open_port(port_of<libremidi::output_port>(out), "client") == stdx::error{});
+    REQUIRE(out.send_ump(some_ump.data(), some_ump.size()) == stdx::error{});
+    CHECK(r.wait_for(some_ump.size()) == some_ump);
+  }
+
+  // The host said goodbye: nowhere to send to
+  bool refused = false;
+  for (int i = 0; i < 200 && !refused; i++)
+  {
+    refused = out.send_ump(some_ump.data(), some_ump.size()) != stdx::error{};
+    if (!refused)
+      std::this_thread::sleep_for(5ms);
+  }
+  REQUIRE(refused);
+
+  // Another one comes up at the same place: the output invites it by itself
+  received r;
+  libremidi::midi_in in{r.configuration(), input(port)};
+  REQUIRE(in.open_virtual_port("host") == stdx::error{});
+
+  bool sent = false;
+  for (int i = 0; i < 1500 && !sent; i++)
+  {
+    sent = out.send_ump(some_ump.data(), some_ump.size()) == stdx::error{};
+    if (!sent)
+      std::this_thread::sleep_for(10ms);
+  }
+  REQUIRE(sent);
+  CHECK(r.wait_for(some_ump.size()) == some_ump);
+}
+
+TEST_CASE("invitations from nowhere do not keep real clients out", "[network_midi2][api]")
+{
+  const int port = free_port();
+  received r;
+  libremidi::midi_in in{r.configuration(), input(port)};
+  REQUIRE(in.open_virtual_port("host") == stdx::error{});
+
+  // More invitations than a host has room for, each from its own address,
+  // none of them ever followed by anything
+  namespace asio = boost::asio;
+  using udp = asio::ip::udp;
+  asio::io_context ctx;
+  libremidi::network_midi2::datagram_writer invitation;
+  invitation.identity(libremidi::network_midi2::command::invitation, 0, "nobody", "nobody");
+  const udp::endpoint host{asio::ip::make_address("127.0.0.1"), static_cast<unsigned short>(port)};
+  std::vector<udp::socket> strangers;
+  for (int i = 0; i < 40; i++)
+  {
+    strangers.emplace_back(ctx, udp::endpoint{asio::ip::make_address("127.0.0.1"), 0});
+    strangers.back().send_to(asio::buffer(invitation.bytes), host);
+  }
+  std::this_thread::sleep_for(100ms);
+
+  libremidi::midi_out out{{}, output(port)};
+  REQUIRE(out.open_port(port_of<libremidi::output_port>(out), "client") == stdx::error{});
+  REQUIRE(out.send_ump(some_ump.data(), some_ump.size()) == stdx::error{});
+  CHECK(r.wait_for(some_ump.size()) == some_ump);
+}
+
+TEST_CASE("two hosts cannot have the same port", "[network_midi2][api]")
+{
+  const int port = free_port();
+  received r;
+  libremidi::midi_in first{r.configuration(), input(port)};
+  REQUIRE(first.open_virtual_port("host") == stdx::error{});
+
+  libremidi::midi_in second{r.configuration(), input(port)};
+  CHECK(second.open_virtual_port("host") != stdx::error{});
 }
