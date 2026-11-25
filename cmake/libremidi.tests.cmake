@@ -84,6 +84,12 @@ add_test(NAME midi_timing_test COMMAND midi_timing_test)
 add_test(NAME rawio_test COMMAND rawio_test)
 add_test(NAME observer_filters_test COMMAND observer_filters_test)
 
+if(LIBREMIDI_HAS_NETWORK)
+  add_executable(network_midi2_api_test tests/integration/network_midi2_api.cpp)
+  target_link_libraries(network_midi2_api_test PRIVATE libremidi Catch2::Catch2WithMain)
+  add_test(NAME network_midi2_api_test COMMAND network_midi2_api_test)
+endif()
+
 if(LIBREMIDI_HAS_COREMIDI)
   add_executable(coremidi_observer_test tests/integration/coremidi_observer.cpp)
   target_link_libraries(coremidi_observer_test PRIVATE libremidi Catch2::Catch2WithMain)
