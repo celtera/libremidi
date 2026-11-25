@@ -651,8 +651,9 @@ TEST_CASE("retransmit requests cannot be made to send without end", "[network_mi
     request.insert(request.end(), {0x80, 1, 0, 0, 0, 0, 0, 0});
   l.host.on_datagram(request, l.now);
 
-  // The buffer twice at most, not eight thousand times
-  CHECK(total_bytes(l.sent_by_host) <= 2 * 128 * (4 + 64 * 4) + 4 * 64);
+  // 256 commands at most, and the first one of each answer once more:
+  // not the buffer eight thousand times
+  CHECK(total_bytes(l.sent_by_host) <= (256 + 2) * (4 + 64 * 4) + 4 * 64);
 
   // And the allowance comes back with time
   l.sent_by_host.clear();
@@ -746,9 +747,86 @@ TEST_CASE("a client that starts again from the same address is heard", "[network
   CHECK(has_command(l.sent_by_host, 0x82));
   CHECK(l.host.established());
 
+  // It says that it starts from zero, and does
+  const bytes reset_reply{M, I, D, I, 0x83, 0, 0, 0};
+  l.host.on_datagram(reset_reply, l.now);
   l.host.on_datagram(data_command(0), l.now);
   l.host.tick(l.now);
   CHECK(l.host_received == std::vector<uint32_t>{0x20900000});
+}
+
+TEST_CASE("data of the old numbering is not taken for the new one", "[network_midi2]")
+{
+  test_link l;
+  l.connect();
+  const auto invitation = l.sent_by_client.at(0);
+  for (uint16_t i = 0; i < 200; i++)
+    l.host.on_datagram(data_command(i), l.now);
+  REQUIRE(l.host_received.size() == 200);
+  l.host_received.clear();
+
+  // We ask to start again
+  l.host.on_datagram(invitation, l.now);
+  l.sent_by_host.clear();
+
+  // What was on its way still arrives: not data from 200 ahead to wait for
+  l.host.on_datagram(data_command(200), l.now);
+  l.host.on_datagram(data_command(201), l.now);
+  for (int i = 0; i < 50; i++)
+    l.host.tick(l.now++);
+  CHECK(l.host_received.empty());
+  CHECK_FALSE(has_command(l.sent_by_host, 0x80));
+
+  // Then the answer, and the new numbering
+  const bytes reset_reply{M, I, D, I, 0x83, 0, 0, 0};
+  l.host.on_datagram(reset_reply, l.now);
+  l.host.on_datagram(data_command(0), l.now);
+  l.host.on_datagram(data_command(1), l.now);
+  CHECK(l.host_received == std::vector<uint32_t>{0x20900000, 0x20900001});
+}
+
+TEST_CASE("a Session Reset that is not answered is sent again, then taken as done", "[network_midi2]")
+{
+  test_link l;
+  l.connect();
+  const auto invitation = l.sent_by_client.at(0);
+  l.host.on_datagram(data_command(0), l.now);
+  l.host.on_datagram(invitation, l.now);
+  l.sent_by_host.clear();
+
+  for (int i = 0; i < 700; i++)
+    l.host.tick(l.now++);
+  int resets = 0;
+  for (const auto& d : l.sent_by_host)
+    resets += d == bytes{M, I, D, I, 0x82, 0, 0, 0};
+  CHECK(resets == 2);
+
+  // No answer ever came: data is listened to again all the same
+  l.host_received.clear();
+  l.host.on_datagram(data_command(0), l.now);
+  CHECK(l.host_received == std::vector<uint32_t>{0x20900000});
+}
+
+TEST_CASE("a long retransmission ends with the command that was asked for", "[network_midi2]")
+{
+  test_link l{{.forward_error_correction = 0}, {}};
+  l.connect();
+  const auto words = notes(32);
+  for (int i = 0; i < 20; i++)
+    l.host.send_ump(words.data(), words.size(), l.now);
+  l.run(5);
+  l.sent_by_host.clear();
+
+  // Everything from the third on: several datagrams
+  const bytes request{M, I, D, I, 0x80, 1, 0, 2, 0, 0, 0, 0};
+  l.host.on_datagram(request, l.now);
+  REQUIRE(l.sent_by_host.size() > 1);
+
+  nm2::datagram_reader reader{l.sent_by_host.back()};
+  nm2::command_view cmd, last;
+  while (reader.next(cmd))
+    last = cmd;
+  CHECK(last.specific_16() == 2);
 }
 
 TEST_CASE("an invitation that comes twice does not disturb a session without data", "[network_midi2]")
@@ -943,8 +1021,10 @@ TEST_CASE("a peer that keeps asking for what is gone gets a new start", "[networ
     l.sent_by_host.clear();
     for (int i = 0; i < 300; i++)
       l.host.tick(l.now++);
-    REQUIRE(l.sent_by_host.size() == 1);
-    CHECK(l.sent_by_host[0] == bytes{M, I, D, I, 0xFF, 0, 0, 0});
+    // The reset once more, as nobody answered it, and an empty command
+    REQUIRE(l.sent_by_host.size() == 2);
+    CHECK(l.sent_by_host[0] == bytes{M, I, D, I, 0x82, 0, 0, 0});
+    CHECK(l.sent_by_host[1] == bytes{M, I, D, I, 0xFF, 0, 0, 0});
   }
 
   SECTION("what was never sent is no reason for it")

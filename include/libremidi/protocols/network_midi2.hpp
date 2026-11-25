@@ -684,17 +684,24 @@ private:
     m_has_sent_data = false;
     m_out_of_sequence_datagrams = 0;
     m_refused_sequence.reset();
+    m_reset_pending = false;
   }
 
   // For when we are the one to send a Session Reset. A peer that was waiting
   // for something of the old numbering only leaves it there when it sees
   // data of the new one (macOS): the empty commands that follow data are
   // made to go out, even if we have nothing to send.
+  //
+  // Until the peer says that it has started again, the data that arrives is
+  // still of the old numbering, and would look like data from far ahead.
   void restart_streams(uint64_t now)
   {
     reset_streams();
     m_has_sent_data = true;
     m_last_sent_data = now;
+    m_reset_pending = true;
+    m_reset_sent = now;
+    m_reset_attempts = 1;
   }
 
   // Commands resent on request: this many at once, and one more per
@@ -831,6 +838,22 @@ private:
       }
     }
 
+    // Our Session Reset was not answered: again, a few times. After that the
+    // peer is taken to have done it, rather than not listened to anymore.
+    if (m_reset_pending && now - m_reset_sent >= reset_retry_ms)
+    {
+      if (m_reset_attempts >= 3)
+        m_reset_pending = false;
+      else
+      {
+        m_reset_attempts++;
+        m_reset_sent = now;
+        datagram_writer w;
+        w.simple(command::session_reset);
+        flush(w);
+      }
+    }
+
     // A command is missing and what follows it is waiting
     if (m_gap_since && now - *m_gap_since >= configuration.recovery_wait)
     {
@@ -912,6 +935,10 @@ private:
   {
     const uint16_t sequence = cmd.specific_16();
 
+    // Of the numbering we asked the peer to leave
+    if (m_reset_pending)
+      return;
+
     m_data_commands++;
 
     // Already delivered: a repeat
@@ -986,6 +1013,9 @@ private:
         m_refused_at = now;
       }
       reply.retransmit_error(1, m_sent.empty() ? m_next_sequence : m_sent.front().sequence);
+      // And where we are now, with the empty commands
+      m_idle_commands = 0;
+      m_last_sent_data = now;
       return;
     }
 
@@ -993,6 +1023,8 @@ private:
       count = static_cast<uint16_t>(m_sent.end() - it);
 
     datagram_writer w;
+    const auto first = it;
+    bool several_datagrams = false;
     for (; it != m_sent.end() && count > 0 && m_retransmit_allowance > 0;
          ++it, --count, --m_retransmit_allowance)
     {
@@ -1000,8 +1032,22 @@ private:
       {
         flush(w);
         w = datagram_writer{};
+        several_datagrams = true;
       }
       w.ump_data(it->sequence, it->words);
+    }
+
+    // The command that was asked for is the one the peer cannot go on
+    // without, and it went first, right when datagrams were being lost:
+    // a long answer ends with it once more.
+    if (several_datagrams)
+    {
+      if (w.size() + 4 + first->words.size() * 4 > max_datagram_bytes)
+      {
+        flush(w);
+        w = datagram_writer{};
+      }
+      w.ump_data(first->sequence, first->words);
     }
     flush(w);
 
@@ -1168,6 +1214,7 @@ private:
         break;
 
       case command::session_reset_reply:
+        m_reset_pending = false;
         break;
 
       case command::nak:
@@ -1327,6 +1374,7 @@ private:
   static constexpr int max_out_of_sequence_datagrams = 64;
   // A peer that skips what it cannot get does so well within this
   static constexpr uint64_t refused_patience_ms = 500;
+  static constexpr uint64_t reset_retry_ms = 200;
 
   role m_role;
   session_state m_state = session_state::idle;
@@ -1364,6 +1412,10 @@ private:
   int m_idle_commands = 0;
   uint64_t m_retransmit_allowance = 0;
   uint64_t m_retransmit_refilled = 0;
+  // A Session Reset of ours that the peer has not answered yet
+  bool m_reset_pending = false;
+  uint64_t m_reset_sent = 0;
+  int m_reset_attempts = 0;
   // The last request we could not answer
   std::optional<uint16_t> m_refused_sequence;
   uint64_t m_refused_at = 0;
