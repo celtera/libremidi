@@ -905,3 +905,48 @@ TEST_CASE("a host that started again and answers pings anyway is found out", "[n
   CHECK(l.client.closed_by_peer());
   CHECK(l.client.close_reason() == nm2::bye_reason::session_not_established);
 }
+
+TEST_CASE("a peer that keeps asking for what is gone gets a new start", "[network_midi2]")
+{
+  test_link l{{.forward_error_correction = 0, .retransmit_buffer_commands = 4}, {}};
+  l.connect();
+  for (uint32_t i = 0; i < 10; i++)
+  {
+    const uint32_t ump = 0x20903C00 | i;
+    l.host.send_ump(&ump, 1, l.now);
+  }
+  l.run(5);
+  l.sent_by_host.clear();
+
+  const bytes gone{M, I, D, I, 0x80, 1, 0, 2, 0, 0, 0, 0};
+  const bytes error{M, I, D, I, 0x81, 1, 1, 0, 0, 6, 0, 0};
+
+  // Told once
+  l.host.on_datagram(gone, l.now);
+  REQUIRE(l.sent_by_host.size() == 1);
+  CHECK(l.sent_by_host[0] == error);
+
+  // Asking again at once is a repeat that crossed our answer
+  l.now += 100;
+  l.host.on_datagram(gone, l.now);
+  REQUIRE(l.sent_by_host.size() == 2);
+  CHECK(l.sent_by_host[1] == error);
+
+  // Still asking: it is stuck there
+  l.now += 900;
+  l.host.on_datagram(gone, l.now);
+  REQUIRE(l.sent_by_host.size() == 3);
+  CHECK(l.sent_by_host[2] == bytes{M, I, D, I, 0x82, 0, 0, 0});
+
+  SECTION("what was never sent is no reason for it")
+  {
+    l.sent_by_host.clear();
+    const bytes future{M, I, D, I, 0x80, 1, 0x01, 0x00, 0, 1, 0, 0};
+    for (int i = 0; i < 5; i++)
+    {
+      l.host.on_datagram(future, l.now);
+      l.now += 1000;
+    }
+    CHECK_FALSE(has_command(l.sent_by_host, 0x82));
+  }
+}

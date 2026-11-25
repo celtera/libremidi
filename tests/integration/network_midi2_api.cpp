@@ -11,7 +11,6 @@
 
 #include <chrono>
 #include <mutex>
-#include <random>
 #include <string_view>
 #include <thread>
 #include <vector>
@@ -20,11 +19,15 @@ namespace
 {
 using namespace std::chrono_literals;
 
-// Somewhere in the dynamic range, different on each run and for each test
+// A port that is free right now, as the system says: several of these tests
+// can run at the same time.
 int free_port()
 {
-  static std::minstd_rand rng{std::random_device{}()};
-  return 49152 + static_cast<int>(rng() % 16000);
+  namespace asio = boost::asio;
+  asio::io_context ctx;
+  asio::ip::udp::socket socket{
+      ctx, asio::ip::udp::endpoint{asio::ip::make_address("127.0.0.1"), 0}};
+  return socket.local_endpoint().port();
 }
 
 struct received

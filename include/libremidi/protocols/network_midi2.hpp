@@ -391,8 +391,11 @@ struct session_configuration
   // so that a lost datagram costs nothing as long as the next one arrives.
   int forward_error_correction = 2;
 
-  // How many sent UMP Data commands are kept to answer retransmit requests
-  std::size_t retransmit_buffer_commands = 128;
+  // How many sent UMP Data commands are kept to answer retransmit requests.
+  // A long SysEx goes at a command per millisecond and some receivers ask a
+  // few hundred milliseconds late (macOS: 320 ms seen): this is about a second
+  // of it, and at most 260 kB per session.
+  std::size_t retransmit_buffer_commands = 1024;
 
   // All in milliseconds
   uint32_t invitation_retry = 1000;
@@ -680,15 +683,13 @@ private:
     m_idle_commands = 0;
     m_has_sent_data = false;
     m_out_of_sequence_datagrams = 0;
+    m_refused_sequence.reset();
   }
 
-  // Commands resent on request: this many at once, and as many per second
-  // as there are milliseconds. A request is a few bytes and can ask for the
+  // Commands resent on request: this many at once, and one more per
+  // millisecond. A request is a few bytes and can ask for the
   // whole buffer, from an address that anybody can write on a datagram.
-  uint64_t retransmit_allowance_max() const noexcept
-  {
-    return 2 * static_cast<uint64_t>(configuration.retransmit_buffer_commands);
-  }
+  static constexpr uint64_t retransmit_allowance_max() noexcept { return 256; }
 
   // Datagrams of data in a row without anything at or after what we expect:
   // the peer counts from somewhere else (it started again, or something made
@@ -956,6 +957,23 @@ private:
     });
     if (it == m_sent.end())
     {
+      // Something we did send, and do not have anymore
+      const bool gone = from != m_next_sequence && !sequence_after(from, m_next_sequence);
+
+      // Told so already, and asked again: this peer does not go on without it
+      // (macOS asks every second, forever, and delivers nothing meanwhile).
+      // Starting the streams again is what gets it out of there.
+      if (gone && m_refused_sequence == from && now - m_refused_at >= refused_patience_ms)
+      {
+        reset_streams();
+        reply.simple(command::session_reset);
+        return;
+      }
+      if (gone && m_refused_sequence != from)
+      {
+        m_refused_sequence = from;
+        m_refused_at = now;
+      }
       reply.retransmit_error(1, m_sent.empty() ? m_next_sequence : m_sent.front().sequence);
       return;
     }
@@ -1291,6 +1309,8 @@ private:
   // What is further ahead than this is not waited for
   static constexpr uint16_t max_sequence_jump = 4096;
   static constexpr int max_out_of_sequence_datagrams = 64;
+  // A peer that skips what it cannot get does so well within this
+  static constexpr uint64_t refused_patience_ms = 500;
 
   role m_role;
   session_state m_state = session_state::idle;
@@ -1328,6 +1348,9 @@ private:
   int m_idle_commands = 0;
   uint64_t m_retransmit_allowance = 0;
   uint64_t m_retransmit_refilled = 0;
+  // The last request we could not answer
+  std::optional<uint16_t> m_refused_sequence;
+  uint64_t m_refused_at = 0;
 
   // Receiving
   uint16_t m_expected = 0;
