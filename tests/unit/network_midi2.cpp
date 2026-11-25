@@ -519,6 +519,38 @@ TEST_CASE("every missing command is asked for by name, in one datagram", "[netwo
   CHECK(l.host_received.size() == 5);
 }
 
+TEST_CASE("a gap that is being filled is not given up on", "[network_midi2]")
+{
+  test_link l;
+  l.connect();
+  l.sent_by_host.clear();
+
+  const auto data = [](uint8_t sequence) {
+    return bytes{M, I, D, I, 0xFF, 1, 0, sequence, 0x20, 0x90, 0x3C, sequence};
+  };
+
+  // 0 arrives, 1 to 6 are lost, 7 arrives: more missing than there are attempts
+  l.host.on_datagram(data(0), l.now);
+  l.host.on_datagram(data(7), l.now);
+
+  // A peer that resends one command per datagram of requests, whatever was asked
+  uint8_t next = 1;
+  for (int i = 0; i < 500 && next < 7; i++)
+  {
+    l.host.tick(l.now++);
+    if (!l.sent_by_host.empty())
+    {
+      l.sent_by_host.clear();
+      l.host.on_datagram(data(next++), l.now);
+    }
+  }
+
+  CHECK(
+      l.host_received
+      == std::vector<uint32_t>{0x20903C00, 0x20903C01, 0x20903C02, 0x20903C03, 0x20903C04,
+                               0x20903C05, 0x20903C06, 0x20903C07});
+}
+
 TEST_CASE("names always end with a zero", "[network_midi2]")
 {
   // Four bytes exactly: a fifth, zero, has to follow

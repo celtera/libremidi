@@ -800,6 +800,7 @@ private:
   // Gives the application what is next in sequence
   void deliver_in_order(uint64_t now)
   {
+    const uint16_t before = m_expected;
     while (!m_held.empty() && m_held.front().sequence == m_expected)
     {
       auto words = std::move(m_held.front().words);
@@ -814,8 +815,10 @@ private:
       m_gap_since.reset();
       m_gap_attempts = 0;
     }
-    else if (!m_gap_since)
+    else if (!m_gap_since || m_expected != before)
     {
+      // A new gap, or one that is being filled: a peer that resends one
+      // command per request needs more rounds than a gap that never moves.
       m_gap_since = now;
       m_gap_attempts = 0;
     }
