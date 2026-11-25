@@ -406,10 +406,15 @@ struct session_configuration
   // How long a missing command is waited for before asking for it again
   uint32_t recovery_wait = 10;
   int retransmit_attempts = 3;
-  // An empty UMP Data command follows the last data after this long,
-  // so that the receiver can notice that the last datagram was lost
+  // Empty UMP Data commands follow the last data, so that the receiver can
+  // notice that the last datagrams were lost: it only asks for what it knows
+  // to be missing. The first after idle_first, then as many as there are
+  // repeats idle_repeat apart, which gives every command its repeats; then,
+  // up to idle_commands in all, at idle_first again and twice as long each
+  // time, to outlast a burst of loss.
   uint32_t idle_first = 250;
   uint32_t idle_repeat = 10;
+  int idle_commands = 6;
 };
 
 /// One Network MIDI 2.0 session with one peer.
@@ -790,15 +795,23 @@ private:
       datagram_writer w;
       w.ping(command::ping, m_ping_id);
       flush(w);
+
+      // And an empty command of data with it. A peer that started again
+      // without us noticing may answer pings from anybody, but will refuse
+      // data that belongs to no session: that is how we learn about it.
+      send_data_command({}, now);
     }
 
     // After the last data, empty commands carry its repeats and let the
     // receiver see that it has everything.
-    if (m_has_sent_data && configuration.forward_error_correction > 0
-        && m_idle_commands < configuration.forward_error_correction)
+    if (m_has_sent_data && m_idle_commands < configuration.idle_commands)
     {
-      const uint32_t wait = m_idle_commands == 0 ? configuration.idle_first
-                                                 : configuration.idle_repeat;
+      const int repeats = std::max(configuration.forward_error_correction, 1);
+      uint64_t wait = configuration.idle_first;
+      if (m_idle_commands > 0 && m_idle_commands < repeats)
+        wait = configuration.idle_repeat;
+      else if (m_idle_commands > repeats)
+        wait <<= std::min(m_idle_commands - repeats, 16);
       if (now - m_last_sent_data >= wait)
       {
         m_idle_commands++;

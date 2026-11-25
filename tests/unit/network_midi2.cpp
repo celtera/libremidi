@@ -842,3 +842,66 @@ TEST_CASE("a client that never answers the authentication request is forgotten",
     l.host.tick(l.now++);
   CHECK(l.host.state() == nm2::session_state::closed);
 }
+
+TEST_CASE("the end of the data survives a burst of loss", "[network_midi2]")
+{
+  test_link l;
+  l.connect();
+
+  const auto words = notes(10);
+  for (int i = 0; i < 9; i++)
+    l.client.send_ump(words.data() + 2 * i, 2, l.now);
+  l.run(5);
+
+  // The last command, and the two empty ones that repeat it, are all lost
+  l.loss = 1.;
+  l.client.send_ump(words.data() + 18, 2, l.now);
+  l.run(300);
+  CHECK(l.host_received.size() == 18);
+
+  // The empty commands that still follow show that something is missing
+  l.loss = 0.;
+  l.run(1000);
+  CHECK(l.host_received == words);
+}
+
+TEST_CASE("six empty commands follow the last data, then nothing", "[network_midi2]")
+{
+  test_link l;
+  l.connect();
+  const uint32_t ump = 0x20903C00;
+  l.client.send_ump(&ump, 1, l.now);
+  l.sent_by_client.clear();
+
+  // At 250, 260, 510, 1010, 2010 and 4010 ms
+  std::vector<uint64_t> at;
+  const uint64_t start = l.now;
+  for (int i = 0; i < 9000; i++)
+  {
+    l.run(1);
+    if (!l.sent_by_client.empty())
+    {
+      at.push_back(l.now - 1 - start);
+      l.sent_by_client.clear();
+    }
+  }
+  CHECK(at == std::vector<uint64_t>{250, 260, 510, 1010, 2010, 4010});
+}
+
+TEST_CASE("a host that started again and answers pings anyway is found out", "[network_midi2]")
+{
+  test_link l;
+  l.connect();
+  REQUIRE(l.client.established());
+
+  // A new host at the same address: it knows of no session, but answers pings
+  l.host = nm2::session{nm2::role::host, {}};
+  l.host.send_datagram = [&l](std::span<const uint8_t> d) { l.transmit(l.to_client, d); };
+
+  l.run(9000);
+  CHECK(l.client.established());
+  l.run(2000);
+  CHECK(l.client.state() == nm2::session_state::closed);
+  CHECK(l.client.closed_by_peer());
+  CHECK(l.client.close_reason() == nm2::bye_reason::session_not_established);
+}
