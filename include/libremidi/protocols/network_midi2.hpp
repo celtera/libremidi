@@ -824,7 +824,8 @@ private:
 
     // After the last data, empty commands carry its repeats and let the
     // receiver see that it has everything.
-    if (m_has_sent_data && m_idle_commands < configuration.idle_commands)
+    // Not before the rest of an answer that is still to go out: they come after it
+    if (m_has_sent_data && m_idle_commands < configuration.idle_commands && !m_retransmit_from)
     {
       const int repeats = std::max(configuration.forward_error_correction, 1);
       uint64_t wait = configuration.idle_first;
