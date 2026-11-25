@@ -839,7 +839,7 @@ private:
       }
     }
 
-    if (m_retransmit_from)
+    if (m_retransmit_from && now - m_last_retransmit_request >= continuation_wait_ms)
       continue_retransmission(now);
 
     // Our Session Reset was not answered: again, a few times. After that the
@@ -989,19 +989,24 @@ private:
   }
 
   // The rest of an answer to "everything from there on" that the allowance
-  // cut short, as the allowance comes back: in order and a command per
-  // millisecond. Some receivers keep nothing that arrives out of order
-  // (macOS): for them the rest never comes otherwise, since what we send
-  // afterwards is too far ahead for them to ask about.
+  // cut short. Some receivers keep nothing that arrives out of order (macOS):
+  // they take what follows the command they expect, and when that ends short
+  // of where we are, what we send afterwards is too far ahead for them to ask
+  // about. They are left there for good.
+  //
+  // Only once the peer has stopped asking: while it asks, each answer has to
+  // be as long as the allowance permits, and this would spend it in crumbs.
+  // Then in whole datagrams, a command per millisecond on average.
   void continue_retransmission(uint64_t now)
   {
     refill_retransmit_allowance(now);
-    if (m_retransmit_allowance == 0)
-      return;
 
     auto it = std::find_if(m_sent.begin(), m_sent.end(), [&](const sent_command& c) {
       return c.sequence == *m_retransmit_from;
     });
+    const auto remaining = static_cast<uint64_t>(m_sent.end() - it);
+    if (m_retransmit_allowance < std::min<uint64_t>(remaining, continuation_batch))
+      return;
 
     datagram_writer w;
     for (; it != m_sent.end() && m_retransmit_allowance > 0; ++it, --m_retransmit_allowance)
@@ -1028,6 +1033,7 @@ private:
   void on_retransmit_request(const command_view& cmd, datagram_writer& reply, uint64_t now)
   {
     refill_retransmit_allowance(now);
+    m_last_retransmit_request = now;
 
     // Some implementations send no count and one request per missing command:
     // that asks for this one. A count of zero asks for everything from there on.
@@ -1429,6 +1435,8 @@ private:
   // A peer that skips what it cannot get does so well within this
   static constexpr uint64_t refused_patience_ms = 500;
   static constexpr uint64_t reset_retry_ms = 200;
+  static constexpr uint64_t continuation_wait_ms = 250;
+  static constexpr uint64_t continuation_batch = 32;
 
   role m_role;
   session_state m_state = session_state::idle;
@@ -1468,6 +1476,7 @@ private:
   uint64_t m_retransmit_refilled = 0;
   // Where the answer to a request for everything goes on
   std::optional<uint16_t> m_retransmit_from;
+  uint64_t m_last_retransmit_request = 0;
   // A Session Reset of ours that the peer has not answered yet
   bool m_reset_pending = false;
   uint64_t m_reset_sent = 0;
