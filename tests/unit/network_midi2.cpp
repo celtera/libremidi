@@ -938,6 +938,15 @@ TEST_CASE("a peer that keeps asking for what is gone gets a new start", "[networ
   REQUIRE(l.sent_by_host.size() == 3);
   CHECK(l.sent_by_host[2] == bytes{M, I, D, I, 0x82, 0, 0, 0});
 
+  SECTION("and sees the new numbering, although we have nothing to send")
+  {
+    l.sent_by_host.clear();
+    for (int i = 0; i < 300; i++)
+      l.host.tick(l.now++);
+    REQUIRE(l.sent_by_host.size() == 1);
+    CHECK(l.sent_by_host[0] == bytes{M, I, D, I, 0xFF, 0, 0, 0});
+  }
+
   SECTION("what was never sent is no reason for it")
   {
     l.sent_by_host.clear();
@@ -949,4 +958,26 @@ TEST_CASE("a peer that keeps asking for what is gone gets a new start", "[networ
     }
     CHECK_FALSE(has_command(l.sent_by_host, 0x82));
   }
+}
+
+TEST_CASE("empty commands follow a retransmission as they follow data", "[network_midi2]")
+{
+  test_link l{{.forward_error_correction = 0}, {}};
+  l.connect();
+  const uint32_t ump = 0x20903C00;
+  for (int i = 0; i < 4; i++)
+    l.host.send_ump(&ump, 1, l.now);
+  // The six that follow the data are long gone
+  l.run(9000);
+  l.sent_by_host.clear();
+
+  const bytes request{M, I, D, I, 0x80, 0, 0, 2};
+  l.host.on_datagram(request, l.now);
+  REQUIRE(l.sent_by_host.size() == 1);
+
+  // Should that answer be lost, a later sequence number tells the peer so
+  for (int i = 0; i < 300; i++)
+    l.host.tick(l.now++);
+  REQUIRE(l.sent_by_host.size() >= 2);
+  CHECK(l.sent_by_host[1] == bytes{M, I, D, I, 0xFF, 0, 0, 10});
 }

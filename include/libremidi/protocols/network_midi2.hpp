@@ -686,6 +686,17 @@ private:
     m_refused_sequence.reset();
   }
 
+  // For when we are the one to send a Session Reset. A peer that was waiting
+  // for something of the old numbering only leaves it there when it sees
+  // data of the new one (macOS): the empty commands that follow data are
+  // made to go out, even if we have nothing to send.
+  void restart_streams(uint64_t now)
+  {
+    reset_streams();
+    m_has_sent_data = true;
+    m_last_sent_data = now;
+  }
+
   // Commands resent on request: this many at once, and one more per
   // millisecond. A request is a few bytes and can ask for the
   // whole buffer, from an address that anybody can write on a datagram.
@@ -706,7 +717,7 @@ private:
     if (++m_out_of_sequence_datagrams < max_out_of_sequence_datagrams)
       return;
 
-    reset_streams();
+    restart_streams(m_last_received);
     datagram_writer w;
     w.simple(command::session_reset);
     flush(w);
@@ -965,7 +976,7 @@ private:
       // Starting the streams again is what gets it out of there.
       if (gone && m_refused_sequence == from && now - m_refused_at >= refused_patience_ms)
       {
-        reset_streams();
+        restart_streams(now);
         reply.simple(command::session_reset);
         return;
       }
@@ -993,6 +1004,11 @@ private:
       w.ump_data(it->sequence, it->words);
     }
     flush(w);
+
+    // The empty commands follow again: if this answer is lost or was cut
+    // short, the peer only asks for the rest when it sees a later command.
+    m_idle_commands = 0;
+    m_last_sent_data = now;
   }
 
   static std::string text_of(std::span<const uint8_t> bytes)
@@ -1199,7 +1215,7 @@ private:
       // The reset makes both sides do so, whichever of the two cases it is.
       if (m_expected != 0 || !m_held.empty())
       {
-        reset_streams();
+        restart_streams(now);
         reply.simple(command::session_reset);
       }
       return;
