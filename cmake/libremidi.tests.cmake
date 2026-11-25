@@ -49,6 +49,9 @@ target_link_libraries(midifile_write_tracks_test PRIVATE libremidi Catch2::Catch
 add_executable(protocols_test tests/unit/protocols.cpp)
 target_link_libraries(protocols_test PRIVATE libremidi Catch2::Catch2WithMain)
 
+add_executable(network_midi2_test tests/unit/network_midi2.cpp)
+target_link_libraries(network_midi2_test PRIVATE libremidi Catch2::Catch2WithMain)
+
 add_executable(midi_stream_decoder_test tests/unit/midi_stream_decoder.cpp)
 target_link_libraries(midi_stream_decoder_test PRIVATE libremidi Catch2::Catch2WithMain)
 
@@ -74,11 +77,18 @@ add_test(NAME midifile_read_test COMMAND midifile_read_test)
 add_test(NAME midifile_write_test COMMAND midifile_write_test)
 add_test(NAME midifile_write_tracks_test COMMAND midifile_write_tracks_test)
 add_test(NAME protocols_test COMMAND protocols_test)
+add_test(NAME network_midi2_test COMMAND network_midi2_test)
 add_test(NAME midi_stream_decoder_test COMMAND midi_stream_decoder_test)
 add_test(NAME midi_stream_decoder_stream_test COMMAND midi_stream_decoder_stream_test "~[bench]")
 add_test(NAME midi_timing_test COMMAND midi_timing_test)
 add_test(NAME rawio_test COMMAND rawio_test)
 add_test(NAME observer_filters_test COMMAND observer_filters_test)
+
+if(LIBREMIDI_HAS_NETWORK)
+  add_executable(network_midi2_api_test tests/integration/network_midi2_api.cpp)
+  target_link_libraries(network_midi2_api_test PRIVATE libremidi Catch2::Catch2WithMain)
+  add_test(NAME network_midi2_api_test COMMAND network_midi2_api_test)
+endif()
 
 if(LIBREMIDI_HAS_COREMIDI)
   add_executable(coremidi_observer_test tests/integration/coremidi_observer.cpp)

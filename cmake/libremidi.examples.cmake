@@ -108,6 +108,7 @@ endif()
 
 if(LIBREMIDI_HAS_NETWORK)
   add_example(network)
+  add_example(network_midi2)
 endif()
 
 if(Boost_cobalt_FOUND)

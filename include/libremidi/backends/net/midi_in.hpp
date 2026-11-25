@@ -1,6 +1,7 @@
 #pragma once
 #include <libremidi/backends/net/config.hpp>
 #include <libremidi/backends/net/helpers.hpp>
+#include <libremidi/backends/net/midi2_udp.hpp>
 #include <libremidi/detail/midi_in.hpp>
 #include <libremidi/detail/midi_stream_decoder.hpp>
 
@@ -324,6 +325,12 @@ public:
       , m_ctx{configuration.io_context}
       , m_socket{m_ctx.get()}
   {
+    if (configuration.protocol == protocol::MIDI2_UDP)
+    {
+      client_open_ = stdx::error{};
+      return;
+    }
+
     m_socket.open(boost::asio::ip::udp::v4());
     m_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
 
@@ -346,13 +353,60 @@ public:
 
   libremidi::API get_current_api() const noexcept override { return libremidi::API::NETWORK_UMP; }
 
+  std::unique_ptr<midi2_udp_endpoint> make_udp_endpoint(std::string_view name)
+  {
+    network_midi2::session_configuration c;
+    c.endpoint_name = name.empty() ? configuration.client_name : std::string(name);
+    c.product_instance_id = configuration.product_instance_id;
+    c.shared_secret = configuration.shared_secret;
+
+    auto udp = std::make_unique<midi2_udp_endpoint>(configuration.io_context, std::move(c));
+    udp->on_ump = [this](std::span<const uint32_t> words) {
+      // Several UMPs can come at once
+      for (std::size_t i = 0; i < words.size();)
+      {
+        const std::size_t n = network_midi2::ump_word_count(words[i]);
+        if (i + n > words.size())
+          break;
+        this->on_message(words.data() + i, n);
+        i += n;
+      }
+    };
+    return udp;
+  }
+
   stdx::error open_port(const input_port&, std::string_view port) override
   {
+    if (configuration.protocol == protocol::MIDI2_UDP)
+    {
+      // Client of the host at host:port
+      m_udp = make_udp_endpoint(port);
+      if (auto err = m_udp->open_client(configuration.host, configuration.port);
+          err != stdx::error{})
+      {
+        m_udp.reset();
+        return err;
+      }
+      return stdx::error{};
+    }
     return open_virtual_port(port);
   }
 
   stdx::error open_virtual_port(std::string_view port) override
   {
+    if (configuration.protocol == protocol::MIDI2_UDP)
+    {
+      // Host: clients invite us on accept:port
+      m_udp = make_udp_endpoint(port);
+      if (auto err = m_udp->open_host(configuration.accept, configuration.port);
+          err != stdx::error{})
+      {
+        m_udp.reset();
+        return err;
+      }
+      return stdx::error{};
+    }
+
     m_portname = std::string(port);
 
     receive();
@@ -384,6 +438,12 @@ public:
 
   stdx::error close_port() override
   {
+    if (m_udp)
+    {
+      m_udp.reset();
+      return {};
+    }
+
     // FIXME async close
     if (m_ctx.is_owned())
       m_ctx.get().stop();
@@ -433,5 +493,7 @@ public:
 
   std::string m_portname;
   alignas(16) unsigned char m_data[65535];
+
+  std::unique_ptr<midi2_udp_endpoint> m_udp;
 };
 }
