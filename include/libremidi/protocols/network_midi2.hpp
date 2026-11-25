@@ -685,6 +685,7 @@ private:
     m_out_of_sequence_datagrams = 0;
     m_refused_sequence.reset();
     m_reset_pending = false;
+    m_retransmit_from.reset();
   }
 
   // For when we are the one to send a Session Reset. A peer that was waiting
@@ -838,6 +839,9 @@ private:
       }
     }
 
+    if (m_retransmit_from)
+      continue_retransmission(now);
+
     // Our Session Reset was not answered: again, a few times. After that the
     // peer is taken to have done it, rather than not listened to anymore.
     if (m_reset_pending && now - m_reset_sent >= reset_retry_ms)
@@ -977,11 +981,53 @@ private:
     }
   }
 
-  void on_retransmit_request(const command_view& cmd, datagram_writer& reply, uint64_t now)
+  void refill_retransmit_allowance(uint64_t now)
   {
     m_retransmit_allowance = std::min<uint64_t>(
         retransmit_allowance_max(), m_retransmit_allowance + (now - m_retransmit_refilled));
     m_retransmit_refilled = now;
+  }
+
+  // The rest of an answer to "everything from there on" that the allowance
+  // cut short, as the allowance comes back: in order and a command per
+  // millisecond. Some receivers keep nothing that arrives out of order
+  // (macOS): for them the rest never comes otherwise, since what we send
+  // afterwards is too far ahead for them to ask about.
+  void continue_retransmission(uint64_t now)
+  {
+    refill_retransmit_allowance(now);
+    if (m_retransmit_allowance == 0)
+      return;
+
+    auto it = std::find_if(m_sent.begin(), m_sent.end(), [&](const sent_command& c) {
+      return c.sequence == *m_retransmit_from;
+    });
+
+    datagram_writer w;
+    for (; it != m_sent.end() && m_retransmit_allowance > 0; ++it, --m_retransmit_allowance)
+    {
+      if (w.size() + 4 + it->words.size() * 4 > max_datagram_bytes)
+      {
+        flush(w);
+        w = datagram_writer{};
+      }
+      w.ump_data(it->sequence, it->words);
+    }
+    flush(w);
+
+    if (it == m_sent.end())
+    {
+      m_retransmit_from.reset();
+      m_idle_commands = 0;
+      m_last_sent_data = now;
+    }
+    else
+      m_retransmit_from = it->sequence;
+  }
+
+  void on_retransmit_request(const command_view& cmd, datagram_writer& reply, uint64_t now)
+  {
+    refill_retransmit_allowance(now);
 
     // Some implementations send no count and one request per missing command:
     // that asks for this one. A count of zero asks for everything from there on.
@@ -1019,8 +1065,13 @@ private:
       return;
     }
 
-    if (count == 0)
+    const bool everything = count == 0;
+    if (everything)
+    {
       count = static_cast<uint16_t>(m_sent.end() - it);
+      // A new place to go on from, or none
+      m_retransmit_from.reset();
+    }
 
     datagram_writer w;
     const auto first = it;
@@ -1050,6 +1101,9 @@ private:
       w.ump_data(first->sequence, first->words);
     }
     flush(w);
+
+    if (everything && it != m_sent.end())
+      m_retransmit_from = it->sequence;
 
     // The empty commands follow again: if this answer is lost or was cut
     // short, the peer only asks for the rest when it sees a later command.
@@ -1412,6 +1466,8 @@ private:
   int m_idle_commands = 0;
   uint64_t m_retransmit_allowance = 0;
   uint64_t m_retransmit_refilled = 0;
+  // Where the answer to a request for everything goes on
+  std::optional<uint16_t> m_retransmit_from;
   // A Session Reset of ours that the peer has not answered yet
   bool m_reset_pending = false;
   uint64_t m_reset_sent = 0;

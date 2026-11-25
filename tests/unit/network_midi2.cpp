@@ -1061,3 +1061,68 @@ TEST_CASE("empty commands follow a retransmission as they follow data", "[networ
   REQUIRE(l.sent_by_host.size() >= 2);
   CHECK(l.sent_by_host[1] == bytes{M, I, D, I, 0xFF, 0, 0, 10});
 }
+
+TEST_CASE("an answer to a request for everything goes on as the allowance comes back", "[network_midi2]")
+{
+  test_link l{{.forward_error_correction = 0}, {}};
+  l.connect();
+  const auto words = notes(32);
+  for (int i = 0; i < 600; i++)
+    l.host.send_ump(words.data(), words.size(), l.now);
+  l.run(5);
+  l.sent_by_host.clear();
+
+  const auto sequences = [&] {
+    std::vector<uint16_t> out;
+    for (const auto& d : l.sent_by_host)
+    {
+      nm2::datagram_reader reader{d};
+      nm2::command_view cmd;
+      while (reader.next(cmd))
+        if (cmd.code == nm2::command::ump_data && !cmd.payload.empty())
+          out.push_back(cmd.specific_16());
+    }
+    return out;
+  };
+
+  // Everything from 10 on: 256 at once, and the command asked for once more
+  const bytes request{M, I, D, I, 0x80, 1, 0, 10, 0, 0, 0, 0};
+  l.host.on_datagram(request, l.now);
+  auto at_once = sequences();
+  REQUIRE(at_once.size() == 257);
+  CHECK(at_once.front() == 10);
+  CHECK(at_once[255] == 265);
+  CHECK(at_once.back() == 10);
+
+  // The rest follows by itself, in order, a command per millisecond
+  l.sent_by_host.clear();
+  for (int i = 0; i < 100; i++)
+    l.host.tick(l.now++);
+  const auto after_100ms = sequences();
+  CHECK(after_100ms.size() >= 95);
+  CHECK(after_100ms.size() <= 101);
+
+  for (int i = 0; i < 400; i++)
+    l.host.tick(l.now++);
+  const auto rest = sequences();
+  REQUIRE(rest.size() == 600 - 266);
+  for (std::size_t i = 0; i < rest.size(); i++)
+    REQUIRE(rest[i] == 266 + i);
+
+  SECTION("a new request moves it")
+  {
+    l.sent_by_host.clear();
+    l.now += 1000;
+    l.host.on_datagram(request, l.now);
+    l.sent_by_host.clear();
+    const bytes further{M, I, D, I, 0x80, 1, 0x01, 0xF4, 0, 0, 0, 0};
+    l.host.on_datagram(further, l.now);
+    for (int i = 0; i < 300; i++)
+      l.host.tick(l.now++);
+    const auto moved = sequences();
+    REQUIRE(!moved.empty());
+    for (uint16_t sequence : moved)
+      CHECK(sequence >= 500);
+    CHECK(moved.back() == 599);
+  }
+}
