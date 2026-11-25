@@ -4,6 +4,7 @@
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/udp.hpp>
+#include <boost/asio/ip/v6_only.hpp>
 #include <boost/asio/steady_timer.hpp>
 
 #include <chrono>
@@ -48,16 +49,28 @@ public:
   midi2_udp_endpoint(const midi2_udp_endpoint&) = delete;
   midi2_udp_endpoint& operator=(const midi2_udp_endpoint&) = delete;
 
-  /// Waits for clients on this address and port
+  /// Waits for clients on this address and port.
+  /// No address, "0.0.0.0" or "::" is every interface, over IPv6 and IPv4 where
+  /// the system has both: some clients (macOS) come over IPv6 link-local addresses.
   stdx::error open_host(const std::string& address, int port)
   {
-    boost::system::error_code ec;
-    const auto ip = boost::asio::ip::make_address(address.empty() ? "0.0.0.0" : address, ec);
-    if (ec)
-      return std::errc::invalid_argument;
+    const auto p = static_cast<unsigned short>(port);
+    if (address.empty() || address == "0.0.0.0" || address == "::")
+    {
+      if (bind(udp::endpoint{udp::v6(), p}, true) != stdx::error{})
+        if (auto err = bind(udp::endpoint{udp::v4(), p}); err != stdx::error{})
+          return err;
+    }
+    else
+    {
+      boost::system::error_code ec;
+      const auto ip = boost::asio::ip::make_address(address, ec);
+      if (ec)
+        return std::errc::invalid_argument;
 
-    if (auto err = bind(udp::endpoint{ip, static_cast<unsigned short>(port)}); err != stdx::error{})
-      return err;
+      if (auto err = bind(udp::endpoint{ip, p}); err != stdx::error{})
+        return err;
+    }
 
     m_role = network_midi2::role::host;
     start();
@@ -187,12 +200,23 @@ private:
                                      .count());
   }
 
-  stdx::error bind(const udp::endpoint& local)
+  // dual_stack: an IPv6 socket that takes IPv4 as well, or nothing
+  stdx::error bind(const udp::endpoint& local, bool dual_stack = false)
   {
     boost::system::error_code ec;
     m_socket.open(local.protocol(), ec);
     if (ec)
       return std::errc::address_family_not_supported;
+    if (dual_stack)
+    {
+      m_socket.set_option(boost::asio::ip::v6_only(false), ec);
+      if (ec)
+      {
+        boost::system::error_code ignored;
+        m_socket.close(ignored);
+        return std::errc::address_family_not_supported;
+      }
+    }
     m_socket.set_option(udp::socket::reuse_address(true), ec);
     m_socket.bind(local, ec);
     if (ec)

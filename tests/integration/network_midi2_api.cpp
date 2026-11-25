@@ -8,6 +8,7 @@
 #include <chrono>
 #include <mutex>
 #include <random>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -181,6 +182,35 @@ TEST_CASE("a host with a secret only lets in those who know it", "[network_midi2
     conf.connection_timeout_ms = 500;
     libremidi::midi_out out{{}, conf};
     CHECK(out.open_port(port_of<libremidi::output_port>(out), "client") != stdx::error{});
+  }
+}
+
+TEST_CASE("a host on every interface takes IPv4 and IPv6 clients", "[network_midi2][api]")
+{
+  const int port = free_port();
+  received r;
+  auto in_conf = input(port);
+  in_conf.accept = "0.0.0.0";
+  libremidi::midi_in in{r.configuration(), in_conf};
+  REQUIRE(in.open_virtual_port("host") == stdx::error{});
+
+  std::size_t expected = 0;
+  for (const char* address : {"127.0.0.1", "::1"})
+  {
+    auto conf = output(port);
+    conf.host = address;
+    conf.connection_timeout_ms = 1000;
+    libremidi::midi_out out{{}, conf};
+    if (out.open_port(port_of<libremidi::output_port>(out), "client") != stdx::error{})
+    {
+      // Machines without IPv6 exist; none without IPv4 runs these tests
+      REQUIRE(std::string_view{address} == "::1");
+      WARN("no IPv6 loopback here");
+      continue;
+    }
+    REQUIRE(out.send_ump(some_ump.data(), some_ump.size()) == stdx::error{});
+    expected += some_ump.size();
+    CHECK(r.wait_for(expected).size() == expected);
   }
 }
 
